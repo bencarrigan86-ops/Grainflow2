@@ -8,11 +8,12 @@ export function saleEconomics(sale) {
   const tons = Number(sale.tons) || 0;
   const tonsDelivered = Number(sale.tonsDelivered) || 0;
 
-  const levies = -(price + freight) * leviesPct;
-  const priceExFarm = price + freight + levies + premium;
+  const netOfFreight = price - freight;
+  const levies = -netOfFreight * leviesPct;
+  const priceExFarm = netOfFreight + levies + premium;
   const totalValue = tons * priceExFarm;
   const tonsDue = tons - tonsDelivered;
-  return { levies, priceExFarm, totalValue, tonsDue };
+  return { netOfFreight, levies, priceExFarm, totalValue, tonsDue };
 }
 
 export function fieldTons(f) {
