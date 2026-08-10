@@ -1,11 +1,12 @@
-import { db } from '../storage.js?v=14';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=14';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=14';
-import { num, tons, esc } from '../fmt.js?v=14';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=14';
+import { db } from '../storage.js?v=15';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=15';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=15';
+import { num, tons, esc } from '../fmt.js?v=15';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=15';
 
 let unsub = null;
 let quickKind = 'silo';
+let listMode = 'chronological';
 
 export function renderStorage(root) {
   if (unsub) unsub();
@@ -34,9 +35,34 @@ function paint(root) {
         <div id="quick-result"></div>
       </div>
 
+      ${storages.length > 0 ? `
+      <div class="card report">
+        <h2><span class="dot report"></span>By commodity</h2>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Commodity</th><th>Measured</th><th>Tracked</th></tr></thead>
+            <tbody>
+              ${storageTonsByCommodity(commodities, storages, movements).map((r) => `
+                <tr>
+                  <td>${esc(r.name)}</td>
+                  <td>${num(r.measuredTons, 1)}</td>
+                  <td>${num(r.trackedTons, 1)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>` : ''}
+
       <div class="card">
         <h2>Saved silos &amp; bunkers</h2>
-        ${storages.length === 0 ? `<div class="empty">Tap + to save a silo or bunker so you only enter today's level next time.</div>` : storages.map((s) => storageRow(s, commodities, movements)).join('')}
+        ${storages.length > 0 ? `
+        <div class="segmented" id="list-mode">
+          <button data-mode="chronological" class="${listMode === 'chronological' ? 'active' : ''}">Chronological</button>
+          <button data-mode="commodity" class="${listMode === 'commodity' ? 'active' : ''}">By commodity</button>
+        </div>
+        <div style="margin-top:10px">` : ''}
+        ${storages.length === 0 ? `<div class="empty">Tap + to save a silo or bunker so you only enter today's level next time.</div>` : renderStorageList(storages, commodities, movements)}
+        ${storages.length > 0 ? `</div>` : ''}
       </div>
     </div>
     <button class="fab" id="add-storage">+</button>
@@ -50,10 +76,52 @@ function paint(root) {
   });
   buildQuickForm(root, commodities);
 
+  const listModeEl = root.querySelector('#list-mode');
+  if (listModeEl) {
+    listModeEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-mode]');
+      if (!btn) return;
+      listMode = btn.dataset.mode;
+      paint(root);
+    });
+  }
+
   root.querySelectorAll('[data-edit-storage]').forEach((el) => {
     el.addEventListener('click', () => openStorageSheet(storages.find((s) => s.id === el.dataset.editStorage)));
   });
   root.querySelector('#add-storage').addEventListener('click', () => openStorageSheet(null));
+}
+
+function storageTonsByCommodity(commodities, storages, movements) {
+  return commodities
+    .map((c) => {
+      const rows = storages.filter((s) => s.commodityId === c.id);
+      const measuredTons = rows.reduce((sum, s) => sum + computeStorageTons(s, commodities).tons, 0);
+      const trackedTons = rows.reduce((sum, s) => sum + storageLedgerStock(s, movements), 0);
+      return { name: c.name, measuredTons, trackedTons, count: rows.length };
+    })
+    .filter((r) => r.count > 0);
+}
+
+function renderStorageList(storages, commodities, movements) {
+  if (listMode === 'commodity') {
+    const groups = commodities
+      .map((c) => ({
+        name: c.name,
+        rows: storages.filter((s) => s.commodityId === c.id).sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+      }))
+      .filter((g) => g.rows.length > 0);
+    const noCommodity = storages.filter((s) => !commodities.some((c) => c.id === s.commodityId));
+    if (noCommodity.length > 0) groups.push({ name: 'No commodity', rows: noCommodity });
+
+    return groups.map((g) => `
+      <div class="group-label"><span>${esc(g.name)}</span></div>
+      ${g.rows.map((s) => storageRow(s, commodities, movements)).join('')}
+    `).join('');
+  }
+
+  const sorted = [...storages].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  return sorted.map((s) => storageRow(s, commodities, movements)).join('');
 }
 
 function commodityOptions(commodities, includeNone = true) {

@@ -112,7 +112,7 @@ export const db = {
       const idx = data.storages.findIndex((s) => s.id === storage.id);
       if (idx >= 0) data.storages[idx] = { ...data.storages[idx], ...storage };
     } else {
-      data.storages.push({ ...storage, id: uid() });
+      data.storages.push({ ...storage, id: uid(), createdAt: Date.now() });
     }
     persist();
   },
