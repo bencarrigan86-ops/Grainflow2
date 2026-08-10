@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=12';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=12';
-import { num, tons, money, esc } from '../fmt.js?v=12';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=12';
+import { db } from '../storage.js?v=13';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=13';
+import { num, tons, money, esc } from '../fmt.js?v=13';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=13';
 
 let unsub = null;
 
@@ -29,7 +29,7 @@ function paint(root) {
         ${rollup.length === 0 ? `<div class="empty">No sales entered yet.</div>` : `
         <div class="table-scroll">
           <table>
-            <thead><tr><th>Commodity</th><th>Tons</th><th>Undelivered</th><th>Avg $/t</th><th>Total $</th></tr></thead>
+            <thead><tr><th>Commodity</th><th>Sold</th><th>Undelivered</th><th>Avg $/t</th><th>Total $</th></tr></thead>
             <tbody>
               ${rollup.map((r) => `
                 <tr>
