@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=10';
-import { siloResult, bunkerResult } from '../calc.js?v=10';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=10';
-import { num, tons, esc } from '../fmt.js?v=10';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=10';
+import { db } from '../storage.js?v=11';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=11';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=11';
+import { num, tons, esc } from '../fmt.js?v=11';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=11';
 
 let unsub = null;
 let quickKind = 'silo';
@@ -128,6 +128,7 @@ function buildQuickForm(root, commodities) {
         ${field({ label: 'Peak angle (°)', id: 'q-angle', type: 'number', step: '1', hint: 'Grain angle of repose' })}
         ${field({ label: 'Test weight (t/m³)', id: 'q-tw', type: 'number', step: '0.01' })}
       </div>
+      ${field({ label: 'Tarp overhang per side (m)', id: 'q-overhang', type: 'number', step: '0.1', value: 1.5 })}
     `;
     formEl.querySelector('#q-commodity').addEventListener('change', () => {
       const c = commodities.find((c) => c.id === getVal(formEl, 'q-commodity'));
@@ -146,13 +147,29 @@ function buildQuickForm(root, commodities) {
         angleDeg: getNum(formEl, 'q-angle'),
         testWeight: getNum(formEl, 'q-tw'),
       });
+      const t = bunkerTarpRequirement({
+        width: getNum(formEl, 'q-width'),
+        length: getNum(formEl, 'q-length'),
+        angleDeg: getNum(formEl, 'q-angle'),
+        overhangM: getNum(formEl, 'q-overhang'),
+      });
       resultEl.innerHTML = quickResultHTML(r.tons, [
         ['Volume', `${num(r.volume, 1)} m³`],
         ['Peak height', `${num(r.height, 2)} m`],
-      ]);
+      ]) + tarpResultHTML(t);
     }
     recompute();
   }
+}
+
+function tarpResultHTML(t) {
+  return `
+    <hr class="sep" />
+    <div class="row"><span class="label"><strong>Tarp needed</strong></span></div>
+    <div class="row"><span class="label">Width</span><span class="value">${num(t.tarpWidthNeeded, 1)} m</span></div>
+    <div class="row"><span class="label">Length</span><span class="value">${num(t.tarpLengthNeeded, 1)} m</span></div>
+    <div class="row"><span class="label">Bare minimum to reach ground</span><span class="value">${num(t.slantWidth, 1)} x ${num(t.slantLength, 1)} m</span></div>
+  `;
 }
 
 function quickResultHTML(tonsVal, extraRows) {
@@ -245,6 +262,12 @@ function openStorageSheet(existing) {
         </div>` : ''}
         <div class="row"><span class="label"><strong>Estimated total (measured)</strong></span><span class="value" id="s-total-preview" style="font-size:20px">—</span></div>
         <div class="field hint">Set the level above after physically dipping the ${kind}. Tracked stock is separate: it's your opening/current stock figure plus movements in/out, and doesn't need to match the measured estimate exactly.</div>
+        ${kind === 'bunker' ? `
+        <hr class="sep" />
+        ${field({ label: 'Tarp overhang per side (m)', id: 's-overhang', type: 'number', step: '0.1', value: existing?.tarpOverhangM ?? 1.5 })}
+        <div class="row"><span class="label">Tarp width needed</span><span class="value" id="s-tarp-width">—</span></div>
+        <div class="row"><span class="label">Tarp length needed</span><span class="value" id="s-tarp-length">—</span></div>
+        ` : ''}
         <button class="btn" id="save" style="margin-top:8px">Save</button>
         ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete</button>` : ''}
       `;
@@ -279,6 +302,8 @@ function openStorageSheet(existing) {
       recomputeLedger();
 
       const preview = root.querySelector('#s-total-preview');
+      const tarpWidthEl = root.querySelector('#s-tarp-width');
+      const tarpLengthEl = root.querySelector('#s-tarp-length');
       function recomputePreview() {
         const c = commodities.find((cc) => cc.id === getVal(root, 's-commodity'));
         const angleOverride = getVal(root, 's-angle');
@@ -289,6 +314,14 @@ function openStorageSheet(existing) {
           ? bunkerResult({ width: getNum(root, 's-width'), length: getNum(root, 's-length'), angleDeg: angleOfRepose, testWeight })
           : siloResult({ radius: getNum(root, 's-radius'), height: getNum(root, 's-height'), coneAngle: getNum(root, 's-cone'), angleOfRepose, testWeight, fillState });
         preview.textContent = `${num(r.tons, 1)} t`;
+        if (kind === 'bunker' && tarpWidthEl) {
+          const t = bunkerTarpRequirement({
+            width: getNum(root, 's-width'), length: getNum(root, 's-length'),
+            angleDeg: angleOfRepose, overhangM: getNum(root, 's-overhang'),
+          });
+          tarpWidthEl.textContent = `${num(t.tarpWidthNeeded, 1)} m`;
+          tarpLengthEl.textContent = `${num(t.tarpLengthNeeded, 1)} m`;
+        }
       }
       root.querySelectorAll('input, select').forEach((el) => el.addEventListener('input', recomputePreview));
       recomputePreview();
@@ -316,6 +349,7 @@ function openStorageSheet(existing) {
         } else {
           payload.width = getNum(root, 's-width');
           payload.length = getNum(root, 's-length');
+          payload.tarpOverhangM = getNum(root, 's-overhang');
         }
         db.upsertStorage(payload);
         closeSheet();

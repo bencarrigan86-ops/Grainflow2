@@ -51,3 +51,28 @@ export function bunkerResult({ width, length, angleDeg, testWeight }) {
   const tons = volume * (Number(testWeight) || 0);
   return { height, volume, tons };
 }
+
+/**
+ * Tarp size for a bunker: how much sheet is needed to drape over the peak
+ * and reach the ground on both the width (side) and length (end) slopes,
+ * plus a minimum overhang on each side to peg down — ported from the
+ * "Tarp Req" columns on the Silo Bunker Calc tab.
+ * @param {object} p
+ * @param {number} p.width meters
+ * @param {number} p.length meters
+ * @param {number} p.angleDeg peak angle (grain angle of repose), degrees
+ * @param {number} [p.overhangM] minimum overhang per side, meters (default 1.5)
+ */
+export function bunkerTarpRequirement({ width, length, angleDeg, overhangM = 1.5 }) {
+  const w = Number(width) || 0;
+  const l = Number(length) || 0;
+  const h = (w / 2) * Math.tan((Number(angleDeg) || 0) * D2R);
+  const overhang = Number(overhangM) || 0;
+
+  const slantWidth = 2 * Math.sqrt(h * h + (w / 2) * (w / 2));
+  const slantLength = 2 * Math.sqrt(h * h + (l / 2) * (l / 2));
+  const tarpWidthNeeded = slantWidth + 2 * overhang;
+  const tarpLengthNeeded = slantLength + 2 * overhang;
+
+  return { height: h, slantWidth, slantLength, tarpWidthNeeded, tarpLengthNeeded };
+}
