@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=15';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=15';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=15';
-import { num, tons, esc } from '../fmt.js?v=15';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=15';
+import { db } from '../storage.js?v=16';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=16';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=16';
+import { num, tons, esc } from '../fmt.js?v=16';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=16';
 
 let unsub = null;
 let quickKind = 'silo';
@@ -16,6 +16,11 @@ export function renderStorage(root) {
 
 function paint(root) {
   const { commodities, storages, movements } = db.get();
+  const commodityRollup = storageTonsByCommodity(commodities, storages, movements);
+  const storageTotals = commodityRollup.reduce((acc, r) => ({
+    measuredTons: acc.measuredTons + r.measuredTons,
+    trackedTons: acc.trackedTons + r.trackedTons,
+  }), { measuredTons: 0, trackedTons: 0 });
 
   root.innerHTML = `
     <div class="topbar">
@@ -42,13 +47,18 @@ function paint(root) {
           <table>
             <thead><tr><th>Commodity</th><th>Measured</th><th>Tracked</th></tr></thead>
             <tbody>
-              ${storageTonsByCommodity(commodities, storages, movements).map((r) => `
+              ${commodityRollup.map((r) => `
                 <tr>
                   <td>${esc(r.name)}</td>
                   <td>${num(r.measuredTons, 1)}</td>
                   <td>${num(r.trackedTons, 1)}</td>
                 </tr>`).join('')}
             </tbody>
+            <tfoot><tr>
+              <td>Total</td>
+              <td>${num(storageTotals.measuredTons, 1)}</td>
+              <td>${num(storageTotals.trackedTons, 1)}</td>
+            </tr></tfoot>
           </table>
         </div>
       </div>` : ''}

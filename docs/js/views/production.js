@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=15';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField } from '../derived.js?v=15';
-import { num, tons, ha, esc } from '../fmt.js?v=15';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=15';
+import { db } from '../storage.js?v=16';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField } from '../derived.js?v=16';
+import { num, tons, ha, esc } from '../fmt.js?v=16';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=16';
 
 let unsub = null;
 
@@ -15,6 +15,8 @@ function paint(root) {
   const { commodities, fields, movements } = db.get();
   const rollup = productionByCommodity(commodities, fields, movements).filter((r) => r.fieldCount > 0);
   const groups = groupFieldsByCommodity(commodities, fields, movements);
+  const productionTotals = rollup.reduce((acc, r) => ({ area: acc.area + r.area, tons: acc.tons + r.tons }), { area: 0, tons: 0 });
+  productionTotals.yieldTHa = productionTotals.area > 0 ? productionTotals.tons / productionTotals.area : 0;
 
   root.innerHTML = `
     <div class="topbar">
@@ -39,6 +41,12 @@ function paint(root) {
                   <td>${num(r.tons, 1)}</td>
                 </tr>`).join('')}
             </tbody>
+            <tfoot><tr>
+              <td>Total</td>
+              <td>${num(productionTotals.area, 1)}</td>
+              <td>${num(productionTotals.yieldTHa, 2)}</td>
+              <td>${num(productionTotals.tons, 1)}</td>
+            </tr></tfoot>
           </table>
         </div>`}
       </div>

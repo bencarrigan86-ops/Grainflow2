@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=15';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=15';
-import { num, tons, money, esc } from '../fmt.js?v=15';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=15';
+import { db } from '../storage.js?v=16';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=16';
+import { num, tons, money, esc } from '../fmt.js?v=16';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=16';
 
 let unsub = null;
 
@@ -15,6 +15,12 @@ function paint(root) {
   const { commodities, sales, movements } = db.get();
   const rollup = salesByCommodity(commodities, sales, movements).filter((r) => r.contractCount > 0);
   const groups = groupSalesByCommodity(commodities, sales, movements);
+  const salesTotals = rollup.reduce((acc, r) => ({
+    tons: acc.tons + r.tons,
+    tonsDue: acc.tonsDue + Math.max(0, r.tonsDue),
+    totalValue: acc.totalValue + r.totalValue,
+  }), { tons: 0, tonsDue: 0, totalValue: 0 });
+  salesTotals.avgPrice = salesTotals.tons > 0 ? salesTotals.totalValue / salesTotals.tons : 0;
 
   root.innerHTML = `
     <div class="topbar">
@@ -40,6 +46,13 @@ function paint(root) {
                   <td>${num(r.totalValue, 0)}</td>
                 </tr>`).join('')}
             </tbody>
+            <tfoot><tr>
+              <td>Total</td>
+              <td>${num(salesTotals.tons, 1)}</td>
+              <td>${num(salesTotals.tonsDue, 1)}</td>
+              <td>${num(salesTotals.avgPrice, 2)}</td>
+              <td>${num(salesTotals.totalValue, 0)}</td>
+            </tr></tfoot>
           </table>
         </div>`}
       </div>
