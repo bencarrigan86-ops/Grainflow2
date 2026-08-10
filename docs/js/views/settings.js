@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=9';
-import { num, money, esc } from '../fmt.js?v=9';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=9';
-import { APP_VERSION } from '../version.js?v=9';
+import { db } from '../storage.js?v=10';
+import { num, money, esc } from '../fmt.js?v=10';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=10';
+import { APP_VERSION } from '../version.js?v=10';
 
 let unsub = null;
 
