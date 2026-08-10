@@ -1,5 +1,5 @@
 import { db } from '../storage.js';
-import { productionByCommodity } from '../derived.js';
+import { productionByCommodity, fieldTons } from '../derived.js';
 import { num, tons, ha, esc } from '../fmt.js';
 import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js';
 
@@ -59,7 +59,6 @@ function paint(root) {
 
 function fieldRow(f, commodities) {
   const c = commodities.find((c) => c.id === f.commodityId);
-  const yieldTHa = f.areaHa > 0 ? (Number(f.actualTons) || 0) / f.areaHa : 0;
   return `
     <div class="list-item" data-edit-field="${f.id}">
       <div>
@@ -67,8 +66,8 @@ function fieldRow(f, commodities) {
         <div class="meta">${esc(c ? c.name : 'No commodity')} · ${ha(f.areaHa)}</div>
       </div>
       <div class="right">
-        <div class="main">${tons(f.actualTons || 0)}</div>
-        <div class="meta">${num(yieldTHa, 2)} t/ha</div>
+        <div class="main">${tons(fieldTons(f))}</div>
+        <div class="meta">${num(f.yieldTHa || 0, 2)} t/ha</div>
       </div>
     </div>
   `;
@@ -83,10 +82,20 @@ function openFieldSheet(existing) {
       ${field({ label: 'Field name', id: 'name', value: existing?.name, placeholder: 'e.g. SR1-3' })}
       ${field({ label: 'Area (ha)', id: 'area', type: 'number', step: '0.01', value: existing?.areaHa })}
       ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
-      ${field({ label: 'Actual tons', id: 'tons', type: 'number', step: '0.01', value: existing?.actualTons })}
-      <button class="btn" id="save">Save</button>
+      ${field({ label: 'Yield (t/ha)', id: 'yield', type: 'number', step: '0.01', value: existing?.yieldTHa })}
+      <div class="row"><span class="label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
+      <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
     `;
+
+    const preview = root.querySelector('#tons-preview');
+    const recompute = () => {
+      preview.textContent = tons(getNum(root, 'area') * getNum(root, 'yield'));
+    };
+    root.querySelector('#area').addEventListener('input', recompute);
+    root.querySelector('#yield').addEventListener('input', recompute);
+    recompute();
+
     root.querySelector('#save').addEventListener('click', () => {
       const name = getVal(root, 'name')?.trim();
       if (!name) { root.querySelector('#name').focus(); return; }
@@ -95,7 +104,7 @@ function openFieldSheet(existing) {
         name,
         areaHa: getNum(root, 'area'),
         commodityId: getVal(root, 'commodity'),
-        actualTons: getNum(root, 'tons'),
+        yieldTHa: getNum(root, 'yield'),
       });
       closeSheet();
     });

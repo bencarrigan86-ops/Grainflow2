@@ -65,7 +65,7 @@ export const db = {
       if (idx >= 0) data.commodities[idx] = { ...data.commodities[idx], ...commodity };
     } else {
       data.commodities.push({
-        id: uid(), mtmPrice: 0, openingStock: 0, retainedSeed: 0, ...commodity,
+        mtmPrice: 0, openingStock: 0, retainedSeed: 0, ...commodity, id: uid(),
       });
     }
     persist();
@@ -81,7 +81,7 @@ export const db = {
       const idx = data.fields.findIndex((f) => f.id === field.id);
       if (idx >= 0) data.fields[idx] = { ...data.fields[idx], ...field };
     } else {
-      data.fields.push({ id: uid(), ...field });
+      data.fields.push({ ...field, id: uid() });
     }
     persist();
   },
@@ -96,7 +96,7 @@ export const db = {
       const idx = data.sales.findIndex((s) => s.id === sale.id);
       if (idx >= 0) data.sales[idx] = { ...data.sales[idx], ...sale };
     } else {
-      data.sales.push({ id: uid(), ...sale });
+      data.sales.push({ ...sale, id: uid() });
     }
     persist();
   },
@@ -111,7 +111,7 @@ export const db = {
       const idx = data.storages.findIndex((s) => s.id === storage.id);
       if (idx >= 0) data.storages[idx] = { ...data.storages[idx], ...storage };
     } else {
-      data.storages.push({ id: uid(), ...storage });
+      data.storages.push({ ...storage, id: uid() });
     }
     persist();
   },

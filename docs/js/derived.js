@@ -15,11 +15,15 @@ export function saleEconomics(sale) {
   return { levies, priceExFarm, totalValue, tonsDue };
 }
 
+export function fieldTons(f) {
+  return (Number(f.areaHa) || 0) * (Number(f.yieldTHa) || 0);
+}
+
 export function productionByCommodity(commodities, fields) {
   return commodities.map((c) => {
     const rows = fields.filter((f) => f.commodityId === c.id);
     const area = rows.reduce((s, f) => s + (Number(f.areaHa) || 0), 0);
-    const tons = rows.reduce((s, f) => s + (Number(f.actualTons) || 0), 0);
+    const tons = rows.reduce((s, f) => s + fieldTons(f), 0);
     const yieldTHa = area > 0 ? tons / area : 0;
     return { commodity: c, area, tons, yieldTHa, fieldCount: rows.length };
   });
