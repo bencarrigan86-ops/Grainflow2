@@ -1,5 +1,5 @@
 import { db } from '../storage.js';
-import { salesByCommodity, saleEconomics } from '../derived.js';
+import { salesByCommodity, saleEconomics, contractTolerance, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js';
 import { num, tons, money, esc } from '../fmt.js';
 import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js';
 
@@ -57,6 +57,15 @@ function paint(root) {
   root.querySelector('#add-sale').addEventListener('click', () => openSaleSheet(null));
 }
 
+function fillBadge(s, econ) {
+  if (econ.isOverDelivered) {
+    const overBy = (Number(s.tonsDelivered) || 0) - econ.maxTons;
+    return `<span class="badge neg">Over by ${num(overBy, 1)} t</span>`;
+  }
+  if (econ.isFull) return `<span class="badge pos">Contract full</span>`;
+  return `<span class="badge neg">${num(econ.tonsToFill, 1)} t to fill</span>`;
+}
+
 function saleRow(s, commodities) {
   const c = commodities.find((c) => c.id === s.commodityId);
   const econ = saleEconomics(s);
@@ -68,7 +77,7 @@ function saleRow(s, commodities) {
       </div>
       <div class="right">
         <div class="main">${money(econ.totalValue, 0)}</div>
-        <div class="meta">${econ.tonsDue > 0.001 ? `${num(econ.tonsDue, 1)} t due` : 'Delivered'}</div>
+        <div class="meta">${fillBadge(s, econ)}</div>
       </div>
     </div>
   `;
@@ -95,10 +104,24 @@ function openSaleSheet(existing) {
         ${field({ label: 'Premium/discount ($/t)', id: 'premium', type: 'number', step: '0.01', value: existing?.premiumDiscount ?? 0 })}
         ${field({ label: 'Levies (%)', id: 'levies', type: 'number', step: '0.01', value: existing ? existing.leviesPct * 100 : 1.02, hint: 'e.g. GRDC + state levy' })}
       </div>
+      <div class="grid-2">
+        ${field({ label: 'Tolerance (%)', id: 'tolPct', type: 'number', step: '0.1', value: existing?.tolerancePct ?? DEFAULT_TOLERANCE_PCT })}
+        ${field({ label: 'Tolerance cap (t)', id: 'tolCap', type: 'number', step: '0.1', value: existing?.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS, hint: 'Lesser of the two applies' })}
+      </div>
+      <div class="row"><span class="label">Delivery range</span><span class="value" id="tol-preview">—</span></div>
       ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
-      <button class="btn" id="save">Save</button>
+      <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete sale</button>` : ''}
     `;
+
+    const tolPreview = root.querySelector('#tol-preview');
+    const recomputeTolerance = () => {
+      const { minTons, maxTons } = contractTolerance(getNum(root, 'tons'), getNum(root, 'tolPct'), getNum(root, 'tolCap'));
+      tolPreview.textContent = `${num(minTons, 1)} – ${num(maxTons, 1)} t`;
+    };
+    ['tons', 'tolPct', 'tolCap'].forEach((id) => root.querySelector(`#${id}`).addEventListener('input', recomputeTolerance));
+    recomputeTolerance();
+
     root.querySelector('#save').addEventListener('click', () => {
       db.upsertSale({
         id: existing?.id,
@@ -111,6 +134,8 @@ function openSaleSheet(existing) {
         freight: getNum(root, 'freight'),
         premiumDiscount: getNum(root, 'premium'),
         leviesPct: getNum(root, 'levies') / 100,
+        tolerancePct: getNum(root, 'tolPct'),
+        toleranceCapTons: getNum(root, 'tolCap'),
         notes: getVal(root, 'notes')?.trim(),
       });
       closeSheet();

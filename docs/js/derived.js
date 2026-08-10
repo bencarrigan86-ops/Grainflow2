@@ -1,5 +1,24 @@
 // Roll-up / position calculations shared across views.
 
+export const DEFAULT_TOLERANCE_PCT = 5;
+export const DEFAULT_TOLERANCE_CAP_TONS = 20;
+
+/**
+ * Contract delivery tolerance: buyers typically accept delivery within
+ * +/- the lesser of a percentage of the contract tons or a flat tonnage cap
+ * (e.g. +/-5% or 20t, whichever is smaller) before the contract is
+ * considered filled / over-delivered.
+ */
+export function contractTolerance(tons, tolerancePct = DEFAULT_TOLERANCE_PCT, toleranceCapTons = DEFAULT_TOLERANCE_CAP_TONS) {
+  const t = Number(tons) || 0;
+  const pctAmount = t * ((Number(tolerancePct) || 0) / 100);
+  const capAmount = Number(toleranceCapTons) || 0;
+  const toleranceTons = Math.min(pctAmount, capAmount);
+  const minTons = Math.max(0, t - toleranceTons);
+  const maxTons = t + toleranceTons;
+  return { toleranceTons, minTons, maxTons };
+}
+
 export function saleEconomics(sale) {
   const price = Number(sale.price) || 0;
   const freight = Number(sale.freight) || 0;
@@ -13,7 +32,17 @@ export function saleEconomics(sale) {
   const priceExFarm = netOfFreight + levies + premium;
   const totalValue = tons * priceExFarm;
   const tonsDue = tons - tonsDelivered;
-  return { netOfFreight, levies, priceExFarm, totalValue, tonsDue };
+
+  const { toleranceTons, minTons, maxTons } = contractTolerance(tons, sale.tolerancePct, sale.toleranceCapTons);
+  const isFull = tonsDelivered >= minTons && tons > 0;
+  const isOverDelivered = tonsDelivered > maxTons;
+  const tonsToFill = Math.max(0, minTons - tonsDelivered);
+  const tonsRemainingMax = Math.max(0, maxTons - tonsDelivered);
+
+  return {
+    netOfFreight, levies, priceExFarm, totalValue, tonsDue,
+    toleranceTons, minTons, maxTons, isFull, isOverDelivered, tonsToFill, tonsRemainingMax,
+  };
 }
 
 export function fieldTons(f) {
