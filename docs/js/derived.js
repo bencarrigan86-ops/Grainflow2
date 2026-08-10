@@ -19,13 +19,33 @@ export function contractTolerance(tons, tolerancePct = DEFAULT_TOLERANCE_PCT, to
   return { toleranceTons, minTons, maxTons };
 }
 
-export function saleEconomics(sale) {
+/** Sum of movement tons that were carted to this sale (contract), i.e. delivered by truck. */
+export function movementTonsToSale(saleId, movements) {
+  return (movements || [])
+    .filter((m) => m.toType === 'sale' && m.toId === saleId)
+    .reduce((s, m) => s + (Number(m.tons) || 0), 0);
+}
+
+/** Net tons moved into (positive) or out of (negative) a storage unit via truck movements. */
+export function movementNetForStorage(storageId, movements) {
+  const into = (movements || [])
+    .filter((m) => m.toType === 'silo' && m.toId === storageId)
+    .reduce((s, m) => s + (Number(m.tons) || 0), 0);
+  const outOf = (movements || [])
+    .filter((m) => m.fromType === 'silo' && m.fromId === storageId)
+    .reduce((s, m) => s + (Number(m.tons) || 0), 0);
+  return into - outOf;
+}
+
+export function saleEconomics(sale, movements = []) {
   const price = Number(sale.price) || 0;
   const freight = Number(sale.freight) || 0;
   const premium = Number(sale.premiumDiscount) || 0;
   const leviesPct = Number(sale.leviesPct) || 0;
   const tons = Number(sale.tons) || 0;
-  const tonsDelivered = Number(sale.tonsDelivered) || 0;
+  const manualDelivered = Number(sale.tonsDelivered) || 0;
+  const movementDelivered = movementTonsToSale(sale.id, movements);
+  const tonsDelivered = manualDelivered + movementDelivered;
 
   const netOfFreight = price - freight;
   const levies = -netOfFreight * leviesPct;
@@ -41,6 +61,7 @@ export function saleEconomics(sale) {
 
   return {
     netOfFreight, levies, priceExFarm, totalValue, tonsDue,
+    manualDelivered, movementDelivered, tonsDelivered,
     toleranceTons, minTons, maxTons, isFull, isOverDelivered, tonsToFill, tonsRemainingMax,
   };
 }
@@ -59,14 +80,14 @@ export function productionByCommodity(commodities, fields) {
   });
 }
 
-export function salesByCommodity(commodities, sales) {
+export function salesByCommodity(commodities, sales, movements = []) {
   return commodities.map((c) => {
     const rows = sales.filter((s) => s.commodityId === c.id);
     let tons = 0, tonsDelivered = 0, totalValue = 0;
     rows.forEach((s) => {
-      const econ = saleEconomics(s);
+      const econ = saleEconomics(s, movements);
       tons += Number(s.tons) || 0;
-      tonsDelivered += Number(s.tonsDelivered) || 0;
+      tonsDelivered += econ.tonsDelivered;
       totalValue += econ.totalValue;
     });
     const avgPrice = tons > 0 ? totalValue / tons : 0;
@@ -89,9 +110,9 @@ export function storageStockByCommodity(commodities, storageResults) {
  * Summary ("ultimate report") tab: Opening Stock + Production − Sold − Retained
  * Seed = Unsold tons; Unsold × MTM price = unsold value.
  */
-export function position(commodities, fields, sales) {
+export function position(commodities, fields, sales, movements = []) {
   const prod = productionByCommodity(commodities, fields);
-  const sold = salesByCommodity(commodities, sales);
+  const sold = salesByCommodity(commodities, sales, movements);
 
   return commodities.map((c, i) => {
     const p = prod[i];

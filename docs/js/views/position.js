@@ -1,6 +1,6 @@
-import { db } from '../storage.js';
-import { position, positionTotals } from '../derived.js';
-import { num, tons, money, pct } from '../fmt.js';
+import { db } from '../storage.js?v=6';
+import { position, positionTotals } from '../derived.js?v=6';
+import { num, tons, money, pct } from '../fmt.js?v=6';
 
 let unsub = null;
 
@@ -11,8 +11,8 @@ export function renderPosition(root) {
 }
 
 function paint(root) {
-  const { commodities, fields, sales } = db.get();
-  const rows = position(commodities, fields, sales).filter((r) => r.area > 0 || r.soldTons > 0 || r.commodity.openingStock);
+  const { commodities, fields, sales, movements } = db.get();
+  const rows = position(commodities, fields, sales, movements).filter((r) => r.area > 0 || r.soldTons > 0 || r.commodity.openingStock);
   const totals = positionTotals(rows);
 
   root.innerHTML = `

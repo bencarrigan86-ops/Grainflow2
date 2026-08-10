@@ -1,7 +1,8 @@
-import { db } from '../storage.js';
-import { siloResult, bunkerResult } from '../calc.js';
-import { num, tons, esc } from '../fmt.js';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js';
+import { db } from '../storage.js?v=6';
+import { siloResult, bunkerResult } from '../calc.js?v=6';
+import { movementNetForStorage } from '../derived.js?v=6';
+import { num, tons, esc } from '../fmt.js?v=6';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=6';
 
 let unsub = null;
 let quickKind = 'silo';
@@ -13,7 +14,7 @@ export function renderStorage(root) {
 }
 
 function paint(root) {
-  const { commodities, storages } = db.get();
+  const { commodities, storages, movements } = db.get();
 
   root.innerHTML = `
     <div class="topbar">
@@ -35,7 +36,7 @@ function paint(root) {
 
       <div class="card">
         <h2>Saved silos &amp; bunkers</h2>
-        ${storages.length === 0 ? `<div class="empty">Tap + to save a silo or bunker so you only enter today's level next time.</div>` : storages.map((s) => storageRow(s, commodities)).join('')}
+        ${storages.length === 0 ? `<div class="empty">Tap + to save a silo or bunker so you only enter today's level next time.</div>` : storages.map((s) => storageRow(s, commodities, movements)).join('')}
       </div>
     </div>
     <button class="fab" id="add-storage">+</button>
@@ -175,15 +176,17 @@ function computeStorageTons(s, commodities) {
   });
 }
 
-function storageRow(s, commodities) {
+function storageRow(s, commodities, movements) {
   const c = commodities.find((c) => c.id === s.commodityId);
   const r = computeStorageTons(s, commodities);
   const capPct = s.capacityTons ? Math.min(100, (r.tons / s.capacityTons) * 100) : null;
+  const net = movementNetForStorage(s.id, movements);
   return `
     <div class="list-item" data-edit-storage="${s.id}">
       <div>
         <div class="main">${esc(s.name)} <span class="badge ${s.kind === 'silo' ? 'pos' : 'neg'}" style="background:var(--surface-2);color:var(--text-dim)">${s.kind === 'silo' ? 'Silo' : 'Bunker'}</span></div>
         <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(s.capacityTons, 0)} t cap` : ''}</div>
+        ${net !== 0 ? `<div class="meta">${net > 0 ? '+' : ''}${num(net, 1)} t via movements since last measured</div>` : ''}
       </div>
       <div class="right">
         <div class="main">${tons(r.tons)}</div>
@@ -193,7 +196,8 @@ function storageRow(s, commodities) {
 }
 
 function openStorageSheet(existing) {
-  const { commodities } = db.get();
+  const { commodities, movements } = db.get();
+  const movementNet = existing ? movementNetForStorage(existing.id, movements) : 0;
   let kind = existing?.kind || 'silo';
 
   const body = openSheet(existing ? 'Edit storage' : 'Add storage', (root) => {
@@ -235,7 +239,10 @@ function openStorageSheet(existing) {
             <button data-fill="decline" class="${existing?.fillState === 'decline' ? 'active' : ''}">Declined</button>
           </div>
         </div>` : ''}
-        <button class="btn" id="save">Save</button>
+        <div class="row"><span class="label"><strong>Estimated total</strong></span><span class="value" id="s-total-preview" style="font-size:20px">—</span></div>
+        ${movementNet !== 0 ? `<div class="row"><span class="label">Net via movements</span><span class="value">${movementNet > 0 ? '+' : ''}${num(movementNet, 1)} t</span></div>` : ''}
+        <div class="field hint">Update the measured level here after physically dipping the ${kind}; movements track loads in/out separately.</div>
+        <button class="btn" id="save" style="margin-top:8px">Save</button>
         ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete</button>` : ''}
       `;
 
@@ -257,8 +264,24 @@ function openStorageSheet(existing) {
           if (!btn) return;
           fillState = btn.dataset.fill;
           fillSel.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b === btn));
+          recomputePreview();
         });
       }
+
+      const preview = root.querySelector('#s-total-preview');
+      function recomputePreview() {
+        const c = commodities.find((cc) => cc.id === getVal(root, 's-commodity'));
+        const angleOverride = getVal(root, 's-angle');
+        const twOverride = getVal(root, 's-tw');
+        const angleOfRepose = angleOverride ? parseFloat(angleOverride) : (c?.angleOfRepose ?? 0);
+        const testWeight = twOverride ? parseFloat(twOverride) : (c?.testWeight ?? 0);
+        const r = kind === 'bunker'
+          ? bunkerResult({ width: getNum(root, 's-width'), length: getNum(root, 's-length'), angleDeg: angleOfRepose, testWeight })
+          : siloResult({ radius: getNum(root, 's-radius'), height: getNum(root, 's-height'), coneAngle: getNum(root, 's-cone'), angleOfRepose, testWeight, fillState });
+        preview.textContent = `${num(r.tons, 1)} t`;
+      }
+      root.querySelectorAll('input, select').forEach((el) => el.addEventListener('input', recomputePreview));
+      recomputePreview();
 
       root.querySelector('#save').addEventListener('click', () => {
         const name = getVal(root, 's-name')?.trim();

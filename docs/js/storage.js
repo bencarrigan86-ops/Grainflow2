@@ -26,6 +26,7 @@ function defaultData() {
     fields: [],
     sales: [],
     storages: [],
+    movements: [],
   };
 }
 
@@ -117,6 +118,21 @@ export const db = {
   },
   deleteStorage(id) {
     data.storages = data.storages.filter((s) => s.id !== id);
+    persist();
+  },
+
+  // --- movements (truck tickets) ---
+  upsertMovement(movement) {
+    if (movement.id) {
+      const idx = data.movements.findIndex((m) => m.id === movement.id);
+      if (idx >= 0) data.movements[idx] = { ...data.movements[idx], ...movement };
+    } else {
+      data.movements.push({ ...movement, id: uid() });
+    }
+    persist();
+  },
+  deleteMovement(id) {
+    data.movements = data.movements.filter((m) => m.id !== id);
     persist();
   },
 

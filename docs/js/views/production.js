@@ -1,7 +1,7 @@
-import { db } from '../storage.js';
-import { productionByCommodity, fieldTons } from '../derived.js';
-import { num, tons, ha, esc } from '../fmt.js';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js';
+import { db } from '../storage.js?v=6';
+import { productionByCommodity, fieldTons } from '../derived.js?v=6';
+import { num, tons, ha, esc } from '../fmt.js?v=6';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=6';
 
 let unsub = null;
 
@@ -60,16 +60,19 @@ function paint(root) {
   root.querySelector('#add-field').addEventListener('click', () => openFieldSheet(null));
 }
 
+function byName(a, b) {
+  return (a.name || '').localeCompare(b.name || '');
+}
+
 function groupFieldsByCommodity(commodities, fields) {
   const groups = commodities
     .map((c) => {
-      const rows = fields.filter((f) => f.commodityId === c.id).sort((a, b) => a.name.localeCompare(b.name));
+      const rows = fields.filter((f) => f.commodityId === c.id).sort(byName);
       return { id: c.id, name: c.name, fields: rows, totalTons: rows.reduce((s, f) => s + fieldTons(f), 0) };
     })
     .filter((g) => g.fields.length > 0);
 
-  const noCommodity = fields.filter((f) => !commodities.some((c) => c.id === f.commodityId))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const noCommodity = fields.filter((f) => !commodities.some((c) => c.id === f.commodityId)).sort(byName);
   if (noCommodity.length > 0) {
     groups.push({ id: null, name: 'No commodity', fields: noCommodity, totalTons: noCommodity.reduce((s, f) => s + fieldTons(f), 0) });
   }

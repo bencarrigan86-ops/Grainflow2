@@ -1,7 +1,7 @@
-import { db } from '../storage.js';
-import { salesByCommodity, saleEconomics, contractTolerance, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js';
-import { num, tons, money, esc } from '../fmt.js';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js';
+import { db } from '../storage.js?v=6';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=6';
+import { num, tons, money, esc } from '../fmt.js?v=6';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=6';
 
 let unsub = null;
 
@@ -12,9 +12,9 @@ export function renderSales(root) {
 }
 
 function paint(root) {
-  const { commodities, sales } = db.get();
-  const rollup = salesByCommodity(commodities, sales).filter((r) => r.contractCount > 0);
-  const groups = groupSalesByCommodity(commodities, sales);
+  const { commodities, sales, movements } = db.get();
+  const rollup = salesByCommodity(commodities, sales, movements).filter((r) => r.contractCount > 0);
+  const groups = groupSalesByCommodity(commodities, sales, movements);
 
   root.innerHTML = `
     <div class="topbar">
@@ -47,7 +47,7 @@ function paint(root) {
         <h2><span class="dot input"></span>Contracts</h2>
         ${groups.length === 0 ? `<div class="empty">Tap + to add your first sale.</div>` : groups.map((g) => `
           <div class="group-label"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
-          ${g.sales.map((s) => saleRow(s)).join('')}
+          ${g.sales.map((s) => saleRow(s, movements)).join('')}
         `).join('')}
       </div>
     </div>
@@ -60,50 +60,60 @@ function paint(root) {
   root.querySelector('#add-sale').addEventListener('click', () => openSaleSheet(null));
 }
 
-function groupSalesByCommodity(commodities, sales) {
+function groupSalesByCommodity(commodities, sales, movements) {
   const groups = commodities
     .map((c) => {
       const rows = sales.filter((s) => s.commodityId === c.id).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-      return { id: c.id, name: c.name, sales: rows, totalValue: rows.reduce((sum, s) => sum + saleEconomics(s).totalValue, 0) };
+      return { id: c.id, name: c.name, sales: rows, totalValue: rows.reduce((sum, s) => sum + saleEconomics(s, movements).totalValue, 0) };
     })
     .filter((g) => g.sales.length > 0);
 
   const noCommodity = sales.filter((s) => !commodities.some((c) => c.id === s.commodityId))
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   if (noCommodity.length > 0) {
-    groups.push({ id: null, name: 'No commodity', sales: noCommodity, totalValue: noCommodity.reduce((sum, s) => sum + saleEconomics(s).totalValue, 0) });
+    groups.push({ id: null, name: 'No commodity', sales: noCommodity, totalValue: noCommodity.reduce((sum, s) => sum + saleEconomics(s, movements).totalValue, 0) });
   }
   return groups;
 }
 
-function fillBadge(s, econ) {
+function fillBadge(econ) {
   if (econ.isOverDelivered) {
-    const overBy = (Number(s.tonsDelivered) || 0) - econ.maxTons;
+    const overBy = econ.tonsDelivered - econ.maxTons;
     return `<span class="badge neg">Over by ${num(overBy, 1)} t</span>`;
   }
   if (econ.isFull) return `<span class="badge pos">Contract full</span>`;
   return `<span class="badge neg">${num(econ.tonsToFill, 1)} t to fill</span>`;
 }
 
-function saleRow(s) {
-  const econ = saleEconomics(s);
+function deliveryWindow(s) {
+  if (s.deliveryStart && s.deliveryEnd) return `${s.deliveryStart} → ${s.deliveryEnd}`;
+  if (s.deliveryStart) return `from ${s.deliveryStart}`;
+  if (s.deliveryEnd) return `by ${s.deliveryEnd}`;
+  return '';
+}
+
+function saleRow(s, movements) {
+  const econ = saleEconomics(s, movements);
+  const window = deliveryWindow(s);
   return `
     <div class="list-item" data-edit-sale="${s.id}">
       <div>
-        <div class="main">${s.buyer ? esc(s.buyer) : 'No buyer'}${s.grade ? ` · ${esc(s.grade)}` : ''}</div>
-        <div class="meta">${esc(s.date || 'No date')} · ${tons(s.tons || 0)} @ ${money(econ.priceExFarm, 2)}/t</div>
+        <div class="main">${s.buyer ? esc(s.buyer) : 'No buyer'}${s.grade ? ` · ${esc(s.grade)}` : ''}${s.contractNo ? ` · #${esc(s.contractNo)}` : ''}${s.brokerNote ? ` · ${esc(s.brokerNote)}` : ''}</div>
+        <div class="meta">${tons(s.tons || 0)} @ ${money(econ.priceExFarm, 2)}/t${econ.movementDelivered > 0 ? ` · ${num(econ.movementDelivered, 1)} t trucked` : ''}</div>
+        <div class="meta">${[s.location, window].filter(Boolean).map(esc).join(' · ') || 'No delivery location/date set'}</div>
       </div>
       <div class="right">
         <div class="main">${money(econ.totalValue, 0)}</div>
-        <div class="meta">${fillBadge(s, econ)}</div>
+        <div class="meta">${fillBadge(econ)}</div>
       </div>
     </div>
   `;
 }
 
 function openSaleSheet(existing) {
-  const { commodities } = db.get();
+  const { commodities, movements } = db.get();
   const commodityOptions = commodities.map((c) => ({ value: c.id, label: c.name }));
+  const movementDelivered = existing ? movementTonsToSale(existing.id, movements) : 0;
 
   openSheet(existing ? 'Edit sale' : 'Add sale', (root) => {
     root.innerHTML = `
@@ -112,11 +122,20 @@ function openSaleSheet(existing) {
         ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
         ${field({ label: 'Grade', id: 'grade', value: existing?.grade, placeholder: 'e.g. APW1, H2' })}
       </div>
-      ${field({ label: 'Buyer', id: 'buyer', value: existing?.buyer, placeholder: 'e.g. CBH, Cargill' })}
+      <div class="grid-2">
+        ${field({ label: 'Buyer', id: 'buyer', value: existing?.buyer, placeholder: 'e.g. CBH, Cargill' })}
+        ${field({ label: 'Contract no.', id: 'contractNo', value: existing?.contractNo })}
+      </div>
+      ${field({ label: 'Location', id: 'location', value: existing?.location, placeholder: 'Delivery site' })}
+      <div class="grid-2">
+        ${field({ label: 'Delivery start', id: 'deliveryStart', type: 'date', value: existing?.deliveryStart })}
+        ${field({ label: 'Delivery finish', id: 'deliveryEnd', type: 'date', value: existing?.deliveryEnd })}
+      </div>
       <div class="grid-2">
         ${field({ label: 'Tons', id: 'tons', type: 'number', step: '0.01', value: existing?.tons })}
-        ${field({ label: 'Tons delivered', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0 })}
+        ${field({ label: 'Tons delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a Movement' })}
       </div>
+      ${movementDelivered > 0 ? `<div class="row"><span class="label">+ Delivered via movements</span><span class="value">${num(movementDelivered, 1)} t</span></div>` : ''}
       <div class="grid-2">
         ${field({ label: 'Price ($/t)', id: 'price', type: 'number', step: '0.01', value: existing?.price })}
         ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
@@ -129,7 +148,8 @@ function openSaleSheet(existing) {
         ${field({ label: 'Tolerance (%)', id: 'tolPct', type: 'number', step: '0.1', value: existing?.tolerancePct ?? DEFAULT_TOLERANCE_PCT })}
         ${field({ label: 'Tolerance cap (t)', id: 'tolCap', type: 'number', step: '0.1', value: existing?.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS, hint: 'Lesser of the two applies' })}
       </div>
-      <div class="row"><span class="label">Delivery range</span><span class="value" id="tol-preview">—</span></div>
+      <div class="row"><span class="label">Tolerance range</span><span class="value" id="tol-preview">—</span></div>
+      ${field({ label: 'Broker note', id: 'brokerNote', value: existing?.brokerNote })}
       ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
       <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete sale</button>` : ''}
@@ -150,6 +170,10 @@ function openSaleSheet(existing) {
         commodityId: getVal(root, 'commodity'),
         grade: getVal(root, 'grade')?.trim(),
         buyer: getVal(root, 'buyer')?.trim(),
+        contractNo: getVal(root, 'contractNo')?.trim(),
+        location: getVal(root, 'location')?.trim(),
+        deliveryStart: getVal(root, 'deliveryStart'),
+        deliveryEnd: getVal(root, 'deliveryEnd'),
         tons: getNum(root, 'tons'),
         tonsDelivered: getNum(root, 'tonsDelivered'),
         price: getNum(root, 'price'),
@@ -158,6 +182,7 @@ function openSaleSheet(existing) {
         leviesPct: getNum(root, 'levies') / 100,
         tolerancePct: getNum(root, 'tolPct'),
         toleranceCapTons: getNum(root, 'tolCap'),
+        brokerNote: getVal(root, 'brokerNote')?.trim(),
         notes: getVal(root, 'notes')?.trim(),
       });
       closeSheet();
