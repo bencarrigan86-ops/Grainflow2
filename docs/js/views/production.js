@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=19';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea } from '../derived.js?v=19';
-import { num, tons, ha, esc } from '../fmt.js?v=19';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=19';
+import { db } from '../storage.js?v=20';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, groupFieldsByCommodity } from '../derived.js?v=20';
+import { num, tons, ha, esc } from '../fmt.js?v=20';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=20';
 
 let unsub = null;
 
@@ -51,12 +51,6 @@ function paint(root) {
         </div>`}
       </div>
 
-      ${groups.length > 0 ? `
-      <div class="card report">
-        <h2><span class="dot report"></span>Fertiliser (urea)</h2>
-        ${groups.map((g) => ureaTable(g)).join('')}
-      </div>` : ''}
-
       <div class="card input">
         <h2><span class="dot input"></span>Fields</h2>
         ${groups.length === 0 ? `<div class="empty">Tap + to add your first field.</div>` : groups.map((g) => `
@@ -72,67 +66,6 @@ function paint(root) {
     el.addEventListener('click', () => openFieldSheet(fields.find((f) => f.id === el.dataset.editField)));
   });
   root.querySelector('#add-field').addEventListener('click', () => openFieldSheet(null));
-}
-
-function byName(a, b) {
-  return (a.name || '').localeCompare(b.name || '');
-}
-
-function groupFieldsByCommodity(commodities, fields, movements) {
-  const groups = commodities
-    .map((c) => {
-      const rows = fields.filter((f) => f.commodityId === c.id).sort(byName);
-      return { id: c.id, name: c.name, fields: rows, totalTons: rows.reduce((s, f) => s + fieldTons(f, movements), 0) };
-    })
-    .filter((g) => g.fields.length > 0);
-
-  const noCommodity = fields.filter((f) => !commodities.some((c) => c.id === f.commodityId)).sort(byName);
-  if (noCommodity.length > 0) {
-    groups.push({ id: null, name: 'No commodity', fields: noCommodity, totalTons: noCommodity.reduce((s, f) => s + fieldTons(f, movements), 0) });
-  }
-  return groups;
-}
-
-function ureaTable(g) {
-  const rows = g.fields.map((f) => ({ f, u: fieldUrea(f) }));
-  const totals = rows.reduce((acc, { f, u }) => ({
-    area: acc.area + (Number(f.areaHa) || 0),
-    reqT: acc.reqT + u.requiredTons,
-    appT: acc.appT + u.appliedTons,
-    leftT: acc.leftT + u.leftTons,
-  }), { area: 0, reqT: 0, appT: 0, leftT: 0 });
-  const reqKgHa = totals.area > 0 ? (totals.reqT * 1000) / totals.area : 0;
-  const appKgHa = totals.area > 0 ? (totals.appT * 1000) / totals.area : 0;
-
-  return `
-    <div class="group-label"><span>${esc(g.name)}</span></div>
-    <div class="table-scroll">
-      <table>
-        <thead><tr><th>Field</th><th>Area</th><th>Req kg/ha</th><th>App kg/ha</th><th>Req t</th><th>App t</th><th>Left t</th></tr></thead>
-        <tbody>
-          ${rows.map(({ f, u }) => `
-            <tr>
-              <td>${esc(f.name)}</td>
-              <td>${num(f.areaHa, 1)}</td>
-              <td>${num(f.ureaRequiredKgHa || 0, 0)}</td>
-              <td>${num(f.ureaAppliedKgHa || 0, 0)}</td>
-              <td>${num(u.requiredTons, 2)}</td>
-              <td>${num(u.appliedTons, 2)}</td>
-              <td>${num(u.leftTons, 2)}</td>
-            </tr>`).join('')}
-        </tbody>
-        <tfoot><tr>
-          <td>Total</td>
-          <td>${num(totals.area, 1)}</td>
-          <td>${num(reqKgHa, 0)}</td>
-          <td>${num(appKgHa, 0)}</td>
-          <td>${num(totals.reqT, 2)}</td>
-          <td>${num(totals.appT, 2)}</td>
-          <td>${num(totals.leftT, 2)}</td>
-        </tr></tfoot>
-      </table>
-    </div>
-  `;
 }
 
 function fieldRow(f, movements) {

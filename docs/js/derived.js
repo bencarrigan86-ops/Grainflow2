@@ -114,6 +114,26 @@ export function productionByCommodity(commodities, fields, movements = []) {
   });
 }
 
+function byName(a, b) {
+  return (a.name || '').localeCompare(b.name || '');
+}
+
+/** Fields grouped under each commodity (plus a trailing "No commodity" group), sorted by name. */
+export function groupFieldsByCommodity(commodities, fields, movements = []) {
+  const groups = commodities
+    .map((c) => {
+      const rows = fields.filter((f) => f.commodityId === c.id).sort(byName);
+      return { id: c.id, name: c.name, fields: rows, totalTons: rows.reduce((s, f) => s + fieldTons(f, movements), 0) };
+    })
+    .filter((g) => g.fields.length > 0);
+
+  const noCommodity = fields.filter((f) => !commodities.some((c) => c.id === f.commodityId)).sort(byName);
+  if (noCommodity.length > 0) {
+    groups.push({ id: null, name: 'No commodity', fields: noCommodity, totalTons: noCommodity.reduce((s, f) => s + fieldTons(f, movements), 0) });
+  }
+  return groups;
+}
+
 export function salesByCommodity(commodities, sales, movements = []) {
   return commodities.map((c) => {
     const rows = sales.filter((s) => s.commodityId === c.id);
