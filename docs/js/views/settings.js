@@ -1,6 +1,7 @@
 import { db } from '../storage.js';
 import { num, money, esc } from '../fmt.js';
 import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js';
+import { APP_VERSION } from '../version.js';
 
 let unsub = null;
 
@@ -36,6 +37,13 @@ function paint(root) {
         <button class="btn danger small" id="reset" style="margin-top:10px">Reset all data</button>
         <input type="file" id="import-file" accept="application/json" style="display:none" />
       </div>
+
+      <div class="card">
+        <h2>App</h2>
+        <div class="row"><span class="label">Version</span><span class="value">${esc(APP_VERSION)}</span></div>
+        <div class="field hint" style="margin-top:6px">If something looks out of date after an update, tap this to force the app to fetch the latest version.</div>
+        <button class="btn secondary small" id="force-refresh" style="margin-top:6px">Force refresh app</button>
+      </div>
     </div>
     <button class="fab" id="add-commodity">+</button>
   `;
@@ -68,6 +76,18 @@ function paint(root) {
   });
   root.querySelector('#reset').addEventListener('click', () => {
     confirmDelete('Reset all data? This cannot be undone.', () => db.resetAll());
+  });
+
+  root.querySelector('#force-refresh').addEventListener('click', async () => {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+    location.reload();
   });
 }
 
