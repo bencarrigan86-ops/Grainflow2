@@ -76,15 +76,31 @@ export function saleEconomics(sale, movements = []) {
   };
 }
 
-export function fieldTons(f) {
+/** Sum of movement tons carted off this field (actual yield source). */
+export function movementTonsFromField(fieldId, movements) {
+  return (movements || [])
+    .filter((m) => m.fromType === 'field' && m.fromId === fieldId)
+    .reduce((s, m) => s + (Number(m.tons) || 0), 0);
+}
+
+export function estimateFieldTons(f) {
   return (Number(f.areaHa) || 0) * (Number(f.yieldTHa) || 0);
 }
 
-export function productionByCommodity(commodities, fields) {
+/**
+ * A field's tons: either the manual estimate (area x yield), or — once
+ * switched to "actual" — the real tons carted off it per Movement tickets.
+ */
+export function fieldTons(f, movements = []) {
+  if (f.yieldMode === 'actual') return movementTonsFromField(f.id, movements);
+  return estimateFieldTons(f);
+}
+
+export function productionByCommodity(commodities, fields, movements = []) {
   return commodities.map((c) => {
     const rows = fields.filter((f) => f.commodityId === c.id);
     const area = rows.reduce((s, f) => s + (Number(f.areaHa) || 0), 0);
-    const tons = rows.reduce((s, f) => s + fieldTons(f), 0);
+    const tons = rows.reduce((s, f) => s + fieldTons(f, movements), 0);
     const yieldTHa = area > 0 ? tons / area : 0;
     return { commodity: c, area, tons, yieldTHa, fieldCount: rows.length };
   });
@@ -121,7 +137,7 @@ export function storageStockByCommodity(commodities, storageResults) {
  * Seed = Unsold tons; Unsold × MTM price = unsold value.
  */
 export function position(commodities, fields, sales, movements = []) {
-  const prod = productionByCommodity(commodities, fields);
+  const prod = productionByCommodity(commodities, fields, movements);
   const sold = salesByCommodity(commodities, sales, movements);
 
   return commodities.map((c, i) => {

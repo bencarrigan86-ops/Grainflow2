@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=7';
-import { productionByCommodity, fieldTons } from '../derived.js?v=7';
-import { num, tons, ha, esc } from '../fmt.js?v=7';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=7';
+import { db } from '../storage.js?v=8';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField } from '../derived.js?v=8';
+import { num, tons, ha, esc } from '../fmt.js?v=8';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=8';
 
 let unsub = null;
 
@@ -12,9 +12,9 @@ export function renderProduction(root) {
 }
 
 function paint(root) {
-  const { commodities, fields } = db.get();
-  const rollup = productionByCommodity(commodities, fields).filter((r) => r.fieldCount > 0);
-  const groups = groupFieldsByCommodity(commodities, fields);
+  const { commodities, fields, movements } = db.get();
+  const rollup = productionByCommodity(commodities, fields, movements).filter((r) => r.fieldCount > 0);
+  const groups = groupFieldsByCommodity(commodities, fields, movements);
 
   root.innerHTML = `
     <div class="topbar">
@@ -47,7 +47,7 @@ function paint(root) {
         <h2><span class="dot input"></span>Fields</h2>
         ${groups.length === 0 ? `<div class="empty">Tap + to add your first field.</div>` : groups.map((g) => `
           <div class="group-label"><span>${esc(g.name)}</span><span class="n">${tons(g.totalTons)}</span></div>
-          ${g.fields.map((f) => fieldRow(f)).join('')}
+          ${g.fields.map((f) => fieldRow(f, movements)).join('')}
         `).join('')}
       </div>
     </div>
@@ -64,57 +64,81 @@ function byName(a, b) {
   return (a.name || '').localeCompare(b.name || '');
 }
 
-function groupFieldsByCommodity(commodities, fields) {
+function groupFieldsByCommodity(commodities, fields, movements) {
   const groups = commodities
     .map((c) => {
       const rows = fields.filter((f) => f.commodityId === c.id).sort(byName);
-      return { id: c.id, name: c.name, fields: rows, totalTons: rows.reduce((s, f) => s + fieldTons(f), 0) };
+      return { id: c.id, name: c.name, fields: rows, totalTons: rows.reduce((s, f) => s + fieldTons(f, movements), 0) };
     })
     .filter((g) => g.fields.length > 0);
 
   const noCommodity = fields.filter((f) => !commodities.some((c) => c.id === f.commodityId)).sort(byName);
   if (noCommodity.length > 0) {
-    groups.push({ id: null, name: 'No commodity', fields: noCommodity, totalTons: noCommodity.reduce((s, f) => s + fieldTons(f), 0) });
+    groups.push({ id: null, name: 'No commodity', fields: noCommodity, totalTons: noCommodity.reduce((s, f) => s + fieldTons(f, movements), 0) });
   }
   return groups;
 }
 
-function fieldRow(f) {
+function fieldRow(f, movements) {
+  const isActual = f.yieldMode === 'actual';
+  const t = fieldTons(f, movements);
+  const yieldTHa = f.areaHa > 0 ? t / f.areaHa : 0;
   return `
     <div class="list-item" data-edit-field="${f.id}">
       <div>
         <div class="main">${esc(f.name)}</div>
-        <div class="meta">${ha(f.areaHa)}</div>
+        <div class="meta">${ha(f.areaHa)} · <span class="badge ${isActual ? 'pos' : 'neg'}">${isActual ? 'Actual' : 'Estimate'}</span></div>
       </div>
       <div class="right">
-        <div class="main">${tons(fieldTons(f))}</div>
-        <div class="meta">${num(f.yieldTHa || 0, 2)} t/ha</div>
+        <div class="main">${tons(t)}</div>
+        <div class="meta">${num(yieldTHa, 2)} t/ha</div>
       </div>
     </div>
   `;
 }
 
 function openFieldSheet(existing) {
-  const { commodities } = db.get();
+  const { commodities, movements } = db.get();
   const commodityOptions = commodities.map((c) => ({ value: c.id, label: c.name }));
+  const actualTons = existing ? movementTonsFromField(existing.id, movements) : 0;
 
   const body = openSheet(existing ? 'Edit field' : 'Add field', (root) => {
     root.innerHTML = `
       ${field({ label: 'Field name', id: 'name', value: existing?.name, placeholder: 'e.g. SR1-3' })}
       ${field({ label: 'Area (ha)', id: 'area', type: 'number', step: '0.01', value: existing?.areaHa })}
       ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
-      ${field({ label: 'Yield (t/ha)', id: 'yield', type: 'number', step: '0.01', value: existing?.yieldTHa })}
+      ${field({ label: 'Yield estimate (t/ha)', id: 'yield', type: 'number', step: '0.01', value: existing?.yieldTHa })}
+      <div class="field">
+        <label>Drive tons from</label>
+        <div class="segmented" id="f-mode">
+          <button data-mode="estimate" class="${(existing?.yieldMode || 'estimate') === 'estimate' ? 'active' : ''}">Estimate</button>
+          <button data-mode="actual" class="${existing?.yieldMode === 'actual' ? 'active' : ''}">Actual (movements)</button>
+        </div>
+        <div class="hint">Actual sums the Movement tickets carted off this field${actualTons > 0 ? ` — currently ${num(actualTons, 1)} t` : ''}.</div>
+      </div>
       <div class="row"><span class="label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
       <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
     `;
 
+    let yieldMode = existing?.yieldMode || 'estimate';
     const preview = root.querySelector('#tons-preview');
     const recompute = () => {
-      preview.textContent = tons(getNum(root, 'area') * getNum(root, 'yield'));
+      if (yieldMode === 'actual') {
+        preview.textContent = tons(actualTons);
+      } else {
+        preview.textContent = tons(estimateFieldTons({ areaHa: getNum(root, 'area'), yieldTHa: getNum(root, 'yield') }));
+      }
     };
     root.querySelector('#area').addEventListener('input', recompute);
     root.querySelector('#yield').addEventListener('input', recompute);
+    root.querySelector('#f-mode').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-mode]');
+      if (!btn) return;
+      yieldMode = btn.dataset.mode;
+      root.querySelectorAll('#f-mode button').forEach((b) => b.classList.toggle('active', b === btn));
+      recompute();
+    });
     recompute();
 
     root.querySelector('#save').addEventListener('click', () => {
@@ -126,6 +150,7 @@ function openFieldSheet(existing) {
         areaHa: getNum(root, 'area'),
         commodityId: getVal(root, 'commodity'),
         yieldTHa: getNum(root, 'yield'),
+        yieldMode,
       });
       closeSheet();
     });
