@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=20';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, groupFieldsByCommodity } from '../derived.js?v=20';
-import { num, tons, ha, esc } from '../fmt.js?v=20';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=20';
+import { db } from '../storage.js?v=21';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldSeed, groupFieldsByCommodity } from '../derived.js?v=21';
+import { num, tons, ha, esc } from '../fmt.js?v=21';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=21';
 
 let unsub = null;
 
@@ -112,6 +112,12 @@ function openFieldSheet(existing) {
         ${field({ label: 'Urea applied (kg/ha)', id: 'ureaApp', type: 'number', step: '1', value: existing?.ureaAppliedKgHa ?? 0 })}
       </div>
       <div class="row"><span class="label">Urea left</span><span class="value" id="urea-preview">0.0 t</span></div>
+      <hr class="sep" />
+      <div class="grid-2">
+        ${field({ label: 'Seed variety', id: 'seedVariety', value: existing?.seedVariety })}
+        ${field({ label: 'Seed rate (kg/ha)', id: 'seedRate', type: 'number', step: '1', value: existing?.seedRateKgHa ?? 0 })}
+      </div>
+      <div class="row"><span class="label">Seed required</span><span class="value" id="seed-preview">0.0 t</span></div>
       <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
     `;
@@ -119,6 +125,7 @@ function openFieldSheet(existing) {
     let yieldMode = existing?.yieldMode || 'estimate';
     const preview = root.querySelector('#tons-preview');
     const ureaPreview = root.querySelector('#urea-preview');
+    const seedPreview = root.querySelector('#seed-preview');
     const recompute = () => {
       if (yieldMode === 'actual') {
         preview.textContent = tons(actualTons);
@@ -127,11 +134,14 @@ function openFieldSheet(existing) {
       }
       const u = fieldUrea({ areaHa: getNum(root, 'area'), ureaRequiredKgHa: getNum(root, 'ureaReq'), ureaAppliedKgHa: getNum(root, 'ureaApp') });
       ureaPreview.textContent = tons(u.leftTons);
+      const s = fieldSeed({ areaHa: getNum(root, 'area'), seedRateKgHa: getNum(root, 'seedRate') });
+      seedPreview.textContent = tons(s.requiredTons);
     };
     root.querySelector('#area').addEventListener('input', recompute);
     root.querySelector('#yield').addEventListener('input', recompute);
     root.querySelector('#ureaReq').addEventListener('input', recompute);
     root.querySelector('#ureaApp').addEventListener('input', recompute);
+    root.querySelector('#seedRate').addEventListener('input', recompute);
     root.querySelector('#f-mode').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-mode]');
       if (!btn) return;
@@ -153,6 +163,8 @@ function openFieldSheet(existing) {
         yieldMode,
         ureaRequiredKgHa: getNum(root, 'ureaReq'),
         ureaAppliedKgHa: getNum(root, 'ureaApp'),
+        seedVariety: getVal(root, 'seedVariety')?.trim(),
+        seedRateKgHa: getNum(root, 'seedRate'),
       });
       closeSheet();
     });

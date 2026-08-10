@@ -95,6 +95,16 @@ export function fieldUrea(f) {
   return { requiredTons, appliedTons, leftTons: requiredTons - appliedTons };
 }
 
+export const SEED_BUFFER_PCT = 5;
+
+/** A field's seed: rate (kg/ha) converted to tonnes over its area, plus a buffered figure. */
+export function fieldSeed(f, bufferPct = SEED_BUFFER_PCT) {
+  const area = Number(f.areaHa) || 0;
+  const requiredTons = (area * (Number(f.seedRateKgHa) || 0)) / 1000;
+  const bufferedTons = requiredTons * (1 + (Number(bufferPct) || 0) / 100);
+  return { requiredTons, bufferedTons };
+}
+
 /**
  * A field's tons: either the manual estimate (area x yield), or — once
  * switched to "actual" — the real tons carted off it per Movement tickets.
