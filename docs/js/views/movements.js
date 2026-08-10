@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=6';
-import { num, tons, esc } from '../fmt.js?v=6';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=6';
+import { db } from '../storage.js?v=7';
+import { num, tons, esc } from '../fmt.js?v=7';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=7';
 
 let unsub = null;
 

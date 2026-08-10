@@ -1,9 +1,9 @@
-import { renderPosition } from './views/position.js?v=6';
-import { renderProduction } from './views/production.js?v=6';
-import { renderSales } from './views/sales.js?v=6';
-import { renderMovements } from './views/movements.js?v=6';
-import { renderStorage } from './views/storage.js?v=6';
-import { renderSettings } from './views/settings.js?v=6';
+import { renderPosition } from './views/position.js?v=7';
+import { renderProduction } from './views/production.js?v=7';
+import { renderSales } from './views/sales.js?v=7';
+import { renderMovements } from './views/movements.js?v=7';
+import { renderStorage } from './views/storage.js?v=7';
+import { renderSettings } from './views/settings.js?v=7';
 
 const TABS = [
   { id: 'position', label: 'Position', icon: '\u{1F33E}', render: renderPosition },

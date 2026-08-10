@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=6';
-import { siloResult, bunkerResult } from '../calc.js?v=6';
-import { movementNetForStorage } from '../derived.js?v=6';
-import { num, tons, esc } from '../fmt.js?v=6';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=6';
+import { db } from '../storage.js?v=7';
+import { siloResult, bunkerResult } from '../calc.js?v=7';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=7';
+import { num, tons, esc } from '../fmt.js?v=7';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=7';
 
 let unsub = null;
 let quickKind = 'silo';
@@ -180,16 +180,17 @@ function storageRow(s, commodities, movements) {
   const c = commodities.find((c) => c.id === s.commodityId);
   const r = computeStorageTons(s, commodities);
   const capPct = s.capacityTons ? Math.min(100, (r.tons / s.capacityTons) * 100) : null;
-  const net = movementNetForStorage(s.id, movements);
+  const ledger = storageLedgerStock(s, movements);
   return `
     <div class="list-item" data-edit-storage="${s.id}">
       <div>
         <div class="main">${esc(s.name)} <span class="badge ${s.kind === 'silo' ? 'pos' : 'neg'}" style="background:var(--surface-2);color:var(--text-dim)">${s.kind === 'silo' ? 'Silo' : 'Bunker'}</span></div>
         <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(s.capacityTons, 0)} t cap` : ''}</div>
-        ${net !== 0 ? `<div class="meta">${net > 0 ? '+' : ''}${num(net, 1)} t via movements since last measured</div>` : ''}
+        <div class="meta">Tracked stock: ${num(ledger, 1)} t</div>
       </div>
       <div class="right">
         <div class="main">${tons(r.tons)}</div>
+        <div class="meta">measured</div>
       </div>
     </div>
   `;
@@ -197,7 +198,7 @@ function storageRow(s, commodities, movements) {
 
 function openStorageSheet(existing) {
   const { commodities, movements } = db.get();
-  const movementNet = existing ? movementNetForStorage(existing.id, movements) : 0;
+  const fixedMovementNet = existing ? movementNetForStorage(existing.id, movements) : 0;
   let kind = existing?.kind || 'silo';
 
   const body = openSheet(existing ? 'Edit storage' : 'Add storage', (root) => {
@@ -212,6 +213,9 @@ function openStorageSheet(existing) {
         </div>` : ''}
         ${field({ label: 'Name', id: 's-name', value: existing?.name, placeholder: existing?.kind === 'bunker' || kind === 'bunker' ? 'e.g. Bunker 1' : 'e.g. Silo 12 (155t)' })}
         ${field({ label: 'Commodity currently stored', id: 's-commodity', type: 'select', value: existing?.commodityId, options: commodityOptions(commodities) })}
+        ${field({ label: 'Opening / current stock (t)', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
+        <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
+        <hr class="sep" />
         ${kind === 'silo' ? `
           <div class="grid-2">
             ${field({ label: 'Radius (m)', id: 's-radius', type: 'number', step: '0.01', value: existing?.radius })}
@@ -239,9 +243,8 @@ function openStorageSheet(existing) {
             <button data-fill="decline" class="${existing?.fillState === 'decline' ? 'active' : ''}">Declined</button>
           </div>
         </div>` : ''}
-        <div class="row"><span class="label"><strong>Estimated total</strong></span><span class="value" id="s-total-preview" style="font-size:20px">—</span></div>
-        ${movementNet !== 0 ? `<div class="row"><span class="label">Net via movements</span><span class="value">${movementNet > 0 ? '+' : ''}${num(movementNet, 1)} t</span></div>` : ''}
-        <div class="field hint">Update the measured level here after physically dipping the ${kind}; movements track loads in/out separately.</div>
+        <div class="row"><span class="label"><strong>Estimated total (measured)</strong></span><span class="value" id="s-total-preview" style="font-size:20px">—</span></div>
+        <div class="field hint">Set the level above after physically dipping the ${kind}. Tracked stock is separate: it's your opening/current stock figure plus movements in/out, and doesn't need to match the measured estimate exactly.</div>
         <button class="btn" id="save" style="margin-top:8px">Save</button>
         ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete</button>` : ''}
       `;
@@ -268,6 +271,13 @@ function openStorageSheet(existing) {
         });
       }
 
+      const ledgerPreview = root.querySelector('#s-ledger-preview');
+      function recomputeLedger() {
+        ledgerPreview.textContent = `${num(getNum(root, 's-opening') + fixedMovementNet, 1)} t`;
+      }
+      root.querySelector('#s-opening').addEventListener('input', recomputeLedger);
+      recomputeLedger();
+
       const preview = root.querySelector('#s-total-preview');
       function recomputePreview() {
         const c = commodities.find((cc) => cc.id === getVal(root, 's-commodity'));
@@ -293,6 +303,7 @@ function openStorageSheet(existing) {
           kind,
           name,
           commodityId: getVal(root, 's-commodity') || null,
+          openingStock: getNum(root, 's-opening'),
           capacityTons: getNum(root, 's-capacity') || null,
           angleOfRepose: angleOverride ? parseFloat(angleOverride) : null,
           testWeight: twOverride ? parseFloat(twOverride) : null,

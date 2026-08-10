@@ -37,6 +37,16 @@ export function movementNetForStorage(storageId, movements) {
   return into - outOf;
 }
 
+/**
+ * Tracked stock ledger for a storage unit: the opening/current stock the
+ * user last entered, plus everything moved in or out since. Independent of
+ * the geometry-based estimate (siloResult/bunkerResult) — that's a physical
+ * dip/measurement, this is paperwork.
+ */
+export function storageLedgerStock(storage, movements) {
+  return (Number(storage.openingStock) || 0) + movementNetForStorage(storage.id, movements);
+}
+
 export function saleEconomics(sale, movements = []) {
   const price = Number(sale.price) || 0;
   const freight = Number(sale.freight) || 0;
