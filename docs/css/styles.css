@@ -136,6 +136,20 @@ th:first-child, td:first-child { text-align: left; }
 th { color: var(--text-dim); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; }
 .table-scroll { overflow-x: auto; margin: 0 -16px; padding: 0 16px; }
 
+.group-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: var(--text-dim);
+  padding: 14px 4px 4px;
+}
+.group-label:first-child { padding-top: 2px; }
+.group-label .n { font-size: 12.5px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+
 .list-item {
   display: flex;
   justify-content: space-between;

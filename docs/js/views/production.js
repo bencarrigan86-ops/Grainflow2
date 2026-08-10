@@ -14,7 +14,7 @@ export function renderProduction(root) {
 function paint(root) {
   const { commodities, fields } = db.get();
   const rollup = productionByCommodity(commodities, fields).filter((r) => r.fieldCount > 0);
-  const sortedFields = [...fields].sort((a, b) => a.name.localeCompare(b.name));
+  const groups = groupFieldsByCommodity(commodities, fields);
 
   root.innerHTML = `
     <div class="topbar">
@@ -45,7 +45,10 @@ function paint(root) {
 
       <div class="card input">
         <h2><span class="dot input"></span>Fields</h2>
-        ${sortedFields.length === 0 ? `<div class="empty">Tap + to add your first field.</div>` : sortedFields.map((f) => fieldRow(f, commodities)).join('')}
+        ${groups.length === 0 ? `<div class="empty">Tap + to add your first field.</div>` : groups.map((g) => `
+          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${tons(g.totalTons)}</span></div>
+          ${g.fields.map((f) => fieldRow(f)).join('')}
+        `).join('')}
       </div>
     </div>
     <button class="fab" id="add-field">+</button>
@@ -57,13 +60,28 @@ function paint(root) {
   root.querySelector('#add-field').addEventListener('click', () => openFieldSheet(null));
 }
 
-function fieldRow(f, commodities) {
-  const c = commodities.find((c) => c.id === f.commodityId);
+function groupFieldsByCommodity(commodities, fields) {
+  const groups = commodities
+    .map((c) => {
+      const rows = fields.filter((f) => f.commodityId === c.id).sort((a, b) => a.name.localeCompare(b.name));
+      return { id: c.id, name: c.name, fields: rows, totalTons: rows.reduce((s, f) => s + fieldTons(f), 0) };
+    })
+    .filter((g) => g.fields.length > 0);
+
+  const noCommodity = fields.filter((f) => !commodities.some((c) => c.id === f.commodityId))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (noCommodity.length > 0) {
+    groups.push({ id: null, name: 'No commodity', fields: noCommodity, totalTons: noCommodity.reduce((s, f) => s + fieldTons(f), 0) });
+  }
+  return groups;
+}
+
+function fieldRow(f) {
   return `
     <div class="list-item" data-edit-field="${f.id}">
       <div>
         <div class="main">${esc(f.name)}</div>
-        <div class="meta">${esc(c ? c.name : 'No commodity')} · ${ha(f.areaHa)}</div>
+        <div class="meta">${ha(f.areaHa)}</div>
       </div>
       <div class="right">
         <div class="main">${tons(fieldTons(f))}</div>

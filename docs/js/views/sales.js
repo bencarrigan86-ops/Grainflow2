@@ -14,7 +14,7 @@ export function renderSales(root) {
 function paint(root) {
   const { commodities, sales } = db.get();
   const rollup = salesByCommodity(commodities, sales).filter((r) => r.contractCount > 0);
-  const sorted = [...sales].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const groups = groupSalesByCommodity(commodities, sales);
 
   root.innerHTML = `
     <div class="topbar">
@@ -45,7 +45,10 @@ function paint(root) {
 
       <div class="card input">
         <h2><span class="dot input"></span>Contracts</h2>
-        ${sorted.length === 0 ? `<div class="empty">Tap + to add your first sale.</div>` : sorted.map((s) => saleRow(s, commodities)).join('')}
+        ${groups.length === 0 ? `<div class="empty">Tap + to add your first sale.</div>` : groups.map((g) => `
+          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
+          ${g.sales.map((s) => saleRow(s)).join('')}
+        `).join('')}
       </div>
     </div>
     <button class="fab" id="add-sale">+</button>
@@ -57,6 +60,22 @@ function paint(root) {
   root.querySelector('#add-sale').addEventListener('click', () => openSaleSheet(null));
 }
 
+function groupSalesByCommodity(commodities, sales) {
+  const groups = commodities
+    .map((c) => {
+      const rows = sales.filter((s) => s.commodityId === c.id).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      return { id: c.id, name: c.name, sales: rows, totalValue: rows.reduce((sum, s) => sum + saleEconomics(s).totalValue, 0) };
+    })
+    .filter((g) => g.sales.length > 0);
+
+  const noCommodity = sales.filter((s) => !commodities.some((c) => c.id === s.commodityId))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  if (noCommodity.length > 0) {
+    groups.push({ id: null, name: 'No commodity', sales: noCommodity, totalValue: noCommodity.reduce((sum, s) => sum + saleEconomics(s).totalValue, 0) });
+  }
+  return groups;
+}
+
 function fillBadge(s, econ) {
   if (econ.isOverDelivered) {
     const overBy = (Number(s.tonsDelivered) || 0) - econ.maxTons;
@@ -66,13 +85,12 @@ function fillBadge(s, econ) {
   return `<span class="badge neg">${num(econ.tonsToFill, 1)} t to fill</span>`;
 }
 
-function saleRow(s, commodities) {
-  const c = commodities.find((c) => c.id === s.commodityId);
+function saleRow(s) {
   const econ = saleEconomics(s);
   return `
     <div class="list-item" data-edit-sale="${s.id}">
       <div>
-        <div class="main">${esc(c ? c.name : '—')} ${s.buyer ? `· ${esc(s.buyer)}` : ''}</div>
+        <div class="main">${s.buyer ? esc(s.buyer) : 'No buyer'}${s.grade ? ` · ${esc(s.grade)}` : ''}</div>
         <div class="meta">${esc(s.date || 'No date')} · ${tons(s.tons || 0)} @ ${money(econ.priceExFarm, 2)}/t</div>
       </div>
       <div class="right">
@@ -90,7 +108,10 @@ function openSaleSheet(existing) {
   openSheet(existing ? 'Edit sale' : 'Add sale', (root) => {
     root.innerHTML = `
       ${field({ label: 'Date', id: 'date', type: 'date', value: existing?.date })}
-      ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
+      <div class="grid-2">
+        ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
+        ${field({ label: 'Grade', id: 'grade', value: existing?.grade, placeholder: 'e.g. APW1, H2' })}
+      </div>
       ${field({ label: 'Buyer', id: 'buyer', value: existing?.buyer, placeholder: 'e.g. CBH, Cargill' })}
       <div class="grid-2">
         ${field({ label: 'Tons', id: 'tons', type: 'number', step: '0.01', value: existing?.tons })}
@@ -127,6 +148,7 @@ function openSaleSheet(existing) {
         id: existing?.id,
         date: getVal(root, 'date'),
         commodityId: getVal(root, 'commodity'),
+        grade: getVal(root, 'grade')?.trim(),
         buyer: getVal(root, 'buyer')?.trim(),
         tons: getNum(root, 'tons'),
         tonsDelivered: getNum(root, 'tonsDelivered'),
