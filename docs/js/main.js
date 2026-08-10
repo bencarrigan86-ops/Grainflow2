@@ -1,16 +1,18 @@
-import { renderPosition } from './views/position.js?v=8';
-import { renderProduction } from './views/production.js?v=8';
-import { renderSales } from './views/sales.js?v=8';
-import { renderMovements } from './views/movements.js?v=8';
-import { renderStorage } from './views/storage.js?v=8';
-import { renderSettings } from './views/settings.js?v=8';
+import { renderPosition } from './views/position.js?v=9';
+import { renderProduction } from './views/production.js?v=9';
+import { renderSales } from './views/sales.js?v=9';
+import { renderMovements } from './views/movements.js?v=9';
+import { renderStorage } from './views/storage.js?v=9';
+import { renderSettings } from './views/settings.js?v=9';
+
+const SILO_ICON = `<svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M7 8a5 5 0 0 1 10 0v7l-5 6-5-6V8z"/></svg>`;
 
 const TABS = [
   { id: 'position', label: 'Position', icon: '\u{1F33E}', render: renderPosition },
   { id: 'production', label: 'Production', icon: '\u{1F33F}', render: renderProduction },
   { id: 'sales', label: 'Sales', icon: '\u{1F4B5}', render: renderSales },
   { id: 'movement', label: 'Movement', icon: '\u{1F69A}', render: renderMovements },
-  { id: 'storage', label: 'Storage', icon: '\u{1F6E2}', render: renderStorage },
+  { id: 'storage', label: 'Storage', icon: SILO_ICON, render: renderStorage },
   { id: 'settings', label: 'Settings', icon: '⚙️', render: renderSettings },
 ];
 
