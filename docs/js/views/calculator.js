@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=18';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=18';
-import { num } from '../fmt.js?v=18';
-import { field, getVal, getNum } from '../ui.js?v=18';
+import { db } from '../storage.js?v=19';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=19';
+import { num } from '../fmt.js?v=19';
+import { field, getVal, getNum } from '../ui.js?v=19';
 
 let unsub = null;
 let quickKind = 'silo';

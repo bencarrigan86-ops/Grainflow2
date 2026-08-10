@@ -87,6 +87,14 @@ export function estimateFieldTons(f) {
   return (Number(f.areaHa) || 0) * (Number(f.yieldTHa) || 0);
 }
 
+/** A field's urea: kg/ha figures converted to tonnes over its area. */
+export function fieldUrea(f) {
+  const area = Number(f.areaHa) || 0;
+  const requiredTons = (area * (Number(f.ureaRequiredKgHa) || 0)) / 1000;
+  const appliedTons = (area * (Number(f.ureaAppliedKgHa) || 0)) / 1000;
+  return { requiredTons, appliedTons, leftTons: requiredTons - appliedTons };
+}
+
 /**
  * A field's tons: either the manual estimate (area x yield), or — once
  * switched to "actual" — the real tons carted off it per Movement tickets.

@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=18';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField } from '../derived.js?v=18';
-import { num, tons, ha, esc } from '../fmt.js?v=18';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=18';
+import { db } from '../storage.js?v=19';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea } from '../derived.js?v=19';
+import { num, tons, ha, esc } from '../fmt.js?v=19';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=19';
 
 let unsub = null;
 
@@ -51,6 +51,12 @@ function paint(root) {
         </div>`}
       </div>
 
+      ${groups.length > 0 ? `
+      <div class="card report">
+        <h2><span class="dot report"></span>Fertiliser (urea)</h2>
+        ${groups.map((g) => ureaTable(g)).join('')}
+      </div>` : ''}
+
       <div class="card input">
         <h2><span class="dot input"></span>Fields</h2>
         ${groups.length === 0 ? `<div class="empty">Tap + to add your first field.</div>` : groups.map((g) => `
@@ -85,6 +91,48 @@ function groupFieldsByCommodity(commodities, fields, movements) {
     groups.push({ id: null, name: 'No commodity', fields: noCommodity, totalTons: noCommodity.reduce((s, f) => s + fieldTons(f, movements), 0) });
   }
   return groups;
+}
+
+function ureaTable(g) {
+  const rows = g.fields.map((f) => ({ f, u: fieldUrea(f) }));
+  const totals = rows.reduce((acc, { f, u }) => ({
+    area: acc.area + (Number(f.areaHa) || 0),
+    reqT: acc.reqT + u.requiredTons,
+    appT: acc.appT + u.appliedTons,
+    leftT: acc.leftT + u.leftTons,
+  }), { area: 0, reqT: 0, appT: 0, leftT: 0 });
+  const reqKgHa = totals.area > 0 ? (totals.reqT * 1000) / totals.area : 0;
+  const appKgHa = totals.area > 0 ? (totals.appT * 1000) / totals.area : 0;
+
+  return `
+    <div class="group-label"><span>${esc(g.name)}</span></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Field</th><th>Area</th><th>Req kg/ha</th><th>App kg/ha</th><th>Req t</th><th>App t</th><th>Left t</th></tr></thead>
+        <tbody>
+          ${rows.map(({ f, u }) => `
+            <tr>
+              <td>${esc(f.name)}</td>
+              <td>${num(f.areaHa, 1)}</td>
+              <td>${num(f.ureaRequiredKgHa || 0, 0)}</td>
+              <td>${num(f.ureaAppliedKgHa || 0, 0)}</td>
+              <td>${num(u.requiredTons, 2)}</td>
+              <td>${num(u.appliedTons, 2)}</td>
+              <td>${num(u.leftTons, 2)}</td>
+            </tr>`).join('')}
+        </tbody>
+        <tfoot><tr>
+          <td>Total</td>
+          <td>${num(totals.area, 1)}</td>
+          <td>${num(reqKgHa, 0)}</td>
+          <td>${num(appKgHa, 0)}</td>
+          <td>${num(totals.reqT, 2)}</td>
+          <td>${num(totals.appT, 2)}</td>
+          <td>${num(totals.leftT, 2)}</td>
+        </tr></tfoot>
+      </table>
+    </div>
+  `;
 }
 
 function fieldRow(f, movements) {
@@ -125,21 +173,32 @@ function openFieldSheet(existing) {
         <div class="hint">Actual sums the Movement tickets carted off this field${actualTons > 0 ? ` — currently ${num(actualTons, 1)} t` : ''}.</div>
       </div>
       <div class="row"><span class="label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
+      <hr class="sep" />
+      <div class="grid-2">
+        ${field({ label: 'Urea required (kg/ha)', id: 'ureaReq', type: 'number', step: '1', value: existing?.ureaRequiredKgHa ?? 0 })}
+        ${field({ label: 'Urea applied (kg/ha)', id: 'ureaApp', type: 'number', step: '1', value: existing?.ureaAppliedKgHa ?? 0 })}
+      </div>
+      <div class="row"><span class="label">Urea left</span><span class="value" id="urea-preview">0.0 t</span></div>
       <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
     `;
 
     let yieldMode = existing?.yieldMode || 'estimate';
     const preview = root.querySelector('#tons-preview');
+    const ureaPreview = root.querySelector('#urea-preview');
     const recompute = () => {
       if (yieldMode === 'actual') {
         preview.textContent = tons(actualTons);
       } else {
         preview.textContent = tons(estimateFieldTons({ areaHa: getNum(root, 'area'), yieldTHa: getNum(root, 'yield') }));
       }
+      const u = fieldUrea({ areaHa: getNum(root, 'area'), ureaRequiredKgHa: getNum(root, 'ureaReq'), ureaAppliedKgHa: getNum(root, 'ureaApp') });
+      ureaPreview.textContent = tons(u.leftTons);
     };
     root.querySelector('#area').addEventListener('input', recompute);
     root.querySelector('#yield').addEventListener('input', recompute);
+    root.querySelector('#ureaReq').addEventListener('input', recompute);
+    root.querySelector('#ureaApp').addEventListener('input', recompute);
     root.querySelector('#f-mode').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-mode]');
       if (!btn) return;
@@ -159,6 +218,8 @@ function openFieldSheet(existing) {
         commodityId: getVal(root, 'commodity'),
         yieldTHa: getNum(root, 'yield'),
         yieldMode,
+        ureaRequiredKgHa: getNum(root, 'ureaReq'),
+        ureaAppliedKgHa: getNum(root, 'ureaApp'),
       });
       closeSheet();
     });
