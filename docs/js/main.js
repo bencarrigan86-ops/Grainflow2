@@ -53,8 +53,18 @@ if (document.readyState !== 'loading') {
   renderActiveView();
 }
 
+// The service worker is off while this app is under active development —
+// an installed SW is exactly what makes a device get stuck on stale code,
+// which defeats the "force refresh" button meant to fix that. Self-heal any
+// device that already has one registered from an earlier build, and re-enable
+// registration (see git history) once the app is ready to ship for real.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      regs.forEach((r) => r.unregister());
+    });
+    if ('caches' in window) {
+      caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+    }
   });
 }
