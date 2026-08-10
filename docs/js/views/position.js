@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=21';
-import { position, positionTotals } from '../derived.js?v=21';
-import { num, tons, money, pct } from '../fmt.js?v=21';
+import { db } from '../storage.js?v=22';
+import { position, positionTotals } from '../derived.js?v=22';
+import { num, tons, money, pct } from '../fmt.js?v=22';
 
 let unsub = null;
 

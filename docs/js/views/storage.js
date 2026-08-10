@@ -1,11 +1,13 @@
-import { db } from '../storage.js?v=21';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=21';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=21';
-import { num, tons, esc } from '../fmt.js?v=21';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=21';
+import { db } from '../storage.js?v=22';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=22';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=22';
+import { num, tons, esc } from '../fmt.js?v=22';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=22';
 
 let unsub = null;
 let listMode = 'chronological';
+let view = 'saved';
+let quickKind = 'silo';
 
 export function renderStorage(root) {
   if (unsub) unsub();
@@ -15,59 +17,81 @@ export function renderStorage(root) {
 
 function paint(root) {
   const { commodities, storages, movements } = db.get();
+
+  root.innerHTML = `
+    <div class="topbar">
+      <div>
+        <h1>Storage</h1>
+        <div class="sub">Saved silos &amp; bunkers, plus a quick calculator</div>
+      </div>
+    </div>
+    <div class="view">
+      <div class="segmented" id="storage-view">
+        <button data-view="saved" class="${view === 'saved' ? 'active' : ''}">Saved</button>
+        <button data-view="calculator" class="${view === 'calculator' ? 'active' : ''}">Calculator</button>
+      </div>
+      <div id="storage-body" style="margin-top:12px"></div>
+    </div>
+    ${view === 'saved' ? `<button class="fab" id="add-storage">+</button>` : ''}
+  `;
+
+  root.querySelector('#storage-view').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-view]');
+    if (!btn) return;
+    view = btn.dataset.view;
+    paint(root);
+  });
+
+  if (view === 'calculator') {
+    paintCalculator(root);
+    return;
+  }
+
   const commodityRollup = storageTonsByCommodity(commodities, storages, movements);
   const storageTotals = commodityRollup.reduce((acc, r) => ({
     measuredTons: acc.measuredTons + r.measuredTons,
     trackedTons: acc.trackedTons + r.trackedTons,
   }), { measuredTons: 0, trackedTons: 0 });
 
-  root.innerHTML = `
-    <div class="topbar">
-      <div>
-        <h1>Storage</h1>
-        <div class="sub">Saved silos &amp; bunkers, tracked by commodity</div>
+  const body = root.querySelector('#storage-body');
+  body.innerHTML = `
+    ${storages.length > 0 ? `
+    <div class="card report">
+      <h2><span class="dot report"></span>By commodity</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Commodity</th><th>Measured</th><th>Tracked</th></tr></thead>
+          <tbody>
+            ${commodityRollup.map((r) => `
+              <tr>
+                <td>${esc(r.name)}</td>
+                <td>${num(r.measuredTons, 1)}</td>
+                <td>${num(r.trackedTons, 1)}</td>
+              </tr>`).join('')}
+          </tbody>
+          <tfoot><tr>
+            <td>Total</td>
+            <td>${num(storageTotals.measuredTons, 1)}</td>
+            <td>${num(storageTotals.trackedTons, 1)}</td>
+          </tr></tfoot>
+        </table>
       </div>
-    </div>
-    <div class="view">
-      ${storages.length > 0 ? `
-      <div class="card report">
-        <h2><span class="dot report"></span>By commodity</h2>
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Commodity</th><th>Measured</th><th>Tracked</th></tr></thead>
-            <tbody>
-              ${commodityRollup.map((r) => `
-                <tr>
-                  <td>${esc(r.name)}</td>
-                  <td>${num(r.measuredTons, 1)}</td>
-                  <td>${num(r.trackedTons, 1)}</td>
-                </tr>`).join('')}
-            </tbody>
-            <tfoot><tr>
-              <td>Total</td>
-              <td>${num(storageTotals.measuredTons, 1)}</td>
-              <td>${num(storageTotals.trackedTons, 1)}</td>
-            </tr></tfoot>
-          </table>
-        </div>
-      </div>` : ''}
+    </div>` : ''}
 
-      <div class="card">
-        <h2>Saved silos &amp; bunkers</h2>
-        ${storages.length > 0 ? `
-        <div class="segmented" id="list-mode">
-          <button data-mode="chronological" class="${listMode === 'chronological' ? 'active' : ''}">Chronological</button>
-          <button data-mode="commodity" class="${listMode === 'commodity' ? 'active' : ''}">By commodity</button>
-        </div>
-        <div style="margin-top:10px">` : ''}
-        ${storages.length === 0 ? `<div class="empty">Tap + to save a silo or bunker so you only enter today's level next time.</div>` : renderStorageList(storages, commodities, movements)}
-        ${storages.length > 0 ? `</div>` : ''}
+    <div class="card">
+      <h2>Saved silos &amp; bunkers</h2>
+      ${storages.length > 0 ? `
+      <div class="segmented" id="list-mode">
+        <button data-mode="chronological" class="${listMode === 'chronological' ? 'active' : ''}">Chronological</button>
+        <button data-mode="commodity" class="${listMode === 'commodity' ? 'active' : ''}">By commodity</button>
       </div>
+      <div style="margin-top:10px">` : ''}
+      ${storages.length === 0 ? `<div class="empty">Tap + to save a silo or bunker so you only enter today's level next time.</div>` : renderStorageList(storages, commodities, movements)}
+      ${storages.length > 0 ? `</div>` : ''}
     </div>
-    <button class="fab" id="add-storage">+</button>
   `;
 
-  const listModeEl = root.querySelector('#list-mode');
+  const listModeEl = body.querySelector('#list-mode');
   if (listModeEl) {
     listModeEl.addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-mode]');
@@ -77,10 +101,156 @@ function paint(root) {
     });
   }
 
-  root.querySelectorAll('[data-edit-storage]').forEach((el) => {
+  body.querySelectorAll('[data-edit-storage]').forEach((el) => {
     el.addEventListener('click', () => openStorageSheet(storages.find((s) => s.id === el.dataset.editStorage)));
   });
   root.querySelector('#add-storage').addEventListener('click', () => openStorageSheet(null));
+}
+
+function paintCalculator(root) {
+  const { commodities } = db.get();
+  const body = root.querySelector('#storage-body');
+  body.innerHTML = `
+    <div class="card">
+      <div class="segmented" id="quick-kind">
+        <button data-kind="silo" class="${quickKind === 'silo' ? 'active' : ''}">Silo</button>
+        <button data-kind="bunker" class="${quickKind === 'bunker' ? 'active' : ''}">Bunker</button>
+      </div>
+      <div id="quick-form" style="margin-top:12px"></div>
+      <div id="quick-result"></div>
+    </div>
+    <div class="field hint" style="padding:0 4px">Quick one-off calc — save it below under Saved if you want to track it day to day.</div>
+  `;
+  body.querySelector('#quick-kind').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-kind]');
+    if (!btn) return;
+    quickKind = btn.dataset.kind;
+    paintCalculator(root);
+  });
+  buildQuickForm(body, commodities);
+}
+
+function commodityOptionsQuick(commodities) {
+  return [{ value: '', label: 'None / manual' }, ...commodities.map((c) => ({ value: c.id, label: c.name }))];
+}
+
+function buildQuickForm(root, commodities) {
+  const formEl = root.querySelector('#quick-form');
+  const resultEl = root.querySelector('#quick-result');
+
+  if (quickKind === 'silo') {
+    formEl.innerHTML = `
+      ${field({ label: 'Commodity (autofills angle &amp; test weight)', id: 'q-commodity', type: 'select', options: commodityOptionsQuick(commodities) })}
+      <div class="grid-2">
+        ${field({ label: 'Radius (m)', id: 'q-radius', type: 'number', step: '0.01' })}
+        ${field({ label: 'Grain height (m)', id: 'q-height', type: 'number', step: '0.01' })}
+      </div>
+      <div class="grid-2">
+        ${field({ label: 'Cone angle (°)', id: 'q-cone', type: 'number', step: '1', value: 0, hint: '0 = flat bottom' })}
+        ${field({ label: 'Angle of repose (°)', id: 'q-angle', type: 'number', step: '1' })}
+      </div>
+      ${field({ label: 'Test weight (t/m³)', id: 'q-tw', type: 'number', step: '0.01' })}
+      <div class="segmented" id="q-fill">
+        <button data-fill="peak" class="active">Peaked</button>
+        <button data-fill="flat">Flat</button>
+        <button data-fill="decline">Declined</button>
+      </div>
+    `;
+    let fillState = 'peak';
+    formEl.querySelector('#q-fill').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-fill]');
+      if (!btn) return;
+      fillState = btn.dataset.fill;
+      formEl.querySelectorAll('#q-fill button').forEach((b) => b.classList.toggle('active', b === btn));
+      recompute();
+    });
+    formEl.querySelector('#q-commodity').addEventListener('change', () => {
+      const c = commodities.find((c) => c.id === getVal(formEl, 'q-commodity'));
+      if (c) {
+        formEl.querySelector('#q-angle').value = c.angleOfRepose ?? '';
+        formEl.querySelector('#q-tw').value = c.testWeight ?? '';
+      }
+      recompute();
+    });
+    formEl.querySelectorAll('input').forEach((el) => el.addEventListener('input', recompute));
+
+    function recompute() {
+      const r = siloResult({
+        radius: getNum(formEl, 'q-radius'),
+        height: getNum(formEl, 'q-height'),
+        coneAngle: getNum(formEl, 'q-cone'),
+        angleOfRepose: getNum(formEl, 'q-angle'),
+        testWeight: getNum(formEl, 'q-tw'),
+        fillState,
+      });
+      resultEl.innerHTML = quickResultHTML(r.tons, [
+        ['Volume', `${num(r.totalVol, 1)} m³`],
+        ['Cone height', `${num(r.coneHeight, 2)} m`],
+        ['Peak/decline height', `${num(r.peakHeight, 2)} m`],
+      ]);
+    }
+    recompute();
+  } else {
+    formEl.innerHTML = `
+      ${field({ label: 'Commodity (autofills angle &amp; test weight)', id: 'q-commodity', type: 'select', options: commodityOptionsQuick(commodities) })}
+      <div class="grid-2">
+        ${field({ label: 'Width (m)', id: 'q-width', type: 'number', step: '0.01' })}
+        ${field({ label: 'Length (m)', id: 'q-length', type: 'number', step: '0.01' })}
+      </div>
+      <div class="grid-2">
+        ${field({ label: 'Peak angle (°)', id: 'q-angle', type: 'number', step: '1', hint: 'Grain angle of repose' })}
+        ${field({ label: 'Test weight (t/m³)', id: 'q-tw', type: 'number', step: '0.01' })}
+      </div>
+      ${field({ label: 'Tarp overhang per side (m)', id: 'q-overhang', type: 'number', step: '0.1', value: 1.5 })}
+    `;
+    formEl.querySelector('#q-commodity').addEventListener('change', () => {
+      const c = commodities.find((c) => c.id === getVal(formEl, 'q-commodity'));
+      if (c) {
+        formEl.querySelector('#q-angle').value = c.angleOfRepose ?? '';
+        formEl.querySelector('#q-tw').value = c.testWeight ?? '';
+      }
+      recompute();
+    });
+    formEl.querySelectorAll('input').forEach((el) => el.addEventListener('input', recompute));
+
+    function recompute() {
+      const r = bunkerResult({
+        width: getNum(formEl, 'q-width'),
+        length: getNum(formEl, 'q-length'),
+        angleDeg: getNum(formEl, 'q-angle'),
+        testWeight: getNum(formEl, 'q-tw'),
+      });
+      const t = bunkerTarpRequirement({
+        width: getNum(formEl, 'q-width'),
+        length: getNum(formEl, 'q-length'),
+        angleDeg: getNum(formEl, 'q-angle'),
+        overhangM: getNum(formEl, 'q-overhang'),
+      });
+      resultEl.innerHTML = quickResultHTML(r.tons, [
+        ['Volume', `${num(r.volume, 1)} m³`],
+        ['Peak height', `${num(r.height, 2)} m`],
+      ]) + tarpResultHTML(t);
+    }
+    recompute();
+  }
+}
+
+function tarpResultHTML(t) {
+  return `
+    <hr class="sep" />
+    <div class="row"><span class="label"><strong>Tarp needed</strong></span></div>
+    <div class="row"><span class="label">Width</span><span class="value">${num(t.tarpWidthNeeded, 1)} m</span></div>
+    <div class="row"><span class="label">Length</span><span class="value">${num(t.tarpLengthNeeded, 1)} m</span></div>
+    <div class="row"><span class="label">Bare minimum to reach ground</span><span class="value">${num(t.slantWidth, 1)} x ${num(t.slantLength, 1)} m</span></div>
+  `;
+}
+
+function quickResultHTML(tonsVal, extraRows) {
+  return `
+    <hr class="sep" />
+    <div class="row"><span class="label"><strong>Tons</strong></span><span class="value" style="font-size:22px">${num(tonsVal, 1)} t</span></div>
+    ${extraRows.map(([l, v]) => `<div class="row"><span class="label">${l}</span><span class="value">${v}</span></div>`).join('')}
+  `;
 }
 
 function storageTonsByCommodity(commodities, storages, movements) {

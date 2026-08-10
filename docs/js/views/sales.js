@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=21';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=21';
-import { num, tons, money, esc } from '../fmt.js?v=21';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=21';
+import { db } from '../storage.js?v=22';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=22';
+import { num, tons, money, esc } from '../fmt.js?v=22';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=22';
 
 let unsub = null;
 
