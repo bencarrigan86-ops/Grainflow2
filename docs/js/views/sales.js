@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=13';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=13';
-import { num, tons, money, esc } from '../fmt.js?v=13';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=13';
+import { db } from '../storage.js?v=14';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=14';
+import { num, tons, money, esc } from '../fmt.js?v=14';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=14';
 
 let unsub = null;
 
@@ -142,7 +142,7 @@ function openSaleSheet(existing) {
         ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
       </div>
       <div class="grid-2">
-        ${field({ label: 'Premium/discount ($/t)', id: 'premium', type: 'number', step: '0.01', value: existing?.premiumDiscount ?? 0 })}
+        ${field({ label: 'Premium/discount ($/t)', id: 'premium', type: 'number', step: '0.01', value: existing?.premiumDiscount ?? 0, allowNegative: true, hint: 'Negative for a discount' })}
         ${field({ label: 'Levies (%)', id: 'levies', type: 'number', step: '0.01', value: existing ? existing.leviesPct * 100 : 1.02, hint: 'e.g. GRDC + state levy' })}
       </div>
       <div class="grid-2">

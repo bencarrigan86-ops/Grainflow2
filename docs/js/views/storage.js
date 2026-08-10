@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=13';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=13';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=13';
-import { num, tons, esc } from '../fmt.js?v=13';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=13';
+import { db } from '../storage.js?v=14';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=14';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=14';
+import { num, tons, esc } from '../fmt.js?v=14';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=14';
 
 let unsub = null;
 let quickKind = 'silo';

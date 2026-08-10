@@ -43,7 +43,7 @@ export function confirmDelete(message, onConfirm) {
   if (window.confirm(message)) onConfirm();
 }
 
-export function field({ label, id, type = 'text', value = '', options = null, step, hint, placeholder }) {
+export function field({ label, id, type = 'text', value = '', options = null, step, hint, placeholder, allowNegative = false }) {
   const val = value === undefined || value === null ? '' : value;
   if (type === 'select') {
     const opts = options.map((o) => `<option value="${o.value}" ${String(o.value) === String(val) ? 'selected' : ''}>${o.label}</option>`).join('');
@@ -54,10 +54,14 @@ export function field({ label, id, type = 'text', value = '', options = null, st
         ${hint ? `<div class="hint">${hint}</div>` : ''}
       </div>`;
   }
+  // inputmode="decimal" gives iOS a numeric keypad with no minus key, so fields
+  // that need negative values (e.g. a discount) must fall back to the default
+  // number keyboard instead, which does include one.
+  const inputmode = type !== 'number' ? 'text' : (allowNegative ? '' : 'decimal');
   return `
     <div class="field">
       <label for="${id}">${label}</label>
-      <input id="${id}" type="${type}" value="${val}" ${step ? `step="${step}"` : ''} ${placeholder ? `placeholder="${placeholder}"` : ''} inputmode="${type === 'number' ? 'decimal' : 'text'}" />
+      <input id="${id}" type="${type}" value="${val}" ${step ? `step="${step}"` : ''} ${placeholder ? `placeholder="${placeholder}"` : ''} ${inputmode ? `inputmode="${inputmode}"` : ''} />
       ${hint ? `<div class="hint">${hint}</div>` : ''}
     </div>`;
 }
