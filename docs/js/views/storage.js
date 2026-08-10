@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=17';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=17';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=17';
-import { num, tons, esc } from '../fmt.js?v=17';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=17';
+import { db } from '../storage.js?v=18';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=18';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=18';
+import { num, tons, esc } from '../fmt.js?v=18';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=18';
 
 let unsub = null;
 let listMode = 'chronological';
@@ -138,12 +138,17 @@ function storageRow(s, commodities, movements) {
   const r = computeStorageTons(s, commodities);
   const capPct = s.capacityTons ? Math.min(100, (r.tons / s.capacityTons) * 100) : null;
   const ledger = storageLedgerStock(s, movements);
+  const angleOfRepose = s.angleOfRepose ?? c?.angleOfRepose ?? 0;
+  const tarp = s.kind === 'bunker'
+    ? bunkerTarpRequirement({ width: s.width, length: s.length, angleDeg: angleOfRepose, overhangM: s.tarpOverhangM ?? 1.5 })
+    : null;
   return `
     <div class="list-item" data-edit-storage="${s.id}">
       <div>
         <div class="main">${esc(s.name)} <span class="badge ${s.kind === 'silo' ? 'pos' : 'neg'}" style="background:var(--surface-2);color:var(--text-dim)">${s.kind === 'silo' ? 'Silo' : 'Bunker'}</span></div>
         <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(s.capacityTons, 0)} t cap` : ''}</div>
         <div class="meta">Tracked stock: ${num(ledger, 1)} t</div>
+        ${tarp ? `<div class="meta">Tarp needed: ${num(tarp.tarpWidthNeeded, 1)} x ${num(tarp.tarpLengthNeeded, 1)} m</div>` : ''}
       </div>
       <div class="right">
         <div class="main">${tons(r.tons)}</div>
