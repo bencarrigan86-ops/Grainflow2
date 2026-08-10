@@ -1,0 +1,129 @@
+import { db } from '../storage.js';
+import { num, money, esc } from '../fmt.js';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js';
+
+let unsub = null;
+
+export function renderSettings(root) {
+  if (unsub) unsub();
+  paint(root);
+  unsub = db.subscribe(() => paint(root));
+}
+
+function paint(root) {
+  const { commodities } = db.get();
+
+  root.innerHTML = `
+    <div class="topbar">
+      <div>
+        <h1>Settings</h1>
+        <div class="sub">Commodities, MTM prices &amp; data</div>
+      </div>
+    </div>
+    <div class="view">
+      <div class="card input">
+        <h2><span class="dot input"></span>Commodities</h2>
+        ${commodities.length === 0 ? `<div class="empty">Tap + to add a commodity.</div>` : commodities.map((c) => commodityRow(c)).join('')}
+      </div>
+
+      <div class="card">
+        <h2>Data</h2>
+        <div class="row"><span class="label">Everything is stored on this device only.</span></div>
+        <div class="swipe-actions">
+          <button class="btn secondary small" id="export">Export backup</button>
+          <button class="btn secondary small" id="import">Import backup</button>
+        </div>
+        <button class="btn danger small" id="reset" style="margin-top:10px">Reset all data</button>
+        <input type="file" id="import-file" accept="application/json" style="display:none" />
+      </div>
+    </div>
+    <button class="fab" id="add-commodity">+</button>
+  `;
+
+  root.querySelectorAll('[data-edit-commodity]').forEach((el) => {
+    el.addEventListener('click', () => openCommoditySheet(commodities.find((c) => c.id === el.dataset.editCommodity)));
+  });
+  root.querySelector('#add-commodity').addEventListener('click', () => openCommoditySheet(null));
+
+  root.querySelector('#export').addEventListener('click', () => {
+    const blob = new Blob([db.exportJSON()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `grainflow-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  const importFile = root.querySelector('#import-file');
+  root.querySelector('#import').addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', async () => {
+    const f = importFile.files[0];
+    if (!f) return;
+    const text = await f.text();
+    try {
+      db.importJSON(text);
+    } catch (e) {
+      alert('Could not read that file.');
+    }
+  });
+  root.querySelector('#reset').addEventListener('click', () => {
+    confirmDelete('Reset all data? This cannot be undone.', () => db.resetAll());
+  });
+}
+
+function commodityRow(c) {
+  return `
+    <div class="list-item" data-edit-commodity="${c.id}">
+      <div>
+        <div class="main">${esc(c.name)}</div>
+        <div class="meta">Angle ${num(c.angleOfRepose, 0)}° · TW ${num(c.testWeight, 2)} t/m³</div>
+      </div>
+      <div class="right">
+        <div class="main">${money(c.mtmPrice, 0)}/t</div>
+        <div class="meta">MTM price</div>
+      </div>
+    </div>
+  `;
+}
+
+function openCommoditySheet(existing) {
+  openSheet(existing ? 'Edit commodity' : 'Add commodity', (root) => {
+    root.innerHTML = `
+      ${field({ label: 'Name', id: 'name', value: existing?.name, placeholder: 'e.g. Wheat' })}
+      <div class="grid-2">
+        ${field({ label: 'Angle of repose (°)', id: 'angle', type: 'number', step: '1', value: existing?.angleOfRepose, hint: 'For silo/bunker peak calc' })}
+        ${field({ label: 'Test weight (t/m³)', id: 'tw', type: 'number', step: '0.01', value: existing?.testWeight })}
+      </div>
+      ${field({ label: 'MTM price ($/t)', id: 'mtm', type: 'number', step: '0.01', value: existing?.mtmPrice ?? 0, hint: 'Used to value unsold position' })}
+      <div class="grid-2">
+        ${field({ label: 'Opening stock (t)', id: 'opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0 })}
+        ${field({ label: 'Retained seed (t)', id: 'seed', type: 'number', step: '0.01', value: existing?.retainedSeed ?? 0 })}
+      </div>
+      <button class="btn" id="save">Save</button>
+      ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete commodity</button>` : ''}
+    `;
+    root.querySelector('#save').addEventListener('click', () => {
+      const name = getVal(root, 'name')?.trim();
+      if (!name) { root.querySelector('#name').focus(); return; }
+      db.upsertCommodity({
+        id: existing?.id,
+        name,
+        angleOfRepose: getNum(root, 'angle'),
+        testWeight: getNum(root, 'tw'),
+        mtmPrice: getNum(root, 'mtm'),
+        openingStock: getNum(root, 'opening'),
+        retainedSeed: getNum(root, 'seed'),
+      });
+      closeSheet();
+    });
+    const del = root.querySelector('#del');
+    if (del) {
+      del.addEventListener('click', () => {
+        confirmDelete(`Delete "${existing.name}"? Fields/sales using it will keep showing it as missing.`, () => {
+          db.deleteCommodity(existing.id);
+          closeSheet();
+        });
+      });
+    }
+  });
+}
