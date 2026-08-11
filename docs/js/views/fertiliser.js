@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=24';
-import { groupFieldsByCommodity, fieldUrea } from '../derived.js?v=24';
-import { num, esc } from '../fmt.js?v=24';
+import { db } from '../storage.js?v=25';
+import { groupFieldsByCommodity, fieldUrea } from '../derived.js?v=25';
+import { num, esc } from '../fmt.js?v=25';
 
 let unsub = null;
 

@@ -12,6 +12,7 @@ function defaultCommodities() {
     { name: 'Faba Beans', angleOfRepose: 25, testWeight: 0.785 },
     { name: 'Canola', angleOfRepose: 26, testWeight: 0.67 },
     { name: 'Sorghum', angleOfRepose: 24, testWeight: 0.77 },
+    { name: 'Fallow', angleOfRepose: 0, testWeight: 0 },
   ].map((c) => ({
     id: uid(),
     mtmPrice: 0,
