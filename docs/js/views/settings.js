@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=27';
-import { num, money, esc } from '../fmt.js?v=27';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=27';
-import { APP_VERSION } from '../version.js?v=27';
+import { db } from '../storage.js?v=28';
+import { num, money, esc } from '../fmt.js?v=28';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=28';
+import { APP_VERSION } from '../version.js?v=28';
 
 let unsub = null;
 
@@ -48,6 +48,11 @@ function paint(root) {
         ${field({ label: 'Depreciation ($)', id: 'oh-depreciation', type: 'number', step: '1', value: overheads.depreciation })}
         ${field({ label: 'Wages ($)', id: 'oh-wages', type: 'number', step: '1', value: overheads.wages })}
         ${field({ label: 'Drawings ($)', id: 'oh-drawings', type: 'number', step: '1', value: overheads.drawings })}
+        ${field({ label: 'Admin ($)', id: 'oh-admin', type: 'number', step: '1', value: overheads.admin })}
+        ${field({ label: 'Energy ($)', id: 'oh-energy', type: 'number', step: '1', value: overheads.energy })}
+        ${field({ label: 'Insurance ($)', id: 'oh-insurance', type: 'number', step: '1', value: overheads.insurance })}
+        ${field({ label: 'R&amp;M ($)', id: 'oh-rm', type: 'number', step: '1', value: overheads.repairsMaintenance })}
+        ${field({ label: 'Other ($)', id: 'oh-other', type: 'number', step: '1', value: overheads.other })}
         <button class="btn" id="save-overheads">Save overheads</button>
       </div>
 
@@ -88,6 +93,11 @@ function paint(root) {
       depreciation: getNum(root, 'oh-depreciation'),
       wages: getNum(root, 'oh-wages'),
       drawings: getNum(root, 'oh-drawings'),
+      admin: getNum(root, 'oh-admin'),
+      energy: getNum(root, 'oh-energy'),
+      insurance: getNum(root, 'oh-insurance'),
+      repairsMaintenance: getNum(root, 'oh-rm'),
+      other: getNum(root, 'oh-other'),
     });
   });
   root.querySelector('#rename-year').addEventListener('click', () => openRenameYearSheet(currentYear));

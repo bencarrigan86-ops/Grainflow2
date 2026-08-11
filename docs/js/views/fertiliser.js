@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=27';
-import { groupFieldsByCommodity, fieldUrea, nitrogenCalc } from '../derived.js?v=27';
-import { num, esc } from '../fmt.js?v=27';
-import { field, getVal, getNum } from '../ui.js?v=27';
+import { db } from '../storage.js?v=28';
+import { groupFieldsByCommodity, fieldUrea, nitrogenCalc } from '../derived.js?v=28';
+import { num, esc } from '../fmt.js?v=28';
+import { field, getVal, getNum } from '../ui.js?v=28';
 
 let unsub = null;
 

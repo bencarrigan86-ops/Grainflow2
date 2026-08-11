@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=27';
-import { position, positionTotals, farmProfitLoss } from '../derived.js?v=27';
-import { num, tons, money, pct } from '../fmt.js?v=27';
+import { db } from '../storage.js?v=28';
+import { position, positionTotals, farmProfitLoss } from '../derived.js?v=28';
+import { num, tons, money, pct } from '../fmt.js?v=28';
 
 let unsub = null;
 
@@ -65,6 +65,11 @@ function farmSummaryCard(totals, overheads, pl) {
       <div class="row"><span class="label">Depreciation</span><span class="value">${money(overheads.depreciation, 0)}</span></div>
       <div class="row"><span class="label">Wages</span><span class="value">${money(overheads.wages, 0)}</span></div>
       <div class="row"><span class="label">Drawings</span><span class="value">${money(overheads.drawings, 0)}</span></div>
+      <div class="row"><span class="label">Admin</span><span class="value">${money(overheads.admin, 0)}</span></div>
+      <div class="row"><span class="label">Energy</span><span class="value">${money(overheads.energy, 0)}</span></div>
+      <div class="row"><span class="label">Insurance</span><span class="value">${money(overheads.insurance, 0)}</span></div>
+      <div class="row"><span class="label">R&amp;M</span><span class="value">${money(overheads.repairsMaintenance, 0)}</span></div>
+      <div class="row"><span class="label">Other</span><span class="value">${money(overheads.other, 0)}</span></div>
       <div class="row"><span class="label">Total overheads</span><span class="value">${money(pl.overheadsTotal, 0)}</span></div>
       <hr class="sep" />
       <div class="row"><span class="label"><strong>${pl.profitLoss >= 0 ? 'Profit' : 'Loss'}</strong></span><span class="value"><span class="badge ${plClass}" style="font-size:16px">${money(pl.profitLoss, 0)}</span></span></div>

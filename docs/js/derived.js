@@ -253,7 +253,12 @@ export function overheadsTotal(overheads) {
     + (Number(o.equipmentRepayments) || 0)
     + (Number(o.depreciation) || 0)
     + (Number(o.wages) || 0)
-    + (Number(o.drawings) || 0);
+    + (Number(o.drawings) || 0)
+    + (Number(o.admin) || 0)
+    + (Number(o.energy) || 0)
+    + (Number(o.insurance) || 0)
+    + (Number(o.repairsMaintenance) || 0)
+    + (Number(o.other) || 0);
 }
 
 /** Whole-farm profit/loss: total gross margin across commodities, less overheads. */

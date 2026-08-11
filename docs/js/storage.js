@@ -24,7 +24,10 @@ function defaultCommodities() {
 }
 
 function defaultOverheads() {
-  return { finance: 0, equipmentRepayments: 0, depreciation: 0, wages: 0, drawings: 0 };
+  return {
+    finance: 0, equipmentRepayments: 0, depreciation: 0, wages: 0, drawings: 0,
+    admin: 0, energy: 0, insurance: 0, repairsMaintenance: 0, other: 0,
+  };
 }
 
 // Nitrogen required per tonne of grain (kg N/t), keyed by normalized commodity
