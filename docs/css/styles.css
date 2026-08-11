@@ -244,6 +244,21 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
   box-shadow: 0 1px 3px rgba(0,0,0,.15);
 }
 
+.year-pill {
+  position: fixed;
+  top: calc(8px + var(--safe-top));
+  right: 12px;
+  z-index: 25;
+  background: var(--accent-summary);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+}
+
 .tabbar {
   position: fixed;
   bottom: 0;

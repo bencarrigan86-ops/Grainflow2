@@ -1,11 +1,12 @@
-import { renderPosition } from './views/position.js?v=22';
-import { renderProduction } from './views/production.js?v=22';
-import { renderFertiliser } from './views/fertiliser.js?v=22';
-import { renderSeed } from './views/seed.js?v=22';
-import { renderSales } from './views/sales.js?v=22';
-import { renderMovements } from './views/movements.js?v=22';
-import { renderStorage } from './views/storage.js?v=22';
-import { renderSettings } from './views/settings.js?v=22';
+import { db } from './storage.js?v=23';
+import { renderPosition } from './views/position.js?v=23';
+import { renderProduction } from './views/production.js?v=23';
+import { renderFertiliser } from './views/fertiliser.js?v=23';
+import { renderSeed } from './views/seed.js?v=23';
+import { renderSales } from './views/sales.js?v=23';
+import { renderMovements } from './views/movements.js?v=23';
+import { renderStorage } from './views/storage.js?v=23';
+import { renderSettings } from './views/settings.js?v=23';
 
 const SILO_ICON = `<svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><polygon points="12,1.5 21,8 3,8"/><rect x="4" y="8.6" width="16" height="2.6"/><rect x="4" y="11.7" width="16" height="2.6"/><rect x="4" y="14.8" width="16" height="2.6"/><polygon points="4,18 20,18 13.2,23 10.8,23"/></svg>`;
 
@@ -50,6 +51,16 @@ function renderActiveView() {
   tab.render(app);
   renderTabbar();
 }
+
+const yearPill = document.getElementById('year-pill');
+function renderYearPill() {
+  yearPill.textContent = db.getCurrentYear();
+}
+yearPill.addEventListener('click', () => {
+  location.hash = '#/settings';
+});
+db.subscribe(renderYearPill);
+renderYearPill();
 
 window.addEventListener('hashchange', renderActiveView);
 window.addEventListener('DOMContentLoaded', () => {

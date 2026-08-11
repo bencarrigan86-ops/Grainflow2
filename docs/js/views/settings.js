@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=22';
-import { num, money, esc } from '../fmt.js?v=22';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=22';
-import { APP_VERSION } from '../version.js?v=22';
+import { db } from '../storage.js?v=23';
+import { num, money, esc } from '../fmt.js?v=23';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=23';
+import { APP_VERSION } from '../version.js?v=23';
 
 let unsub = null;
 
@@ -13,6 +13,8 @@ export function renderSettings(root) {
 
 function paint(root) {
   const { commodities } = db.get();
+  const years = db.getYears();
+  const currentYear = db.getCurrentYear();
 
   root.innerHTML = `
     <div class="topbar">
@@ -22,6 +24,13 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      <div class="card">
+        <h2>Season</h2>
+        ${field({ label: 'Viewing', id: 'year-select', type: 'select', value: currentYear, options: years.map((y) => ({ value: y, label: y })) })}
+        <button class="btn secondary small" id="new-year" style="margin-top:6px">Start new year&hellip;</button>
+        ${years.length > 1 ? `<button class="btn danger small" id="delete-year" style="margin-top:8px">Delete "${esc(currentYear)}" season</button>` : ''}
+      </div>
+
       <div class="card input">
         <h2><span class="dot input"></span>Commodities</h2>
         ${commodities.length === 0 ? `<div class="empty">Tap + to add a commodity.</div>` : commodities.map((c) => commodityRow(c)).join('')}
@@ -52,6 +61,19 @@ function paint(root) {
     el.addEventListener('click', () => openCommoditySheet(commodities.find((c) => c.id === el.dataset.editCommodity)));
   });
   root.querySelector('#add-commodity').addEventListener('click', () => openCommoditySheet(null));
+
+  root.querySelector('#year-select').addEventListener('change', (e) => {
+    db.setCurrentYear(e.target.value);
+  });
+  root.querySelector('#new-year').addEventListener('click', () => openNewYearSheet(currentYear));
+  const deleteYearBtn = root.querySelector('#delete-year');
+  if (deleteYearBtn) {
+    deleteYearBtn.addEventListener('click', () => {
+      confirmDelete(`Delete the "${currentYear}" season? Its fields, silos, sales and movements will be gone for good. Other seasons aren't affected.`, () => {
+        db.deleteYear(currentYear);
+      });
+    });
+  }
 
   root.querySelector('#export').addEventListener('click', () => {
     const blob = new Blob([db.exportJSON()], { type: 'application/json' });
@@ -88,6 +110,28 @@ function paint(root) {
       await Promise.all(keys.map((k) => caches.delete(k)));
     }
     location.reload();
+  });
+}
+
+function openNewYearSheet(currentYear) {
+  const guess = /^\d+$/.test(currentYear) ? String(Number(currentYear) + 1) : '';
+  openSheet('Start new year', (root) => {
+    root.innerHTML = `
+      <div class="field hint" style="margin-bottom:12px">
+        Carries over: field names/areas, silo/bunker names &amp; geometry, and commodities (angle of repose, test weight) — with their commodity assignments kept.<br/><br/>
+        Resets to empty: yield, urea, seed data on fields; grain level, opening stock on silos/bunkers; MTM price, opening stock, retained seed on commodities.<br/><br/>
+        Cleared entirely: sales contracts and truck movements.
+      </div>
+      ${field({ label: 'New year label', id: 'year', value: guess, placeholder: 'e.g. 2027' })}
+      <button class="btn" id="create">Create &amp; switch</button>
+    `;
+    root.querySelector('#create').addEventListener('click', () => {
+      const year = getVal(root, 'year')?.trim();
+      if (!year) { root.querySelector('#year').focus(); return; }
+      const ok = db.createYear(year);
+      if (!ok) { alert(`"${year}" already exists or is invalid.`); return; }
+      closeSheet();
+    });
   });
 }
 

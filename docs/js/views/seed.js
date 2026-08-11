@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=22';
-import { groupFieldsByCommodity, fieldSeed, SEED_BUFFER_PCT } from '../derived.js?v=22';
-import { num, esc } from '../fmt.js?v=22';
+import { db } from '../storage.js?v=23';
+import { groupFieldsByCommodity, fieldSeed, SEED_BUFFER_PCT } from '../derived.js?v=23';
+import { num, esc } from '../fmt.js?v=23';
 
 let unsub = null;
 
