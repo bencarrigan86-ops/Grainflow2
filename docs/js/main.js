@@ -1,12 +1,12 @@
-import { db } from './storage.js?v=25';
-import { renderPosition } from './views/position.js?v=25';
-import { renderProduction } from './views/production.js?v=25';
-import { renderFertiliser } from './views/fertiliser.js?v=25';
-import { renderSeed } from './views/seed.js?v=25';
-import { renderSales } from './views/sales.js?v=25';
-import { renderMovements } from './views/movements.js?v=25';
-import { renderStorage } from './views/storage.js?v=25';
-import { renderSettings } from './views/settings.js?v=25';
+import { db } from './storage.js?v=26';
+import { renderPosition } from './views/position.js?v=26';
+import { renderProduction } from './views/production.js?v=26';
+import { renderFertiliser } from './views/fertiliser.js?v=26';
+import { renderSeed } from './views/seed.js?v=26';
+import { renderSales } from './views/sales.js?v=26';
+import { renderMovements } from './views/movements.js?v=26';
+import { renderStorage } from './views/storage.js?v=26';
+import { renderSettings } from './views/settings.js?v=26';
 
 const SILO_ICON = `<svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><polygon points="12,1.5 21,8 3,8"/><rect x="4" y="8.6" width="16" height="2.6"/><rect x="4" y="11.7" width="16" height="2.6"/><rect x="4" y="14.8" width="16" height="2.6"/><polygon points="4,18 20,18 13.2,23 10.8,23"/></svg>`;
 

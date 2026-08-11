@@ -1,6 +1,7 @@
-import { db } from '../storage.js?v=25';
-import { groupFieldsByCommodity, fieldUrea } from '../derived.js?v=25';
-import { num, esc } from '../fmt.js?v=25';
+import { db } from '../storage.js?v=26';
+import { groupFieldsByCommodity, fieldUrea, nitrogenCalc } from '../derived.js?v=26';
+import { num, esc } from '../fmt.js?v=26';
+import { field, getVal, getNum } from '../ui.js?v=26';
 
 let unsub = null;
 
@@ -22,12 +23,57 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      <div class="card">
+        <h2>Nitrogen calculator</h2>
+        <div id="n-calc-form"></div>
+        <div id="n-calc-result"></div>
+      </div>
       <div class="card report">
         <h2><span class="dot report"></span>Urea</h2>
         ${groups.length === 0 ? `<div class="empty">Add fields with urea rates in the Production tab.</div>` : groups.map((g) => ureaTable(g)).join('')}
       </div>
     </div>
   `;
+  buildNitrogenCalc(root, commodities);
+}
+
+function commodityOptionsCalc(commodities) {
+  return [{ value: '', label: 'None / manual' }, ...commodities.map((c) => ({ value: c.id, label: c.name }))];
+}
+
+function buildNitrogenCalc(root, commodities) {
+  const formEl = root.querySelector('#n-calc-form');
+  const resultEl = root.querySelector('#n-calc-result');
+
+  formEl.innerHTML = `
+    ${field({ label: 'Crop (autofills N required)', id: 'n-commodity', type: 'select', options: commodityOptionsCalc(commodities) })}
+    <div class="grid-2">
+      ${field({ label: 'Target yield (t/ha)', id: 'n-yield', type: 'number', step: '0.1' })}
+      ${field({ label: 'Soil test N (kg/ha)', id: 'n-soil', type: 'number', step: '1' })}
+    </div>
+    ${field({ label: 'N required (kg/t)', id: 'n-per-tonne', type: 'number', step: '1', hint: 'From the crop, or enter your own' })}
+  `;
+  formEl.querySelector('#n-commodity').addEventListener('change', () => {
+    const c = commodities.find((c) => c.id === getVal(formEl, 'n-commodity'));
+    if (c) formEl.querySelector('#n-per-tonne').value = c.nPerTonne ?? '';
+    recompute();
+  });
+  formEl.querySelectorAll('input').forEach((el) => el.addEventListener('input', recompute));
+
+  function recompute() {
+    const r = nitrogenCalc({
+      nPerTonne: getNum(formEl, 'n-per-tonne'),
+      targetYieldTHa: getNum(formEl, 'n-yield'),
+      soilTestN: getNum(formEl, 'n-soil'),
+    });
+    resultEl.innerHTML = `
+      <hr class="sep" />
+      <div class="row"><span class="label">Soil N (urea equivalent)</span><span class="value">${num(r.soilUreaEquivalent, 0)} kg/ha</span></div>
+      <div class="row"><span class="label">Urea required for target yield</span><span class="value">${num(r.ureaForTargetYield, 0)} kg/ha</span></div>
+      <div class="row"><span class="label"><strong>Additional urea required</strong></span><span class="value" style="font-size:22px">${num(r.additionalUreaRequired, 0)} kg/ha</span></div>
+    `;
+  }
+  recompute();
 }
 
 function ureaTable(g) {

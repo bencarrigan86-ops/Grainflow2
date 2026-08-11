@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=25';
-import { num, money, esc } from '../fmt.js?v=25';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=25';
-import { APP_VERSION } from '../version.js?v=25';
+import { db } from '../storage.js?v=26';
+import { num, money, esc } from '../fmt.js?v=26';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=26';
+import { APP_VERSION } from '../version.js?v=26';
 
 let unsub = null;
 
@@ -183,6 +183,7 @@ function openCommoditySheet(existing) {
         ${field({ label: 'Opening stock (t)', id: 'opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0 })}
         ${field({ label: 'Retained seed (t)', id: 'seed', type: 'number', step: '0.01', value: existing?.retainedSeed ?? 0 })}
       </div>
+      ${field({ label: 'N required (kg/t)', id: 'nPerTonne', type: 'number', step: '1', value: existing?.nPerTonne ?? 0, hint: 'Nitrogen per tonne of grain, for the Fert calculator' })}
       <button class="btn" id="save">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete commodity</button>` : ''}
     `;
@@ -197,6 +198,7 @@ function openCommoditySheet(existing) {
         mtmPrice: getNum(root, 'mtm'),
         openingStock: getNum(root, 'opening'),
         retainedSeed: getNum(root, 'seed'),
+        nPerTonne: getNum(root, 'nPerTonne'),
       });
       closeSheet();
     });

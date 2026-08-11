@@ -6,13 +6,13 @@ function uid() {
 
 function defaultCommodities() {
   return [
-    { name: 'Wheat', angleOfRepose: 24, testWeight: 0.82 },
-    { name: 'Barley', angleOfRepose: 27, testWeight: 0.69 },
-    { name: 'Chickpeas', angleOfRepose: 28, testWeight: 0.76 },
-    { name: 'Faba Beans', angleOfRepose: 25, testWeight: 0.785 },
-    { name: 'Canola', angleOfRepose: 26, testWeight: 0.67 },
-    { name: 'Sorghum', angleOfRepose: 24, testWeight: 0.77 },
-    { name: 'Fallow', angleOfRepose: 0, testWeight: 0 },
+    { name: 'Wheat', angleOfRepose: 24, testWeight: 0.82, nPerTonne: 44 },
+    { name: 'Barley', angleOfRepose: 27, testWeight: 0.69, nPerTonne: 34 },
+    { name: 'Chickpeas', angleOfRepose: 28, testWeight: 0.76, nPerTonne: 35 },
+    { name: 'Faba Beans', angleOfRepose: 25, testWeight: 0.785, nPerTonne: 40 },
+    { name: 'Canola', angleOfRepose: 26, testWeight: 0.67, nPerTonne: 0 },
+    { name: 'Sorghum', angleOfRepose: 24, testWeight: 0.77, nPerTonne: 0 },
+    { name: 'Fallow', angleOfRepose: 0, testWeight: 0, nPerTonne: 0 },
   ].map((c) => ({
     id: uid(),
     mtmPrice: 0,
@@ -20,6 +20,25 @@ function defaultCommodities() {
     retainedSeed: 0,
     ...c,
   }));
+}
+
+// Nitrogen required per tonne of grain (kg N/t), keyed by normalized commodity
+// name — used to backfill existing saves from before this field existed.
+const N_PER_TONNE_BY_NAME = {
+  wheat: 44,
+  barley: 34,
+  chickpeas: 35,
+  'chick peas': 35,
+  'faba beans': 40,
+  faba: 40,
+};
+
+function backfillNPerTonne(commodities) {
+  return (commodities || []).map((c) => {
+    if (c.nPerTonne !== undefined) return c;
+    const key = String(c.name || '').trim().toLowerCase();
+    return { ...c, nPerTonne: N_PER_TONNE_BY_NAME[key] ?? 0 };
+  });
 }
 
 function defaultYear() {
@@ -50,17 +69,21 @@ function migrate(parsed) {
       version: 2,
       currentYear: parsed.currentYear && parsed.years[parsed.currentYear] ? parsed.currentYear : Object.keys(parsed.years)[0],
       years: Object.fromEntries(
-        Object.entries(parsed.years).map(([y, yd]) => [y, { ...defaultYear(), ...yd }])
+        Object.entries(parsed.years).map(([y, yd]) => {
+          const merged = { ...defaultYear(), ...yd };
+          return [y, { ...merged, commodities: backfillNPerTonne(merged.commodities) }];
+        })
       ),
     } || fresh;
   }
   // Old flat shape: { commodities, fields, sales, storages, movements }
   if (parsed && (parsed.commodities || parsed.fields || parsed.sales || parsed.storages)) {
     const year = String(new Date().getFullYear());
+    const merged = { ...defaultYear(), ...parsed };
     return {
       version: 2,
       currentYear: year,
-      years: { [year]: { ...defaultYear(), ...parsed } },
+      years: { [year]: { ...merged, commodities: backfillNPerTonne(merged.commodities) } },
     };
   }
   return defaultData();

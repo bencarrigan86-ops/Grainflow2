@@ -95,6 +95,25 @@ export function fieldUrea(f) {
   return { requiredTons, appliedTons, leftTons: requiredTons - appliedTons };
 }
 
+/**
+ * Nitrogen/urea requirement to grow a crop to a target yield, ported from
+ * the Fert tab's Table5 + "Total Urea Required" formula:
+ *   soil N -> urea equivalent = soil test N / urea N%
+ *   urea for target yield = (N required per tonne / urea N%) x target yield
+ *   additional urea required = urea for target yield - soil urea equivalent
+ * (46% is urea's nitrogen content by weight — the standard Australian
+ * urea N%, matching the source workbook.)
+ */
+export const UREA_N_PCT = 46;
+
+export function nitrogenCalc({ nPerTonne, targetYieldTHa, soilTestN, ureaNPct = UREA_N_PCT }) {
+  const pct = (Number(ureaNPct) || 0) / 100;
+  const soilUreaEquivalent = pct > 0 ? (Number(soilTestN) || 0) / pct : 0;
+  const ureaForTargetYield = pct > 0 ? ((Number(nPerTonne) || 0) / pct) * (Number(targetYieldTHa) || 0) : 0;
+  const additionalUreaRequired = ureaForTargetYield - soilUreaEquivalent;
+  return { soilUreaEquivalent, ureaForTargetYield, additionalUreaRequired };
+}
+
 export const SEED_BUFFER_PCT = 5;
 
 /** A field's seed: rate (kg/ha) converted to tonnes over its area, plus a buffered figure. */
