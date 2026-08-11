@@ -110,6 +110,17 @@ export const db = {
     persist();
     return true;
   },
+  renameYear(oldYear, newYear) {
+    const label = String(newYear || '').trim();
+    if (!label || !data.years[oldYear]) return false;
+    if (label === oldYear) return true;
+    if (data.years[label]) return false;
+    data.years[label] = data.years[oldYear];
+    delete data.years[oldYear];
+    if (data.currentYear === oldYear) data.currentYear = label;
+    persist();
+    return true;
+  },
   /**
    * Start a new year, seeded from the currently active one: fields and
    * storages carry over their setup (name, area/geometry, commodity) but

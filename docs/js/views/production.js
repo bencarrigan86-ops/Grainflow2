@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=23';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldSeed, groupFieldsByCommodity } from '../derived.js?v=23';
-import { num, tons, ha, esc } from '../fmt.js?v=23';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=23';
+import { db } from '../storage.js?v=24';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldSeed, groupFieldsByCommodity } from '../derived.js?v=24';
+import { num, tons, ha, esc } from '../fmt.js?v=24';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=24';
 
 let unsub = null;
 

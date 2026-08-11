@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=23';
-import { num, money, esc } from '../fmt.js?v=23';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=23';
-import { APP_VERSION } from '../version.js?v=23';
+import { db } from '../storage.js?v=24';
+import { num, money, esc } from '../fmt.js?v=24';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=24';
+import { APP_VERSION } from '../version.js?v=24';
 
 let unsub = null;
 
@@ -27,7 +27,10 @@ function paint(root) {
       <div class="card">
         <h2>Season</h2>
         ${field({ label: 'Viewing', id: 'year-select', type: 'select', value: currentYear, options: years.map((y) => ({ value: y, label: y })) })}
-        <button class="btn secondary small" id="new-year" style="margin-top:6px">Start new year&hellip;</button>
+        <div class="swipe-actions">
+          <button class="btn secondary small" id="rename-year">Rename "${esc(currentYear)}"&hellip;</button>
+          <button class="btn secondary small" id="new-year">Start new year&hellip;</button>
+        </div>
         ${years.length > 1 ? `<button class="btn danger small" id="delete-year" style="margin-top:8px">Delete "${esc(currentYear)}" season</button>` : ''}
       </div>
 
@@ -65,6 +68,7 @@ function paint(root) {
   root.querySelector('#year-select').addEventListener('change', (e) => {
     db.setCurrentYear(e.target.value);
   });
+  root.querySelector('#rename-year').addEventListener('click', () => openRenameYearSheet(currentYear));
   root.querySelector('#new-year').addEventListener('click', () => openNewYearSheet(currentYear));
   const deleteYearBtn = root.querySelector('#delete-year');
   if (deleteYearBtn) {
@@ -110,6 +114,22 @@ function paint(root) {
       await Promise.all(keys.map((k) => caches.delete(k)));
     }
     location.reload();
+  });
+}
+
+function openRenameYearSheet(currentYear) {
+  openSheet('Rename season', (root) => {
+    root.innerHTML = `
+      ${field({ label: 'New label', id: 'year', value: currentYear, placeholder: 'e.g. 2025' })}
+      <button class="btn" id="rename">Rename</button>
+    `;
+    root.querySelector('#rename').addEventListener('click', () => {
+      const year = getVal(root, 'year')?.trim();
+      if (!year) { root.querySelector('#year').focus(); return; }
+      const ok = db.renameYear(currentYear, year);
+      if (!ok) { alert(`"${year}" is already in use.`); return; }
+      closeSheet();
+    });
   });
 }
 
