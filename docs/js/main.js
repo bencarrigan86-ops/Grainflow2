@@ -1,20 +1,18 @@
-import { db } from './storage.js?v=28';
-import { renderPosition } from './views/position.js?v=28';
-import { renderProduction } from './views/production.js?v=28';
-import { renderFertiliser } from './views/fertiliser.js?v=28';
-import { renderSeed } from './views/seed.js?v=28';
-import { renderSales } from './views/sales.js?v=28';
-import { renderMovements } from './views/movements.js?v=28';
-import { renderStorage } from './views/storage.js?v=28';
-import { renderSettings } from './views/settings.js?v=28';
+import { db } from './storage.js?v=29';
+import { renderPosition } from './views/position.js?v=29';
+import { renderProduction } from './views/production.js?v=29';
+import { renderReports } from './views/reports.js?v=29';
+import { renderSales } from './views/sales.js?v=29';
+import { renderMovements } from './views/movements.js?v=29';
+import { renderStorage } from './views/storage.js?v=29';
+import { renderSettings } from './views/settings.js?v=29';
 
 const SILO_ICON = `<svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><polygon points="12,1.5 21,8 3,8"/><rect x="4" y="8.6" width="16" height="2.6"/><rect x="4" y="11.7" width="16" height="2.6"/><rect x="4" y="14.8" width="16" height="2.6"/><polygon points="4,18 20,18 13.2,23 10.8,23"/></svg>`;
 
 const TABS = [
   { id: 'position', label: 'Position', icon: '\u{1F33E}', render: renderPosition },
   { id: 'production', label: 'Production', icon: '\u{1F33F}', render: renderProduction },
-  { id: 'fertiliser', label: 'Fert', icon: '\u{1F9C2}', render: renderFertiliser },
-  { id: 'seed', label: 'Seed', icon: '\u{1F331}', render: renderSeed },
+  { id: 'reports', label: 'Reports', icon: '\u{1F4CA}', render: renderReports },
   { id: 'sales', label: 'Sales', icon: '\u{1F4B5}', render: renderSales },
   { id: 'movement', label: 'Movement', icon: '\u{1F69A}', render: renderMovements },
   { id: 'storage', label: 'Storage', icon: SILO_ICON, render: renderStorage },
