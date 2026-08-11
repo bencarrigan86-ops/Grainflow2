@@ -18,8 +18,13 @@ function defaultCommodities() {
     mtmPrice: 0,
     openingStock: 0,
     retainedSeed: 0,
+    grossMarginCost: 0,
     ...c,
   }));
+}
+
+function defaultOverheads() {
+  return { finance: 0, equipmentRepayments: 0, depreciation: 0, wages: 0, drawings: 0 };
 }
 
 // Nitrogen required per tonne of grain (kg N/t), keyed by normalized commodity
@@ -48,6 +53,7 @@ function defaultYear() {
     sales: [],
     storages: [],
     movements: [],
+    overheads: defaultOverheads(),
   };
 }
 
@@ -71,7 +77,11 @@ function migrate(parsed) {
       years: Object.fromEntries(
         Object.entries(parsed.years).map(([y, yd]) => {
           const merged = { ...defaultYear(), ...yd };
-          return [y, { ...merged, commodities: backfillNPerTonne(merged.commodities) }];
+          return [y, {
+            ...merged,
+            commodities: backfillNPerTonne(merged.commodities),
+            overheads: { ...defaultOverheads(), ...(yd.overheads || {}) },
+          }];
         })
       ),
     } || fresh;
@@ -83,7 +93,11 @@ function migrate(parsed) {
     return {
       version: 2,
       currentYear: year,
-      years: { [year]: { ...merged, commodities: backfillNPerTonne(merged.commodities) } },
+      years: { [year]: {
+        ...merged,
+        commodities: backfillNPerTonne(merged.commodities),
+        overheads: { ...defaultOverheads(), ...(parsed.overheads || {}) },
+      } },
     };
   }
   return defaultData();
@@ -150,8 +164,9 @@ export const db = {
    * storages carry over their setup (name, area/geometry, commodity) but
    * have their season data (yield, urea, seed, current level, opening
    * stock) reset. Commodities carry over their physical properties (angle
-   * of repose, test weight) but reset MTM price / opening stock / retained
-   * seed. Sales and movements start empty.
+   * of repose, test weight, N required per tonne) but reset MTM price /
+   * opening stock / retained seed / gross margin cost. Overheads reset to
+   * zero. Sales and movements start empty.
    */
   createYear(year) {
     const label = String(year || '').trim();
@@ -167,9 +182,11 @@ export const db = {
         name: c.name,
         angleOfRepose: c.angleOfRepose,
         testWeight: c.testWeight,
+        nPerTonne: c.nPerTonne,
         mtmPrice: 0,
         openingStock: 0,
         retainedSeed: 0,
+        grossMarginCost: 0,
       };
     });
     const mapCommodity = (oldId) => (oldId && idMap.has(oldId) ? idMap.get(oldId) : null);
@@ -206,7 +223,7 @@ export const db = {
       createdAt: Date.now(),
     }));
 
-    data.years[label] = { commodities, fields, storages, sales: [], movements: [] };
+    data.years[label] = { commodities, fields, storages, sales: [], movements: [], overheads: defaultOverheads() };
     data.currentYear = label;
     persist();
     return true;
@@ -228,7 +245,7 @@ export const db = {
       if (idx >= 0) c.commodities[idx] = { ...c.commodities[idx], ...commodity };
     } else {
       c.commodities.push({
-        mtmPrice: 0, openingStock: 0, retainedSeed: 0, ...commodity, id: uid(),
+        mtmPrice: 0, openingStock: 0, retainedSeed: 0, grossMarginCost: 0, ...commodity, id: uid(),
       });
     }
     persist();
@@ -299,6 +316,15 @@ export const db = {
   },
   deleteMovement(id) {
     current().movements = current().movements.filter((m) => m.id !== id);
+    persist();
+  },
+
+  // --- overheads (farm-wide, per season) ---
+  getOverheads() {
+    return current().overheads;
+  },
+  updateOverheads(patch) {
+    current().overheads = { ...current().overheads, ...patch };
     persist();
   },
 

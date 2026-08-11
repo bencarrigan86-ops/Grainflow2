@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=26';
-import { num, money, esc } from '../fmt.js?v=26';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=26';
-import { APP_VERSION } from '../version.js?v=26';
+import { db } from '../storage.js?v=27';
+import { num, money, esc } from '../fmt.js?v=27';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=27';
+import { APP_VERSION } from '../version.js?v=27';
 
 let unsub = null;
 
@@ -15,6 +15,7 @@ function paint(root) {
   const { commodities } = db.get();
   const years = db.getYears();
   const currentYear = db.getCurrentYear();
+  const overheads = db.getOverheads();
 
   root.innerHTML = `
     <div class="topbar">
@@ -37,6 +38,17 @@ function paint(root) {
       <div class="card input">
         <h2><span class="dot input"></span>Commodities</h2>
         ${commodities.length === 0 ? `<div class="empty">Tap + to add a commodity.</div>` : commodities.map((c) => commodityRow(c)).join('')}
+      </div>
+
+      <div class="card">
+        <h2>Overheads</h2>
+        <div class="field hint" style="margin-bottom:6px">Whole-farm costs, subtracted from total gross margin in the Position tab.</div>
+        ${field({ label: 'Finance ($)', id: 'oh-finance', type: 'number', step: '1', value: overheads.finance })}
+        ${field({ label: 'Equipment repayments ($)', id: 'oh-equipment', type: 'number', step: '1', value: overheads.equipmentRepayments })}
+        ${field({ label: 'Depreciation ($)', id: 'oh-depreciation', type: 'number', step: '1', value: overheads.depreciation })}
+        ${field({ label: 'Wages ($)', id: 'oh-wages', type: 'number', step: '1', value: overheads.wages })}
+        ${field({ label: 'Drawings ($)', id: 'oh-drawings', type: 'number', step: '1', value: overheads.drawings })}
+        <button class="btn" id="save-overheads">Save overheads</button>
       </div>
 
       <div class="card">
@@ -67,6 +79,16 @@ function paint(root) {
 
   root.querySelector('#year-select').addEventListener('change', (e) => {
     db.setCurrentYear(e.target.value);
+  });
+
+  root.querySelector('#save-overheads').addEventListener('click', () => {
+    db.updateOverheads({
+      finance: getNum(root, 'oh-finance'),
+      equipmentRepayments: getNum(root, 'oh-equipment'),
+      depreciation: getNum(root, 'oh-depreciation'),
+      wages: getNum(root, 'oh-wages'),
+      drawings: getNum(root, 'oh-drawings'),
+    });
   });
   root.querySelector('#rename-year').addEventListener('click', () => openRenameYearSheet(currentYear));
   root.querySelector('#new-year').addEventListener('click', () => openNewYearSheet(currentYear));
@@ -138,8 +160,8 @@ function openNewYearSheet(currentYear) {
   openSheet('Start new year', (root) => {
     root.innerHTML = `
       <div class="field hint" style="margin-bottom:12px">
-        Carries over: field names/areas, silo/bunker names &amp; geometry, and commodities (angle of repose, test weight) — with their commodity assignments kept.<br/><br/>
-        Resets to empty: yield, urea, seed data on fields; grain level, opening stock on silos/bunkers; MTM price, opening stock, retained seed on commodities.<br/><br/>
+        Carries over: field names/areas, silo/bunker names &amp; geometry, and commodities (angle of repose, test weight, N required) — with their commodity assignments kept.<br/><br/>
+        Resets to empty: yield, urea, seed data on fields; grain level, opening stock on silos/bunkers; MTM price, opening stock, retained seed, gross margin cost on commodities; overheads.<br/><br/>
         Cleared entirely: sales contracts and truck movements.
       </div>
       ${field({ label: 'New year label', id: 'year', value: guess, placeholder: 'e.g. 2027' })}
@@ -184,6 +206,7 @@ function openCommoditySheet(existing) {
         ${field({ label: 'Retained seed (t)', id: 'seed', type: 'number', step: '0.01', value: existing?.retainedSeed ?? 0 })}
       </div>
       ${field({ label: 'N required (kg/t)', id: 'nPerTonne', type: 'number', step: '1', value: existing?.nPerTonne ?? 0, hint: 'Nitrogen per tonne of grain, for the Fert calculator' })}
+      ${field({ label: 'Gross margin cost ($)', id: 'gmCost', type: 'number', step: '1', value: existing?.grossMarginCost ?? 0, hint: 'Total input cost for this commodity, for the Position tab' })}
       <button class="btn" id="save">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete commodity</button>` : ''}
     `;
@@ -199,6 +222,7 @@ function openCommoditySheet(existing) {
         openingStock: getNum(root, 'opening'),
         retainedSeed: getNum(root, 'seed'),
         nPerTonne: getNum(root, 'nPerTonne'),
+        grossMarginCost: getNum(root, 'gmCost'),
       });
       closeSheet();
     });

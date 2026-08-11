@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=26';
-import { position, positionTotals } from '../derived.js?v=26';
-import { num, tons, money, pct } from '../fmt.js?v=26';
+import { db } from '../storage.js?v=27';
+import { position, positionTotals, farmProfitLoss } from '../derived.js?v=27';
+import { num, tons, money, pct } from '../fmt.js?v=27';
 
 let unsub = null;
 
@@ -12,8 +12,10 @@ export function renderPosition(root) {
 
 function paint(root) {
   const { commodities, fields, sales, movements } = db.get();
+  const overheads = db.getOverheads();
   const rows = position(commodities, fields, sales, movements).filter((r) => r.area > 0 || r.soldTons > 0 || r.commodity.openingStock);
   const totals = positionTotals(rows);
+  const pl = farmProfitLoss(totals.grossMargin, overheads);
 
   root.innerHTML = `
     <div class="topbar">
@@ -45,6 +47,27 @@ function paint(root) {
       ${rows.length === 0 ? `<div class="empty">No production, sales or opening stock yet.<br/>Add data in the Production and Sales tabs.</div>` : ''}
 
       ${rows.map((r) => commodityCard(r)).join('')}
+
+      ${rows.length > 0 ? farmSummaryCard(totals, overheads, pl) : ''}
+    </div>
+  `;
+}
+
+function farmSummaryCard(totals, overheads, pl) {
+  const plClass = pl.profitLoss >= 0 ? 'pos' : 'neg';
+  return `
+    <div class="card summary">
+      <h2><span class="dot summary"></span>Whole farm</h2>
+      <div class="row"><span class="label"><strong>Total gross margin</strong></span><span class="value"><strong>${money(totals.grossMargin, 0)}</strong></span></div>
+      <hr class="sep" />
+      <div class="row"><span class="label">Finance</span><span class="value">${money(overheads.finance, 0)}</span></div>
+      <div class="row"><span class="label">Equipment repayments</span><span class="value">${money(overheads.equipmentRepayments, 0)}</span></div>
+      <div class="row"><span class="label">Depreciation</span><span class="value">${money(overheads.depreciation, 0)}</span></div>
+      <div class="row"><span class="label">Wages</span><span class="value">${money(overheads.wages, 0)}</span></div>
+      <div class="row"><span class="label">Drawings</span><span class="value">${money(overheads.drawings, 0)}</span></div>
+      <div class="row"><span class="label">Total overheads</span><span class="value">${money(pl.overheadsTotal, 0)}</span></div>
+      <hr class="sep" />
+      <div class="row"><span class="label"><strong>${pl.profitLoss >= 0 ? 'Profit' : 'Loss'}</strong></span><span class="value"><span class="badge ${plClass}" style="font-size:16px">${money(pl.profitLoss, 0)}</span></span></div>
     </div>
   `;
 }
@@ -74,6 +97,9 @@ function commodityCard(r) {
       <div class="row"><span class="label">Unsold value</span><span class="value">${money(r.unsoldValue, 0)}</span></div>
       <hr class="sep" />
       <div class="row"><span class="label"><strong>Total position value</strong></span><span class="value"><strong>${money(r.totalValue, 0)}</strong></span></div>
+      <hr class="sep" />
+      <div class="row"><span class="label">Gross margin cost</span><span class="value">${money(r.grossMarginCost, 0)}</span></div>
+      <div class="row"><span class="label"><strong>Gross margin</strong></span><span class="value"><strong>${money(r.grossMargin, 0)}</strong> <span class="badge ${r.grossMargin >= 0 ? 'pos' : 'neg'}">${pct(r.grossMarginPct)}</span></span></div>
     </div>
   `;
 }

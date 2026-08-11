@@ -207,6 +207,9 @@ export function position(commodities, fields, sales, movements = []) {
     const unsoldValue = unsoldTons * mtmPrice;
     const totalValue = s.totalValue + unsoldValue;
     const pctSold = (p.tons - retainedSeed) > 0 ? s.tons / (p.tons - retainedSeed) : 0;
+    const grossMarginCost = Number(c.grossMarginCost) || 0;
+    const grossMargin = totalValue - grossMarginCost;
+    const grossMarginPct = totalValue > 0 ? grossMargin / totalValue : 0;
     return {
       commodity: c,
       area: p.area,
@@ -222,6 +225,9 @@ export function position(commodities, fields, sales, movements = []) {
       mtmPrice,
       unsoldValue,
       totalValue,
+      grossMarginCost,
+      grossMargin,
+      grossMarginPct,
     };
   });
 }
@@ -235,5 +241,23 @@ export function positionTotals(rows) {
     unsoldTons: acc.unsoldTons + r.unsoldTons,
     unsoldValue: acc.unsoldValue + r.unsoldValue,
     totalValue: acc.totalValue + r.totalValue,
-  }), { area: 0, productionTons: 0, soldTons: 0, soldValue: 0, unsoldTons: 0, unsoldValue: 0, totalValue: 0 });
+    grossMarginCost: acc.grossMarginCost + r.grossMarginCost,
+    grossMargin: acc.grossMargin + r.grossMargin,
+  }), { area: 0, productionTons: 0, soldTons: 0, soldValue: 0, unsoldTons: 0, unsoldValue: 0, totalValue: 0, grossMarginCost: 0, grossMargin: 0 });
+}
+
+/** Sum of the farm-wide overhead categories. */
+export function overheadsTotal(overheads) {
+  const o = overheads || {};
+  return (Number(o.finance) || 0)
+    + (Number(o.equipmentRepayments) || 0)
+    + (Number(o.depreciation) || 0)
+    + (Number(o.wages) || 0)
+    + (Number(o.drawings) || 0);
+}
+
+/** Whole-farm profit/loss: total gross margin across commodities, less overheads. */
+export function farmProfitLoss(totalGrossMargin, overheads) {
+  const overheadsSum = overheadsTotal(overheads);
+  return { overheadsTotal: overheadsSum, profitLoss: totalGrossMargin - overheadsSum };
 }
