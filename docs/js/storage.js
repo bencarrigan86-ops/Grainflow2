@@ -400,6 +400,14 @@ export const db = {
     c.invoices[idx] = { ...c.invoices[idx], status, paidDate: status === 'paid' ? new Date().toISOString().slice(0, 10) : null };
     persist();
   },
+  /** Overwrite an existing invoice's lines/totals (editing which loads, custom items, or amounts) without touching its number or paid status. */
+  updateInvoice(id, patch) {
+    const c = current();
+    const idx = c.invoices.findIndex((inv) => inv.id === id);
+    if (idx < 0) return;
+    c.invoices[idx] = { ...c.invoices[idx], ...patch };
+    persist();
+  },
   deleteInvoice(id) {
     current().invoices = current().invoices.filter((inv) => inv.id !== id);
     persist();
