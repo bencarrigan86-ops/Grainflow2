@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=31';
-import { num, money, esc } from '../fmt.js?v=31';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=31';
-import { APP_VERSION } from '../version.js?v=31';
+import { db } from '../storage.js?v=32';
+import { num, money, esc } from '../fmt.js?v=32';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=32';
+import { APP_VERSION } from '../version.js?v=32';
 
 let unsub = null;
 
@@ -16,6 +16,7 @@ function paint(root) {
   const years = db.getYears();
   const currentYear = db.getCurrentYear();
   const overheads = db.getOverheads();
+  const business = db.getBusinessDetails();
 
   root.innerHTML = `
     <div class="topbar">
@@ -54,6 +55,33 @@ function paint(root) {
         ${field({ label: 'R&amp;M ($)', id: 'oh-rm', type: 'number', step: '1', value: overheads.repairsMaintenance })}
         ${field({ label: 'Other ($)', id: 'oh-other', type: 'number', step: '1', value: overheads.other })}
         <button class="btn" id="save-overheads">Save overheads</button>
+      </div>
+
+      <div class="card">
+        <h2>Business details</h2>
+        <div class="field hint" style="margin-bottom:6px">Used as the "Seller" on invoices you generate in Sales.</div>
+        ${field({ label: 'Entity / business name', id: 'bd-entity', value: business.entityName, placeholder: 'e.g. Carrigan Agricultural Co Pty Ltd' })}
+        <div class="grid-2">
+          ${field({ label: 'ABN', id: 'bd-abn', value: business.abn })}
+          ${field({ label: 'NGR', id: 'bd-ngr', value: business.ngr })}
+        </div>
+        ${field({ label: 'Contact name', id: 'bd-contact', value: business.contactName })}
+        <div class="grid-2">
+          ${field({ label: 'Phone', id: 'bd-phone', value: business.phone })}
+          ${field({ label: 'Email', id: 'bd-email', value: business.email })}
+        </div>
+        ${field({ label: 'Address', id: 'bd-address', value: business.address })}
+        ${field({ label: 'Payment terms (days)', id: 'bd-terms', type: 'number', step: '1', value: business.paymentTermsDays })}
+        <hr class="sep" />
+        <div class="grid-2">
+          ${field({ label: 'Bank name', id: 'bd-bank', value: business.bankName })}
+          ${field({ label: 'Account name', id: 'bd-accname', value: business.accountName })}
+        </div>
+        <div class="grid-2">
+          ${field({ label: 'BSB', id: 'bd-bsb', value: business.bsb })}
+          ${field({ label: 'Account number', id: 'bd-accno', value: business.accountNumber })}
+        </div>
+        <button class="btn" id="save-business">Save business details</button>
       </div>
 
       <div class="card">
@@ -98,6 +126,23 @@ function paint(root) {
       insurance: getNum(root, 'oh-insurance'),
       repairsMaintenance: getNum(root, 'oh-rm'),
       other: getNum(root, 'oh-other'),
+    });
+  });
+
+  root.querySelector('#save-business').addEventListener('click', () => {
+    db.updateBusinessDetails({
+      entityName: getVal(root, 'bd-entity')?.trim(),
+      abn: getVal(root, 'bd-abn')?.trim(),
+      ngr: getVal(root, 'bd-ngr')?.trim(),
+      contactName: getVal(root, 'bd-contact')?.trim(),
+      phone: getVal(root, 'bd-phone')?.trim(),
+      email: getVal(root, 'bd-email')?.trim(),
+      address: getVal(root, 'bd-address')?.trim(),
+      paymentTermsDays: getNum(root, 'bd-terms'),
+      bankName: getVal(root, 'bd-bank')?.trim(),
+      accountName: getVal(root, 'bd-accname')?.trim(),
+      bsb: getVal(root, 'bd-bsb')?.trim(),
+      accountNumber: getVal(root, 'bd-accno')?.trim(),
     });
   });
   root.querySelector('#rename-year').addEventListener('click', () => openRenameYearSheet(currentYear));

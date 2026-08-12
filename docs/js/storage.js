@@ -60,12 +60,23 @@ function defaultYear() {
   };
 }
 
+// Not per-year — the farm's own details barely change season to season, and
+// are used to fill in the "Seller" side of a generated sale invoice.
+function defaultBusinessDetails() {
+  return {
+    entityName: '', abn: '', ngr: '', contactName: '', phone: '', email: '', address: '',
+    paymentTermsDays: 14,
+    bankName: '', accountName: '', bsb: '', accountNumber: '',
+  };
+}
+
 function defaultData() {
   const year = String(new Date().getFullYear());
   return {
     version: 2,
     currentYear: year,
     years: { [year]: defaultYear() },
+    businessDetails: defaultBusinessDetails(),
   };
 }
 
@@ -87,6 +98,7 @@ function migrate(parsed) {
           }];
         })
       ),
+      businessDetails: { ...defaultBusinessDetails(), ...(parsed.businessDetails || {}) },
     } || fresh;
   }
   // Old flat shape: { commodities, fields, sales, storages, movements }
@@ -101,6 +113,7 @@ function migrate(parsed) {
         commodities: backfillNPerTonne(merged.commodities),
         overheads: { ...defaultOverheads(), ...(parsed.overheads || {}) },
       } },
+      businessDetails: defaultBusinessDetails(),
     };
   }
   return defaultData();
@@ -125,7 +138,13 @@ function current() {
 }
 
 function persist() {
-  localStorage.setItem(KEY, JSON.stringify(data));
+  try {
+    localStorage.setItem(KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save data', e);
+    alert('Could not save — your device storage may be full. Try removing a movement photo and saving again.');
+    return;
+  }
   listeners.forEach((fn) => fn(data));
 }
 
@@ -328,6 +347,15 @@ export const db = {
   },
   updateOverheads(patch) {
     current().overheads = { ...current().overheads, ...patch };
+    persist();
+  },
+
+  // --- business details (not per-year — used to fill in a sale invoice) ---
+  getBusinessDetails() {
+    return data.businessDetails;
+  },
+  updateBusinessDetails(patch) {
+    data.businessDetails = { ...data.businessDetails, ...patch };
     persist();
   },
 

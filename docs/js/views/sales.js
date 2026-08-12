@@ -1,8 +1,9 @@
-import { db } from '../storage.js?v=31';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=31';
-import { num, tons, money, esc } from '../fmt.js?v=31';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=31';
-import { renderRelatedMovements } from './movements.js?v=31';
+import { db } from '../storage.js?v=32';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=32';
+import { num, tons, money, esc } from '../fmt.js?v=32';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=32';
+import { renderRelatedMovements } from './movements.js?v=32';
+import { openInvoiceSheet } from './invoice.js?v=32';
 
 let unsub = null;
 
@@ -166,11 +167,18 @@ function openSaleSheet(existing) {
       <div class="row"><span class="label">Tolerance range</span><span class="value" id="tol-preview">—</span></div>
       ${field({ label: 'Broker note', id: 'brokerNote', value: existing?.brokerNote })}
       ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
+      <div class="grid-2">
+        ${field({ label: 'Buyer ABN (optional)', id: 'buyerAbn', value: existing?.buyerAbn, hint: 'For invoices' })}
+        ${field({ label: 'Buyer address (optional)', id: 'buyerAddress', value: existing?.buyerAddress })}
+      </div>
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       <button class="btn" id="save" style="margin-top:12px">Save</button>
+      ${existing ? `<button class="btn secondary" id="view-invoice" style="margin-top:8px">View / print invoice</button>` : ''}
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete sale</button>` : ''}
     `;
     if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'sale', existing.id);
+    const invoiceBtn = root.querySelector('#view-invoice');
+    if (invoiceBtn) invoiceBtn.addEventListener('click', () => openInvoiceSheet(existing));
 
     const tolPreview = root.querySelector('#tol-preview');
     const recomputeTolerance = () => {
@@ -201,6 +209,8 @@ function openSaleSheet(existing) {
         toleranceCapTons: getNum(root, 'tolCap'),
         brokerNote: getVal(root, 'brokerNote')?.trim(),
         notes: getVal(root, 'notes')?.trim(),
+        buyerAbn: getVal(root, 'buyerAbn')?.trim(),
+        buyerAddress: getVal(root, 'buyerAddress')?.trim(),
       });
       closeSheet();
     });

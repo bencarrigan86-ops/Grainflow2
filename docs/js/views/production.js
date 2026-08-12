@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=31';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldSeed, groupFieldsByCommodity } from '../derived.js?v=31';
-import { num, tons, ha, esc } from '../fmt.js?v=31';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=31';
-import { renderRelatedMovements } from './movements.js?v=31';
+import { db } from '../storage.js?v=32';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldSeed, groupFieldsByCommodity } from '../derived.js?v=32';
+import { num, tons, ha, esc } from '../fmt.js?v=32';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=32';
+import { renderRelatedMovements } from './movements.js?v=32';
 
 let unsub = null;
 
@@ -133,11 +133,12 @@ function openFieldSheet(existing) {
     const ureaPreview = root.querySelector('#urea-preview');
     const seedPreview = root.querySelector('#seed-preview');
     const recompute = () => {
-      if (yieldMode === 'actual') {
-        preview.textContent = tons(actualTons);
-      } else {
-        preview.textContent = tons(estimateFieldTons({ areaHa: getNum(root, 'area'), yieldTHa: getNum(root, 'yield') }));
-      }
+      const tonsVal = yieldMode === 'actual'
+        ? actualTons
+        : estimateFieldTons({ areaHa: getNum(root, 'area'), yieldTHa: getNum(root, 'yield') });
+      const area = getNum(root, 'area');
+      const yieldTHa = area > 0 ? tonsVal / area : 0;
+      preview.textContent = `${tons(tonsVal)} · ${num(yieldTHa, 2)} t/ha`;
       const u = fieldUrea({ areaHa: getNum(root, 'area'), ureaRequiredKgHa: getNum(root, 'ureaReq'), ureaAppliedKgHa: getNum(root, 'ureaApp') });
       ureaPreview.textContent = tons(u.leftTons);
       const s = fieldSeed({ areaHa: getNum(root, 'area'), seedRateKgHa: getNum(root, 'seedRate') });

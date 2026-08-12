@@ -354,3 +354,36 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
 .swipe-actions { display: flex; gap: 8px; margin-top: 8px; }
 
 hr.sep { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+/* Invoice document: intentionally fixed light colors, not theme vars — it's
+   meant to look like paper whether the app is in light or dark mode. */
+.invoice-doc {
+  background: #fff;
+  color: #14171a;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 13px;
+  border: 1px solid #e2e2e2;
+}
+.invoice-doc .title { font-size: 18px; margin: 0 0 4px; text-align: center; letter-spacing: .03em; }
+.invoice-doc .invoice-meta { display: flex; justify-content: space-between; font-size: 12px; color: #555; margin-bottom: 14px; flex-wrap: wrap; gap: 6px; }
+.invoice-doc .invoice-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.invoice-doc .invoice-block { border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; }
+.invoice-doc .invoice-block h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #777; margin: 0 0 6px; }
+.invoice-doc .invoice-block .line { font-size: 12.5px; margin-bottom: 2px; }
+.invoice-doc table { font-size: 12px; }
+.invoice-doc th, .invoice-doc td { border-color: #e2e2e2; color: #14171a; }
+.invoice-doc tfoot td { border-top: 1.5px solid #999; }
+.invoice-doc .invoice-totals { margin-top: 10px; }
+.invoice-doc .invoice-totals .row { border-bottom: 1px solid #eee; padding: 6px 0; }
+.invoice-doc .invoice-totals .row .label { color: #666; }
+.invoice-doc .invoice-totals .row .value { color: #14171a; }
+.invoice-doc .invoice-totals .row.total { font-size: 15px; font-weight: 800; border-top: 2px solid #14171a; border-bottom: none; padding-top: 10px; margin-top: 4px; }
+.invoice-doc .invoice-bank { margin-top: 14px; font-size: 12px; color: #444; }
+
+@media print {
+  body * { visibility: hidden; }
+  .invoice-doc, .invoice-doc * { visibility: visible; }
+  .invoice-doc { position: absolute; top: 0; left: 0; width: 100%; margin: 0; border-radius: 0; border: none; }
+  .tabbar, .year-pill, .fab, #print-invoice, .sheet-header, .sheet-handle { display: none !important; }
+}

@@ -1,7 +1,8 @@
-import { db } from '../storage.js?v=31';
-import { movementsForEndpoint } from '../derived.js?v=31';
-import { num, tons, esc } from '../fmt.js?v=31';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=31';
+import { db } from '../storage.js?v=32';
+import { movementsForEndpoint } from '../derived.js?v=32';
+import { num, tons, esc } from '../fmt.js?v=32';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=32';
+import { compressAndStampImage } from '../img.js?v=32';
 
 let unsub = null;
 
@@ -101,7 +102,7 @@ export function movementRow(m, ctx) {
       </div>
       <div class="right">
         <div class="main">${tons(m.tons || 0)}</div>
-        <div class="meta"><span class="badge ${isFinal ? 'pos' : 'neg'}">${isFinal ? 'Final' : 'Estimate'}</span></div>
+        <div class="meta"><span class="badge ${isFinal ? 'pos' : 'neg'}">${isFinal ? 'Final' : 'Estimate'}</span>${m.photoDataUrl ? ' 📷' : ''}</div>
       </div>
     </div>
   `;
@@ -132,6 +133,12 @@ export function openMovementSheet(existing) {
         </div>
       </div>
       ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
+      <div class="field">
+        <label>Photo (e.g. truck rego)</label>
+        <input id="m-photo-file" type="file" accept="image/*" capture="environment" />
+        <div class="hint">Saved on this device only. A date/time stamp is added automatically.</div>
+        <div id="m-photo-preview" style="margin-top:8px"></div>
+      </div>
       <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete movement</button>` : ''}
     `;
@@ -142,6 +149,27 @@ export function openMovementSheet(existing) {
       if (!btn) return;
       weightStatus = btn.dataset.status;
       root.querySelectorAll('#m-status button').forEach((b) => b.classList.toggle('active', b === btn));
+    });
+
+    let photoDataUrl = existing?.photoDataUrl || null;
+    const photoPreview = root.querySelector('#m-photo-preview');
+    function renderPhotoPreview() {
+      photoPreview.innerHTML = photoDataUrl
+        ? `<img src="${photoDataUrl}" style="width:100%;border-radius:10px;display:block" /><button class="btn secondary small" id="m-photo-remove" style="margin-top:8px">Remove photo</button>`
+        : '';
+      const removeBtn = photoPreview.querySelector('#m-photo-remove');
+      if (removeBtn) removeBtn.addEventListener('click', () => { photoDataUrl = null; renderPhotoPreview(); });
+    }
+    renderPhotoPreview();
+    root.querySelector('#m-photo-file').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        photoDataUrl = await compressAndStampImage(file);
+        renderPhotoPreview();
+      } catch (err) {
+        alert('Could not process that photo.');
+      }
     });
 
     root.querySelector('#save').addEventListener('click', () => {
@@ -166,6 +194,7 @@ export function openMovementSheet(existing) {
         tons: getNum(root, 'tons'),
         weightStatus,
         notes: getVal(root, 'notes')?.trim(),
+        photoDataUrl,
       });
       closeSheet();
     });
