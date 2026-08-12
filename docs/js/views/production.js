@@ -1,7 +1,8 @@
-import { db } from '../storage.js?v=29';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldSeed, groupFieldsByCommodity } from '../derived.js?v=29';
-import { num, tons, ha, esc } from '../fmt.js?v=29';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=29';
+import { db } from '../storage.js?v=30';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldSeed, groupFieldsByCommodity } from '../derived.js?v=30';
+import { num, tons, ha, esc } from '../fmt.js?v=30';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=30';
+import { renderRelatedMovements } from './movements.js?v=30';
 
 let unsub = null;
 
@@ -118,9 +119,11 @@ function openFieldSheet(existing) {
         ${field({ label: 'Seed rate (kg/ha)', id: 'seedRate', type: 'number', step: '1', value: existing?.seedRateKgHa ?? 0 })}
       </div>
       <div class="row"><span class="label">Seed required</span><span class="value" id="seed-preview">0.0 t</span></div>
+      ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
     `;
+    if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'field', existing.id);
 
     let yieldMode = existing?.yieldMode || 'estimate';
     const preview = root.querySelector('#tons-preview');

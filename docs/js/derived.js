@@ -26,6 +26,13 @@ export function movementTonsToSale(saleId, movements) {
     .reduce((s, m) => s + (Number(m.tons) || 0), 0);
 }
 
+/** All movements touching a given endpoint (field, silo, or sale) as either source or destination, newest first. */
+export function movementsForEndpoint(type, id, movements) {
+  return (movements || [])
+    .filter((m) => (m.fromType === type && m.fromId === id) || (m.toType === type && m.toId === id))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+}
+
 /** Net tons moved into (positive) or out of (negative) a storage unit via truck movements. */
 export function movementNetForStorage(storageId, movements) {
   const into = (movements || [])

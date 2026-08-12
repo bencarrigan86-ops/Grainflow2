@@ -1,7 +1,8 @@
-import { db } from '../storage.js?v=29';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=29';
-import { num, tons, money, esc } from '../fmt.js?v=29';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=29';
+import { db } from '../storage.js?v=30';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=30';
+import { num, tons, money, esc } from '../fmt.js?v=30';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=30';
+import { renderRelatedMovements } from './movements.js?v=30';
 
 let unsub = null;
 
@@ -165,9 +166,11 @@ function openSaleSheet(existing) {
       <div class="row"><span class="label">Tolerance range</span><span class="value" id="tol-preview">—</span></div>
       ${field({ label: 'Broker note', id: 'brokerNote', value: existing?.brokerNote })}
       ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
+      ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete sale</button>` : ''}
     `;
+    if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'sale', existing.id);
 
     const tolPreview = root.querySelector('#tol-preview');
     const recomputeTolerance = () => {

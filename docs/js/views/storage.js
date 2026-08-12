@@ -1,8 +1,9 @@
-import { db } from '../storage.js?v=29';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=29';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=29';
-import { num, tons, esc } from '../fmt.js?v=29';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=29';
+import { db } from '../storage.js?v=30';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=30';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=30';
+import { num, tons, esc } from '../fmt.js?v=30';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=30';
+import { renderRelatedMovements } from './movements.js?v=30';
 
 let unsub = null;
 let listMode = 'chronological';
@@ -383,9 +384,11 @@ function openStorageSheet(existing) {
         <div class="row"><span class="label">Tarp width needed</span><span class="value" id="s-tarp-width">—</span></div>
         <div class="row"><span class="label">Tarp length needed</span><span class="value" id="s-tarp-length">—</span></div>
         ` : ''}
+        ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
         <button class="btn" id="save" style="margin-top:8px">Save</button>
         ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete</button>` : ''}
       `;
+      if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id);
 
       const kindSel = root.querySelector('#s-kind');
       if (kindSel) {

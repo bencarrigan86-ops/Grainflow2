@@ -1,6 +1,7 @@
-import { db } from '../storage.js?v=29';
-import { num, tons, esc } from '../fmt.js?v=29';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=29';
+import { db } from '../storage.js?v=30';
+import { movementsForEndpoint } from '../derived.js?v=30';
+import { num, tons, esc } from '../fmt.js?v=30';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=30';
 
 let unsub = null;
 
@@ -68,7 +69,27 @@ function endpointLabel(type, id, { fields, storages, sales, commodities }) {
   return 'Unknown';
 }
 
-function movementRow(m, ctx) {
+/**
+ * Renders a "Related movements" card into `container` for a field, silo, or
+ * sale — the same movement rows shown in the Movement tab, filtered to the
+ * ones touching this endpoint. Tapping one opens it for editing.
+ */
+export function renderRelatedMovements(container, type, id) {
+  if (!container) return;
+  const { fields, storages, sales, commodities, movements } = db.get();
+  const related = movementsForEndpoint(type, id, movements);
+  const ctx = { fields, storages, sales, commodities };
+  container.className = 'card';
+  container.innerHTML = `
+    <h2>Related movements</h2>
+    ${related.length === 0 ? `<div class="empty">No movements linked to this yet.</div>` : related.map((m) => movementRow(m, ctx)).join('')}
+  `;
+  container.querySelectorAll('[data-edit-movement]').forEach((el) => {
+    el.addEventListener('click', () => openMovementSheet(related.find((m) => m.id === el.dataset.editMovement)));
+  });
+}
+
+export function movementRow(m, ctx) {
   const fromLabel = endpointLabel(m.fromType, m.fromId, ctx);
   const toLabel = endpointLabel(m.toType, m.toId, ctx);
   const isFinal = m.weightStatus === 'final';
@@ -86,7 +107,7 @@ function movementRow(m, ctx) {
   `;
 }
 
-function openMovementSheet(existing) {
+export function openMovementSheet(existing) {
   const { fields, storages, sales, commodities } = db.get();
   const fromOptions = endpointOptions(fields, storages, sales, commodities, 'from');
   const toOptions = endpointOptions(fields, storages, sales, commodities, 'to');
