@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=32';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldSeed, groupFieldsByCommodity } from '../derived.js?v=32';
-import { num, tons, ha, esc } from '../fmt.js?v=32';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=32';
-import { renderRelatedMovements } from './movements.js?v=32';
+import { db } from '../storage.js?v=33';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldSeed, groupFieldsByCommodity } from '../derived.js?v=33';
+import { num, tons, ha, esc } from '../fmt.js?v=33';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=33';
+import { renderRelatedMovements } from './movements.js?v=33';
 
 let unsub = null;
 

@@ -77,15 +77,41 @@ function defaultData() {
     currentYear: year,
     years: { [year]: defaultYear() },
     businessDetails: defaultBusinessDetails(),
+    nextMovementNo: 1,
   };
+}
+
+// Movement ticket numbers are farm-wide and never reused (not per-year, so
+// they stay meaningful across season changes) — assign them to any
+// movement that predates this field, in date order, without colliding with
+// numbers already assigned.
+function backfillMovementNos(result) {
+  const used = new Set();
+  Object.values(result.years).forEach((y) => {
+    (y.movements || []).forEach((m) => { if (m.ticketNo) used.add(m.ticketNo); });
+  });
+  let next = Number(result.nextMovementNo) || 1;
+  const unnumbered = [];
+  Object.values(result.years).forEach((y) => {
+    (y.movements || []).forEach((m) => { if (!m.ticketNo) unnumbered.push(m); });
+  });
+  unnumbered
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    .forEach((m) => {
+      while (used.has(next)) next++;
+      m.ticketNo = next;
+      used.add(next);
+      next++;
+    });
+  result.nextMovementNo = next;
+  return result;
 }
 
 // Bring an older single-season save (or one missing fields we've since added)
 // up to the current {version, currentYear, years} shape without losing data.
 function migrate(parsed) {
   if (parsed && parsed.years && typeof parsed.years === 'object') {
-    const fresh = defaultData();
-    return {
+    const result = {
       version: 2,
       currentYear: parsed.currentYear && parsed.years[parsed.currentYear] ? parsed.currentYear : Object.keys(parsed.years)[0],
       years: Object.fromEntries(
@@ -99,13 +125,15 @@ function migrate(parsed) {
         })
       ),
       businessDetails: { ...defaultBusinessDetails(), ...(parsed.businessDetails || {}) },
-    } || fresh;
+      nextMovementNo: parsed.nextMovementNo,
+    };
+    return backfillMovementNos(result);
   }
   // Old flat shape: { commodities, fields, sales, storages, movements }
   if (parsed && (parsed.commodities || parsed.fields || parsed.sales || parsed.storages)) {
     const year = String(new Date().getFullYear());
     const merged = { ...defaultYear(), ...parsed };
-    return {
+    const result = {
       version: 2,
       currentYear: year,
       years: { [year]: {
@@ -114,7 +142,9 @@ function migrate(parsed) {
         overheads: { ...defaultOverheads(), ...(parsed.overheads || {}) },
       } },
       businessDetails: defaultBusinessDetails(),
+      nextMovementNo: parsed.nextMovementNo,
     };
+    return backfillMovementNos(result);
   }
   return defaultData();
 }
@@ -332,7 +362,8 @@ export const db = {
       const idx = c.movements.findIndex((m) => m.id === movement.id);
       if (idx >= 0) c.movements[idx] = { ...c.movements[idx], ...movement };
     } else {
-      c.movements.push({ ...movement, id: uid() });
+      c.movements.push({ ...movement, id: uid(), ticketNo: data.nextMovementNo });
+      data.nextMovementNo += 1;
     }
     persist();
   },

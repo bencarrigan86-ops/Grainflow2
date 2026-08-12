@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=32';
-import { invoiceForSale } from '../derived.js?v=32';
-import { num, money, esc } from '../fmt.js?v=32';
-import { openSheet } from '../ui.js?v=32';
+import { db } from '../storage.js?v=33';
+import { invoiceForSale } from '../derived.js?v=33';
+import { num, money, esc } from '../fmt.js?v=33';
+import { openSheet } from '../ui.js?v=33';
 
 export function openInvoiceSheet(sale) {
   const { commodities, movements } = db.get();

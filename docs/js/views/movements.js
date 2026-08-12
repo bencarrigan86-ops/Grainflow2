@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=32';
-import { movementsForEndpoint } from '../derived.js?v=32';
-import { num, tons, esc } from '../fmt.js?v=32';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=32';
-import { compressAndStampImage } from '../img.js?v=32';
+import { db } from '../storage.js?v=33';
+import { movementsForEndpoint } from '../derived.js?v=33';
+import { num, tons, esc } from '../fmt.js?v=33';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=33';
+import { compressAndStampImage } from '../img.js?v=33';
 
 let unsub = null;
 
@@ -97,7 +97,7 @@ export function movementRow(m, ctx) {
   return `
     <div class="list-item" data-edit-movement="${m.id}">
       <div>
-        <div class="main">${esc(fromLabel)} &rarr; ${esc(toLabel)}</div>
+        <div class="main">${m.ticketNo ? `<span style="color:var(--text-dim);font-weight:500">#${m.ticketNo}</span> ` : ''}${esc(fromLabel)} &rarr; ${esc(toLabel)}</div>
         <div class="meta">${esc(m.date || 'No date')}${m.truckRego ? ` · ${esc(m.truckRego)}` : ''}${m.driver ? ` · ${esc(m.driver)}` : ''}</div>
       </div>
       <div class="right">
@@ -115,7 +115,7 @@ export function openMovementSheet(existing) {
   const existingFrom = existing ? `${existing.fromType}:${existing.fromId}` : '';
   const existingTo = existing ? `${existing.toType}:${existing.toId}` : '';
 
-  openSheet(existing ? 'Edit movement' : 'Add movement', (root) => {
+  openSheet(existing ? `Edit movement #${existing.ticketNo ?? ''}` : 'Add movement', (root) => {
     root.innerHTML = `
       ${field({ label: 'Date', id: 'date', type: 'date', value: existing?.date })}
       ${field({ label: 'From (field or silo)', id: 'from', type: 'select', value: existingFrom, options: fromOptions })}
