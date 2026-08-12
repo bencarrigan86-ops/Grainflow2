@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=33';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=33';
-import { num, tons, money, esc } from '../fmt.js?v=33';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=33';
-import { renderRelatedMovements } from './movements.js?v=33';
-import { openInvoiceSheet } from './invoice.js?v=33';
+import { db } from '../storage.js?v=34';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=34';
+import { num, tons, money, esc } from '../fmt.js?v=34';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=34';
+import { renderRelatedMovements } from './movements.js?v=34';
+import { openInvoiceListSheet } from './invoice.js?v=34';
 
 let unsub = null;
 
@@ -111,6 +111,8 @@ function deliveryWindow(s) {
 function saleRow(s, movements) {
   const econ = saleEconomics(s, movements);
   const window = deliveryWindow(s);
+  const invoices = db.getInvoicesForSale(s.id);
+  const outstandingInvoices = invoices.filter((inv) => inv.status !== 'paid');
   return `
     <div class="list-item" data-edit-sale="${s.id}">
       <div>
@@ -121,9 +123,17 @@ function saleRow(s, movements) {
       <div class="right">
         <div class="main">${money(econ.totalValue, 0)}</div>
         <div class="meta">${fillBadge(econ)}</div>
+        ${outstandingInvoices.length > 0 ? `<div class="meta"><span class="badge neg">${outstandingInvoices.length} inv. outstanding</span></div>` : invoices.length > 0 ? `<div class="meta"><span class="badge pos">Invoiced &amp; paid</span></div>` : ''}
       </div>
     </div>
   `;
+}
+
+function invoiceButtonLabel(sale) {
+  const invoices = db.getInvoicesForSale(sale.id);
+  if (invoices.length === 0) return 'Invoices';
+  const outstanding = invoices.filter((inv) => inv.status !== 'paid').length;
+  return `Invoices (${invoices.length}${outstanding > 0 ? `, ${outstanding} outstanding` : ', all paid'})`;
 }
 
 function openSaleSheet(existing) {
@@ -173,12 +183,12 @@ function openSaleSheet(existing) {
       </div>
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       <button class="btn" id="save" style="margin-top:12px">Save</button>
-      ${existing ? `<button class="btn secondary" id="view-invoice" style="margin-top:8px">View / print invoice</button>` : ''}
+      ${existing ? `<button class="btn secondary" id="view-invoice" style="margin-top:8px">${invoiceButtonLabel(existing)}</button>` : ''}
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete sale</button>` : ''}
     `;
     if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'sale', existing.id);
     const invoiceBtn = root.querySelector('#view-invoice');
-    if (invoiceBtn) invoiceBtn.addEventListener('click', () => openInvoiceSheet(existing));
+    if (invoiceBtn) invoiceBtn.addEventListener('click', () => openInvoiceListSheet(existing));
 
     const tolPreview = root.querySelector('#tol-preview');
     const recomputeTolerance = () => {

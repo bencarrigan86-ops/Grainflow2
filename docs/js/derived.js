@@ -86,26 +86,29 @@ export function saleEconomics(sale, movements = []) {
 export const GST_RATE = 0.10;
 
 /**
- * Line items + totals for a printable invoice on a sale, mirroring a
- * standard grain RCTI: one line per truck movement delivered to this
- * contract (falling back to a single line from the sale itself if none are
- * tracked yet), GST at 10%, and grain levies computed the same way a broker
- * RCTI does — as a percentage of the ex-GST commodity value.
+ * Invoice line items for a chosen set of movements (the loads the user
+ * picked to invoice), plus an optional manual line. One row per movement,
+ * all at the sale's contract rate.
  */
-export function invoiceForSale(sale, movements = []) {
+export function invoiceLineItems(sale, movements) {
   const price = Number(sale.price) || 0;
   const premium = Number(sale.premiumDiscount) || 0;
-  const freight = Number(sale.freight) || 0;
   const rate = price + premium;
-
-  const related = (movements || []).filter((m) => m.toType === 'sale' && m.toId === sale.id);
-  const source = related.length > 0
-    ? related.map((m) => ({ date: m.date, rego: m.truckRego || '—', tons: Number(m.tons) || 0 }))
-    : [{ date: sale.date, rego: '—', tons: Number(sale.tons) || 0 }];
-  const lines = source
-    .map((l) => ({ ...l, rate, subtotal: l.tons * rate }))
+  return (movements || [])
+    .map((m) => ({
+      date: m.date, rego: m.truckRego || '—', tons: Number(m.tons) || 0, movementId: m.id,
+      rate, subtotal: (Number(m.tons) || 0) * rate,
+    }))
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+}
 
+/**
+ * Totals for a set of invoice line items, mirroring a standard grain RCTI:
+ * GST at 10%, and grain levies computed the same way a broker RCTI does —
+ * as a percentage of the ex-GST commodity value.
+ */
+export function invoiceTotals(sale, lines) {
+  const freight = Number(sale.freight) || 0;
   const totalTons = lines.reduce((s, l) => s + l.tons, 0);
   const subtotalExGST = lines.reduce((s, l) => s + l.subtotal, 0);
   const leviesPct = Number(sale.leviesPct) || 0;
@@ -113,8 +116,14 @@ export function invoiceForSale(sale, movements = []) {
   const freightTotal = freight * totalTons;
   const gst = subtotalExGST * GST_RATE;
   const totalPayable = subtotalExGST + gst - levies - freightTotal;
+  return { totalTons, subtotalExGST, levies, freightTotal, gst, totalPayable };
+}
 
-  return { lines, totalTons, subtotalExGST, levies, freightTotal, gst, totalPayable };
+/** Movement ids already included on any existing invoice, so they aren't offered again. */
+export function invoicedMovementIds(invoices) {
+  const set = new Set();
+  (invoices || []).forEach((inv) => (inv.lines || []).forEach((l) => { if (l.movementId) set.add(l.movementId); }));
+  return set;
 }
 
 /** Sum of movement tons carted off this field (actual yield source). */

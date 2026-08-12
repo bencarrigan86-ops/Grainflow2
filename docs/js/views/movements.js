@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=33';
-import { movementsForEndpoint } from '../derived.js?v=33';
-import { num, tons, esc } from '../fmt.js?v=33';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=33';
-import { compressAndStampImage } from '../img.js?v=33';
+import { db } from '../storage.js?v=34';
+import { movementsForEndpoint } from '../derived.js?v=34';
+import { num, tons, esc } from '../fmt.js?v=34';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=34';
+import { compressAndStampImage } from '../img.js?v=34';
 
 let unsub = null;
 
