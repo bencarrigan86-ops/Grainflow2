@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=30';
-import { movementsForEndpoint } from '../derived.js?v=30';
-import { num, tons, esc } from '../fmt.js?v=30';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=30';
+import { db } from '../storage.js?v=31';
+import { movementsForEndpoint } from '../derived.js?v=31';
+import { num, tons, esc } from '../fmt.js?v=31';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=31';
 
 let unsub = null;
 

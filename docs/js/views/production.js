@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=30';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldSeed, groupFieldsByCommodity } from '../derived.js?v=30';
-import { num, tons, ha, esc } from '../fmt.js?v=30';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=30';
-import { renderRelatedMovements } from './movements.js?v=30';
+import { db } from '../storage.js?v=31';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldSeed, groupFieldsByCommodity } from '../derived.js?v=31';
+import { num, tons, ha, esc } from '../fmt.js?v=31';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=31';
+import { renderRelatedMovements } from './movements.js?v=31';
 
 let unsub = null;
 
@@ -73,11 +73,14 @@ function fieldRow(f, movements) {
   const isActual = f.yieldMode === 'actual';
   const t = fieldTons(f, movements);
   const yieldTHa = f.areaHa > 0 ? t / f.areaHa : 0;
+  const actualTons = movementTonsFromField(f.id, movements);
+  const actualYieldTHa = f.areaHa > 0 ? actualTons / f.areaHa : 0;
   return `
     <div class="list-item" data-edit-field="${f.id}">
       <div>
         <div class="main">${esc(f.name)}</div>
         <div class="meta">${ha(f.areaHa)} · <span class="badge ${isActual ? 'pos' : 'neg'}">${isActual ? 'Actual' : 'Estimate'}</span></div>
+        ${!isActual && actualTons > 0 ? `<div class="meta">Actual (movements): ${num(actualTons, 1)} t · ${num(actualYieldTHa, 2)} t/ha</div>` : ''}
       </div>
       <div class="right">
         <div class="main">${tons(t)}</div>
