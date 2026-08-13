@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=35';
-import { movementsForEndpoint } from '../derived.js?v=35';
-import { num, tons, esc } from '../fmt.js?v=35';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=35';
-import { compressAndStampImage } from '../img.js?v=35';
+import { db } from '../storage.js?v=36';
+import { movementsForEndpoint } from '../derived.js?v=36';
+import { num, tons, esc } from '../fmt.js?v=36';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=36';
+import { compressAndStampImage } from '../img.js?v=36';
 
 let unsub = null;
 
@@ -91,14 +91,19 @@ export function renderRelatedMovements(container, type, id) {
 }
 
 export function movementRow(m, ctx) {
-  const fromLabel = endpointLabel(m.fromType, m.fromId, ctx);
+  const froms = m.froms || [];
+  const fromLabel = froms.map((f) => endpointLabel(f.type, f.id, ctx)).join(' + ') || 'Unknown';
   const toLabel = endpointLabel(m.toType, m.toId, ctx);
   const isFinal = m.weightStatus === 'final';
+  const fromBreakdown = froms.length > 1
+    ? froms.map((f) => `${endpointLabel(f.type, f.id, ctx)}: ${num(f.tons, 2)} t`).join(', ')
+    : null;
   return `
     <div class="list-item" data-edit-movement="${m.id}">
       <div>
         <div class="main">${m.ticketNo ? `<span style="color:var(--text-dim);font-weight:500">#${m.ticketNo}</span> ` : ''}${esc(fromLabel)} &rarr; ${esc(toLabel)}</div>
         <div class="meta">${esc(m.date || 'No date')}${m.truckRego ? ` · ${esc(m.truckRego)}` : ''}${m.driver ? ` · ${esc(m.driver)}` : ''}</div>
+        ${fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
       </div>
       <div class="right">
         <div class="main">${tons(m.tons || 0)}</div>
@@ -108,25 +113,69 @@ export function movementRow(m, ctx) {
   `;
 }
 
+function addFromRow(container, options, onChange, existingFrom) {
+  const row = document.createElement('div');
+  row.className = 'from-row';
+  row.style.cssText = 'display:flex;gap:8px;align-items:flex-end;margin-bottom:10px';
+  const selectedVal = existingFrom?.type ? `${existingFrom.type}:${existingFrom.id}` : '';
+  const opts = options.map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
+  row.innerHTML = `
+    <div class="field" style="flex:2;margin-bottom:0">
+      <label>From</label>
+      <select class="from-select">${opts}</select>
+    </div>
+    <div class="field" style="flex:1;margin-bottom:0">
+      <label>Tons</label>
+      <input type="number" step="0.01" inputmode="decimal" class="from-tons" value="${existingFrom?.tons ?? ''}" />
+    </div>
+    <button type="button" class="btn danger small from-remove" style="width:auto">&times;</button>
+  `;
+  container.appendChild(row);
+  row.querySelector('.from-tons').addEventListener('input', onChange);
+  row.querySelector('.from-select').addEventListener('change', onChange);
+  row.querySelector('.from-remove').addEventListener('click', () => {
+    if (container.querySelectorAll('.from-row').length <= 1) return;
+    row.remove();
+    onChange();
+  });
+}
+
+function readFromRows(container) {
+  return Array.from(container.querySelectorAll('.from-row')).map((row) => {
+    const val = row.querySelector('.from-select').value;
+    const [type, ...rest] = val.split(':');
+    return { type: type || '', id: rest.join(':'), tons: parseFloat(row.querySelector('.from-tons').value) || 0 };
+  });
+}
+
 export function openMovementSheet(existing) {
   const { fields, storages, sales, commodities } = db.get();
   const fromOptions = endpointOptions(fields, storages, sales, commodities, 'from');
   const toOptions = endpointOptions(fields, storages, sales, commodities, 'to');
-  const existingFrom = existing ? `${existing.fromType}:${existing.fromId}` : '';
   const existingTo = existing ? `${existing.toType}:${existing.toId}` : '';
+  const existingFroms = existing?.froms?.length ? existing.froms : [{ type: '', id: '', tons: '' }];
 
   openSheet(existing ? `Edit movement #${existing.ticketNo ?? ''}` : 'Add movement', (root) => {
     root.innerHTML = `
       ${field({ label: 'Date', id: 'date', type: 'date', value: existing?.date })}
-      ${field({ label: 'From (field or silo)', id: 'from', type: 'select', value: existingFrom, options: fromOptions })}
+      <div class="field"><label>From (add more if a load blends multiple silos/fields)</label></div>
+      <div id="from-rows"></div>
+      <button type="button" class="btn secondary small" id="add-from">+ Add source</button>
+      <div class="row" style="margin-bottom:14px"><span class="label">Sources total</span><span class="value" id="from-sources-total">0.0 t</span></div>
       ${field({ label: 'To (silo or contract)', id: 'to', type: 'select', value: existingTo, options: toOptions })}
       <div class="grid-2">
         ${field({ label: 'Truck rego', id: 'truckRego', value: existing?.truckRego })}
         ${field({ label: 'Driver', id: 'driver', value: existing?.driver })}
       </div>
-      ${field({ label: 'Tons', id: 'tons', type: 'number', step: '0.01', value: existing?.tons })}
+      <hr class="sep" />
+      <div class="field"><label>Weight</label></div>
+      <div class="grid-2">
+        ${field({ label: 'Gross (t, optional)', id: 'gross', type: 'number', step: '0.01', value: existing?.grossWeight })}
+        ${field({ label: 'Tare (t, optional)', id: 'tare', type: 'number', step: '0.01', value: existing?.tareWeight })}
+      </div>
+      ${field({ label: 'Net weight (t)', id: 'tons', type: 'number', step: '0.01', value: existing?.tons, hint: 'Auto-fills from Gross − Tare, or enter it directly if those are unknown' })}
       <div class="field">
-        <label>Weight</label>
+        <label>Weight status</label>
         <div class="segmented" id="m-status">
           <button data-status="estimate" class="${(existing?.weightStatus || 'estimate') === 'estimate' ? 'active' : ''}">Estimate</button>
           <button data-status="final" class="${existing?.weightStatus === 'final' ? 'active' : ''}">Final</button>
@@ -142,6 +191,29 @@ export function openMovementSheet(existing) {
       <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete movement</button>` : ''}
     `;
+
+    const fromRowsEl = root.querySelector('#from-rows');
+    const sourcesTotalEl = root.querySelector('#from-sources-total');
+    function recomputeSourcesTotal() {
+      const total = readFromRows(fromRowsEl).reduce((s, f) => s + (Number(f.tons) || 0), 0);
+      sourcesTotalEl.textContent = tons(total);
+    }
+    existingFroms.forEach((f) => addFromRow(fromRowsEl, fromOptions, recomputeSourcesTotal, f));
+    root.querySelector('#add-from').addEventListener('click', () => addFromRow(fromRowsEl, fromOptions, recomputeSourcesTotal));
+    recomputeSourcesTotal();
+
+    const grossEl = root.querySelector('#gross');
+    const tareEl = root.querySelector('#tare');
+    const tonsEl = root.querySelector('#tons');
+    function recomputeNet() {
+      const gross = parseFloat(grossEl.value);
+      const tare = parseFloat(tareEl.value);
+      if (!Number.isNaN(gross) && !Number.isNaN(tare)) {
+        tonsEl.value = (gross - tare).toFixed(2);
+      }
+    }
+    grossEl.addEventListener('input', recomputeNet);
+    tareEl.addEventListener('input', recomputeNet);
 
     let weightStatus = existing?.weightStatus || 'estimate';
     root.querySelector('#m-status').addEventListener('click', (e) => {
@@ -173,24 +245,24 @@ export function openMovementSheet(existing) {
     });
 
     root.querySelector('#save').addEventListener('click', () => {
-      const fromVal = getVal(root, 'from');
+      const froms = readFromRows(fromRowsEl).filter((f) => f.type && f.id);
       const toVal = getVal(root, 'to');
-      if (!fromVal || !toVal) {
-        if (!fromVal) root.querySelector('#from').focus();
+      if (froms.length === 0 || !toVal) {
+        if (froms.length === 0) fromRowsEl.querySelector('.from-select')?.focus();
         else root.querySelector('#to').focus();
         return;
       }
-      const [fromType, ...fromRest] = fromVal.split(':');
       const [toType, ...toRest] = toVal.split(':');
       db.upsertMovement({
         id: existing?.id,
         date: getVal(root, 'date'),
-        fromType,
-        fromId: fromRest.join(':'),
+        froms,
         toType,
         toId: toRest.join(':'),
         truckRego: getVal(root, 'truckRego')?.trim(),
         driver: getVal(root, 'driver')?.trim(),
+        grossWeight: getVal(root, 'gross') ? getNum(root, 'gross') : null,
+        tareWeight: getVal(root, 'tare') ? getNum(root, 'tare') : null,
         tons: getNum(root, 'tons'),
         weightStatus,
         notes: getVal(root, 'notes')?.trim(),

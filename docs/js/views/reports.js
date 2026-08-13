@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=35';
-import { groupFieldsByCommodity, fieldUrea, nitrogenCalc, fieldSeed, SEED_BUFFER_PCT } from '../derived.js?v=35';
-import { num, esc } from '../fmt.js?v=35';
-import { field, getVal, getNum } from '../ui.js?v=35';
+import { db } from '../storage.js?v=36';
+import { groupFieldsByCommodity, fieldUrea, nitrogenCalc, fieldSeed, SEED_BUFFER_PCT } from '../derived.js?v=36';
+import { num, esc } from '../fmt.js?v=36';
+import { field, getVal, getNum } from '../ui.js?v=36';
 
 let unsub = null;
 let view = 'fert';

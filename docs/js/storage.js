@@ -109,6 +109,20 @@ function backfillMovementNos(result) {
   return result;
 }
 
+// Movements used to have a single `fromType`/`fromId` source; multi-source
+// loads (a truck filling from more than one silo/field) need
+// `froms: [{ type, id, tons }]` instead — convert any movement still in the
+// old single-source shape so every consumer can assume `froms` exists.
+function backfillMovementFroms(result) {
+  Object.values(result.years).forEach((y) => {
+    y.movements = (y.movements || []).map((m) => {
+      if (m.froms) return m;
+      return { ...m, froms: [{ type: m.fromType, id: m.fromId, tons: m.tons }] };
+    });
+  });
+  return result;
+}
+
 // Bring an older single-season save (or one missing fields we've since added)
 // up to the current {version, currentYear, years} shape without losing data.
 function migrate(parsed) {
@@ -130,7 +144,7 @@ function migrate(parsed) {
       nextMovementNo: parsed.nextMovementNo,
       nextInvoiceNo: parsed.nextInvoiceNo || 1,
     };
-    return backfillMovementNos(result);
+    return backfillMovementNos(backfillMovementFroms(result));
   }
   // Old flat shape: { commodities, fields, sales, storages, movements }
   if (parsed && (parsed.commodities || parsed.fields || parsed.sales || parsed.storages)) {
@@ -148,7 +162,7 @@ function migrate(parsed) {
       nextMovementNo: parsed.nextMovementNo,
       nextInvoiceNo: 1,
     };
-    return backfillMovementNos(result);
+    return backfillMovementNos(backfillMovementFroms(result));
   }
   return defaultData();
 }

@@ -26,11 +26,16 @@ export function movementTonsToSale(saleId, movements) {
     .reduce((s, m) => s + (Number(m.tons) || 0), 0);
 }
 
-/** All movements touching a given endpoint (field, silo, or sale) as either source or destination, newest first. */
+/** All movements touching a given endpoint (field, silo, or sale) as either a source or the destination, newest first. */
 export function movementsForEndpoint(type, id, movements) {
   return (movements || [])
-    .filter((m) => (m.fromType === type && m.fromId === id) || (m.toType === type && m.toId === id))
+    .filter((m) => (m.froms || []).some((f) => f.type === type && f.id === id) || (m.toType === type && m.toId === id))
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+}
+
+/** Sum of a movement's per-source tons allocated to one endpoint (a movement can draw from several silos/fields at once). */
+function fromTonsForEndpoint(m, type, id) {
+  return (m.froms || []).filter((f) => f.type === type && f.id === id).reduce((s, f) => s + (Number(f.tons) || 0), 0);
 }
 
 /** Net tons moved into (positive) or out of (negative) a storage unit via truck movements. */
@@ -39,8 +44,7 @@ export function movementNetForStorage(storageId, movements) {
     .filter((m) => m.toType === 'silo' && m.toId === storageId)
     .reduce((s, m) => s + (Number(m.tons) || 0), 0);
   const outOf = (movements || [])
-    .filter((m) => m.fromType === 'silo' && m.fromId === storageId)
-    .reduce((s, m) => s + (Number(m.tons) || 0), 0);
+    .reduce((s, m) => s + fromTonsForEndpoint(m, 'silo', storageId), 0);
   return into - outOf;
 }
 
@@ -128,9 +132,7 @@ export function invoicedMovementIds(invoices) {
 
 /** Sum of movement tons carted off this field (actual yield source). */
 export function movementTonsFromField(fieldId, movements) {
-  return (movements || [])
-    .filter((m) => m.fromType === 'field' && m.fromId === fieldId)
-    .reduce((s, m) => s + (Number(m.tons) || 0), 0);
+  return (movements || []).reduce((s, m) => s + fromTonsForEndpoint(m, 'field', fieldId), 0);
 }
 
 export function estimateFieldTons(f) {
