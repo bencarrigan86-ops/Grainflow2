@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=36';
-import { movementsForEndpoint } from '../derived.js?v=36';
-import { num, tons, esc } from '../fmt.js?v=36';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=36';
-import { compressAndStampImage } from '../img.js?v=36';
+import { db } from '../storage.js?v=37';
+import { movementsForEndpoint } from '../derived.js?v=37';
+import { num, tons, esc } from '../fmt.js?v=37';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=37';
+import { compressAndStampImage } from '../img.js?v=37';
 
 let unsub = null;
 
@@ -44,18 +44,21 @@ function paint(root) {
   root.querySelector('#add-movement').addEventListener('click', () => openMovementSheet(null));
 }
 
-function endpointOptions(fields, storages, sales, commodities, kind) {
-  const fieldOpts = fields.map((f) => ({ value: `field:${f.id}`, label: f.name }));
-  const siloOpts = storages.map((s) => ({ value: `silo:${s.id}`, label: s.name }));
-  if (kind === 'from') {
-    return [{ value: '', label: 'Select…' }, ...fieldOpts, ...siloOpts];
-  }
-  const saleOpts = sales.map((s) => {
+function fieldOptions(fields) {
+  return [{ value: '', label: 'Select…' }, ...fields.map((f) => ({ value: `field:${f.id}`, label: f.name }))];
+}
+
+function siloOptions(storages) {
+  return [{ value: '', label: 'Select…' }, ...storages.map((s) => ({ value: `silo:${s.id}`, label: s.name }))];
+}
+
+function saleOptions(sales, commodities) {
+  const opts = sales.map((s) => {
     const c = commodities.find((cc) => cc.id === s.commodityId);
     const label = [c?.name, s.buyer, s.contractNo ? `#${s.contractNo}` : null].filter(Boolean).join(' · ') || 'Sale';
     return { value: `sale:${s.id}`, label };
   });
-  return [{ value: '', label: 'Select…' }, ...siloOpts, ...saleOpts];
+  return [{ value: '', label: 'Select…' }, ...opts];
 }
 
 function endpointLabel(type, id, { fields, storages, sales, commodities }) {
@@ -113,26 +116,49 @@ export function movementRow(m, ctx) {
   `;
 }
 
-function addFromRow(container, options, onChange, existingFrom) {
+function addFromRow(container, ctx, onChange, existingFrom) {
   const row = document.createElement('div');
   row.className = 'from-row';
-  row.style.cssText = 'display:flex;gap:8px;align-items:flex-end;margin-bottom:10px';
-  const selectedVal = existingFrom?.type ? `${existingFrom.type}:${existingFrom.id}` : '';
-  const opts = options.map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
+  row.style.cssText = 'margin-bottom:10px;padding:10px;border:1px solid var(--border);border-radius:10px';
+  let kind = existingFrom?.type === 'silo' ? 'silo' : 'field';
   row.innerHTML = `
-    <div class="field" style="flex:2;margin-bottom:0">
-      <label>From</label>
-      <select class="from-select">${opts}</select>
+    <div class="segmented from-kind" style="margin-bottom:8px">
+      <button type="button" data-kind="field" class="${kind === 'field' ? 'active' : ''}">Field</button>
+      <button type="button" data-kind="silo" class="${kind === 'silo' ? 'active' : ''}">Silo</button>
     </div>
-    <div class="field" style="flex:1;margin-bottom:0">
-      <label>Tons</label>
-      <input type="number" step="0.01" inputmode="decimal" class="from-tons" value="${existingFrom?.tons ?? ''}" />
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <div class="field" style="flex:2;margin-bottom:0">
+        <label>From</label>
+        <select class="from-select"></select>
+      </div>
+      <div class="field" style="flex:1;margin-bottom:0">
+        <label>Tons</label>
+        <input type="number" step="0.01" inputmode="decimal" class="from-tons" value="${existingFrom?.tons ?? ''}" />
+      </div>
+      <button type="button" class="btn danger small from-remove" style="width:auto">&times;</button>
     </div>
-    <button type="button" class="btn danger small from-remove" style="width:auto">&times;</button>
   `;
   container.appendChild(row);
+
+  const selectEl = row.querySelector('.from-select');
+  function renderSelect() {
+    const options = kind === 'silo' ? ctx.siloOpts : ctx.fieldOpts;
+    const selectedVal = existingFrom?.type === kind ? `${existingFrom.type}:${existingFrom.id}` : '';
+    selectEl.innerHTML = options.map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
+  }
+  renderSelect();
+
+  row.querySelector('.from-kind').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-kind]');
+    if (!btn || btn.dataset.kind === kind) return;
+    kind = btn.dataset.kind;
+    row.querySelectorAll('.from-kind button').forEach((b) => b.classList.toggle('active', b === btn));
+    renderSelect();
+    onChange();
+  });
+
   row.querySelector('.from-tons').addEventListener('input', onChange);
-  row.querySelector('.from-select').addEventListener('change', onChange);
+  selectEl.addEventListener('change', onChange);
   row.querySelector('.from-remove').addEventListener('click', () => {
     if (container.querySelectorAll('.from-row').length <= 1) return;
     row.remove();
@@ -150,8 +176,11 @@ function readFromRows(container) {
 
 export function openMovementSheet(existing) {
   const { fields, storages, sales, commodities } = db.get();
-  const fromOptions = endpointOptions(fields, storages, sales, commodities, 'from');
-  const toOptions = endpointOptions(fields, storages, sales, commodities, 'to');
+  const ctx = {
+    fieldOpts: fieldOptions(fields),
+    siloOpts: siloOptions(storages),
+    saleOpts: saleOptions(sales, commodities),
+  };
   const existingTo = existing ? `${existing.toType}:${existing.toId}` : '';
   const existingFroms = existing?.froms?.length ? existing.froms : [{ type: '', id: '', tons: '' }];
 
@@ -162,7 +191,14 @@ export function openMovementSheet(existing) {
       <div id="from-rows"></div>
       <button type="button" class="btn secondary small" id="add-from">+ Add source</button>
       <div class="row" style="margin-bottom:14px"><span class="label">Sources total</span><span class="value" id="from-sources-total">0.0 t</span></div>
-      ${field({ label: 'To (silo or contract)', id: 'to', type: 'select', value: existingTo, options: toOptions })}
+      <div class="field">
+        <label>To</label>
+        <div class="segmented" id="to-kind">
+          <button type="button" data-kind="silo" class="${existing?.toType !== 'sale' ? 'active' : ''}">Silo</button>
+          <button type="button" data-kind="sale" class="${existing?.toType === 'sale' ? 'active' : ''}">Contract</button>
+        </div>
+        <select id="to" style="margin-top:8px"></select>
+      </div>
       <div class="grid-2">
         ${field({ label: 'Truck rego', id: 'truckRego', value: existing?.truckRego })}
         ${field({ label: 'Driver', id: 'driver', value: existing?.driver })}
@@ -198,9 +234,25 @@ export function openMovementSheet(existing) {
       const total = readFromRows(fromRowsEl).reduce((s, f) => s + (Number(f.tons) || 0), 0);
       sourcesTotalEl.textContent = tons(total);
     }
-    existingFroms.forEach((f) => addFromRow(fromRowsEl, fromOptions, recomputeSourcesTotal, f));
-    root.querySelector('#add-from').addEventListener('click', () => addFromRow(fromRowsEl, fromOptions, recomputeSourcesTotal));
+    existingFroms.forEach((f) => addFromRow(fromRowsEl, ctx, recomputeSourcesTotal, f));
+    root.querySelector('#add-from').addEventListener('click', () => addFromRow(fromRowsEl, ctx, recomputeSourcesTotal));
     recomputeSourcesTotal();
+
+    let toKind = existing?.toType === 'sale' ? 'sale' : 'silo';
+    const toSelect = root.querySelector('#to');
+    function renderToSelect() {
+      const options = toKind === 'sale' ? ctx.saleOpts : ctx.siloOpts;
+      const selectedVal = existingTo && existing.toType === toKind ? existingTo : '';
+      toSelect.innerHTML = options.map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
+    }
+    renderToSelect();
+    root.querySelector('#to-kind').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-kind]');
+      if (!btn || btn.dataset.kind === toKind) return;
+      toKind = btn.dataset.kind;
+      root.querySelectorAll('#to-kind button').forEach((b) => b.classList.toggle('active', b === btn));
+      renderToSelect();
+    });
 
     const grossEl = root.querySelector('#gross');
     const tareEl = root.querySelector('#tare');
