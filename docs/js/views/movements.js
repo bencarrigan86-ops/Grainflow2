@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=37';
-import { movementsForEndpoint } from '../derived.js?v=37';
-import { num, tons, esc } from '../fmt.js?v=37';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=37';
-import { compressAndStampImage } from '../img.js?v=37';
+import { db } from '../storage.js?v=38';
+import { movementsForEndpoint } from '../derived.js?v=38';
+import { num, tons, esc } from '../fmt.js?v=38';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=38';
+import { compressAndStampImage } from '../img.js?v=38';
 
 let unsub = null;
 
@@ -95,11 +95,15 @@ export function renderRelatedMovements(container, type, id) {
 
 export function movementRow(m, ctx) {
   const froms = m.froms || [];
+  const tos = m.tos || [];
   const fromLabel = froms.map((f) => endpointLabel(f.type, f.id, ctx)).join(' + ') || 'Unknown';
-  const toLabel = endpointLabel(m.toType, m.toId, ctx);
+  const toLabel = tos.map((t) => endpointLabel(t.type, t.id, ctx)).join(' + ') || 'Unknown';
   const isFinal = m.weightStatus === 'final';
   const fromBreakdown = froms.length > 1
-    ? froms.map((f) => `${endpointLabel(f.type, f.id, ctx)}: ${num(f.tons, 2)} t`).join(', ')
+    ? froms.map((f) => `From ${endpointLabel(f.type, f.id, ctx)}: ${num(f.tons, 2)} t`).join(', ')
+    : null;
+  const toBreakdown = tos.length > 1
+    ? tos.map((t) => `To ${endpointLabel(t.type, t.id, ctx)}: ${num(t.tons, 2)} t`).join(', ')
     : null;
   return `
     <div class="list-item" data-edit-movement="${m.id}">
@@ -107,6 +111,7 @@ export function movementRow(m, ctx) {
         <div class="main">${m.ticketNo ? `<span style="color:var(--text-dim);font-weight:500">#${m.ticketNo}</span> ` : ''}${esc(fromLabel)} &rarr; ${esc(toLabel)}</div>
         <div class="meta">${esc(m.date || 'No date')}${m.truckRego ? ` · ${esc(m.truckRego)}` : ''}${m.driver ? ` · ${esc(m.driver)}` : ''}</div>
         ${fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
+        ${toBreakdown ? `<div class="meta">${esc(toBreakdown)}</div>` : ''}
       </div>
       <div class="right">
         <div class="main">${tons(m.tons || 0)}</div>
@@ -174,6 +179,44 @@ function readFromRows(container) {
   });
 }
 
+// A load can split across several silos (e.g. topping up two bins), but
+// never several contracts — a delivery to more than one buyer is always a
+// separate movement — so only the silo destination is repeatable.
+function addToRow(container, siloOpts, onChange, existingTo) {
+  const row = document.createElement('div');
+  row.className = 'to-row';
+  row.style.cssText = 'display:flex;gap:8px;align-items:flex-end;margin-bottom:10px';
+  const selectedVal = existingTo?.id ? `silo:${existingTo.id}` : '';
+  const opts = siloOpts.map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
+  row.innerHTML = `
+    <div class="field" style="flex:2;margin-bottom:0">
+      <label>Silo</label>
+      <select class="to-select">${opts}</select>
+    </div>
+    <div class="field" style="flex:1;margin-bottom:0">
+      <label>Tons</label>
+      <input type="number" step="0.01" inputmode="decimal" class="to-tons" value="${existingTo?.tons ?? ''}" />
+    </div>
+    <button type="button" class="btn danger small to-remove" style="width:auto">&times;</button>
+  `;
+  container.appendChild(row);
+  row.querySelector('.to-tons').addEventListener('input', onChange);
+  row.querySelector('.to-select').addEventListener('change', onChange);
+  row.querySelector('.to-remove').addEventListener('click', () => {
+    if (container.querySelectorAll('.to-row').length <= 1) return;
+    row.remove();
+    onChange();
+  });
+}
+
+function readToRows(container) {
+  return Array.from(container.querySelectorAll('.to-row')).map((row) => {
+    const val = row.querySelector('.to-select').value;
+    const [type, ...rest] = val.split(':');
+    return { type: type || '', id: rest.join(':'), tons: parseFloat(row.querySelector('.to-tons').value) || 0 };
+  });
+}
+
 export function openMovementSheet(existing) {
   const { fields, storages, sales, commodities } = db.get();
   const ctx = {
@@ -181,8 +224,9 @@ export function openMovementSheet(existing) {
     siloOpts: siloOptions(storages),
     saleOpts: saleOptions(sales, commodities),
   };
-  const existingTo = existing ? `${existing.toType}:${existing.toId}` : '';
   const existingFroms = existing?.froms?.length ? existing.froms : [{ type: '', id: '', tons: '' }];
+  const existingSiloTos = (existing?.tos || []).filter((t) => t.type === 'silo');
+  const existingSaleTo = (existing?.tos || []).find((t) => t.type === 'sale');
 
   openSheet(existing ? `Edit movement #${existing.ticketNo ?? ''}` : 'Add movement', (root) => {
     root.innerHTML = `
@@ -194,11 +238,11 @@ export function openMovementSheet(existing) {
       <div class="field">
         <label>To</label>
         <div class="segmented" id="to-kind">
-          <button type="button" data-kind="silo" class="${existing?.toType !== 'sale' ? 'active' : ''}">Silo</button>
-          <button type="button" data-kind="sale" class="${existing?.toType === 'sale' ? 'active' : ''}">Contract</button>
+          <button type="button" data-kind="silo" class="${!existingSaleTo ? 'active' : ''}">Silo</button>
+          <button type="button" data-kind="sale" class="${existingSaleTo ? 'active' : ''}">Contract</button>
         </div>
-        <select id="to" style="margin-top:8px"></select>
       </div>
+      <div id="to-body" style="margin-top:8px"></div>
       <div class="grid-2">
         ${field({ label: 'Truck rego', id: 'truckRego', value: existing?.truckRego })}
         ${field({ label: 'Driver', id: 'driver', value: existing?.driver })}
@@ -238,20 +282,38 @@ export function openMovementSheet(existing) {
     root.querySelector('#add-from').addEventListener('click', () => addFromRow(fromRowsEl, ctx, recomputeSourcesTotal));
     recomputeSourcesTotal();
 
-    let toKind = existing?.toType === 'sale' ? 'sale' : 'silo';
-    const toSelect = root.querySelector('#to');
-    function renderToSelect() {
-      const options = toKind === 'sale' ? ctx.saleOpts : ctx.siloOpts;
-      const selectedVal = existingTo && existing.toType === toKind ? existingTo : '';
-      toSelect.innerHTML = options.map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
+    let toKind = existingSaleTo ? 'sale' : 'silo';
+    const toBody = root.querySelector('#to-body');
+    function renderToBody() {
+      if (toKind === 'sale') {
+        const selectedVal = existingSaleTo ? `sale:${existingSaleTo.id}` : '';
+        const opts = ctx.saleOpts.map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
+        toBody.innerHTML = `<select id="to-sale-select">${opts}</select>`;
+      } else {
+        toBody.innerHTML = `
+          <div id="to-rows"></div>
+          <button type="button" class="btn secondary small" id="add-to">+ Add destination</button>
+          <div class="row" style="margin-bottom:14px"><span class="label">Destinations total</span><span class="value" id="to-destinations-total">0.0 t</span></div>
+        `;
+        const toRowsEl = toBody.querySelector('#to-rows');
+        const destTotalEl = toBody.querySelector('#to-destinations-total');
+        function recomputeDestTotal() {
+          const total = readToRows(toRowsEl).reduce((s, t) => s + (Number(t.tons) || 0), 0);
+          destTotalEl.textContent = tons(total);
+        }
+        const initialTos = existingSiloTos.length > 0 ? existingSiloTos : [{ type: '', id: '', tons: '' }];
+        initialTos.forEach((t) => addToRow(toRowsEl, ctx.siloOpts, recomputeDestTotal, t));
+        toBody.querySelector('#add-to').addEventListener('click', () => addToRow(toRowsEl, ctx.siloOpts, recomputeDestTotal));
+        recomputeDestTotal();
+      }
     }
-    renderToSelect();
+    renderToBody();
     root.querySelector('#to-kind').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-kind]');
       if (!btn || btn.dataset.kind === toKind) return;
       toKind = btn.dataset.kind;
       root.querySelectorAll('#to-kind button').forEach((b) => b.classList.toggle('active', b === btn));
-      renderToSelect();
+      renderToBody();
     });
 
     const grossEl = root.querySelector('#gross');
@@ -298,19 +360,28 @@ export function openMovementSheet(existing) {
 
     root.querySelector('#save').addEventListener('click', () => {
       const froms = readFromRows(fromRowsEl).filter((f) => f.type && f.id);
-      const toVal = getVal(root, 'to');
-      if (froms.length === 0 || !toVal) {
+      let tos;
+      if (toKind === 'sale') {
+        const saleVal = getVal(root, 'to-sale-select');
+        if (!saleVal) {
+          root.querySelector('#to-sale-select')?.focus();
+          return;
+        }
+        const [type, ...rest] = saleVal.split(':');
+        tos = [{ type, id: rest.join(':'), tons: getNum(root, 'tons') }];
+      } else {
+        tos = readToRows(toBody.querySelector('#to-rows')).filter((t) => t.type && t.id);
+      }
+      if (froms.length === 0 || tos.length === 0) {
         if (froms.length === 0) fromRowsEl.querySelector('.from-select')?.focus();
-        else root.querySelector('#to').focus();
+        else toBody.querySelector('.to-select')?.focus();
         return;
       }
-      const [toType, ...toRest] = toVal.split(':');
       db.upsertMovement({
         id: existing?.id,
         date: getVal(root, 'date'),
         froms,
-        toType,
-        toId: toRest.join(':'),
+        tos,
         truckRego: getVal(root, 'truckRego')?.trim(),
         driver: getVal(root, 'driver')?.trim(),
         grossWeight: getVal(root, 'gross') ? getNum(root, 'gross') : null,

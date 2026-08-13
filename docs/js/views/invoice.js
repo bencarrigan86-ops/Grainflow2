@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=37';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds } from '../derived.js?v=37';
-import { num, money, esc } from '../fmt.js?v=37';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=37';
+import { db } from '../storage.js?v=38';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint } from '../derived.js?v=38';
+import { num, money, esc } from '../fmt.js?v=38';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=38';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -71,7 +71,7 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
             <input type="checkbox" class="ld-check" data-mid="${m.id}" ${existingInvoice ? (existingMovementIds.has(m.id) ? 'checked' : '') : 'checked'} style="width:18px;height:18px" />
             <div>
               <div class="main">${esc(m.date || 'No date')}${m.truckRego ? ` &middot; ${esc(m.truckRego)}` : ''}</div>
-              <div class="meta">${num(m.tons, 2)} t</div>
+              <div class="meta">${num(toTonsForEndpoint(m, 'sale', sale.id), 2)} t</div>
             </div>
           </div>
         </label>

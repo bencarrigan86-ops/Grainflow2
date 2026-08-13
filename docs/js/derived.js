@@ -19,32 +19,32 @@ export function contractTolerance(tons, tolerancePct = DEFAULT_TOLERANCE_PCT, to
   return { toleranceTons, minTons, maxTons };
 }
 
+/** Sum of a movement's per-source tons allocated to one endpoint (a movement can draw from several silos/fields at once). */
+export function fromTonsForEndpoint(m, type, id) {
+  return (m.froms || []).filter((f) => f.type === type && f.id === id).reduce((s, f) => s + (Number(f.tons) || 0), 0);
+}
+
+/** Sum of a movement's per-destination tons allocated to one endpoint (a movement can deliver to more than one silo/contract at once). */
+export function toTonsForEndpoint(m, type, id) {
+  return (m.tos || []).filter((t) => t.type === type && t.id === id).reduce((s, t) => s + (Number(t.tons) || 0), 0);
+}
+
 /** Sum of movement tons that were carted to this sale (contract), i.e. delivered by truck. */
 export function movementTonsToSale(saleId, movements) {
-  return (movements || [])
-    .filter((m) => m.toType === 'sale' && m.toId === saleId)
-    .reduce((s, m) => s + (Number(m.tons) || 0), 0);
+  return (movements || []).reduce((s, m) => s + toTonsForEndpoint(m, 'sale', saleId), 0);
 }
 
-/** All movements touching a given endpoint (field, silo, or sale) as either a source or the destination, newest first. */
+/** All movements touching a given endpoint (field, silo, or sale) as either a source or a destination, newest first. */
 export function movementsForEndpoint(type, id, movements) {
   return (movements || [])
-    .filter((m) => (m.froms || []).some((f) => f.type === type && f.id === id) || (m.toType === type && m.toId === id))
+    .filter((m) => (m.froms || []).some((f) => f.type === type && f.id === id) || (m.tos || []).some((t) => t.type === type && t.id === id))
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-}
-
-/** Sum of a movement's per-source tons allocated to one endpoint (a movement can draw from several silos/fields at once). */
-function fromTonsForEndpoint(m, type, id) {
-  return (m.froms || []).filter((f) => f.type === type && f.id === id).reduce((s, f) => s + (Number(f.tons) || 0), 0);
 }
 
 /** Net tons moved into (positive) or out of (negative) a storage unit via truck movements. */
 export function movementNetForStorage(storageId, movements) {
-  const into = (movements || [])
-    .filter((m) => m.toType === 'silo' && m.toId === storageId)
-    .reduce((s, m) => s + (Number(m.tons) || 0), 0);
-  const outOf = (movements || [])
-    .reduce((s, m) => s + fromTonsForEndpoint(m, 'silo', storageId), 0);
+  const into = (movements || []).reduce((s, m) => s + toTonsForEndpoint(m, 'silo', storageId), 0);
+  const outOf = (movements || []).reduce((s, m) => s + fromTonsForEndpoint(m, 'silo', storageId), 0);
   return into - outOf;
 }
 
@@ -99,10 +99,13 @@ export function invoiceLineItems(sale, movements) {
   const premium = Number(sale.premiumDiscount) || 0;
   const rate = price + premium;
   return (movements || [])
-    .map((m) => ({
-      date: m.date, rego: m.truckRego || '—', tons: Number(m.tons) || 0, movementId: m.id,
-      rate, subtotal: (Number(m.tons) || 0) * rate,
-    }))
+    .map((m) => {
+      const t = toTonsForEndpoint(m, 'sale', sale.id);
+      return {
+        date: m.date, rego: m.truckRego || '—', tons: t, movementId: m.id,
+        rate, subtotal: t * rate,
+      };
+    })
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 }
 

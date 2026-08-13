@@ -123,6 +123,18 @@ function backfillMovementFroms(result) {
   return result;
 }
 
+// Same idea for the destination side: a load can split across a couple of
+// silos, so `toType`/`toId` becomes `tos: [{ type, id, tons }]`.
+function backfillMovementTos(result) {
+  Object.values(result.years).forEach((y) => {
+    y.movements = (y.movements || []).map((m) => {
+      if (m.tos) return m;
+      return { ...m, tos: [{ type: m.toType, id: m.toId, tons: m.tons }] };
+    });
+  });
+  return result;
+}
+
 // Bring an older single-season save (or one missing fields we've since added)
 // up to the current {version, currentYear, years} shape without losing data.
 function migrate(parsed) {
@@ -144,7 +156,7 @@ function migrate(parsed) {
       nextMovementNo: parsed.nextMovementNo,
       nextInvoiceNo: parsed.nextInvoiceNo || 1,
     };
-    return backfillMovementNos(backfillMovementFroms(result));
+    return backfillMovementNos(backfillMovementTos(backfillMovementFroms(result)));
   }
   // Old flat shape: { commodities, fields, sales, storages, movements }
   if (parsed && (parsed.commodities || parsed.fields || parsed.sales || parsed.storages)) {
@@ -162,7 +174,7 @@ function migrate(parsed) {
       nextMovementNo: parsed.nextMovementNo,
       nextInvoiceNo: 1,
     };
-    return backfillMovementNos(backfillMovementFroms(result));
+    return backfillMovementNos(backfillMovementTos(backfillMovementFroms(result)));
   }
   return defaultData();
 }
