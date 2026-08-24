@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=42';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=42';
-import { num, tons, ha, esc } from '../fmt.js?v=42';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=42';
-import { renderRelatedMovements } from './movements.js?v=42';
+import { db } from '../storage.js?v=43';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=43';
+import { num, tons, ha, esc } from '../fmt.js?v=43';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=43';
+import { renderRelatedMovements } from './movements.js?v=43';
 
 let unsub = null;
 
@@ -94,13 +94,16 @@ function openFieldSheet(existing) {
   const { commodities, movements } = db.get();
   const commodityOptions = commodities.map((c) => ({ value: c.id, label: c.name }));
   const actualTons = existing ? movementTonsFromField(existing.id, movements) : 0;
+  const initialCommodity = commodities.find((c) => c.id === (existing?.commodityId ?? commodities[0]?.id));
 
   const body = openSheet(existing ? 'Edit field' : 'Add field', (root) => {
     root.innerHTML = `
       ${field({ label: 'Field name', id: 'name', value: existing?.name, placeholder: 'e.g. SR1-3' })}
       ${field({ label: 'Area (ha)', id: 'area', type: 'number', step: '0.01', value: existing?.areaHa })}
       ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
-      ${field({ label: 'Yield estimate (t/ha)', id: 'yield', type: 'number', step: '0.01', value: existing?.yieldTHa })}
+      ${field({ label: 'Yield estimate (t/ha)', id: 'yield', type: 'number', step: '0.01', value: existing ? existing.yieldTHa : (initialCommodity?.defaultYieldTHa || '') })}
+      <div class="row"><span class="label">Commodity's default yield estimate</span><span class="value" id="commodity-yield-preview">— t/ha</span></div>
+      ${existing ? `<button class="btn secondary small" id="use-default-yield" style="margin-bottom:8px">Use commodity default</button>` : ''}
       <div class="field">
         <label>Drive tons from</label>
         <div class="segmented" id="f-mode">
@@ -146,6 +149,7 @@ function openFieldSheet(existing) {
     const preview = root.querySelector('#tons-preview');
     const ureaPreview = root.querySelector('#urea-preview');
     const soilNPreview = root.querySelector('#soiln-preview');
+    const commodityYieldPreview = root.querySelector('#commodity-yield-preview');
     const commodityTargetPreview = root.querySelector('#commodity-target-preview');
     const targetYieldPreview = root.querySelector('#target-yield-preview');
     const targetUreaPreview = root.querySelector('#target-urea-preview');
@@ -166,6 +170,8 @@ function openFieldSheet(existing) {
       ureaPreview.textContent = tons(u.leftTons);
       soilNPreview.textContent = `${num(soilNUreaEquivalent(getNum(root, 'soilTestN')), 0)} kg/ha`;
       const selectedCommodity = commodities.find((c) => c.id === getVal(root, 'commodity'));
+      const commodityDefaultYield = Number(selectedCommodity?.defaultYieldTHa) || 0;
+      commodityYieldPreview.textContent = commodityDefaultYield > 0 ? `${num(commodityDefaultYield, 2)} t/ha` : '— (set one in Settings)';
       const commodityDefault = Number(selectedCommodity?.targetYieldTHa) || 0;
       commodityTargetPreview.textContent = commodityDefault > 0 ? `${num(commodityDefault, 2)} t/ha` : '— (set one in Settings)';
       const targetCalc = currentTargetCalc();
@@ -178,7 +184,21 @@ function openFieldSheet(existing) {
     };
     root.querySelector('#area').addEventListener('input', recompute);
     root.querySelector('#yield').addEventListener('input', recompute);
-    root.querySelector('#commodity').addEventListener('change', recompute);
+    root.querySelector('#commodity').addEventListener('change', () => {
+      if (!existing) {
+        const c = commodities.find((cc) => cc.id === getVal(root, 'commodity'));
+        root.querySelector('#yield').value = c?.defaultYieldTHa || '';
+      }
+      recompute();
+    });
+    const useDefaultYieldBtn = root.querySelector('#use-default-yield');
+    if (useDefaultYieldBtn) {
+      useDefaultYieldBtn.addEventListener('click', () => {
+        const c = commodities.find((cc) => cc.id === getVal(root, 'commodity'));
+        root.querySelector('#yield').value = c?.defaultYieldTHa || '';
+        recompute();
+      });
+    }
     root.querySelector('#ureaReq').addEventListener('input', recompute);
     root.querySelector('#ureaApp').addEventListener('input', recompute);
     root.querySelector('#soilTestN').addEventListener('input', recompute);

@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=42';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=42';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=42';
-import { num, tons, esc } from '../fmt.js?v=42';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=42';
-import { renderRelatedMovements } from './movements.js?v=42';
+import { db } from '../storage.js?v=43';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=43';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=43';
+import { num, tons, esc } from '../fmt.js?v=43';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=43';
+import { renderRelatedMovements } from './movements.js?v=43';
 
 let unsub = null;
 let listMode = 'chronological';

@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=42';
-import { num, money, esc } from '../fmt.js?v=42';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=42';
-import { APP_VERSION } from '../version.js?v=42';
-import { exportRowsAsCSV } from '../csv.js?v=42';
-import { fieldTons, fieldUrea, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=42';
-import { endpointLabel } from './movements.js?v=42';
+import { db } from '../storage.js?v=43';
+import { num, money, esc } from '../fmt.js?v=43';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=43';
+import { APP_VERSION } from '../version.js?v=43';
+import { exportRowsAsCSV } from '../csv.js?v=43';
+import { fieldTons, fieldUrea, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=43';
+import { endpointLabel } from './movements.js?v=43';
 
 let unsub = null;
 
@@ -398,8 +398,10 @@ function openCommoditySheet(existing) {
         ${field({ label: 'Opening stock (t)', id: 'opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0 })}
         ${field({ label: 'Retained seed (t)', id: 'seed', type: 'number', step: '0.01', value: existing?.retainedSeed ?? 0 })}
       </div>
+      ${field({ label: 'Default yield estimate (t/ha)', id: 'defaultYield', type: 'number', step: '0.1', value: existing?.defaultYieldTHa ?? 0, hint: 'Pre-fills new fields\' production yield estimate, in Production — separate from the fert target yield below' })}
+      <hr class="sep" />
       <div class="grid-2">
-        ${field({ label: 'Target yield (t/ha)', id: 'targetYield', type: 'number', step: '0.1', value: existing?.targetYieldTHa ?? 0, hint: 'Default fert planning target — separate from each field\'s production yield estimate' })}
+        ${field({ label: 'Target yield (t/ha)', id: 'targetYield', type: 'number', step: '0.1', value: existing?.targetYieldTHa ?? 0, hint: 'Default fert planning target — separate from the production yield estimate above' })}
         ${field({ label: 'N required (kg/t)', id: 'nPerTonne', type: 'number', step: '1', value: existing?.nPerTonne ?? 0, hint: 'For the Fert calculator' })}
       </div>
       ${existing ? `
@@ -427,6 +429,7 @@ function openCommoditySheet(existing) {
         mtmPrice: getNum(root, 'mtm'),
         openingStock: getNum(root, 'opening'),
         retainedSeed: getNum(root, 'seed'),
+        defaultYieldTHa: getNum(root, 'defaultYield'),
         targetYieldTHa: getNum(root, 'targetYield'),
         nPerTonne: getNum(root, 'nPerTonne'),
         grossMarginCost: getNum(root, 'gmCost'),
