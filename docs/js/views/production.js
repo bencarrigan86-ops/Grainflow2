@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=38';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldSeed, groupFieldsByCommodity } from '../derived.js?v=38';
-import { num, tons, ha, esc } from '../fmt.js?v=38';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=38';
-import { renderRelatedMovements } from './movements.js?v=38';
+import { db } from '../storage.js?v=40';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldStarter, fieldSeed, soilNUreaEquivalent, groupFieldsByCommodity } from '../derived.js?v=40';
+import { num, tons, ha, esc } from '../fmt.js?v=40';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=40';
+import { renderRelatedMovements } from './movements.js?v=40';
 
 let unsub = null;
 
@@ -115,7 +115,15 @@ function openFieldSheet(existing) {
         ${field({ label: 'Urea required (kg/ha)', id: 'ureaReq', type: 'number', step: '1', value: existing?.ureaRequiredKgHa ?? 0 })}
         ${field({ label: 'Urea applied (kg/ha)', id: 'ureaApp', type: 'number', step: '1', value: existing?.ureaAppliedKgHa ?? 0 })}
       </div>
+      ${field({ label: 'Soil test N (kg/ha)', id: 'soilTestN', type: 'number', step: '1', value: existing?.soilTestNKgHa ?? 0, hint: 'From your soil test report — converted to a urea equivalent below, and shown in the Fert report' })}
+      <div class="row"><span class="label">Soil N (urea equivalent)</span><span class="value" id="soiln-preview">0 kg/ha</span></div>
       <div class="row"><span class="label">Urea left</span><span class="value" id="urea-preview">0.0 t</span></div>
+      <hr class="sep" />
+      <div class="grid-2">
+        ${field({ label: 'Starter required (kg/ha)', id: 'starterReq', type: 'number', step: '1', value: existing?.starterRequiredKgHa ?? 0 })}
+        ${field({ label: 'Starter applied (kg/ha)', id: 'starterApp', type: 'number', step: '1', value: existing?.starterAppliedKgHa ?? 0 })}
+      </div>
+      <div class="row"><span class="label">Starter left</span><span class="value" id="starter-preview">0.0 t</span></div>
       <hr class="sep" />
       <div class="grid-2">
         ${field({ label: 'Seed variety', id: 'seedVariety', value: existing?.seedVariety })}
@@ -131,6 +139,8 @@ function openFieldSheet(existing) {
     let yieldMode = existing?.yieldMode || 'estimate';
     const preview = root.querySelector('#tons-preview');
     const ureaPreview = root.querySelector('#urea-preview');
+    const soilNPreview = root.querySelector('#soiln-preview');
+    const starterPreview = root.querySelector('#starter-preview');
     const seedPreview = root.querySelector('#seed-preview');
     const recompute = () => {
       const tonsVal = yieldMode === 'actual'
@@ -141,6 +151,9 @@ function openFieldSheet(existing) {
       preview.textContent = `${tons(tonsVal)} · ${num(yieldTHa, 2)} t/ha`;
       const u = fieldUrea({ areaHa: getNum(root, 'area'), ureaRequiredKgHa: getNum(root, 'ureaReq'), ureaAppliedKgHa: getNum(root, 'ureaApp') });
       ureaPreview.textContent = tons(u.leftTons);
+      soilNPreview.textContent = `${num(soilNUreaEquivalent(getNum(root, 'soilTestN')), 0)} kg/ha`;
+      const st = fieldStarter({ areaHa: getNum(root, 'area'), starterRequiredKgHa: getNum(root, 'starterReq'), starterAppliedKgHa: getNum(root, 'starterApp') });
+      starterPreview.textContent = tons(st.leftTons);
       const s = fieldSeed({ areaHa: getNum(root, 'area'), seedRateKgHa: getNum(root, 'seedRate') });
       seedPreview.textContent = tons(s.requiredTons);
     };
@@ -148,6 +161,9 @@ function openFieldSheet(existing) {
     root.querySelector('#yield').addEventListener('input', recompute);
     root.querySelector('#ureaReq').addEventListener('input', recompute);
     root.querySelector('#ureaApp').addEventListener('input', recompute);
+    root.querySelector('#soilTestN').addEventListener('input', recompute);
+    root.querySelector('#starterReq').addEventListener('input', recompute);
+    root.querySelector('#starterApp').addEventListener('input', recompute);
     root.querySelector('#seedRate').addEventListener('input', recompute);
     root.querySelector('#f-mode').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-mode]');
@@ -170,6 +186,9 @@ function openFieldSheet(existing) {
         yieldMode,
         ureaRequiredKgHa: getNum(root, 'ureaReq'),
         ureaAppliedKgHa: getNum(root, 'ureaApp'),
+        soilTestNKgHa: getNum(root, 'soilTestN'),
+        starterRequiredKgHa: getNum(root, 'starterReq'),
+        starterAppliedKgHa: getNum(root, 'starterApp'),
         seedVariety: getVal(root, 'seedVariety')?.trim(),
         seedRateKgHa: getNum(root, 'seedRate'),
       });

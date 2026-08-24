@@ -1,7 +1,10 @@
-import { db } from '../storage.js?v=38';
-import { num, money, esc } from '../fmt.js?v=38';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=38';
-import { APP_VERSION } from '../version.js?v=38';
+import { db } from '../storage.js?v=40';
+import { num, money, esc } from '../fmt.js?v=40';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=40';
+import { APP_VERSION } from '../version.js?v=40';
+import { exportRowsAsCSV } from '../csv.js?v=40';
+import { fieldTons, fieldUrea, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=40';
+import { endpointLabel } from './movements.js?v=40';
 
 let unsub = null;
 
@@ -91,6 +94,7 @@ function paint(root) {
           <button class="btn secondary small" id="export">Export backup</button>
           <button class="btn secondary small" id="import">Import backup</button>
         </div>
+        <button class="btn secondary small" id="export-csv" style="margin-top:8px">Export CSV (Excel)&hellip;</button>
         <button class="btn danger small" id="reset" style="margin-top:10px">Reset all data</button>
         <input type="file" id="import-file" accept="application/json" style="display:none" />
       </div>
@@ -165,6 +169,7 @@ function paint(root) {
     a.click();
     URL.revokeObjectURL(url);
   });
+  root.querySelector('#export-csv').addEventListener('click', () => openExportCsvSheet());
   const importFile = root.querySelector('#import-file');
   root.querySelector('#import').addEventListener('click', () => importFile.click());
   importFile.addEventListener('change', async () => {
@@ -192,6 +197,138 @@ function paint(root) {
     }
     location.reload();
   });
+}
+
+function commodityName(commodities, id) {
+  return commodities.find((c) => c.id === id)?.name || '';
+}
+
+function endpointsLabel(entries, ctx) {
+  return (entries || [])
+    .map((e) => `${endpointLabel(e.type, e.id, ctx)} (${num(e.tons, 2)}t)`)
+    .join('; ');
+}
+
+function openExportCsvSheet() {
+  const year = db.getCurrentYear();
+  const stamp = new Date().toISOString().slice(0, 10);
+
+  openSheet('Export CSV', (root) => {
+    root.innerHTML = `
+      <div class="field hint" style="margin-bottom:12px">Each downloads as a .csv file for the "${esc(year)}" season — opens straight into Excel, Numbers or Google Sheets.</div>
+      <button class="btn secondary" id="exp-fields" style="margin-bottom:8px">Fields (Production)</button>
+      <button class="btn secondary" id="exp-sales" style="margin-bottom:8px">Sales</button>
+      <button class="btn secondary" id="exp-movements" style="margin-bottom:8px">Movements</button>
+      <button class="btn secondary" id="exp-storage" style="margin-bottom:8px">Storage (silos &amp; bunkers)</button>
+      <button class="btn secondary" id="exp-invoices">Invoices</button>
+    `;
+
+    root.querySelector('#exp-fields').addEventListener('click', () => exportFieldsCSV(year, stamp));
+    root.querySelector('#exp-sales').addEventListener('click', () => exportSalesCSV(year, stamp));
+    root.querySelector('#exp-movements').addEventListener('click', () => exportMovementsCSV(year, stamp));
+    root.querySelector('#exp-storage').addEventListener('click', () => exportStorageCSV(year, stamp));
+    root.querySelector('#exp-invoices').addEventListener('click', () => exportInvoicesCSV(year, stamp));
+  });
+}
+
+function exportFieldsCSV(year, stamp) {
+  const { commodities, fields, movements } = db.get();
+  exportRowsAsCSV(`grainflow-fields-${year}-${stamp}.csv`, fields, [
+    { label: 'Name', get: (f) => f.name },
+    { label: 'Commodity', get: (f) => commodityName(commodities, f.commodityId) },
+    { label: 'Area (ha)', get: (f) => f.areaHa ?? '' },
+    { label: 'Yield mode', get: (f) => f.yieldMode === 'actual' ? 'Actual (from movements)' : 'Estimate' },
+    { label: 'Yield (t/ha)', get: (f) => f.yieldTHa ?? '' },
+    { label: 'Tonnes', get: (f) => num(fieldTons(f, movements), 2) },
+    { label: 'Urea required (kg/ha)', get: (f) => f.ureaRequiredKgHa ?? '' },
+    { label: 'Urea applied (kg/ha)', get: (f) => f.ureaAppliedKgHa ?? '' },
+    { label: 'Urea left (t)', get: (f) => num(fieldUrea(f).leftTons, 2) },
+    { label: 'Seed variety', get: (f) => f.seedVariety ?? '' },
+    { label: 'Seed rate (kg/ha)', get: (f) => f.seedRateKgHa ?? '' },
+    { label: 'Seed required (t)', get: (f) => num(fieldSeed(f).requiredTons, 2) },
+  ]);
+}
+
+function exportSalesCSV(year, stamp) {
+  const { commodities, sales, movements } = db.get();
+  exportRowsAsCSV(`grainflow-sales-${year}-${stamp}.csv`, sales, [
+    { label: 'Date', get: (s) => s.date ?? '' },
+    { label: 'Commodity', get: (s) => commodityName(commodities, s.commodityId) },
+    { label: 'Grade', get: (s) => s.grade ?? '' },
+    { label: 'Buyer', get: (s) => s.buyer ?? '' },
+    { label: 'Contract No', get: (s) => s.contractNo ?? '' },
+    { label: 'Location', get: (s) => s.location ?? '' },
+    { label: 'Delivery start', get: (s) => s.deliveryStart ?? '' },
+    { label: 'Delivery end', get: (s) => s.deliveryEnd ?? '' },
+    { label: 'Tons contracted', get: (s) => s.tons ?? '' },
+    { label: 'Tons delivered', get: (s) => num(saleEconomics(s, movements).tonsDelivered, 2) },
+    { label: 'Tons due', get: (s) => num(saleEconomics(s, movements).tonsDue, 2) },
+    { label: 'Price ($/t)', get: (s) => s.price ?? '' },
+    { label: 'Freight ($/t)', get: (s) => s.freight ?? '' },
+    { label: 'Premium/Discount ($/t)', get: (s) => s.premiumDiscount ?? '' },
+    { label: 'Levies (%)', get: (s) => num((s.leviesPct ?? 0) * 100, 2) },
+    { label: 'Net price ex-farm ($/t)', get: (s) => num(saleEconomics(s, movements).priceExFarm, 2) },
+    { label: 'Total value ($)', get: (s) => num(saleEconomics(s, movements).totalValue, 2) },
+    { label: 'Broker note', get: (s) => s.brokerNote ?? '' },
+    { label: 'Notes', get: (s) => s.notes ?? '' },
+  ]);
+}
+
+function exportMovementsCSV(year, stamp) {
+  const data = db.get();
+  const { movements } = data;
+  exportRowsAsCSV(`grainflow-movements-${year}-${stamp}.csv`, movements, [
+    { label: 'Ticket No', get: (m) => m.ticketNo ?? '' },
+    { label: 'Date', get: (m) => m.date ?? '' },
+    { label: 'From', get: (m) => endpointsLabel(m.froms, data) },
+    { label: 'To', get: (m) => endpointsLabel(m.tos, data) },
+    { label: 'Tons', get: (m) => m.tons ?? '' },
+    { label: 'Truck rego', get: (m) => m.truckRego ?? '' },
+    { label: 'Driver', get: (m) => m.driver ?? '' },
+    { label: 'Gross weight (t)', get: (m) => m.grossWeight ?? '' },
+    { label: 'Tare weight (t)', get: (m) => m.tareWeight ?? '' },
+    { label: 'Weight status', get: (m) => m.weightStatus ?? '' },
+    { label: 'Notes', get: (m) => m.notes ?? '' },
+  ]);
+}
+
+function exportStorageCSV(year, stamp) {
+  const { commodities, storages, movements } = db.get();
+  exportRowsAsCSV(`grainflow-storage-${year}-${stamp}.csv`, storages, [
+    { label: 'Name', get: (s) => s.name },
+    { label: 'Kind', get: (s) => s.kind === 'bunker' ? 'Bunker' : 'Silo' },
+    { label: 'Commodity', get: (s) => commodityName(commodities, s.commodityId) },
+    { label: 'Opening stock (t)', get: (s) => s.openingStock ?? '' },
+    { label: 'Tracked stock (t)', get: (s) => num(storageLedgerStock(s, movements), 2) },
+    { label: 'Capacity (t)', get: (s) => s.capacityTons ?? '' },
+    { label: 'Radius / Width (m)', get: (s) => s.kind === 'bunker' ? (s.width ?? '') : (s.radius ?? '') },
+    { label: 'Height / Length (m)', get: (s) => s.kind === 'bunker' ? (s.length ?? '') : (s.currentHeight ?? '') },
+    { label: 'Angle of repose override (°)', get: (s) => s.angleOfRepose ?? '' },
+    { label: 'Test weight override (t/m³)', get: (s) => s.testWeight ?? '' },
+  ]);
+}
+
+function exportInvoicesCSV(year, stamp) {
+  const { commodities, sales, invoices } = db.get();
+  const saleLabel = (saleId) => {
+    const s = sales.find((ss) => ss.id === saleId);
+    if (!s) return 'Unknown contract';
+    return [commodityName(commodities, s.commodityId), s.buyer, s.contractNo ? `#${s.contractNo}` : null].filter(Boolean).join(' · ');
+  };
+  exportRowsAsCSV(`grainflow-invoices-${year}-${stamp}.csv`, invoices, [
+    { label: 'Invoice No', get: (i) => i.invoiceNo ?? '' },
+    { label: 'Issue date', get: (i) => i.issueDate ?? '' },
+    { label: 'Due date', get: (i) => i.dueDate ?? '' },
+    { label: 'Sale', get: (i) => saleLabel(i.saleId) },
+    { label: 'Total tons', get: (i) => num(i.totalTons, 2) },
+    { label: 'Subtotal ex GST ($)', get: (i) => num(i.subtotalExGST, 2) },
+    { label: 'Freight total ($)', get: (i) => num(i.freightTotal, 2) },
+    { label: 'Levies ($)', get: (i) => num(i.levies, 2) },
+    { label: 'GST ($)', get: (i) => num(i.gst, 2) },
+    { label: 'Total payable ($)', get: (i) => num(i.totalPayable, 2) },
+    { label: 'Status', get: (i) => i.status ?? '' },
+    { label: 'Paid date', get: (i) => i.paidDate ?? '' },
+  ]);
 }
 
 function openRenameYearSheet(currentYear) {

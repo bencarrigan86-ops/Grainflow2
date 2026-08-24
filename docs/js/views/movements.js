@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=38';
-import { movementsForEndpoint } from '../derived.js?v=38';
-import { num, tons, esc } from '../fmt.js?v=38';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=38';
-import { compressAndStampImage } from '../img.js?v=38';
+import { db } from '../storage.js?v=40';
+import { movementsForEndpoint } from '../derived.js?v=40';
+import { num, tons, esc } from '../fmt.js?v=40';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=40';
+import { compressAndStampImage } from '../img.js?v=40';
 
 let unsub = null;
 
@@ -61,7 +61,7 @@ function saleOptions(sales, commodities) {
   return [{ value: '', label: 'Select…' }, ...opts];
 }
 
-function endpointLabel(type, id, { fields, storages, sales, commodities }) {
+export function endpointLabel(type, id, { fields, storages, sales, commodities }) {
   if (type === 'field') return fields.find((f) => f.id === id)?.name || 'Unknown field';
   if (type === 'silo') return storages.find((s) => s.id === id)?.name || 'Unknown silo';
   if (type === 'sale') {

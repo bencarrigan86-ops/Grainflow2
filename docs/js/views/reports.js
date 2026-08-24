@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=38';
-import { groupFieldsByCommodity, fieldUrea, nitrogenCalc, fieldSeed, SEED_BUFFER_PCT } from '../derived.js?v=38';
-import { num, esc } from '../fmt.js?v=38';
-import { field, getVal, getNum } from '../ui.js?v=38';
+import { db } from '../storage.js?v=40';
+import { groupFieldsByCommodity, fieldUrea, fieldStarter, soilNUreaEquivalent, nitrogenCalc, fieldSeed, SEED_BUFFER_PCT } from '../derived.js?v=40';
+import { num, esc } from '../fmt.js?v=40';
+import { field, getVal, getNum } from '../ui.js?v=40';
 
 let unsub = null;
 let view = 'fert';
@@ -58,8 +58,19 @@ function paintFert(root) {
       <h2><span class="dot report"></span>Urea</h2>
       ${groups.length === 0 ? `<div class="empty">Add fields with urea rates in the Production tab.</div>` : groups.map((g) => ureaTable(g)).join('')}
     </div>
+    <div class="card report">
+      <h2><span class="dot report"></span>Starter fertiliser</h2>
+      ${groups.length === 0 ? `<div class="empty">Add fields with starter rates in the Production tab.</div>` : groups.map((g) => starterTable(g)).join('')}
+    </div>
+    <div class="card">
+      <h2>Yield sensitivity</h2>
+      <div class="field hint" style="margin-bottom:10px">Move the forecast yield up or down across every field and see how urea requirement changes — doesn't touch any saved data.</div>
+      <div id="sens-form"></div>
+      <div id="sens-table"></div>
+    </div>
   `;
   buildNitrogenCalc(body, commodities);
+  buildYieldSensitivity(body, commodities, groups);
 }
 
 function commodityOptionsCalc(commodities) {
@@ -101,13 +112,136 @@ function buildNitrogenCalc(root, commodities) {
   recompute();
 }
 
+/**
+ * Live "what-if": scales every field's forecast yield by one adjustment
+ * (+/- %) and recomputes urea required from the same nitrogenCalc formula
+ * used above (commodity N/t x scenario yield, less each field's own soil
+ * test) — without touching any saved field data.
+ */
+function buildYieldSensitivity(root, commodities, groups) {
+  const formEl = root.querySelector('#sens-form');
+  const tableEl = root.querySelector('#sens-table');
+
+  formEl.innerHTML = `
+    ${field({ label: 'Yield adjustment (%)', id: 'sens-pct', type: 'number', step: '5', value: 0, allowNegative: true, hint: "Applied to every field's forecast yield — e.g. -10 for a lighter season, 15 for a bumper one" })}
+  `;
+  formEl.querySelector('#sens-pct').addEventListener('input', recompute);
+
+  function recompute() {
+    const pct = getNum(formEl, 'sens-pct');
+    const factor = 1 + pct / 100;
+
+    const rowsByGroup = groups
+      .map((g) => {
+        const nPerTonne = commodities.find((c) => c.id === g.id)?.nPerTonne || 0;
+        const rows = g.fields.map((f) => {
+          const scenarioYieldTHa = (Number(f.yieldTHa) || 0) * factor;
+          const { additionalUreaRequired } = nitrogenCalc({ nPerTonne, targetYieldTHa: scenarioYieldTHa, soilTestN: f.soilTestNKgHa });
+          const area = Number(f.areaHa) || 0;
+          const scenarioReqT = (area * additionalUreaRequired) / 1000;
+          return { f, scenarioYieldTHa, area, kgHa: additionalUreaRequired, scenarioReqT, currentReqT: fieldUrea(f).requiredTons };
+        });
+        return { g, rows };
+      })
+      .filter(({ rows }) => rows.length > 0);
+
+    if (rowsByGroup.length === 0) {
+      tableEl.innerHTML = `<div class="empty">Add fields with a forecast yield and commodity in the Production tab.</div>`;
+      return;
+    }
+
+    const grandScenario = rowsByGroup.reduce((s, { rows }) => s + rows.reduce((s2, r) => s2 + r.scenarioReqT, 0), 0);
+    const grandCurrent = rowsByGroup.reduce((s, { rows }) => s + rows.reduce((s2, r) => s2 + r.currentReqT, 0), 0);
+    const delta = grandScenario - grandCurrent;
+
+    tableEl.innerHTML = `
+      ${rowsByGroup.map(({ g, rows }) => `
+        <div class="group-label"><span>${esc(g.name)}</span></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Field</th><th>Area</th><th>Scenario yield t/ha</th><th>Urea req kg/ha</th><th>Urea req t</th></tr></thead>
+            <tbody>
+              ${rows.map((r) => `
+                <tr>
+                  <td>${esc(r.f.name)}</td>
+                  <td>${num(r.area, 1)}</td>
+                  <td>${num(r.scenarioYieldTHa, 2)}</td>
+                  <td>${num(r.kgHa, 0)}</td>
+                  <td>${num(r.scenarioReqT, 2)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      `).join('')}
+      <hr class="sep" />
+      <div class="row"><span class="label">Total urea required at this scenario</span><span class="value" style="font-size:20px">${num(grandScenario, 2)} t</span></div>
+      <div class="row"><span class="label">Vs currently entered "required"</span><span class="value">${num(grandCurrent, 2)} t &nbsp; <span class="badge ${delta >= 0 ? 'neg' : 'pos'}">${delta >= 0 ? '+' : ''}${num(delta, 2)} t</span></span></div>
+    `;
+  }
+  recompute();
+}
+
 function ureaTable(g) {
-  const rows = g.fields.map((f) => ({ f, u: fieldUrea(f) }));
+  const rows = g.fields.map((f) => ({ f, u: fieldUrea(f), soilEquivKgHa: soilNUreaEquivalent(f.soilTestNKgHa) }));
   const totals = rows.reduce((acc, { f, u }) => ({
     area: acc.area + (Number(f.areaHa) || 0),
     reqT: acc.reqT + u.requiredTons,
     appT: acc.appT + u.appliedTons,
     leftT: acc.leftT + u.leftTons,
+  }), { area: 0, reqT: 0, appT: 0, leftT: 0 });
+  const reqKgHa = totals.area > 0 ? (totals.reqT * 1000) / totals.area : 0;
+  const appKgHa = totals.area > 0 ? (totals.appT * 1000) / totals.area : 0;
+  const leftKgHa = totals.area > 0 ? (totals.leftT * 1000) / totals.area : 0;
+  const avgSoilTestN = rows.length > 0 ? rows.reduce((s, { f }) => s + (Number(f.soilTestNKgHa) || 0), 0) / rows.length : 0;
+  const avgSoilEquiv = rows.length > 0 ? rows.reduce((s, { soilEquivKgHa }) => s + soilEquivKgHa, 0) / rows.length : 0;
+
+  return `
+    <div class="group-label"><span>${esc(g.name)}</span></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Field</th><th>Area</th><th>Soil N kg/ha</th><th>Soil equiv kg/ha</th><th>Req kg/ha</th><th>App kg/ha</th><th>Left kg/ha</th><th>Req t</th><th>App t</th><th>Left t</th></tr></thead>
+        <tbody>
+          ${rows.map(({ f, u, soilEquivKgHa }) => {
+            const leftKgHaField = f.areaHa > 0 ? (u.leftTons * 1000) / f.areaHa : 0;
+            return `
+            <tr>
+              <td>${esc(f.name)}</td>
+              <td>${num(f.areaHa, 1)}</td>
+              <td>${num(f.soilTestNKgHa || 0, 0)}</td>
+              <td>${num(soilEquivKgHa, 0)}</td>
+              <td>${num(f.ureaRequiredKgHa || 0, 0)}</td>
+              <td>${num(f.ureaAppliedKgHa || 0, 0)}</td>
+              <td>${num(leftKgHaField, 0)}</td>
+              <td>${num(u.requiredTons, 2)}</td>
+              <td>${num(u.appliedTons, 2)}</td>
+              <td>${num(u.leftTons, 2)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot><tr>
+          <td>Total</td>
+          <td>${num(totals.area, 1)}</td>
+          <td>${num(avgSoilTestN, 0)}</td>
+          <td>${num(avgSoilEquiv, 0)}</td>
+          <td>${num(reqKgHa, 0)}</td>
+          <td>${num(appKgHa, 0)}</td>
+          <td>${num(leftKgHa, 0)}</td>
+          <td>${num(totals.reqT, 2)}</td>
+          <td>${num(totals.appT, 2)}</td>
+          <td>${num(totals.leftT, 2)}</td>
+        </tr></tfoot>
+      </table>
+    </div>
+  `;
+}
+
+function starterTable(g) {
+  const rows = g.fields.map((f) => ({ f, s: fieldStarter(f) }));
+  const totals = rows.reduce((acc, { f, s }) => ({
+    area: acc.area + (Number(f.areaHa) || 0),
+    reqT: acc.reqT + s.requiredTons,
+    appT: acc.appT + s.appliedTons,
+    leftT: acc.leftT + s.leftTons,
   }), { area: 0, reqT: 0, appT: 0, leftT: 0 });
   const reqKgHa = totals.area > 0 ? (totals.reqT * 1000) / totals.area : 0;
   const appKgHa = totals.area > 0 ? (totals.appT * 1000) / totals.area : 0;
@@ -119,18 +253,18 @@ function ureaTable(g) {
       <table>
         <thead><tr><th>Field</th><th>Area</th><th>Req kg/ha</th><th>App kg/ha</th><th>Left kg/ha</th><th>Req t</th><th>App t</th><th>Left t</th></tr></thead>
         <tbody>
-          ${rows.map(({ f, u }) => {
-            const leftKgHaField = f.areaHa > 0 ? (u.leftTons * 1000) / f.areaHa : 0;
+          ${rows.map(({ f, s }) => {
+            const leftKgHaField = f.areaHa > 0 ? (s.leftTons * 1000) / f.areaHa : 0;
             return `
             <tr>
               <td>${esc(f.name)}</td>
               <td>${num(f.areaHa, 1)}</td>
-              <td>${num(f.ureaRequiredKgHa || 0, 0)}</td>
-              <td>${num(f.ureaAppliedKgHa || 0, 0)}</td>
+              <td>${num(f.starterRequiredKgHa || 0, 0)}</td>
+              <td>${num(f.starterAppliedKgHa || 0, 0)}</td>
               <td>${num(leftKgHaField, 0)}</td>
-              <td>${num(u.requiredTons, 2)}</td>
-              <td>${num(u.appliedTons, 2)}</td>
-              <td>${num(u.leftTons, 2)}</td>
+              <td>${num(s.requiredTons, 2)}</td>
+              <td>${num(s.appliedTons, 2)}</td>
+              <td>${num(s.leftTons, 2)}</td>
             </tr>`;
           }).join('')}
         </tbody>

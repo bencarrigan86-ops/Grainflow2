@@ -150,6 +150,14 @@ export function fieldUrea(f) {
   return { requiredTons, appliedTons, leftTons: requiredTons - appliedTons };
 }
 
+/** A field's starter fertiliser: kg/ha figures converted to tonnes over its area — same shape as fieldUrea. */
+export function fieldStarter(f) {
+  const area = Number(f.areaHa) || 0;
+  const requiredTons = (area * (Number(f.starterRequiredKgHa) || 0)) / 1000;
+  const appliedTons = (area * (Number(f.starterAppliedKgHa) || 0)) / 1000;
+  return { requiredTons, appliedTons, leftTons: requiredTons - appliedTons };
+}
+
 /**
  * Nitrogen/urea requirement to grow a crop to a target yield, ported from
  * the Fert tab's Table5 + "Total Urea Required" formula:
@@ -161,9 +169,15 @@ export function fieldUrea(f) {
  */
 export const UREA_N_PCT = 46;
 
+/** Soil test N (kg/ha) converted to its urea-equivalent (kg/ha). */
+export function soilNUreaEquivalent(soilTestNKgHa, ureaNPct = UREA_N_PCT) {
+  const pct = (Number(ureaNPct) || 0) / 100;
+  return pct > 0 ? (Number(soilTestNKgHa) || 0) / pct : 0;
+}
+
 export function nitrogenCalc({ nPerTonne, targetYieldTHa, soilTestN, ureaNPct = UREA_N_PCT }) {
   const pct = (Number(ureaNPct) || 0) / 100;
-  const soilUreaEquivalent = pct > 0 ? (Number(soilTestN) || 0) / pct : 0;
+  const soilUreaEquivalent = soilNUreaEquivalent(soilTestN, ureaNPct);
   const ureaForTargetYield = pct > 0 ? ((Number(nPerTonne) || 0) / pct) * (Number(targetYieldTHa) || 0) : 0;
   const additionalUreaRequired = ureaForTargetYield - soilUreaEquivalent;
   return { soilUreaEquivalent, ureaForTargetYield, additionalUreaRequired };
