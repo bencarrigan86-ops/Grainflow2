@@ -142,11 +142,23 @@ export function estimateFieldTons(f) {
   return (Number(f.areaHa) || 0) * (Number(f.yieldTHa) || 0);
 }
 
+/**
+ * A field's applied urea (kg/ha) — the sum of its logged application
+ * entries if any exist, otherwise the older single manually-entered
+ * total (fields recorded before per-application logging existed).
+ */
+export function ureaAppliedKgHaFor(f) {
+  if (Array.isArray(f.ureaApplications) && f.ureaApplications.length > 0) {
+    return f.ureaApplications.reduce((s, a) => s + (Number(a.rateKgHa) || 0), 0);
+  }
+  return Number(f.ureaAppliedKgHa) || 0;
+}
+
 /** A field's urea: kg/ha figures converted to tonnes over its area. */
 export function fieldUrea(f) {
   const area = Number(f.areaHa) || 0;
   const requiredTons = (area * (Number(f.ureaRequiredKgHa) || 0)) / 1000;
-  const appliedTons = (area * (Number(f.ureaAppliedKgHa) || 0)) / 1000;
+  const appliedTons = (area * ureaAppliedKgHaFor(f)) / 1000;
   return { requiredTons, appliedTons, leftTons: requiredTons - appliedTons };
 }
 

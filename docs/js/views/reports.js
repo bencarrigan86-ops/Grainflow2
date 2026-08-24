@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=44';
-import { groupFieldsByCommodity, fieldUrea, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT } from '../derived.js?v=44';
-import { num, tons, esc } from '../fmt.js?v=44';
-import { field, getVal, getNum } from '../ui.js?v=44';
+import { db } from '../storage.js?v=45';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT } from '../derived.js?v=45';
+import { num, tons, esc } from '../fmt.js?v=45';
+import { field, getVal, getNum } from '../ui.js?v=45';
 
 let unsub = null;
 let view = 'fert';
@@ -141,7 +141,7 @@ function ureaTable(g, commodity) {
               <td>${target.targetYieldTHa > 0 ? num(target.targetYieldTHa, 2) : '—'}</td>
               <td>${num(target.requiredKgHa, 0)}</td>
               <td>${num(f.ureaRequiredKgHa || 0, 0)}</td>
-              <td>${num(f.ureaAppliedKgHa || 0, 0)}</td>
+              <td>${num(ureaAppliedKgHaFor(f), 0)}</td>
               <td>${num(leftKgHaField, 0)}</td>
               <td>${num(u.requiredTons, 2)}</td>
               <td>${num(u.appliedTons, 2)}</td>

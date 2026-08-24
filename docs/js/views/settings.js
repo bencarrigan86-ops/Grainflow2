@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=44';
-import { num, money, esc } from '../fmt.js?v=44';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=44';
-import { APP_VERSION } from '../version.js?v=44';
-import { exportRowsAsCSV } from '../csv.js?v=44';
-import { fieldTons, fieldUrea, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=44';
-import { endpointLabel } from './movements.js?v=44';
+import { db } from '../storage.js?v=45';
+import { num, money, esc } from '../fmt.js?v=45';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=45';
+import { APP_VERSION } from '../version.js?v=45';
+import { exportRowsAsCSV } from '../csv.js?v=45';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=45';
+import { endpointLabel } from './movements.js?v=45';
 
 let unsub = null;
 
@@ -241,7 +241,7 @@ function exportFieldsCSV(year, stamp) {
     { label: 'Yield (t/ha)', get: (f) => f.yieldTHa ?? '' },
     { label: 'Tonnes', get: (f) => num(fieldTons(f, movements), 2) },
     { label: 'Urea required (kg/ha)', get: (f) => f.ureaRequiredKgHa ?? '' },
-    { label: 'Urea applied (kg/ha)', get: (f) => f.ureaAppliedKgHa ?? '' },
+    { label: 'Urea applied (kg/ha)', get: (f) => ureaAppliedKgHaFor(f) },
     { label: 'Urea left (t)', get: (f) => num(fieldUrea(f).leftTons, 2) },
     { label: 'Seed variety', get: (f) => f.seedVariety ?? '' },
     { label: 'Seed rate (kg/ha)', get: (f) => f.seedRateKgHa ?? '' },

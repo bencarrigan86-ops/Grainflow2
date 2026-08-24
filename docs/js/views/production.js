@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=44';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=44';
-import { num, tons, ha, esc } from '../fmt.js?v=44';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=44';
-import { renderRelatedMovements } from './movements.js?v=44';
+import { db } from '../storage.js?v=45';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=45';
+import { num, tons, ha, esc } from '../fmt.js?v=45';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=45';
+import { renderRelatedMovements } from './movements.js?v=45';
 
 let unsub = null;
 
@@ -124,9 +124,18 @@ function openFieldSheet(existing) {
       <div class="row"><span class="label"><strong>Urea required to hit target</strong></span><span class="value" id="target-urea-preview" style="font-size:18px">0 kg/ha</span></div>
       <button class="btn secondary small" id="use-target-urea" style="margin:8px 0">Use as "Urea required" below</button>
       <hr class="sep" />
-      <div class="grid-2">
-        ${field({ label: 'Urea required (kg/ha)', id: 'ureaReq', type: 'number', step: '1', value: existing?.ureaRequiredKgHa ?? 0 })}
-        ${field({ label: 'Urea applied (kg/ha)', id: 'ureaApp', type: 'number', step: '1', value: existing?.ureaAppliedKgHa ?? 0 })}
+      ${field({ label: 'Urea required (kg/ha)', id: 'ureaReq', type: 'number', step: '1', value: existing?.ureaRequiredKgHa ?? 0 })}
+      <div class="row"><span class="label">Urea applied (kg/ha)</span><span class="value" id="urea-applied-total">0 kg/ha</span></div>
+      <div id="urea-app-list"></div>
+      <button class="btn secondary small" id="toggle-urea-app-form" style="margin-bottom:10px">+ Add application</button>
+      <div id="urea-app-form" style="display:none;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
+        ${field({ label: 'Date', id: 'ua-date', type: 'date' })}
+        <div class="grid-2">
+          ${field({ label: 'Applied by', id: 'ua-by', placeholder: 'e.g. Ben' })}
+          ${field({ label: 'Machine', id: 'ua-machine', placeholder: 'e.g. Boomspray' })}
+        </div>
+        ${field({ label: 'Rate (kg/ha)', id: 'ua-rate', type: 'number', step: '1' })}
+        <button class="btn small" id="ua-add" style="margin-top:2px">Add application</button>
       </div>
       <div class="row"><span class="label">Urea left</span><span class="value" id="urea-preview">0.0 t</span></div>
       <hr class="sep" />
@@ -148,8 +157,11 @@ function openFieldSheet(existing) {
     if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'field', existing.id);
 
     let yieldMode = existing?.yieldMode || 'estimate';
+    let applications = (existing?.ureaApplications || []).slice();
     const preview = root.querySelector('#tons-preview');
     const ureaPreview = root.querySelector('#urea-preview');
+    const ureaAppliedTotalEl = root.querySelector('#urea-applied-total');
+    const appListEl = root.querySelector('#urea-app-list');
     const soilNPreview = root.querySelector('#soiln-preview');
     const commodityYieldPreview = root.querySelector('#commodity-yield-preview');
     const commodityTargetPreview = root.querySelector('#commodity-target-preview');
@@ -161,6 +173,32 @@ function openFieldSheet(existing) {
       { soilTestNKgHa: getNum(root, 'soilTestN'), targetYieldOverrideTHa: getNum(root, 'targetYieldOverride') },
       commodities.find((c) => c.id === getVal(root, 'commodity'))
     );
+    const appliedKgHa = () => ureaAppliedKgHaFor({ ureaApplications: applications, ureaAppliedKgHa: existing?.ureaAppliedKgHa });
+    const renderApplications = () => {
+      if (applications.length === 0) {
+        const legacy = Number(existing?.ureaAppliedKgHa) || 0;
+        appListEl.innerHTML = legacy > 0
+          ? `<div class="field hint" style="margin-bottom:8px">No applications logged yet — showing the ${num(legacy, 0)} kg/ha entered before detailed logging started. Add an application below to begin tracking history.</div>`
+          : `<div class="field hint" style="margin-bottom:8px">No applications logged yet.</div>`;
+      } else {
+        appListEl.innerHTML = applications.map((a) => `
+          <div class="list-item" style="padding:8px 4px">
+            <div>
+              <div class="main">${esc(a.date || 'No date')}${a.appliedBy ? ' &middot; ' + esc(a.appliedBy) : ''}</div>
+              <div class="meta">${esc(a.machine || '—')} &middot; ${num(a.rateKgHa, 0)} kg/ha</div>
+            </div>
+            <button type="button" class="btn danger small" data-remove-app="${a.id}" style="width:auto">&times;</button>
+          </div>
+        `).join('');
+        appListEl.querySelectorAll('[data-remove-app]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            applications = applications.filter((a) => a.id !== btn.dataset.removeApp);
+            renderApplications();
+            recompute();
+          });
+        });
+      }
+    };
     const recompute = () => {
       const tonsVal = yieldMode === 'actual'
         ? actualTons
@@ -168,7 +206,9 @@ function openFieldSheet(existing) {
       const area = getNum(root, 'area');
       const yieldTHa = area > 0 ? tonsVal / area : 0;
       preview.textContent = `${tons(tonsVal)} · ${num(yieldTHa, 2)} t/ha`;
-      const u = fieldUrea({ areaHa: getNum(root, 'area'), ureaRequiredKgHa: getNum(root, 'ureaReq'), ureaAppliedKgHa: getNum(root, 'ureaApp') });
+      const applied = appliedKgHa();
+      ureaAppliedTotalEl.textContent = `${num(applied, 0)} kg/ha`;
+      const u = fieldUrea({ areaHa: getNum(root, 'area'), ureaRequiredKgHa: getNum(root, 'ureaReq'), ureaAppliedKgHa: applied });
       ureaPreview.textContent = tons(u.leftTons);
       soilNPreview.textContent = `${num(soilNUreaEquivalent(getNum(root, 'soilTestN')), 0)} kg/ha`;
       const selectedCommodity = commodities.find((c) => c.id === getVal(root, 'commodity'));
@@ -202,7 +242,27 @@ function openFieldSheet(existing) {
       });
     }
     root.querySelector('#ureaReq').addEventListener('input', recompute);
-    root.querySelector('#ureaApp').addEventListener('input', recompute);
+    root.querySelector('#toggle-urea-app-form').addEventListener('click', () => {
+      const formEl = root.querySelector('#urea-app-form');
+      formEl.style.display = formEl.style.display === 'none' ? 'block' : 'none';
+    });
+    root.querySelector('#ua-add').addEventListener('click', () => {
+      const rate = getNum(root, 'ua-rate');
+      if (!rate) { root.querySelector('#ua-rate').focus(); return; }
+      applications.push({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+        date: getVal(root, 'ua-date') || '',
+        appliedBy: getVal(root, 'ua-by')?.trim() || '',
+        machine: getVal(root, 'ua-machine')?.trim() || '',
+        rateKgHa: rate,
+      });
+      root.querySelector('#ua-date').value = '';
+      root.querySelector('#ua-by').value = '';
+      root.querySelector('#ua-machine').value = '';
+      root.querySelector('#ua-rate').value = '';
+      renderApplications();
+      recompute();
+    });
     root.querySelector('#soilTestN').addEventListener('input', recompute);
     root.querySelector('#targetYieldOverride').addEventListener('input', recompute);
     root.querySelector('#starterReq').addEventListener('input', recompute);
@@ -219,6 +279,7 @@ function openFieldSheet(existing) {
       root.querySelector('#ureaReq').value = Math.round(currentTargetCalc().requiredKgHa);
       recompute();
     });
+    renderApplications();
     recompute();
 
     root.querySelector('#save').addEventListener('click', () => {
@@ -232,7 +293,8 @@ function openFieldSheet(existing) {
         yieldTHa: getNum(root, 'yield'),
         yieldMode,
         ureaRequiredKgHa: getNum(root, 'ureaReq'),
-        ureaAppliedKgHa: getNum(root, 'ureaApp'),
+        ureaAppliedKgHa: existing?.ureaAppliedKgHa ?? 0,
+        ureaApplications: applications,
         soilTestNKgHa: getNum(root, 'soilTestN'),
         targetYieldOverrideTHa: getNum(root, 'targetYieldOverride'),
         starterRequiredKgHa: getNum(root, 'starterReq'),
