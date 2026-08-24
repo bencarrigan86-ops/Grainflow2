@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=41';
-import { groupFieldsByCommodity, fieldUrea, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT } from '../derived.js?v=41';
-import { num, tons, esc } from '../fmt.js?v=41';
-import { field, getVal, getNum } from '../ui.js?v=41';
+import { db } from '../storage.js?v=42';
+import { groupFieldsByCommodity, fieldUrea, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT } from '../derived.js?v=42';
+import { num, tons, esc } from '../fmt.js?v=42';
+import { field, getVal, getNum } from '../ui.js?v=42';
 
 let unsub = null;
 let view = 'fert';
@@ -65,15 +65,8 @@ function paintFert(root) {
       <h2><span class="dot report"></span>Starter fertiliser</h2>
       ${groups.length === 0 ? `<div class="empty">Add fields with starter rates in the Production tab.</div>` : groups.map((g) => starterTable(g)).join('')}
     </div>
-    <div class="card">
-      <h2>Yield sensitivity</h2>
-      <div class="field hint" style="margin-bottom:10px">Move the forecast yield up or down across every field and see how urea requirement changes — doesn't touch any saved data.</div>
-      <div id="sens-form"></div>
-      <div id="sens-table"></div>
-    </div>
   `;
   buildNitrogenCalc(body, commodities);
-  buildYieldSensitivity(body, commodities, groups);
 }
 
 function commodityOptionsCalc(commodities) {
@@ -110,75 +103,6 @@ function buildNitrogenCalc(root, commodities) {
       <div class="row"><span class="label">Soil N (urea equivalent)</span><span class="value">${num(r.soilUreaEquivalent, 0)} kg/ha</span></div>
       <div class="row"><span class="label">Urea required for target yield</span><span class="value">${num(r.ureaForTargetYield, 0)} kg/ha</span></div>
       <div class="row"><span class="label"><strong>Additional urea required</strong></span><span class="value" style="font-size:22px">${num(r.additionalUreaRequired, 0)} kg/ha</span></div>
-    `;
-  }
-  recompute();
-}
-
-/**
- * Live "what-if": scales every field's forecast yield by one adjustment
- * (+/- %) and recomputes urea required from the same nitrogenCalc formula
- * used above (commodity N/t x scenario yield, less each field's own soil
- * test) — without touching any saved field data.
- */
-function buildYieldSensitivity(root, commodities, groups) {
-  const formEl = root.querySelector('#sens-form');
-  const tableEl = root.querySelector('#sens-table');
-
-  formEl.innerHTML = `
-    ${field({ label: 'Yield adjustment (%)', id: 'sens-pct', type: 'number', step: '5', value: 0, allowNegative: true, hint: "Applied to every field's forecast yield — e.g. -10 for a lighter season, 15 for a bumper one" })}
-  `;
-  formEl.querySelector('#sens-pct').addEventListener('input', recompute);
-
-  function recompute() {
-    const pct = getNum(formEl, 'sens-pct');
-    const factor = 1 + pct / 100;
-
-    const rowsByGroup = groups
-      .map((g) => {
-        const nPerTonne = commodities.find((c) => c.id === g.id)?.nPerTonne || 0;
-        const rows = g.fields.map((f) => {
-          const scenarioYieldTHa = (Number(f.yieldTHa) || 0) * factor;
-          const { additionalUreaRequired } = nitrogenCalc({ nPerTonne, targetYieldTHa: scenarioYieldTHa, soilTestN: f.soilTestNKgHa });
-          const area = Number(f.areaHa) || 0;
-          const scenarioReqT = (area * additionalUreaRequired) / 1000;
-          return { f, scenarioYieldTHa, area, kgHa: additionalUreaRequired, scenarioReqT, currentReqT: fieldUrea(f).requiredTons };
-        });
-        return { g, rows };
-      })
-      .filter(({ rows }) => rows.length > 0);
-
-    if (rowsByGroup.length === 0) {
-      tableEl.innerHTML = `<div class="empty">Add fields with a forecast yield and commodity in the Production tab.</div>`;
-      return;
-    }
-
-    const grandScenario = rowsByGroup.reduce((s, { rows }) => s + rows.reduce((s2, r) => s2 + r.scenarioReqT, 0), 0);
-    const grandCurrent = rowsByGroup.reduce((s, { rows }) => s + rows.reduce((s2, r) => s2 + r.currentReqT, 0), 0);
-    const delta = grandScenario - grandCurrent;
-
-    tableEl.innerHTML = `
-      ${rowsByGroup.map(({ g, rows }) => `
-        <div class="group-label"><span>${esc(g.name)}</span></div>
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Field</th><th>Area</th><th>Scenario yield t/ha</th><th>Urea req kg/ha</th><th>Urea req t</th></tr></thead>
-            <tbody>
-              ${rows.map((r) => `
-                <tr>
-                  <td>${esc(r.f.name)}</td>
-                  <td>${num(r.area, 1)}</td>
-                  <td>${num(r.scenarioYieldTHa, 2)}</td>
-                  <td>${num(r.kgHa, 0)}</td>
-                  <td>${num(r.scenarioReqT, 2)}</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-      `).join('')}
-      <hr class="sep" />
-      <div class="row"><span class="label">Total urea required at this scenario</span><span class="value" style="font-size:20px">${num(grandScenario, 2)} t</span></div>
-      <div class="row"><span class="label">Vs currently entered "required"</span><span class="value">${num(grandCurrent, 2)} t &nbsp; <span class="badge ${delta >= 0 ? 'neg' : 'pos'}">${delta >= 0 ? '+' : ''}${num(delta, 2)} t</span></span></div>
     `;
   }
   recompute();

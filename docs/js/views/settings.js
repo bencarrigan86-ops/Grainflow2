@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=41';
-import { num, money, esc } from '../fmt.js?v=41';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=41';
-import { APP_VERSION } from '../version.js?v=41';
-import { exportRowsAsCSV } from '../csv.js?v=41';
-import { fieldTons, fieldUrea, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=41';
-import { endpointLabel } from './movements.js?v=41';
+import { db } from '../storage.js?v=42';
+import { num, money, esc } from '../fmt.js?v=42';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=42';
+import { APP_VERSION } from '../version.js?v=42';
+import { exportRowsAsCSV } from '../csv.js?v=42';
+import { fieldTons, fieldUrea, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=42';
+import { endpointLabel } from './movements.js?v=42';
 
 let unsub = null;
 
@@ -385,6 +385,7 @@ function commodityRow(c) {
 }
 
 function openCommoditySheet(existing) {
+  const { fields } = db.get();
   openSheet(existing ? 'Edit commodity' : 'Add commodity', (root) => {
     root.innerHTML = `
       ${field({ label: 'Name', id: 'name', value: existing?.name, placeholder: 'e.g. Wheat' })}
@@ -398,13 +399,23 @@ function openCommoditySheet(existing) {
         ${field({ label: 'Retained seed (t)', id: 'seed', type: 'number', step: '0.01', value: existing?.retainedSeed ?? 0 })}
       </div>
       <div class="grid-2">
-        ${field({ label: 'Target yield (t/ha)', id: 'targetYield', type: 'number', step: '0.1', value: existing?.targetYieldTHa ?? 0, hint: 'Default fert planning target — override per field in Production' })}
+        ${field({ label: 'Target yield (t/ha)', id: 'targetYield', type: 'number', step: '0.1', value: existing?.targetYieldTHa ?? 0, hint: 'Default fert planning target — separate from each field\'s production yield estimate' })}
         ${field({ label: 'N required (kg/t)', id: 'nPerTonne', type: 'number', step: '1', value: existing?.nPerTonne ?? 0, hint: 'For the Fert calculator' })}
       </div>
+      ${existing ? `
+        <div class="row"><span class="label">Fields using this commodity</span><span class="value">${fields.filter((f) => f.commodityId === existing.id).length}</span></div>
+        <hr class="sep" />
+        <h2 style="margin:0 0 4px">Fert sensitivity</h2>
+        <div class="field hint" style="margin-bottom:10px">See how urea requirement across this commodity's fields changes as the target yield above moves — overridden fields scale from their own override, not this default. Doesn't change any saved data.</div>
+        <div id="commodity-sens-form"></div>
+        <div id="commodity-sens-table"></div>
+      ` : ''}
+      <hr class="sep" />
       ${field({ label: 'Gross margin cost ($)', id: 'gmCost', type: 'number', step: '1', value: existing?.grossMarginCost ?? 0, hint: 'Total input cost for this commodity, for the Position tab' })}
       <button class="btn" id="save">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete commodity</button>` : ''}
     `;
+    if (existing) buildCommoditySensitivity(root, existing.id);
     root.querySelector('#save').addEventListener('click', () => {
       const name = getVal(root, 'name')?.trim();
       if (!name) { root.querySelector('#name').focus(); return; }
@@ -432,4 +443,74 @@ function openCommoditySheet(existing) {
       });
     }
   });
+}
+
+/**
+ * Live "what-if" for one commodity: flexes its target yield (or, per
+ * field, that field's own override) by an adjustment % and recomputes
+ * urea required across every field using it — reading the target yield
+ * and N/tonne straight off the form above, so it stays in sync as those
+ * are edited, before anything is saved.
+ */
+function buildCommoditySensitivity(root, commodityId) {
+  const { fields } = db.get();
+  const commodityFields = fields.filter((f) => f.commodityId === commodityId);
+  const formEl = root.querySelector('#commodity-sens-form');
+  const tableEl = root.querySelector('#commodity-sens-table');
+
+  formEl.innerHTML = `
+    ${field({ label: 'Sensitivity adjustment (%)', id: 'csens-pct', type: 'number', step: '5', value: 0, allowNegative: true, hint: "Applied on top of the target yield (or each field's own override)" })}
+  `;
+
+  const recompute = () => {
+    if (commodityFields.length === 0) {
+      tableEl.innerHTML = `<div class="empty">No fields use this commodity yet.</div>`;
+      return;
+    }
+    const liveCommodity = { targetYieldTHa: getNum(root, 'targetYield'), nPerTonne: getNum(root, 'nPerTonne') };
+    const factor = 1 + getNum(root, 'csens-pct') / 100;
+
+    const rows = commodityFields.map((f) => {
+      const base = fieldUreaForTarget(f, liveCommodity);
+      const scenarioYieldTHa = base.targetYieldTHa * factor;
+      const { additionalUreaRequired } = nitrogenCalc({ nPerTonne: liveCommodity.nPerTonne, targetYieldTHa: scenarioYieldTHa, soilTestN: f.soilTestNKgHa });
+      const area = Number(f.areaHa) || 0;
+      return { f, scenarioYieldTHa, kgHa: additionalUreaRequired, reqT: (area * additionalUreaRequired) / 1000, currentReqT: fieldUrea(f).requiredTons };
+    });
+    const totalArea = rows.reduce((s, r) => s + (Number(r.f.areaHa) || 0), 0);
+    const totalReqT = rows.reduce((s, r) => s + r.reqT, 0);
+    const totalCurrentT = rows.reduce((s, r) => s + r.currentReqT, 0);
+    const delta = totalReqT - totalCurrentT;
+
+    tableEl.innerHTML = `
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Field</th><th>Area</th><th>Scenario yield t/ha</th><th>Urea req kg/ha</th><th>Urea req t</th></tr></thead>
+          <tbody>
+            ${rows.map((r) => `
+              <tr>
+                <td>${esc(r.f.name)}</td>
+                <td>${num(r.f.areaHa, 1)}</td>
+                <td>${num(r.scenarioYieldTHa, 2)}</td>
+                <td>${num(r.kgHa, 0)}</td>
+                <td>${num(r.reqT, 2)}</td>
+              </tr>`).join('')}
+          </tbody>
+          <tfoot><tr>
+            <td>Total</td>
+            <td>${num(totalArea, 1)}</td>
+            <td></td>
+            <td></td>
+            <td>${num(totalReqT, 2)}</td>
+          </tr></tfoot>
+        </table>
+      </div>
+      <div class="row" style="margin-top:6px"><span class="label">Vs currently recorded "required"</span><span class="value">${num(totalCurrentT, 2)} t &nbsp; <span class="badge ${delta >= 0 ? 'neg' : 'pos'}">${delta >= 0 ? '+' : ''}${num(delta, 2)} t</span></span></div>
+    `;
+  };
+
+  formEl.querySelector('#csens-pct').addEventListener('input', recompute);
+  root.querySelector('#targetYield').addEventListener('input', recompute);
+  root.querySelector('#nPerTonne').addEventListener('input', recompute);
+  recompute();
 }

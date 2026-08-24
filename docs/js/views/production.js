@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=41';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=41';
-import { num, tons, ha, esc } from '../fmt.js?v=41';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=41';
-import { renderRelatedMovements } from './movements.js?v=41';
+import { db } from '../storage.js?v=42';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=42';
+import { num, tons, ha, esc } from '../fmt.js?v=42';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=42';
+import { renderRelatedMovements } from './movements.js?v=42';
 
 let unsub = null;
 
@@ -111,6 +111,7 @@ function openFieldSheet(existing) {
       </div>
       <div class="row"><span class="label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
       <hr class="sep" />
+      <div class="row"><span class="label">Commodity's default target yield</span><span class="value" id="commodity-target-preview">— t/ha</span></div>
       ${field({ label: 'Target yield override (t/ha)', id: 'targetYieldOverride', type: 'number', step: '0.1', value: existing?.targetYieldOverrideTHa || '', placeholder: 'Commodity default', hint: "For fert planning — leave blank to use the commodity's default target yield (set in Settings)" })}
       ${field({ label: 'Soil test N (kg/ha)', id: 'soilTestN', type: 'number', step: '1', value: existing?.soilTestNKgHa ?? 0, hint: 'From your soil test report' })}
       <div class="row"><span class="label">Target yield in use</span><span class="value" id="target-yield-preview">— t/ha</span></div>
@@ -145,6 +146,7 @@ function openFieldSheet(existing) {
     const preview = root.querySelector('#tons-preview');
     const ureaPreview = root.querySelector('#urea-preview');
     const soilNPreview = root.querySelector('#soiln-preview');
+    const commodityTargetPreview = root.querySelector('#commodity-target-preview');
     const targetYieldPreview = root.querySelector('#target-yield-preview');
     const targetUreaPreview = root.querySelector('#target-urea-preview');
     const starterPreview = root.querySelector('#starter-preview');
@@ -163,6 +165,9 @@ function openFieldSheet(existing) {
       const u = fieldUrea({ areaHa: getNum(root, 'area'), ureaRequiredKgHa: getNum(root, 'ureaReq'), ureaAppliedKgHa: getNum(root, 'ureaApp') });
       ureaPreview.textContent = tons(u.leftTons);
       soilNPreview.textContent = `${num(soilNUreaEquivalent(getNum(root, 'soilTestN')), 0)} kg/ha`;
+      const selectedCommodity = commodities.find((c) => c.id === getVal(root, 'commodity'));
+      const commodityDefault = Number(selectedCommodity?.targetYieldTHa) || 0;
+      commodityTargetPreview.textContent = commodityDefault > 0 ? `${num(commodityDefault, 2)} t/ha` : '— (set one in Settings)';
       const targetCalc = currentTargetCalc();
       targetYieldPreview.textContent = targetCalc.targetYieldTHa > 0 ? `${num(targetCalc.targetYieldTHa, 2)} t/ha` : '— (set a target yield)';
       targetUreaPreview.textContent = `${num(targetCalc.requiredKgHa, 0)} kg/ha`;
