@@ -183,6 +183,31 @@ export function nitrogenCalc({ nPerTonne, targetYieldTHa, soilTestN, ureaNPct = 
   return { soilUreaEquivalent, ureaForTargetYield, additionalUreaRequired };
 }
 
+/**
+ * The target yield actually used for a field's fert planning: its own
+ * override if one's been set, otherwise the commodity's default target
+ * yield.
+ */
+export function effectiveTargetYieldTHa(f, commodity) {
+  const override = Number(f?.targetYieldOverrideTHa) || 0;
+  if (override > 0) return override;
+  return Number(commodity?.targetYieldTHa) || 0;
+}
+
+/**
+ * Urea required (kg/ha) for a field to hit its effective target yield,
+ * netting off what its own soil test already supplies.
+ */
+export function fieldUreaForTarget(f, commodity) {
+  const targetYieldTHa = effectiveTargetYieldTHa(f, commodity);
+  const { additionalUreaRequired } = nitrogenCalc({
+    nPerTonne: commodity?.nPerTonne,
+    targetYieldTHa,
+    soilTestN: f?.soilTestNKgHa,
+  });
+  return { targetYieldTHa, requiredKgHa: additionalUreaRequired };
+}
+
 export const SEED_BUFFER_PCT = 5;
 
 /** A field's seed: rate (kg/ha) converted to tonnes over its area, plus a buffered figure. */

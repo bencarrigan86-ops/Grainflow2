@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=40';
-import { num, money, esc } from '../fmt.js?v=40';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=40';
-import { APP_VERSION } from '../version.js?v=40';
-import { exportRowsAsCSV } from '../csv.js?v=40';
-import { fieldTons, fieldUrea, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=40';
-import { endpointLabel } from './movements.js?v=40';
+import { db } from '../storage.js?v=41';
+import { num, money, esc } from '../fmt.js?v=41';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=41';
+import { APP_VERSION } from '../version.js?v=41';
+import { exportRowsAsCSV } from '../csv.js?v=41';
+import { fieldTons, fieldUrea, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=41';
+import { endpointLabel } from './movements.js?v=41';
 
 let unsub = null;
 
@@ -397,7 +397,10 @@ function openCommoditySheet(existing) {
         ${field({ label: 'Opening stock (t)', id: 'opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0 })}
         ${field({ label: 'Retained seed (t)', id: 'seed', type: 'number', step: '0.01', value: existing?.retainedSeed ?? 0 })}
       </div>
-      ${field({ label: 'N required (kg/t)', id: 'nPerTonne', type: 'number', step: '1', value: existing?.nPerTonne ?? 0, hint: 'Nitrogen per tonne of grain, for the Fert calculator' })}
+      <div class="grid-2">
+        ${field({ label: 'Target yield (t/ha)', id: 'targetYield', type: 'number', step: '0.1', value: existing?.targetYieldTHa ?? 0, hint: 'Default fert planning target — override per field in Production' })}
+        ${field({ label: 'N required (kg/t)', id: 'nPerTonne', type: 'number', step: '1', value: existing?.nPerTonne ?? 0, hint: 'For the Fert calculator' })}
+      </div>
       ${field({ label: 'Gross margin cost ($)', id: 'gmCost', type: 'number', step: '1', value: existing?.grossMarginCost ?? 0, hint: 'Total input cost for this commodity, for the Position tab' })}
       <button class="btn" id="save">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete commodity</button>` : ''}
@@ -413,6 +416,7 @@ function openCommoditySheet(existing) {
         mtmPrice: getNum(root, 'mtm'),
         openingStock: getNum(root, 'opening'),
         retainedSeed: getNum(root, 'seed'),
+        targetYieldTHa: getNum(root, 'targetYield'),
         nPerTonne: getNum(root, 'nPerTonne'),
         grossMarginCost: getNum(root, 'gmCost'),
       });

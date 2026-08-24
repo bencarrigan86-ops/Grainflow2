@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=40';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldStarter, fieldSeed, soilNUreaEquivalent, groupFieldsByCommodity } from '../derived.js?v=40';
-import { num, tons, ha, esc } from '../fmt.js?v=40';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=40';
-import { renderRelatedMovements } from './movements.js?v=40';
+import { db } from '../storage.js?v=41';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=41';
+import { num, tons, ha, esc } from '../fmt.js?v=41';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=41';
+import { renderRelatedMovements } from './movements.js?v=41';
 
 let unsub = null;
 
@@ -111,12 +111,17 @@ function openFieldSheet(existing) {
       </div>
       <div class="row"><span class="label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
       <hr class="sep" />
+      ${field({ label: 'Target yield override (t/ha)', id: 'targetYieldOverride', type: 'number', step: '0.1', value: existing?.targetYieldOverrideTHa || '', placeholder: 'Commodity default', hint: "For fert planning — leave blank to use the commodity's default target yield (set in Settings)" })}
+      ${field({ label: 'Soil test N (kg/ha)', id: 'soilTestN', type: 'number', step: '1', value: existing?.soilTestNKgHa ?? 0, hint: 'From your soil test report' })}
+      <div class="row"><span class="label">Target yield in use</span><span class="value" id="target-yield-preview">— t/ha</span></div>
+      <div class="row"><span class="label">Soil N (urea equivalent)</span><span class="value" id="soiln-preview">0 kg/ha</span></div>
+      <div class="row"><span class="label"><strong>Urea required to hit target</strong></span><span class="value" id="target-urea-preview" style="font-size:18px">0 kg/ha</span></div>
+      <button class="btn secondary small" id="use-target-urea" style="margin:8px 0">Use as "Urea required" below</button>
+      <hr class="sep" />
       <div class="grid-2">
         ${field({ label: 'Urea required (kg/ha)', id: 'ureaReq', type: 'number', step: '1', value: existing?.ureaRequiredKgHa ?? 0 })}
         ${field({ label: 'Urea applied (kg/ha)', id: 'ureaApp', type: 'number', step: '1', value: existing?.ureaAppliedKgHa ?? 0 })}
       </div>
-      ${field({ label: 'Soil test N (kg/ha)', id: 'soilTestN', type: 'number', step: '1', value: existing?.soilTestNKgHa ?? 0, hint: 'From your soil test report — converted to a urea equivalent below, and shown in the Fert report' })}
-      <div class="row"><span class="label">Soil N (urea equivalent)</span><span class="value" id="soiln-preview">0 kg/ha</span></div>
       <div class="row"><span class="label">Urea left</span><span class="value" id="urea-preview">0.0 t</span></div>
       <hr class="sep" />
       <div class="grid-2">
@@ -140,8 +145,14 @@ function openFieldSheet(existing) {
     const preview = root.querySelector('#tons-preview');
     const ureaPreview = root.querySelector('#urea-preview');
     const soilNPreview = root.querySelector('#soiln-preview');
+    const targetYieldPreview = root.querySelector('#target-yield-preview');
+    const targetUreaPreview = root.querySelector('#target-urea-preview');
     const starterPreview = root.querySelector('#starter-preview');
     const seedPreview = root.querySelector('#seed-preview');
+    const currentTargetCalc = () => fieldUreaForTarget(
+      { soilTestNKgHa: getNum(root, 'soilTestN'), targetYieldOverrideTHa: getNum(root, 'targetYieldOverride') },
+      commodities.find((c) => c.id === getVal(root, 'commodity'))
+    );
     const recompute = () => {
       const tonsVal = yieldMode === 'actual'
         ? actualTons
@@ -152,6 +163,9 @@ function openFieldSheet(existing) {
       const u = fieldUrea({ areaHa: getNum(root, 'area'), ureaRequiredKgHa: getNum(root, 'ureaReq'), ureaAppliedKgHa: getNum(root, 'ureaApp') });
       ureaPreview.textContent = tons(u.leftTons);
       soilNPreview.textContent = `${num(soilNUreaEquivalent(getNum(root, 'soilTestN')), 0)} kg/ha`;
+      const targetCalc = currentTargetCalc();
+      targetYieldPreview.textContent = targetCalc.targetYieldTHa > 0 ? `${num(targetCalc.targetYieldTHa, 2)} t/ha` : '— (set a target yield)';
+      targetUreaPreview.textContent = `${num(targetCalc.requiredKgHa, 0)} kg/ha`;
       const st = fieldStarter({ areaHa: getNum(root, 'area'), starterRequiredKgHa: getNum(root, 'starterReq'), starterAppliedKgHa: getNum(root, 'starterApp') });
       starterPreview.textContent = tons(st.leftTons);
       const s = fieldSeed({ areaHa: getNum(root, 'area'), seedRateKgHa: getNum(root, 'seedRate') });
@@ -159,9 +173,11 @@ function openFieldSheet(existing) {
     };
     root.querySelector('#area').addEventListener('input', recompute);
     root.querySelector('#yield').addEventListener('input', recompute);
+    root.querySelector('#commodity').addEventListener('change', recompute);
     root.querySelector('#ureaReq').addEventListener('input', recompute);
     root.querySelector('#ureaApp').addEventListener('input', recompute);
     root.querySelector('#soilTestN').addEventListener('input', recompute);
+    root.querySelector('#targetYieldOverride').addEventListener('input', recompute);
     root.querySelector('#starterReq').addEventListener('input', recompute);
     root.querySelector('#starterApp').addEventListener('input', recompute);
     root.querySelector('#seedRate').addEventListener('input', recompute);
@@ -170,6 +186,10 @@ function openFieldSheet(existing) {
       if (!btn) return;
       yieldMode = btn.dataset.mode;
       root.querySelectorAll('#f-mode button').forEach((b) => b.classList.toggle('active', b === btn));
+      recompute();
+    });
+    root.querySelector('#use-target-urea').addEventListener('click', () => {
+      root.querySelector('#ureaReq').value = Math.round(currentTargetCalc().requiredKgHa);
       recompute();
     });
     recompute();
@@ -187,6 +207,7 @@ function openFieldSheet(existing) {
         ureaRequiredKgHa: getNum(root, 'ureaReq'),
         ureaAppliedKgHa: getNum(root, 'ureaApp'),
         soilTestNKgHa: getNum(root, 'soilTestN'),
+        targetYieldOverrideTHa: getNum(root, 'targetYieldOverride'),
         starterRequiredKgHa: getNum(root, 'starterReq'),
         starterAppliedKgHa: getNum(root, 'starterApp'),
         seedVariety: getVal(root, 'seedVariety')?.trim(),
