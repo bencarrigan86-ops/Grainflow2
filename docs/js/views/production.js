@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=43';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=43';
-import { num, tons, ha, esc } from '../fmt.js?v=43';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=43';
-import { renderRelatedMovements } from './movements.js?v=43';
+import { db } from '../storage.js?v=44';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=44';
+import { num, tons, ha, esc } from '../fmt.js?v=44';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=44';
+import { renderRelatedMovements } from './movements.js?v=44';
 
 let unsub = null;
 
@@ -101,7 +101,7 @@ function openFieldSheet(existing) {
       ${field({ label: 'Field name', id: 'name', value: existing?.name, placeholder: 'e.g. SR1-3' })}
       ${field({ label: 'Area (ha)', id: 'area', type: 'number', step: '0.01', value: existing?.areaHa })}
       ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
-      ${field({ label: 'Yield estimate (t/ha)', id: 'yield', type: 'number', step: '0.01', value: existing ? existing.yieldTHa : (initialCommodity?.defaultYieldTHa || '') })}
+      ${field({ label: 'Yield estimate (t/ha)', id: 'yield', type: 'number', step: '0.01', value: existing ? existing.yieldTHa : (initialCommodity?.defaultYieldTHa || ''), hint: 'For production &amp; sales. Pre-filled from the commodity default below — type in this box to override it for this field.' })}
       <div class="row"><span class="label">Commodity's default yield estimate</span><span class="value" id="commodity-yield-preview">— t/ha</span></div>
       ${existing ? `<button class="btn secondary small" id="use-default-yield" style="margin-bottom:8px">Use commodity default</button>` : ''}
       <div class="field">
@@ -114,8 +114,10 @@ function openFieldSheet(existing) {
       </div>
       <div class="row"><span class="label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
       <hr class="sep" />
+      <div class="group-label"><span>Fertiliser planning</span></div>
+      <div class="field hint" style="margin:-4px 0 12px">Separate from the yield estimate above — used only for the urea and starter calculations below.</div>
       <div class="row"><span class="label">Commodity's default target yield</span><span class="value" id="commodity-target-preview">— t/ha</span></div>
-      ${field({ label: 'Target yield override (t/ha)', id: 'targetYieldOverride', type: 'number', step: '0.1', value: existing?.targetYieldOverrideTHa || '', placeholder: 'Commodity default', hint: "For fert planning — leave blank to use the commodity's default target yield (set in Settings)" })}
+      ${field({ label: 'Target yield override (t/ha)', id: 'targetYieldOverride', type: 'number', step: '0.1', value: existing?.targetYieldOverrideTHa || '', placeholder: 'Commodity default', hint: "Leave blank to use the commodity's default above — type a value here to override it for this field" })}
       ${field({ label: 'Soil test N (kg/ha)', id: 'soilTestN', type: 'number', step: '1', value: existing?.soilTestNKgHa ?? 0, hint: 'From your soil test report' })}
       <div class="row"><span class="label">Target yield in use</span><span class="value" id="target-yield-preview">— t/ha</span></div>
       <div class="row"><span class="label">Soil N (urea equivalent)</span><span class="value" id="soiln-preview">0 kg/ha</span></div>

@@ -137,6 +137,18 @@ th { color: var(--text-dim); font-weight: 600; font-size: 11px; text-transform: 
 .table-scroll { overflow-x: auto; margin: 0 -16px; padding: 0 16px; }
 tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--border); }
 
+/* Freeze the leftmost (identifying) column on wide report tables so it stays
+   visible while scrolling across — the background must match the card's own
+   tint or the scrolling columns show through underneath it. */
+.card.report .table-scroll th:first-child,
+.card.report .table-scroll td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--accent-report-bg);
+  border-right: 1px solid var(--border);
+}
+
 .group-label {
   display: flex;
   justify-content: space-between;
