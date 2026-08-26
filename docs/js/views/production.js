@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=46';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=46';
-import { num, tons, ha, esc } from '../fmt.js?v=46';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=46';
-import { renderRelatedMovements } from './movements.js?v=46';
+import { db } from '../storage.js?v=47';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=47';
+import { num, tons, ha, esc } from '../fmt.js?v=47';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=47';
+import { renderRelatedMovements } from './movements.js?v=47';
 
 let unsub = null;
 
@@ -137,6 +137,7 @@ function openFieldSheet(existing) {
         ${field({ label: 'Rate (kg/ha)', id: 'ua-rate', type: 'number', step: '1' })}
         ${field({ label: 'Comment', id: 'ua-comment', placeholder: 'e.g. windy, cut rate back on the headland' })}
         <button class="btn small" id="ua-add" style="margin-top:2px">Add application</button>
+        ${!existing ? `<div class="hint" style="margin-top:8px">Saved automatically once you save this new field below.</div>` : ''}
       </div>
       <div class="row"><span class="label">Urea left</span><span class="value" id="urea-preview">0.0 t</span></div>
       <hr class="sep" />
@@ -177,6 +178,15 @@ function openFieldSheet(existing) {
       commodities.find((c) => c.id === getVal(root, 'commodity'))
     );
     const appliedKgHa = () => ureaAppliedKgHaFor({ ureaApplications: applications, ureaAppliedKgHa: existing?.ureaAppliedKgHa });
+    // Application entries save immediately, independent of the field's main
+    // Save button — logging one shouldn't require also saving every other
+    // field on the sheet, and shouldn't be lost if the sheet gets closed
+    // without hitting Save. A brand-new field has no id to attach to yet, so
+    // those just stay pending in `applications` until the field itself is saved.
+    const persistApplications = () => {
+      if (!existing) return;
+      db.upsertField({ ...existing, ureaApplications: applications });
+    };
     const renderApplications = () => {
       if (applications.length === 0) {
         const legacy = Number(existing?.ureaAppliedKgHa) || 0;
@@ -199,6 +209,7 @@ function openFieldSheet(existing) {
             applications = applications.filter((a) => a.id !== btn.dataset.removeApp);
             renderApplications();
             recompute();
+            persistApplications();
           });
         });
       }
@@ -268,6 +279,7 @@ function openFieldSheet(existing) {
       root.querySelector('#ua-comment').value = '';
       renderApplications();
       recompute();
+      persistApplications();
     });
     root.querySelector('#soilTestN').addEventListener('input', recompute);
     root.querySelector('#targetYieldOverride').addEventListener('input', recompute);
