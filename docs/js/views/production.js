@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=45';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=45';
-import { num, tons, ha, esc } from '../fmt.js?v=45';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=45';
-import { renderRelatedMovements } from './movements.js?v=45';
+import { db } from '../storage.js?v=46';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=46';
+import { num, tons, ha, esc } from '../fmt.js?v=46';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=46';
+import { renderRelatedMovements } from './movements.js?v=46';
 
 let unsub = null;
 
@@ -135,6 +135,7 @@ function openFieldSheet(existing) {
           ${field({ label: 'Machine', id: 'ua-machine', placeholder: 'e.g. Boomspray' })}
         </div>
         ${field({ label: 'Rate (kg/ha)', id: 'ua-rate', type: 'number', step: '1' })}
+        ${field({ label: 'Comment', id: 'ua-comment', placeholder: 'e.g. windy, cut rate back on the headland' })}
         <button class="btn small" id="ua-add" style="margin-top:2px">Add application</button>
       </div>
       <div class="row"><span class="label">Urea left</span><span class="value" id="urea-preview">0.0 t</span></div>
@@ -150,6 +151,8 @@ function openFieldSheet(existing) {
         ${field({ label: 'Seed rate (kg/ha)', id: 'seedRate', type: 'number', step: '1', value: existing?.seedRateKgHa ?? 0 })}
       </div>
       <div class="row"><span class="label">Seed required</span><span class="value" id="seed-preview">0.0 t</span></div>
+      <hr class="sep" />
+      ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
@@ -186,6 +189,7 @@ function openFieldSheet(existing) {
             <div>
               <div class="main">${esc(a.date || 'No date')}${a.appliedBy ? ' &middot; ' + esc(a.appliedBy) : ''}</div>
               <div class="meta">${esc(a.machine || '—')} &middot; ${num(a.rateKgHa, 0)} kg/ha</div>
+              ${a.comment ? `<div class="meta">${esc(a.comment)}</div>` : ''}
             </div>
             <button type="button" class="btn danger small" data-remove-app="${a.id}" style="width:auto">&times;</button>
           </div>
@@ -255,11 +259,13 @@ function openFieldSheet(existing) {
         appliedBy: getVal(root, 'ua-by')?.trim() || '',
         machine: getVal(root, 'ua-machine')?.trim() || '',
         rateKgHa: rate,
+        comment: getVal(root, 'ua-comment')?.trim() || '',
       });
       root.querySelector('#ua-date').value = '';
       root.querySelector('#ua-by').value = '';
       root.querySelector('#ua-machine').value = '';
       root.querySelector('#ua-rate').value = '';
+      root.querySelector('#ua-comment').value = '';
       renderApplications();
       recompute();
     });
@@ -301,6 +307,7 @@ function openFieldSheet(existing) {
         starterAppliedKgHa: getNum(root, 'starterApp'),
         seedVariety: getVal(root, 'seedVariety')?.trim(),
         seedRateKgHa: getNum(root, 'seedRate'),
+        notes: getVal(root, 'notes')?.trim(),
       });
       closeSheet();
     });
