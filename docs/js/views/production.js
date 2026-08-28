@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=47';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=47';
-import { num, tons, ha, esc } from '../fmt.js?v=47';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=47';
-import { renderRelatedMovements } from './movements.js?v=47';
+import { db } from '../storage.js?v=48';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=48';
+import { num, tons, ha, esc } from '../fmt.js?v=48';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=48';
+import { renderRelatedMovements } from './movements.js?v=48';
 
 let unsub = null;
 
@@ -110,9 +110,9 @@ function openFieldSheet(existing) {
           <button data-mode="estimate" class="${(existing?.yieldMode || 'estimate') === 'estimate' ? 'active' : ''}">Estimate</button>
           <button data-mode="actual" class="${existing?.yieldMode === 'actual' ? 'active' : ''}">Actual (movements)</button>
         </div>
-        <div class="hint">Actual sums the Movement tickets carted off this field${actualTons > 0 ? ` — currently ${num(actualTons, 1)} t` : ''}.</div>
+        <div class="hint" id="actual-hint">Actual sums the Movement tickets carted off this field${actualTons > 0 ? ` — currently ${num(actualTons, 1)} t` : ''}.</div>
       </div>
-      <div class="row"><span class="label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
+      <div class="row"><span class="label" id="tons-label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
       <hr class="sep" />
       <div class="group-label"><span>Fertiliser planning</span></div>
       <div class="field hint" style="margin:-4px 0 12px">Separate from the yield estimate above — used only for the urea and starter calculations below.</div>
@@ -162,6 +162,9 @@ function openFieldSheet(existing) {
 
     let yieldMode = existing?.yieldMode || 'estimate';
     let applications = (existing?.ureaApplications || []).slice();
+    const yieldLabelEl = root.querySelector('label[for="yield"]');
+    const tonsLabelEl = root.querySelector('#tons-label');
+    const actualHintEl = root.querySelector('#actual-hint');
     const preview = root.querySelector('#tons-preview');
     const ureaPreview = root.querySelector('#urea-preview');
     const ureaAppliedTotalEl = root.querySelector('#urea-applied-total');
@@ -215,12 +218,20 @@ function openFieldSheet(existing) {
       }
     };
     const recompute = () => {
+      const selectedCommodityEarly = commodities.find((c) => c.id === getVal(root, 'commodity'));
+      const isBales = selectedCommodityEarly?.unit === 'bale';
+      const unit = isBales ? 'bales' : 't';
+      const unitPerHa = isBales ? 'bales/ha' : 't/ha';
+      yieldLabelEl.textContent = `Yield estimate (${unitPerHa})`;
+      tonsLabelEl.textContent = isBales ? 'Total bales' : 'Total tons';
+      actualHintEl.textContent = `Actual sums the Movement tickets carted off this field${actualTons > 0 ? ` — currently ${num(actualTons, 1)} ${unit}` : ''}.`;
+
       const tonsVal = yieldMode === 'actual'
         ? actualTons
         : estimateFieldTons({ areaHa: getNum(root, 'area'), yieldTHa: getNum(root, 'yield') });
       const area = getNum(root, 'area');
       const yieldTHa = area > 0 ? tonsVal / area : 0;
-      preview.textContent = `${tons(tonsVal)} · ${num(yieldTHa, 2)} t/ha`;
+      preview.textContent = `${num(tonsVal, 1)} ${unit} · ${num(yieldTHa, 2)} ${unitPerHa}`;
       const applied = appliedKgHa();
       ureaAppliedTotalEl.textContent = `${num(applied, 0)} kg/ha`;
       const u = fieldUrea({ areaHa: getNum(root, 'area'), ureaRequiredKgHa: getNum(root, 'ureaReq'), ureaAppliedKgHa: applied });
@@ -228,7 +239,7 @@ function openFieldSheet(existing) {
       soilNPreview.textContent = `${num(soilNUreaEquivalent(getNum(root, 'soilTestN')), 0)} kg/ha`;
       const selectedCommodity = commodities.find((c) => c.id === getVal(root, 'commodity'));
       const commodityDefaultYield = Number(selectedCommodity?.defaultYieldTHa) || 0;
-      commodityYieldPreview.textContent = commodityDefaultYield > 0 ? `${num(commodityDefaultYield, 2)} t/ha` : '— (set one in Settings)';
+      commodityYieldPreview.textContent = commodityDefaultYield > 0 ? `${num(commodityDefaultYield, 2)} ${unitPerHa}` : '— (set one in Settings)';
       const commodityDefault = Number(selectedCommodity?.targetYieldTHa) || 0;
       commodityTargetPreview.textContent = commodityDefault > 0 ? `${num(commodityDefault, 2)} t/ha` : '— (set one in Settings)';
       const targetCalc = currentTargetCalc();

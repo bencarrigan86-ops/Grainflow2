@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=47';
-import { movementsForEndpoint } from '../derived.js?v=47';
-import { num, tons, esc } from '../fmt.js?v=47';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=47';
-import { compressAndStampImage } from '../img.js?v=47';
+import { db } from '../storage.js?v=48';
+import { movementsForEndpoint } from '../derived.js?v=48';
+import { num, tons, esc } from '../fmt.js?v=48';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=48';
+import { compressAndStampImage } from '../img.js?v=48';
 
 let unsub = null;
 
@@ -30,6 +30,8 @@ function paint(root) {
         <div class="stat"><div class="n">${num(totalTons, 1)} t</div><div class="l">Total moved</div></div>
       </div>
 
+      ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="log-ginning" style="margin-bottom:4px">+ Log ginning</button>` : ''}
+
       <div class="card input">
         <h2><span class="dot input"></span>Tickets</h2>
         ${sorted.length === 0 ? `<div class="empty">Tap + to log your first truck movement.</div>` : sorted.map((m) => movementRow(m, { fields, storages, sales, commodities })).join('')}
@@ -42,6 +44,8 @@ function paint(root) {
     el.addEventListener('click', () => openMovementSheet(movements.find((m) => m.id === el.dataset.editMovement)));
   });
   root.querySelector('#add-movement').addEventListener('click', () => openMovementSheet(null));
+  const ginBtn = root.querySelector('#log-ginning');
+  if (ginBtn) ginBtn.addEventListener('click', () => openGinningSheet());
 }
 
 function fieldOptions(fields) {
@@ -214,6 +218,85 @@ function readToRows(container) {
     const val = row.querySelector('.to-select').value;
     const [type, ...rest] = val.split(':');
     return { type: type || '', id: rest.join(':'), tons: parseFloat(row.querySelector('.to-tons').value) || 0 };
+  });
+}
+
+/**
+ * Ginning converts round bales sitting at the gin into lint bales + seed —
+ * a processing step, not a relocation, so the "in" and "out" quantities
+ * deliberately don't match. Movements never enforce froms/tos balancing
+ * (see the multi-destination silo-split feature), so this is really just a
+ * pre-filled movement: round bales out of one tally storage, lint bales +
+ * seed tonnes into two others. Saved as a normal movement — editable
+ * afterwards via the regular "Edit movement" sheet like any other.
+ */
+function openGinningSheet() {
+  const { storages, commodities } = db.get();
+  const tallyStorages = storages.filter((s) => s.kind === 'tally');
+  const tallyOptions = [{ value: '', label: 'Select…' }, ...tallyStorages.map((s) => ({ value: s.id, label: s.name }))];
+
+  openSheet('Log ginning', (root) => {
+    root.innerHTML = `
+      ${field({ label: 'Date', id: 'g-date', type: 'date' })}
+      ${field({ label: 'Round bale storage', id: 'g-from', type: 'select', options: tallyOptions, hint: 'Where the round bales being ginned are currently tracked' })}
+      ${field({ label: 'Round bales to gin', id: 'g-round', type: 'number', step: '1' })}
+      ${field({ label: 'Ginned bales per round bale', id: 'g-ratio', type: 'number', step: '0.1', placeholder: 'e.g. 4.2', hint: "Defaults from the commodity's setting — editable to match the actual gin docket" })}
+      ${field({ label: 'Lint bale storage', id: 'g-lint-to', type: 'select', options: tallyOptions })}
+      ${field({ label: 'Lint bales produced', id: 'g-lint-bales', type: 'number', step: '1', hint: 'Auto-calculated from the ratio above — adjust to match the docket' })}
+      ${field({ label: 'Seed storage', id: 'g-seed-to', type: 'select', options: tallyOptions })}
+      ${field({ label: 'Seed produced (t)', id: 'g-seed-t', type: 'number', step: '0.01' })}
+      ${field({ label: 'Notes', id: 'g-notes', placeholder: 'Ginning' })}
+      <button class="btn" id="g-save" style="margin-top:12px">Save</button>
+    `;
+
+    const fromSelect = root.querySelector('#g-from');
+    const ratioInput = root.querySelector('#g-ratio');
+    const roundInput = root.querySelector('#g-round');
+    const lintBalesInput = root.querySelector('#g-lint-bales');
+    let lintBalesTouched = false;
+
+    fromSelect.addEventListener('change', () => {
+      const source = tallyStorages.find((s) => s.id === getVal(root, 'g-from'));
+      const commodity = commodities.find((c) => c.id === source?.commodityId);
+      if (commodity?.balesPerRoundBale) ratioInput.value = commodity.balesPerRoundBale;
+      recomputeLint();
+    });
+    const recomputeLint = () => {
+      if (lintBalesTouched) return;
+      const round = getNum(root, 'g-round');
+      const ratio = getNum(root, 'g-ratio');
+      lintBalesInput.value = round > 0 && ratio > 0 ? (Math.round(round * ratio * 10) / 10) : '';
+    };
+    roundInput.addEventListener('input', recomputeLint);
+    ratioInput.addEventListener('input', recomputeLint);
+    lintBalesInput.addEventListener('input', () => { lintBalesTouched = true; });
+
+    root.querySelector('#g-save').addEventListener('click', () => {
+      const fromId = getVal(root, 'g-from');
+      const lintToId = getVal(root, 'g-lint-to');
+      const seedToId = getVal(root, 'g-seed-to');
+      const roundBales = getNum(root, 'g-round');
+      if (!fromId) { fromSelect.focus(); return; }
+      if (!roundBales) { roundInput.focus(); return; }
+      if (!lintToId && !seedToId) { root.querySelector('#g-lint-to').focus(); return; }
+
+      const tos = [];
+      const lintBales = getNum(root, 'g-lint-bales');
+      const seedTons = getNum(root, 'g-seed-t');
+      if (lintToId && lintBales) tos.push({ type: 'silo', id: lintToId, tons: lintBales });
+      if (seedToId && seedTons) tos.push({ type: 'silo', id: seedToId, tons: seedTons });
+      if (tos.length === 0) { root.querySelector('#g-lint-bales').focus(); return; }
+
+      db.upsertMovement({
+        date: getVal(root, 'g-date'),
+        froms: [{ type: 'silo', id: fromId, tons: roundBales }],
+        tos,
+        tons: roundBales,
+        weightStatus: 'final',
+        notes: getVal(root, 'g-notes')?.trim() || 'Ginning',
+      });
+      closeSheet();
+    });
   });
 }
 

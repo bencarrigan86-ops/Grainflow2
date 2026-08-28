@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=47';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=47';
-import { num, tons, money, esc } from '../fmt.js?v=47';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=47';
-import { renderRelatedMovements } from './movements.js?v=47';
-import { openInvoiceListSheet } from './invoice.js?v=47';
+import { db } from '../storage.js?v=48';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=48';
+import { num, tons, money, esc } from '../fmt.js?v=48';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=48';
+import { renderRelatedMovements } from './movements.js?v=48';
+import { openInvoiceListSheet } from './invoice.js?v=48';
 
 let unsub = null;
 
@@ -63,7 +63,7 @@ function paint(root) {
         <h2><span class="dot input"></span>Contracts</h2>
         ${groups.length === 0 ? `<div class="empty">Tap + to add your first sale.</div>` : groups.map((g) => `
           <div class="group-label"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
-          ${g.sales.map((s) => saleRow(s, movements)).join('')}
+          ${g.sales.map((s) => saleRow(s, movements, commodities)).join('')}
         `).join('')}
       </div>
     </div>
@@ -92,13 +92,13 @@ function groupSalesByCommodity(commodities, sales, movements) {
   return groups;
 }
 
-function fillBadge(econ) {
+function fillBadge(econ, unit) {
   if (econ.isOverDelivered) {
     const overBy = econ.tonsDelivered - econ.maxTons;
-    return `<span class="badge neg">Over by ${num(overBy, 1)} t</span>`;
+    return `<span class="badge neg">Over by ${num(overBy, 1)} ${unit}</span>`;
   }
   if (econ.isFull) return `<span class="badge pos">Contract full</span>`;
-  return `<span class="badge neg">${num(econ.tonsToFill, 1)} t to fill</span>`;
+  return `<span class="badge neg">${num(econ.tonsToFill, 1)} ${unit} to fill</span>`;
 }
 
 function deliveryWindow(s) {
@@ -108,21 +108,24 @@ function deliveryWindow(s) {
   return '';
 }
 
-function saleRow(s, movements) {
+function saleRow(s, movements, commodities) {
   const econ = saleEconomics(s, movements);
   const window = deliveryWindow(s);
   const invoices = db.getInvoicesForSale(s.id);
   const outstandingInvoices = invoices.filter((inv) => inv.status !== 'paid');
+  const isBales = commodities.find((c) => c.id === s.commodityId)?.unit === 'bale';
+  const unit = isBales ? 'bales' : 't';
+  const amount = isBales ? `${num(s.tons || 0, 1)} bales` : tons(s.tons || 0);
   return `
     <div class="list-item" data-edit-sale="${s.id}">
       <div>
         <div class="main">${s.buyer ? esc(s.buyer) : 'No buyer'}${s.grade ? ` · ${esc(s.grade)}` : ''}${s.contractNo ? ` · #${esc(s.contractNo)}` : ''}${s.brokerNote ? ` · ${esc(s.brokerNote)}` : ''}</div>
-        <div class="meta">${tons(s.tons || 0)} @ ${money(econ.priceExFarm, 2)}/t${econ.movementDelivered > 0 ? ` · ${num(econ.movementDelivered, 1)} t trucked` : ''}</div>
+        <div class="meta">${amount} @ ${money(econ.priceExFarm, 2)}/${isBales ? 'bale' : 't'}${econ.movementDelivered > 0 ? ` · ${num(econ.movementDelivered, 1)} ${unit} trucked` : ''}</div>
         <div class="meta">${[s.location, window].filter(Boolean).map(esc).join(' · ') || 'No delivery location/date set'}</div>
       </div>
       <div class="right">
         <div class="main">${money(econ.totalValue, 0)}</div>
-        <div class="meta">${fillBadge(econ)}</div>
+        <div class="meta">${fillBadge(econ, unit)}</div>
         ${outstandingInvoices.length > 0 ? `<div class="meta"><span class="badge neg">${outstandingInvoices.length} inv. outstanding</span></div>` : invoices.length > 0 ? `<div class="meta"><span class="badge pos">Invoiced &amp; paid</span></div>` : ''}
       </div>
     </div>
@@ -161,7 +164,7 @@ function openSaleSheet(existing) {
         ${field({ label: 'Tons', id: 'tons', type: 'number', step: '0.01', value: existing?.tons })}
         ${field({ label: 'Tons delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a Movement' })}
       </div>
-      ${movementDelivered > 0 ? `<div class="row"><span class="label">+ Delivered via movements</span><span class="value">${num(movementDelivered, 1)} t</span></div>` : ''}
+      ${movementDelivered > 0 ? `<div class="row"><span class="label">+ Delivered via movements</span><span class="value" id="movement-delivered-value">${num(movementDelivered, 1)} t</span></div>` : ''}
       <div class="grid-2">
         ${field({ label: 'Price ($/t)', id: 'price', type: 'number', step: '0.01', value: existing?.price })}
         ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
@@ -175,6 +178,7 @@ function openSaleSheet(existing) {
         ${field({ label: 'Tolerance cap (t)', id: 'tolCap', type: 'number', step: '0.1', value: existing?.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS, hint: 'Lesser of the two applies' })}
       </div>
       <div class="row"><span class="label">Tolerance range</span><span class="value" id="tol-preview">—</span></div>
+      ${field({ label: 'Ginning cost ($)', id: 'ginning', type: 'number', step: '0.01', value: existing?.ginning ?? 0, hint: 'Net ginning deduction — e.g. for a cotton seed sale. A total dollar amount, not a rate.' })}
       ${field({ label: 'Broker note', id: 'brokerNote', value: existing?.brokerNote })}
       ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
       <div class="grid-2">
@@ -191,12 +195,34 @@ function openSaleSheet(existing) {
     if (invoiceBtn) invoiceBtn.addEventListener('click', () => openInvoiceListSheet(existing));
 
     const tolPreview = root.querySelector('#tol-preview');
+    let currentUnit = 't';
     const recomputeTolerance = () => {
       const { minTons, maxTons } = contractTolerance(getNum(root, 'tons'), getNum(root, 'tolPct'), getNum(root, 'tolCap'));
-      tolPreview.textContent = `${num(minTons, 1)} – ${num(maxTons, 1)} t`;
+      tolPreview.textContent = `${num(minTons, 1)} – ${num(maxTons, 1)} ${currentUnit}`;
     };
     ['tons', 'tolPct', 'tolCap'].forEach((id) => root.querySelector(`#${id}`).addEventListener('input', recomputeTolerance));
-    recomputeTolerance();
+
+    const tonsLabelEl = root.querySelector('label[for="tons"]');
+    const tonsDeliveredLabelEl = root.querySelector('label[for="tonsDelivered"]');
+    const priceLabelEl = root.querySelector('label[for="price"]');
+    const freightLabelEl = root.querySelector('label[for="freight"]');
+    const tolCapLabelEl = root.querySelector('label[for="tolCap"]');
+    const movementDeliveredValueEl = root.querySelector('#movement-delivered-value');
+    const syncUnitLabels = () => {
+      const c = commodities.find((cc) => cc.id === getVal(root, 'commodity'));
+      const isBales = c?.unit === 'bale';
+      currentUnit = isBales ? 'bales' : 't';
+      const perUnit = isBales ? '$/bale' : '$/t';
+      tonsLabelEl.textContent = isBales ? 'Bales' : 'Tons';
+      tonsDeliveredLabelEl.textContent = isBales ? 'Bales delivered (manual)' : 'Tons delivered (manual)';
+      priceLabelEl.textContent = `Price (${perUnit})`;
+      freightLabelEl.textContent = `Freight (${perUnit})`;
+      tolCapLabelEl.textContent = isBales ? 'Tolerance cap (bales)' : 'Tolerance cap (t)';
+      if (movementDeliveredValueEl) movementDeliveredValueEl.textContent = `${num(movementDelivered, 1)} ${currentUnit}`;
+      recomputeTolerance();
+    };
+    root.querySelector('#commodity').addEventListener('change', syncUnitLabels);
+    syncUnitLabels();
 
     root.querySelector('#save').addEventListener('click', () => {
       db.upsertSale({
@@ -214,6 +240,7 @@ function openSaleSheet(existing) {
         price: getNum(root, 'price'),
         freight: getNum(root, 'freight'),
         premiumDiscount: getNum(root, 'premium'),
+        ginning: getNum(root, 'ginning'),
         leviesPct: getNum(root, 'levies') / 100,
         tolerancePct: getNum(root, 'tolPct'),
         toleranceCapTons: getNum(root, 'tolCap'),

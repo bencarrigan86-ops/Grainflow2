@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=47';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=47';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=47';
-import { num, tons, esc } from '../fmt.js?v=47';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=47';
-import { renderRelatedMovements } from './movements.js?v=47';
+import { db } from '../storage.js?v=48';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=48';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=48';
+import { num, tons, esc } from '../fmt.js?v=48';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=48';
+import { renderRelatedMovements } from './movements.js?v=48';
 
 let unsub = null;
 let listMode = 'chronological';
@@ -292,6 +292,7 @@ function commodityOptions(commodities, includeNone = true) {
 }
 
 function computeStorageTons(s, commodities) {
+  if (s.kind === 'tally') return { tons: 0 };
   const c = commodities.find((c) => c.id === s.commodityId);
   const angleOfRepose = s.angleOfRepose ?? c?.angleOfRepose ?? 0;
   const testWeight = s.testWeight ?? c?.testWeight ?? 0;
@@ -304,11 +305,35 @@ function computeStorageTons(s, commodities) {
   });
 }
 
+function kindLabel(kind) {
+  if (kind === 'bunker') return 'Bunker';
+  if (kind === 'tally') return 'Tally';
+  return 'Silo';
+}
+
 function storageRow(s, commodities, movements) {
   const c = commodities.find((c) => c.id === s.commodityId);
+  const ledger = storageLedgerStock(s, movements);
+  const isTally = s.kind === 'tally';
+  const unitLabel = isTally ? (s.unitLabel || 't') : 't';
+
+  if (isTally) {
+    return `
+      <div class="list-item" data-edit-storage="${s.id}">
+        <div>
+          <div class="main">${esc(s.name)} <span class="badge" style="background:var(--surface-2);color:var(--text-dim)">Tally</span></div>
+          <div class="meta">${esc(c ? c.name : 'No commodity set')}</div>
+        </div>
+        <div class="right">
+          <div class="main">${num(ledger, 1)} ${esc(unitLabel)}</div>
+          <div class="meta">tracked</div>
+        </div>
+      </div>
+    `;
+  }
+
   const r = computeStorageTons(s, commodities);
   const capPct = s.capacityTons ? Math.min(100, (r.tons / s.capacityTons) * 100) : null;
-  const ledger = storageLedgerStock(s, movements);
   const angleOfRepose = s.angleOfRepose ?? c?.angleOfRepose ?? 0;
   const tarp = s.kind === 'bunker'
     ? bunkerTarpRequirement({ width: s.width, length: s.length, angleDeg: angleOfRepose, overhangM: s.tarpOverhangM ?? 1.5 })
@@ -316,7 +341,7 @@ function storageRow(s, commodities, movements) {
   return `
     <div class="list-item" data-edit-storage="${s.id}">
       <div>
-        <div class="main">${esc(s.name)} <span class="badge ${s.kind === 'silo' ? 'pos' : 'neg'}" style="background:var(--surface-2);color:var(--text-dim)">${s.kind === 'silo' ? 'Silo' : 'Bunker'}</span></div>
+        <div class="main">${esc(s.name)} <span class="badge ${s.kind === 'silo' ? 'pos' : 'neg'}" style="background:var(--surface-2);color:var(--text-dim)">${kindLabel(s.kind)}</span></div>
         <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(s.capacityTons, 0)} t cap` : ''}</div>
         <div class="meta">Tracked stock: ${num(ledger, 1)} t</div>
         ${tarp ? `<div class="meta">Tarp needed: ${num(tarp.tarpWidthNeeded, 1)} x ${num(tarp.tarpLengthNeeded, 1)} m</div>` : ''}
@@ -338,11 +363,13 @@ function openStorageSheet(existing) {
     build();
 
     function build() {
+      if (kind === 'tally') { buildTally(); return; }
       root.innerHTML = `
         ${!existing ? `
         <div class="segmented" id="s-kind">
           <button data-kind="silo" class="${kind === 'silo' ? 'active' : ''}">Silo</button>
           <button data-kind="bunker" class="${kind === 'bunker' ? 'active' : ''}">Bunker</button>
+          <button data-kind="tally" class="${kind === 'tally' ? 'active' : ''}">Tally</button>
         </div>` : ''}
         ${field({ label: 'Name', id: 's-name', value: existing?.name, placeholder: existing?.kind === 'bunker' || kind === 'bunker' ? 'e.g. Bunker 1' : 'e.g. Silo 12 (155t)' })}
         ${field({ label: 'Commodity currently stored', id: 's-commodity', type: 'select', value: existing?.commodityId, options: commodityOptions(commodities) })}
@@ -470,6 +497,72 @@ function openStorageSheet(existing) {
           payload.tarpOverhangM = getNum(root, 's-overhang');
         }
         db.upsertStorage(payload);
+        closeSheet();
+      });
+      const del = root.querySelector('#del');
+      if (del) {
+        del.addEventListener('click', () => {
+          confirmDelete(`Delete "${existing.name}"?`, () => {
+            db.deleteStorage(existing.id);
+            closeSheet();
+          });
+        });
+      }
+    }
+
+    // A bare count with no geometry — round bales, ginned lint bales, seed
+    // tonnes: anything tracked purely by a movement-adjusted ledger, not a
+    // measured shape. Reuses the same opening-stock/ledger mechanism as
+    // silo/bunker, just skips every geometry field.
+    function buildTally() {
+      root.innerHTML = `
+        ${!existing ? `
+        <div class="segmented" id="s-kind">
+          <button data-kind="silo" class="${kind === 'silo' ? 'active' : ''}">Silo</button>
+          <button data-kind="bunker" class="${kind === 'bunker' ? 'active' : ''}">Bunker</button>
+          <button data-kind="tally" class="${kind === 'tally' ? 'active' : ''}">Tally</button>
+        </div>` : ''}
+        ${field({ label: 'Name', id: 's-name', value: existing?.name, placeholder: 'e.g. SR1 round bales' })}
+        ${field({ label: 'Commodity', id: 's-commodity', type: 'select', value: existing?.commodityId, options: commodityOptions(commodities) })}
+        ${field({ label: 'Unit', id: 's-unit', value: existing?.unitLabel, placeholder: 'e.g. round bales, bales, t', hint: "Whatever this storage counts — shown next to the tracked stock figure" })}
+        ${field({ label: 'Opening / current stock', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
+        <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
+        ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
+        <button class="btn" id="save" style="margin-top:8px">Save</button>
+        ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete</button>` : ''}
+      `;
+      if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id);
+
+      const kindSel = root.querySelector('#s-kind');
+      if (kindSel) {
+        kindSel.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-kind]');
+          if (!btn) return;
+          kind = btn.dataset.kind;
+          build();
+        });
+      }
+
+      const ledgerPreview = root.querySelector('#s-ledger-preview');
+      function recomputeLedger() {
+        const unit = getVal(root, 's-unit')?.trim() || 't';
+        ledgerPreview.textContent = `${num(getNum(root, 's-opening') + fixedMovementNet, 1)} ${unit}`;
+      }
+      root.querySelector('#s-opening').addEventListener('input', recomputeLedger);
+      root.querySelector('#s-unit').addEventListener('input', recomputeLedger);
+      recomputeLedger();
+
+      root.querySelector('#save').addEventListener('click', () => {
+        const name = getVal(root, 's-name')?.trim();
+        if (!name) { root.querySelector('#s-name').focus(); return; }
+        db.upsertStorage({
+          id: existing?.id,
+          kind,
+          name,
+          commodityId: getVal(root, 's-commodity') || null,
+          unitLabel: getVal(root, 's-unit')?.trim() || 't',
+          openingStock: getNum(root, 's-opening'),
+        });
         closeSheet();
       });
       const del = root.querySelector('#del');

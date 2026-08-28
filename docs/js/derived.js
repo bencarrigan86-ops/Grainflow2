@@ -62,6 +62,7 @@ export function saleEconomics(sale, movements = []) {
   const price = Number(sale.price) || 0;
   const freight = Number(sale.freight) || 0;
   const premium = Number(sale.premiumDiscount) || 0;
+  const ginning = Number(sale.ginning) || 0;
   const leviesPct = Number(sale.leviesPct) || 0;
   const tons = Number(sale.tons) || 0;
   const manualDelivered = Number(sale.tonsDelivered) || 0;
@@ -71,7 +72,11 @@ export function saleEconomics(sale, movements = []) {
   const netOfFreight = price - freight;
   const levies = -netOfFreight * leviesPct;
   const priceExFarm = netOfFreight + levies + premium;
-  const totalValue = tons * priceExFarm;
+  // Ginning is a total-dollar deduction (not a rate — the grower reads it
+  // straight off the gin's settlement statement), so it's subtracted once
+  // here rather than folded into the per-unit price chain above — e.g. a
+  // "net ginning" cotton seed sale: seed tonnes x $/t, less the ginning fee.
+  const totalValue = tons * priceExFarm - ginning;
   const tonsDue = tons - tonsDelivered;
 
   const { toleranceTons, minTons, maxTons } = contractTolerance(tons, sale.tolerancePct, sale.toleranceCapTons);
@@ -81,7 +86,7 @@ export function saleEconomics(sale, movements = []) {
   const tonsRemainingMax = Math.max(0, maxTons - tonsDelivered);
 
   return {
-    netOfFreight, levies, priceExFarm, totalValue, tonsDue,
+    netOfFreight, levies, priceExFarm, ginning, totalValue, tonsDue,
     manualDelivered, movementDelivered, tonsDelivered,
     toleranceTons, minTons, maxTons, isFull, isOverDelivered, tonsToFill, tonsRemainingMax,
   };

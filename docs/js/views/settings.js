@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=47';
-import { num, money, esc } from '../fmt.js?v=47';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=47';
-import { APP_VERSION } from '../version.js?v=47';
-import { exportRowsAsCSV } from '../csv.js?v=47';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=47';
-import { endpointLabel } from './movements.js?v=47';
+import { db } from '../storage.js?v=48';
+import { num, money, esc } from '../fmt.js?v=48';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=48';
+import { APP_VERSION } from '../version.js?v=48';
+import { exportRowsAsCSV } from '../csv.js?v=48';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=48';
+import { endpointLabel } from './movements.js?v=48';
 
 let unsub = null;
 
@@ -389,6 +389,10 @@ function openCommoditySheet(existing) {
   openSheet(existing ? 'Edit commodity' : 'Add commodity', (root) => {
     root.innerHTML = `
       ${field({ label: 'Name', id: 'name', value: existing?.name, placeholder: 'e.g. Wheat' })}
+      ${field({ label: 'Sold &amp; measured in', id: 'unit', type: 'select', value: existing?.unit ?? 't', options: [{ value: 't', label: 'Tonnes' }, { value: 'bale', label: 'Bales' }], hint: 'Bales — for cotton lint. Changes the units shown in Production and Sales for this commodity.' })}
+      <div id="bales-per-round-wrap" style="display:none">
+        ${field({ label: 'Ginned bales per round bale', id: 'balesPerRound', type: 'number', step: '0.1', value: existing?.balesPerRoundBale ?? '', placeholder: 'e.g. 4.2', hint: 'Default ratio used when logging a ginning — editable per event' })}
+      </div>
       <div class="grid-2">
         ${field({ label: 'Angle of repose (°)', id: 'angle', type: 'number', step: '1', value: existing?.angleOfRepose, hint: 'For silo/bunker peak calc' })}
         ${field({ label: 'Test weight (t/m³)', id: 'tw', type: 'number', step: '0.01', value: existing?.testWeight })}
@@ -419,12 +423,18 @@ function openCommoditySheet(existing) {
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete commodity</button>` : ''}
     `;
     if (existing) buildCommoditySensitivity(root, existing.id);
+    const balesWrap = root.querySelector('#bales-per-round-wrap');
+    const syncUnitFields = () => { balesWrap.style.display = getVal(root, 'unit') === 'bale' ? 'block' : 'none'; };
+    root.querySelector('#unit').addEventListener('change', syncUnitFields);
+    syncUnitFields();
     root.querySelector('#save').addEventListener('click', () => {
       const name = getVal(root, 'name')?.trim();
       if (!name) { root.querySelector('#name').focus(); return; }
       db.upsertCommodity({
         id: existing?.id,
         name,
+        unit: getVal(root, 'unit') || 't',
+        balesPerRoundBale: getNum(root, 'balesPerRound'),
         angleOfRepose: getNum(root, 'angle'),
         testWeight: getNum(root, 'tw'),
         mtmPrice: getNum(root, 'mtm'),
