@@ -225,6 +225,68 @@ export function fieldUreaForTarget(f, commodity) {
   return { targetYieldTHa, requiredKgHa: additionalUreaRequired };
 }
 
+/**
+ * The other direction: what yield can the nitrogen actually on the paddock
+ * support?
+ *
+ * The required-urea calculation answers "how much do I need for 4 tonnes".
+ * This answers "I have put on 300 kg — what does that buy me", which is the
+ * question once the spreader has been through and the season has not gone to
+ * plan. Same three quantities, rearranged:
+ *
+ *   N from urea      = urea applied x urea N%
+ *   N available      = soil test N + N from urea
+ *   max yield        = N available / N required per tonne
+ *
+ * It is a ceiling, not a forecast. Nitrogen is one input; water, disease and
+ * everything else can only take yield below this, never above it. Named
+ * maxYield rather than expectedYield for exactly that reason.
+ */
+export function maxYieldFromUrea({ nPerTonne, soilTestN, ureaAppliedKgHa, ureaNPct = UREA_N_PCT }) {
+  const pct = (Number(ureaNPct) || 0) / 100;
+  const soilN = Number(soilTestN) || 0;
+  const nFromUrea = (Number(ureaAppliedKgHa) || 0) * pct;
+  const nAvailableKgHa = soilN + nFromUrea;
+  const perTonne = Number(nPerTonne) || 0;
+  return {
+    soilN,
+    nFromUrea,
+    nAvailableKgHa,
+    maxYieldTHa: perTonne > 0 ? nAvailableKgHa / perTonne : 0,
+  };
+}
+
+/** maxYieldFromUrea for a field, using whatever has actually been applied. */
+export function fieldMaxYield(f, commodity) {
+  return maxYieldFromUrea({
+    nPerTonne: commodity?.nPerTonne,
+    soilTestN: f?.soilTestNKgHa,
+    ureaAppliedKgHa: ureaAppliedKgHaFor(f),
+  });
+}
+
+/**
+ * Catch a urea figure entered into the nitrogen field.
+ *
+ * This is not hypothetical fussiness. 44 kg N/t for wheat is 95.65 kg of urea
+ * per tonne, and entering the second where the first belongs makes every
+ * requirement 2.17x too high — 749 kg/ha instead of 300 — with nothing on
+ * screen to say so. Across 320 hectares that is an order of 240 tonnes of urea
+ * instead of 96.
+ *
+ * Cereal N removal runs roughly 20-45 kg/t; pulses higher, but nothing
+ * approaches 60. Above that the number is almost certainly urea, and dividing
+ * it back by the urea nitrogen content recovers what was meant.
+ */
+export const MAX_PLAUSIBLE_N_PER_TONNE = 60;
+
+export function checkNPerTonne(nPerTonne, ureaNPct = UREA_N_PCT) {
+  const value = Number(nPerTonne) || 0;
+  if (value <= MAX_PLAUSIBLE_N_PER_TONNE) return { suspect: false, value };
+  const pct = (Number(ureaNPct) || 0) / 100;
+  return { suspect: true, value, asNitrogen: pct > 0 ? value * pct : 0 };
+}
+
 export const SEED_BUFFER_PCT = 5;
 
 /** A field's seed: rate (kg/ha) converted to tonnes over its area, plus a buffered figure. */

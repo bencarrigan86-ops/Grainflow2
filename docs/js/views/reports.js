@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=70';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT } from '../derived.js?v=70';
-import { num, tons, esc } from '../fmt.js?v=70';
-import { field, getVal, getNum } from '../ui.js?v=70';
+import { db } from '../storage.js?v=50';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=50';
+import { num, tons, esc } from '../fmt.js?v=50';
+import { field, getVal, getNum } from '../ui.js?v=50';
 
 let unsub = null;
 let view = 'fert';
@@ -109,7 +109,20 @@ function buildNitrogenCalc(root, commodities) {
 }
 
 function ureaTable(g, commodity) {
-  const rows = g.fields.map((f) => ({ f, u: fieldUrea(f), soilEquivKgHa: soilNUreaEquivalent(f.soilTestNKgHa), target: fieldUreaForTarget(f, commodity) }));
+  const rows = g.fields.map((f) => ({
+    f,
+    u: fieldUrea(f),
+    soilEquivKgHa: soilNUreaEquivalent(f.soilTestNKgHa),
+    target: fieldUreaForTarget(f, commodity),
+    // What the nitrogen actually on the paddock will carry, as against what
+    // the plan called for. The gap between Target t/ha and Max t/ha is the
+    // column worth reading in a dry year.
+    max: maxYieldFromUrea({
+      nPerTonne: commodity?.nPerTonne,
+      soilTestN: f.soilTestNKgHa,
+      ureaAppliedKgHa: ureaAppliedKgHaFor(f),
+    }),
+  }));
   const totals = rows.reduce((acc, { f, u }) => ({
     area: acc.area + (Number(f.areaHa) || 0),
     reqT: acc.reqT + u.requiredTons,
@@ -123,14 +136,20 @@ function ureaTable(g, commodity) {
   const avgSoilEquiv = rows.length > 0 ? rows.reduce((s, { soilEquivKgHa }) => s + soilEquivKgHa, 0) / rows.length : 0;
   const avgTargetYield = rows.length > 0 ? rows.reduce((s, { target }) => s + target.targetYieldTHa, 0) / rows.length : 0;
   const avgTargetCalc = rows.length > 0 ? rows.reduce((s, { target }) => s + target.requiredKgHa, 0) / rows.length : 0;
+  // Area-weighted, not a plain mean: a 320 ha paddock and a 12 ha corner do
+  // not carry the same weight in what the block as a whole can yield.
+  const totalNAvail = rows.reduce((s, { f, max }) => s + max.nAvailableKgHa * (Number(f.areaHa) || 0), 0);
+  const wtdNAvail = totals.area > 0 ? totalNAvail / totals.area : 0;
+  const totalMaxYield = rows.reduce((s, { f, max }) => s + max.maxYieldTHa * (Number(f.areaHa) || 0), 0);
+  const wtdMaxYield = totals.area > 0 ? totalMaxYield / totals.area : 0;
 
   return `
     <div class="group-label"><span>${esc(g.name)}</span></div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Field</th><th>Area</th><th>Soil N kg/ha</th><th>Soil equiv kg/ha</th><th>Target t/ha</th><th>Target calc kg/ha</th><th>Req kg/ha</th><th>App kg/ha</th><th>Left kg/ha</th><th>Req t</th><th>App t</th><th>Left t</th></tr></thead>
+        <thead><tr><th>Field</th><th>Area</th><th>Soil N kg/ha</th><th>Soil equiv kg/ha</th><th>Target t/ha</th><th>Target calc kg/ha</th><th>Req kg/ha</th><th>App kg/ha</th><th>N avail kg/ha</th><th>Max t/ha</th><th>Left kg/ha</th><th>Req t</th><th>App t</th><th>Left t</th></tr></thead>
         <tbody>
-          ${rows.map(({ f, u, soilEquivKgHa, target }) => {
+          ${rows.map(({ f, u, soilEquivKgHa, target, max }) => {
             const leftKgHaField = f.areaHa > 0 ? (u.leftTons * 1000) / f.areaHa : 0;
             return `
             <tr>
@@ -142,6 +161,8 @@ function ureaTable(g, commodity) {
               <td>${num(target.requiredKgHa, 0)}</td>
               <td>${num(f.ureaRequiredKgHa || 0, 0)}</td>
               <td>${num(ureaAppliedKgHaFor(f), 0)}</td>
+              <td>${num(max.nAvailableKgHa, 0)}</td>
+              <td>${max.maxYieldTHa > 0 ? num(max.maxYieldTHa, 2) : '—'}</td>
               <td>${num(leftKgHaField, 0)}</td>
               <td>${num(u.requiredTons, 2)}</td>
               <td>${num(u.appliedTons, 2)}</td>
@@ -158,6 +179,8 @@ function ureaTable(g, commodity) {
           <td>${num(avgTargetCalc, 0)}</td>
           <td>${num(reqKgHa, 0)}</td>
           <td>${num(appKgHa, 0)}</td>
+          <td>${num(wtdNAvail, 0)}</td>
+          <td>${wtdMaxYield > 0 ? num(wtdMaxYield, 2) : '—'}</td>
           <td>${num(leftKgHa, 0)}</td>
           <td>${num(totals.reqT, 2)}</td>
           <td>${num(totals.appT, 2)}</td>

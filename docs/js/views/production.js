@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=70';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity } from '../derived.js?v=70';
-import { num, tons, ha, esc } from '../fmt.js?v=70';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=70';
-import { renderRelatedMovements } from './movements.js?v=70';
+import { db } from '../storage.js?v=56';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=56';
+import { num, tons, ha, esc } from '../fmt.js?v=56';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=56';
+import { renderRelatedMovements } from './movements.js?v=56';
 
 let unsub = null;
 
@@ -121,11 +121,16 @@ function openFieldSheet(existing) {
       ${field({ label: 'Soil test N (kg/ha)', id: 'soilTestN', type: 'number', step: '1', value: existing?.soilTestNKgHa ?? 0, hint: 'From your soil test report' })}
       <div class="row"><span class="label">Target yield in use</span><span class="value" id="target-yield-preview">— t/ha</span></div>
       <div class="row"><span class="label">Soil N (urea equivalent)</span><span class="value" id="soiln-preview">0 kg/ha</span></div>
+      <div class="row"><span class="label">N needed for that yield</span><span class="value" id="n-demand-preview">0 kg N/ha</span></div>
       <div class="row"><span class="label"><strong>Urea required to hit target</strong></span><span class="value" id="target-urea-preview" style="font-size:18px">0 kg/ha</span></div>
+      <div class="field hint" id="n-unit-warning" style="display:none;margin:6px 0 0;color:var(--danger)"></div>
       <button class="btn secondary small" id="use-target-urea" style="margin:8px 0">Use as "Urea required" below</button>
       <hr class="sep" />
       ${field({ label: 'Urea required (kg/ha)', id: 'ureaReq', type: 'number', step: '1', value: existing?.ureaRequiredKgHa ?? 0 })}
       <div class="row"><span class="label">Urea applied (kg/ha)</span><span class="value" id="urea-applied-total">0 kg/ha</span></div>
+      <div class="row"><span class="label">N available (soil + applied)</span><span class="value" id="n-available-preview">0 kg N/ha</span></div>
+      <div class="row"><span class="label"><strong>Max yield from N applied</strong></span><span class="value" id="max-yield-preview" style="font-size:18px">— t/ha</span></div>
+      <div class="field hint" style="margin:-2px 0 12px">A ceiling set by nitrogen alone. Water, disease and everything else can take the crop below this; nothing takes it above.</div>
       <div id="urea-app-list"></div>
       <button class="btn secondary small" id="toggle-urea-app-form" style="margin-bottom:10px">+ Add application</button>
       <div id="urea-app-form" style="display:none;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
@@ -174,6 +179,10 @@ function openFieldSheet(existing) {
     const commodityTargetPreview = root.querySelector('#commodity-target-preview');
     const targetYieldPreview = root.querySelector('#target-yield-preview');
     const targetUreaPreview = root.querySelector('#target-urea-preview');
+    const nDemandPreview = root.querySelector('#n-demand-preview');
+    const nAvailablePreview = root.querySelector('#n-available-preview');
+    const maxYieldPreview = root.querySelector('#max-yield-preview');
+    const nUnitWarning = root.querySelector('#n-unit-warning');
     const starterPreview = root.querySelector('#starter-preview');
     const seedPreview = root.querySelector('#seed-preview');
     const currentTargetCalc = () => fieldUreaForTarget(
@@ -245,6 +254,28 @@ function openFieldSheet(existing) {
       const targetCalc = currentTargetCalc();
       targetYieldPreview.textContent = targetCalc.targetYieldTHa > 0 ? `${num(targetCalc.targetYieldTHa, 2)} t/ha` : '— (set a target yield)';
       targetUreaPreview.textContent = `${num(targetCalc.requiredKgHa, 0)} kg/ha`;
+
+      // Show the nitrogen demand as well as the urea, because the two differ
+      // by a factor of 2.17 and the difference is exactly where a urea figure
+      // entered in the nitrogen field hides.
+      const nPerTonne = Number(selectedCommodity?.nPerTonne) || 0;
+      nDemandPreview.textContent = `${num(nPerTonne * targetCalc.targetYieldTHa, 0)} kg N/ha`;
+
+      const unitCheck = checkNPerTonne(nPerTonne);
+      nUnitWarning.style.display = unitCheck.suspect ? '' : 'none';
+      nUnitWarning.textContent = unitCheck.suspect
+        ? `${esc(selectedCommodity?.name || 'This commodity')} is set to ${num(nPerTonne, 2)} kg N per tonne, which is far above anything a crop removes — it looks like a urea figure entered where nitrogen belongs. As nitrogen it would be about ${num(unitCheck.asNitrogen, 0)}. Every requirement here is roughly 2.2x too high until it is corrected in Settings.`
+        : '';
+
+      const maxYield = maxYieldFromUrea({
+        nPerTonne,
+        soilTestN: getNum(root, 'soilTestN'),
+        ureaAppliedKgHa: applied,
+      });
+      nAvailablePreview.textContent = `${num(maxYield.nAvailableKgHa, 0)} kg N/ha`;
+      maxYieldPreview.textContent = nPerTonne > 0
+        ? `${num(maxYield.maxYieldTHa, 2)} t/ha`
+        : '— (set N required on the commodity)';
       const st = fieldStarter({ areaHa: getNum(root, 'area'), starterRequiredKgHa: getNum(root, 'starterReq'), starterAppliedKgHa: getNum(root, 'starterApp') });
       starterPreview.textContent = tons(st.leftTons);
       const s = fieldSeed({ areaHa: getNum(root, 'area'), seedRateKgHa: getNum(root, 'seedRate') });
