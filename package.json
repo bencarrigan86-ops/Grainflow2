@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node serve.js",
-    "test": "node tests/enums.test.mjs && node tests/mapping.test.mjs",
+    "test": "node tests/boot.test.mjs && node tests/enums.test.mjs && node tests/mapping.test.mjs",
     "check": "node tests/validate-import.mjs"
   },
   "devDependencies": {

@@ -37,9 +37,22 @@ function db() {
 
 // --- the working copy ------------------------------------------------------
 
-export async function saveState(state) {
+/**
+ * Save the farm, stamped with which farm it is.
+ *
+ * The stamp matters more than it looks. Without it, a device that has been
+ * used for two farms — a contractor, a shared office laptop, or simply
+ * somebody testing — holds one anonymous blob, and startup cannot tell whether
+ * it belongs to the farm being opened. Get that wrong in one direction and the
+ * server overwrites work it has never seen; get it wrong in the other and one
+ * farm's records are pushed into another's. Both have happened here.
+ */
+export async function saveState(state, farmId) {
   const d = await db();
-  await d.put('state', state, 'current');
+  const tx = d.transaction('state', 'readwrite');
+  await tx.store.put(state, 'current');
+  if (farmId !== undefined) await tx.store.put(farmId ?? null, 'farm');
+  await tx.done;
 }
 
 export async function loadState() {
@@ -47,9 +60,34 @@ export async function loadState() {
   return (await d.get('state', 'current')) ?? null;
 }
 
+/** Which farm the saved copy belongs to; null for copies written before this
+ *  existed, which is not the same as "no farm" and must not be read as "mine". */
+export async function loadFarmStamp() {
+  const d = await db();
+  return (await d.get('state', 'farm')) ?? null;
+}
+
 export async function clearState() {
   const d = await db();
   await d.delete('state', 'current');
+}
+
+/**
+ * Move a state out of the way instead of overwriting it.
+ *
+ * Used when the device is holding unsent changes for a different farm than the
+ * one being opened. Adopting them would push one farm's records into another;
+ * overwriting them would destroy work that has never reached a server. So they
+ * are set aside under their own key, and the app says so out loud.
+ */
+export async function setAsideState(state, farmId) {
+  const d = await db();
+  await d.put('state', { state, farmId, at: Date.now() }, 'set-aside');
+}
+
+export async function loadAsideState() {
+  const d = await db();
+  return (await d.get('state', 'set-aside')) ?? null;
 }
 
 // --- the outbox ------------------------------------------------------------

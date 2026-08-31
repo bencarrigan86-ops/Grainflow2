@@ -132,6 +132,8 @@ function getAll(db, store) {
   }
 
   const state = await get(db, 'state', 'current');
+  const stamp = await get(db, 'state', 'farm');
+  const aside = await get(db, 'state', 'set-aside');
 
   if (!state) {
     card(`<div class="big bad">Nothing has been saved to this device.</div>
@@ -163,7 +165,23 @@ function getAll(db, store) {
         <tr><th>Season</th><th>Comm.</th><th>Paddocks</th><th>Storages</th>
             <th>Sales</th><th>Moves</th><th>Inv.</th></tr>
         ${rows || '<tr><td>no seasons</td><td colspan="6"></td></tr>'}
-      </table>`);
+      </table>
+      <div class="detail" style="margin-top:10px">Belongs to farm:
+        <code>${stamp || 'not recorded (saved before farms were stamped)'}</code></div>`);
+  }
+
+  // A copy set aside because it held unsent changes for a different farm. It is
+  // not deleted and it is not adopted; it waits here until someone signs in to
+  // the farm it belongs to. Showing it is the whole point — an unsent change
+  // nobody knows about is the same as a lost one.
+  if (aside) {
+    const y = Object.keys(aside.state?.years || {}).sort();
+    card(`<div class="big warn">There is a set-aside copy on this device.</div>
+      <div class="detail">It holds unsent changes for farm
+      <code>${aside.farmId || 'unknown'}</code>, saved
+      ${new Date(aside.at || Date.now()).toLocaleString()}.
+      Season(s): ${y.join(', ') || 'none'}. Sign in to that farm to send them —
+      nothing has been deleted.</div>`);
   }
 
   // The outbox is the other half of the story: work owed to the server. A long

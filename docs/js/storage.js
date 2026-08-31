@@ -18,10 +18,14 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=65';
-import { saveState, loadState, markDeleted } from './local.js?v=65';
-import { schedulePush, pushOnReconnect } from './sync.js?v=65';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=65';
+import { hydrate } from './hydrate.js?v=66';
+import {
+  saveState, loadState, markDeleted, markDirty, outboxCount,
+  loadFarmStamp, setAsideState,
+} from './local.js?v=66';
+import { chooseBootState } from './boot.js?v=66';
+import { schedulePush, pushOnReconnect } from './sync.js?v=66';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=66';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -114,10 +118,25 @@ function current() {
  * the memory write and the disk write they lose one edit, not the season.
  */
 function persist() {
-  if (ready) {
-    saveState(data).catch((e) => console.error('Local save failed', e));
-    schedulePush(() => data, farmId, role);
-  }
+  // The local write is unconditional, and that is the fix for the worst bug
+  // this app has had. It used to sit behind `if (ready)` — ready meaning
+  // db.init() had finished, which needs the server — so before the app had
+  // talked to Supabase, every save silently did nothing while the screen
+  // redrew as though it had worked. An entire imported season was accepted,
+  // counted back, displayed, and never written.
+  //
+  // Nothing about durability on this device should depend on a network. That
+  // is the whole premise of the app: it has to work in a paddock.
+  saveState(data, farmId).catch((e) => {
+    console.error('LOCAL SAVE FAILED — this change exists only in this tab', e);
+    window.dispatchEvent(new CustomEvent('grainflow:save-failed', { detail: { error: String(e) } }));
+  });
+
+  // The push is a different question, and it does need to know where the data
+  // goes. With no farm yet, the work is still recorded as owed so it leaves on
+  // the first push after signing in, rather than being forgotten.
+  if (farmId) schedulePush(() => data, farmId, role);
+  else markDirty().catch((e) => console.error('Could not queue for the server', e));
   // A view that throws while re-rendering must not take the write down with
   // it. The save has already happened by this point; letting the exception out
   // makes the caller believe it failed and, worse, report a rendering fault as
@@ -148,7 +167,10 @@ window.addEventListener('grainflow:push-failed', (e) => {
 
 /** Record that a row must be stamped deleted on the server. */
 function tombstone(table, id) {
-  if (ready && id) markDeleted(table, id).catch((e) => console.error('Tombstone failed', e));
+  // Not gated on `ready` either. A row deleted before the app has finished
+  // starting up is still deleted, and the server has to be told — a tombstone
+  // that is never recorded means the row quietly returns on the next hydrate.
+  if (id) markDeleted(table, id).catch((e) => console.error('Tombstone failed', e));
 }
 
 // ---------------------------------------------------------------------------
@@ -162,22 +184,46 @@ export const db = {
     farmId = fid;
     role = r;
 
-    let loaded = null;
+    // Gather the facts, then decide. The decision itself lives in boot.js as a
+    // pure function so it can be tested against every combination without a
+    // browser or a server — see tests/boot.test.mjs. What used to be here was
+    // three lines of implicit policy that quietly preferred the server.
+    const localState = await loadState().catch(() => null);
+    const localFarm = await loadFarmStamp().catch(() => null);
+    const pending = await outboxCount().catch(() => 0);
+
+    let serverState = null;
     if (navigator.onLine) {
       try {
         const { state } = await hydrate(farmId);
-        // A farm with no seasons yet is a new account, not a failed read.
-        loaded = Object.keys(state.years).length ? state : null;
-        if (loaded) await saveState(loaded);
+        serverState = state;
       } catch (e) {
-        console.warn('Hydrate failed, falling back to the local copy', e);
+        console.warn('Hydrate failed; the copy on this device stands', e);
       }
     }
 
-    if (!loaded) loaded = await loadState();
+    const decision = chooseBootState({ farmId, localState, localFarm, pending, serverState });
+    console.info(`Grainflow start: using the ${decision.use} copy — ${decision.reason}.`);
 
-    if (loaded) {
-      data = deriveCounters(loaded);
+    if (decision.orphan) {
+      // Unsent changes for a different farm. Preserved rather than overwritten,
+      // and said out loud — silence here is how work disappears.
+      await setAsideState(localState, localFarm).catch(
+        (e) => console.error('Could not set aside the other farm\'s changes', e));
+      console.error(
+        `This device is holding ${pending} unsent change(s) for a different farm ` +
+        `(${localFarm}). They have been set aside, not deleted, and are visible on ` +
+        `state.html. Sign in to that farm to send them.`);
+      window.dispatchEvent(new CustomEvent('grainflow:orphaned-changes', {
+        detail: { farmId: localFarm, pending },
+      }));
+    }
+
+    if (decision.use === 'server') {
+      data = deriveCounters(serverState);
+      await saveState(data, farmId).catch((e) => console.error('Local save failed', e));
+    } else if (decision.use === 'local') {
+      data = deriveCounters(localState);
     } else {
       // Brand new farm: seed the default commodity list so Settings is not
       // an empty screen on day one.
@@ -187,7 +233,13 @@ export const db = {
 
     ready = true;
     pushOnReconnect(() => data, farmId, role);
-    listeners.forEach((fn) => fn(data));
+
+    // Anything this device owes goes now rather than waiting for the next edit.
+    if (decision.pushLocal) schedulePush(() => data, farmId, role, { delay: 0 });
+
+    listeners.forEach((fn) => {
+      try { fn(data); } catch (e) { console.error('A view failed to render at startup', e); }
+    });
     return data;
   },
 
