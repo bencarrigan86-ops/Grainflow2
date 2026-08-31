@@ -35,6 +35,21 @@ export function renderLogin(root, { mode = 'signin', onDone } = {}) {
             ${isSignUp
               ? 'Already have an account? <button class="link-btn" id="to-signin">Sign in</button>'
               : 'No account yet? <button class="link-btn" id="to-signup">Create one</button>'}
+          </div>
+          <!--
+            On iOS a home-screen app has its own storage, sealed off from
+            Safari. Anyone who used Grainflow before accounts existed has a
+            season in that container which the signed-out app cannot show them
+            and which Safari cannot see at all.
+
+            A plain anchor, deliberately: it navigates within the app's scope,
+            so it opens inside the home-screen app rather than kicking out to
+            the browser — which would land in the wrong storage container and
+            find nothing.
+          -->
+          <div class="empty" style="padding:4px 10px 20px">
+            <a href="./legacy-export.html" class="link-btn"
+               style="text-decoration:none">Recover data from an earlier version</a>
           </div>`}
       </div>
     `;
