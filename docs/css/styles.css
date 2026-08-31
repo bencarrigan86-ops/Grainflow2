@@ -210,6 +210,26 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
   z-index: 20;
 }
 
+/* A labelled companion to .fab — fixed alongside it so it's always visible
+   without scrolling, for a second action that deserves to be just as easy
+   to find (e.g. "Repeat" next to "+ Add"). */
+.fab-secondary {
+  position: fixed;
+  right: 82px;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 16px);
+  height: 54px;
+  padding: 0 20px;
+  border-radius: 27px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0,0,0,.2);
+  z-index: 20;
+}
+
 .field {
   margin-bottom: 12px;
 }

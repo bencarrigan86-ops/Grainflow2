@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=49';
-import { movementsForEndpoint } from '../derived.js?v=49';
-import { num, tons, esc } from '../fmt.js?v=49';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=49';
-import { compressAndStampImage } from '../img.js?v=49';
+import { db } from '../storage.js?v=50';
+import { movementsForEndpoint } from '../derived.js?v=50';
+import { num, tons, esc } from '../fmt.js?v=50';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=50';
+import { compressAndStampImage } from '../img.js?v=50';
 
 let unsub = null;
 
@@ -30,16 +30,14 @@ function paint(root) {
         <div class="stat"><div class="n">${num(totalTons, 1)} t</div><div class="l">Total moved</div></div>
       </div>
 
-      <div class="swipe-actions" style="margin-bottom:4px">
-        ${movements.length > 0 ? `<button class="btn secondary small" id="repeat-movement">Repeat last movement</button>` : ''}
-        ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="log-ginning">+ Log ginning</button>` : ''}
-      </div>
+      ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="log-ginning" style="margin-bottom:4px">+ Log ginning</button>` : ''}
 
       <div class="card input">
         <h2><span class="dot input"></span>Tickets</h2>
         ${sorted.length === 0 ? `<div class="empty">Tap + to log your first truck movement.</div>` : sorted.map((m) => movementRow(m, { fields, storages, sales, commodities })).join('')}
       </div>
     </div>
+    ${movements.length > 0 ? `<button class="fab-secondary" id="repeat-movement">Repeat</button>` : ''}
     <button class="fab" id="add-movement">+</button>
   `;
 
