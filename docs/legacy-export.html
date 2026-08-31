@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Grainflow — rescue your season</title>
+<style>
+  :root { color-scheme:light dark; --bg:#f2f3f5; --surface:#fff; --text:#14171a;
+          --dim:#6b7280; --border:#e3e5e8; --ok:#2e7d32; --bad:#c0392b; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0e1013; --surface:#1a1d21; --text:#f0f1f3; --dim:#9aa1a9;
+            --border:#2b2f34; --ok:#6adb7a; --bad:#ef8a7f; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px 16px 60px; background:var(--bg); color:var(--text);
+         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         line-height:1.55; }
+  .wrap { max-width:620px; margin:0 auto; }
+  h1 { font-size:21px; margin:0 0 6px; }
+  .sub { color:var(--dim); font-size:13.5px; margin:0 0 20px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:13px;
+          padding:16px 18px; margin-bottom:12px; }
+  .big { font-size:17px; font-weight:600; }
+  .big.ok { color:var(--ok); } .big.bad { color:var(--bad); }
+  .detail { color:var(--dim); font-size:13px; margin-top:6px; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; margin-top:10px; }
+  td { padding:5px 0; border-bottom:1px solid var(--border); }
+  td:last-child { text-align:right; font-weight:600; font-variant-numeric:tabular-nums; }
+  tr:last-child td { border-bottom:none; }
+  button { appearance:none; border:none; background:#2e7d32; color:#fff; font-weight:600;
+           font-size:16px; padding:15px 16px; border-radius:12px; width:100%;
+           margin-top:14px; }
+  button.secondary { background:transparent; color:var(--text);
+                     border:1px solid var(--border); }
+  textarea { width:100%; height:180px; margin-top:12px; font-family:ui-monospace,monospace;
+             font-size:11px; border:1px solid var(--border); border-radius:10px;
+             padding:10px; background:var(--bg); color:var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Rescue your season</h1>
+  <p class="sub">Reads the original Grainflow data still held by this browser and saves it as a file. Nothing is changed or deleted — this only reads.</p>
+  <div id="out"></div>
+</div>
+
+<script>
+// Deliberately plain script, not a module, and importing nothing.
+//
+// This page has one job and has to work even if every other file in the app is
+// broken, missing, or from a different version. Its whole purpose is to reach a
+// season that the current app can no longer see.
+
+const KEY = 'grainflow.v1';
+const out = document.getElementById('out');
+const raw = localStorage.getItem(KEY);
+
+function card(html) {
+  const d = document.createElement('div');
+  d.className = 'card';
+  d.innerHTML = html;
+  out.appendChild(d);
+  return d;
+}
+
+if (!raw) {
+  // Be specific about why, because "not found" on its own invites people to go
+  // hunting on the wrong device.
+  const others = Object.keys(localStorage).filter((k) => k.toLowerCase().includes('grain'));
+  card(`<div class="big bad">No original data in this browser.</div>
+    <div class="detail">
+      Storage belongs to one website on one device. This page can only see data
+      saved at <strong>${location.origin}</strong> in <em>this</em> browser.
+      ${others.length
+        ? `Other keys that look related: <code>${others.join(', ')}</code>.`
+        : 'Nothing resembling Grainflow data is stored here at all.'}
+      <br><br>
+      If your season is on a different phone, in a different browser, or was saved
+      to the home screen from a different address, open this page there instead.
+    </div>`);
+} else {
+  let parsed = null;
+  try { parsed = JSON.parse(raw); } catch (e) { /* handled below */ }
+
+  if (!parsed) {
+    card(`<div class="big bad">Found data, but could not read it.</div>
+      <div class="detail">It is still safe and untouched. Copy the raw text below
+      and send it on — it can be repaired.</div>
+      <textarea readonly>${raw.slice(0, 20000)}</textarea>`);
+  } else {
+    const years = Object.keys(parsed.years || {});
+    const totals = { seasons: years.length, commodities: 0, paddocks: 0,
+                     storages: 0, sales: 0, movements: 0, invoices: 0, photos: 0 };
+    for (const y of Object.values(parsed.years || {})) {
+      totals.commodities += (y.commodities || []).length;
+      totals.paddocks    += (y.fields || []).length;
+      totals.storages    += (y.storages || []).length;
+      totals.sales       += (y.sales || []).length;
+      totals.movements   += (y.movements || []).length;
+      totals.invoices    += (y.invoices || []).length;
+      totals.photos      += (y.movements || []).filter((m) => m.photoDataUrl).length;
+    }
+
+    const kb = Math.round(raw.length / 1024);
+
+    card(`<div class="big ok">Your season is here.</div>
+      <div class="detail">${years.join(', ') || 'no seasons'} — ${kb} KB in total.</div>
+      <table>
+        ${Object.entries(totals).map(([k, v]) =>
+          `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
+      </table>`);
+
+    const actions = card(`<div class="big">Save it</div>
+      <div class="detail">Download the file, then keep a copy somewhere that is not
+      this phone. This is the only copy of your records until it is imported.</div>`);
+
+    const dl = document.createElement('button');
+    dl.textContent = 'Download backup file';
+    dl.onclick = () => {
+      const blob = new Blob([raw], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `grainflow-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    };
+    actions.appendChild(dl);
+
+    // A download can fail silently inside an installed home-screen app, so give
+    // a second route out that does not depend on the file system.
+    const copy = document.createElement('button');
+    copy.className = 'secondary';
+    copy.textContent = 'Copy to clipboard instead';
+    copy.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(raw);
+        copy.textContent = 'Copied';
+      } catch {
+        copy.textContent = 'Could not copy — use the text box below';
+        const ta = document.createElement('textarea');
+        ta.readOnly = true;
+        ta.value = raw;
+        actions.appendChild(ta);
+        ta.select();
+      }
+    };
+    actions.appendChild(copy);
+  }
+}
+</script>
+</body>
+</html>
