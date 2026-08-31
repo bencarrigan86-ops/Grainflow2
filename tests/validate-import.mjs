@@ -64,6 +64,42 @@ if (filled?.length) {
   for (const f of filled) console.log(`  + ${f}`);
 }
 
+// Which keys the file actually carries, per record type.
+//
+// "It did not come through" has two completely different causes — the value was
+// never in the file, or the file had it and something downstream dropped it —
+// and no amount of reasoning about the code can tell them apart. This reads the
+// file and says which.
+{
+  const LISTS = [
+    ['paddocks', 'fields'], ['storages', 'storages'], ['contracts', 'sales'],
+    ['movements', 'movements'], ['commodities', 'commodities'],
+  ];
+  console.log('\n=== what each record in the file actually carries ===');
+  for (const [label, key] of LISTS) {
+    const rows = Object.values(state.years || {}).flatMap((y) => y[key] || []);
+    if (!rows.length) { console.log(`  ${label}: none in this file`); continue; }
+    const counts = new Map();
+    for (const r of rows) {
+      for (const [k, v] of Object.entries(r)) {
+        if (k.startsWith('__')) continue;
+        const set = v !== null && v !== undefined && v !== ''
+          && !(Array.isArray(v) && v.length === 0);
+        if (set) counts.set(k, (counts.get(k) || 0) + 1);
+        else if (!counts.has(k)) counts.set(k, 0);
+      }
+    }
+    console.log(`  ${label} (${rows.length}):`);
+    for (const [k, c] of [...counts].sort()) {
+      console.log(`      ${c ? String(c).padStart(4) : '   -'}  ${k}`);
+    }
+  }
+  console.log('\n  A dash means the key exists on no record with a value in it.');
+  console.log('  A key absent from this list is not in the file at all — in which');
+  console.log('  case no amount of fixing the app will bring it back, and it has');
+  console.log('  to come from wherever it still exists.');
+}
+
 const show = (title, list) => {
   if (!list.length) return;
   console.log(`\n=== ${title} (${list.length}) ===`);
