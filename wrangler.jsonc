@@ -1,0 +1,19 @@
+{
+  // Cloudflare deployment config.
+  //
+  // Grainflow has no build step — docs/ is already exactly what should be
+  // served — so this is a static-assets Worker with no code of its own.
+  // Cloudflare uploads the folder and serves it directly.
+  //
+  // If a build step ever arrives (Vite, at Phase 3 when PowerSync needs a
+  // bundler) this is where the output directory changes, and a "build command"
+  // gets filled in on the Cloudflare side.
+
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "grainflow2",
+  "compatibility_date": "2026-08-31",
+
+  "assets": {
+    "directory": "./docs"
+  }
+}
