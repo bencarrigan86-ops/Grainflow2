@@ -279,7 +279,7 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
 .year-pill {
   position: fixed;
   top: calc(8px + var(--safe-top));
-  right: 12px;
+  right: 52px;
   z-index: 25;
   background: var(--accent-summary);
   color: #fff;
@@ -290,6 +290,28 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
   font-weight: 700;
   box-shadow: 0 2px 6px rgba(0,0,0,.2);
 }
+
+/* Settings lives up here rather than in the tab bar — it is configuration,
+   not a destination you visit during a day's carting, and moving it off the
+   bar buys every remaining tab meaningful width on a phone. */
+.settings-btn {
+  position: fixed;
+  top: calc(6px + var(--safe-top));
+  right: 10px;
+  z-index: 25;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-dim);
+  padding: 0;
+}
+.settings-btn.active { color: var(--accent-summary); }
+.settings-btn:active { background: var(--surface-2); }
 
 .tabbar {
   position: fixed;
@@ -417,5 +439,5 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
   body * { visibility: hidden; }
   .invoice-doc, .invoice-doc * { visibility: visible; }
   .invoice-doc { position: absolute; top: 0; left: 0; width: 100%; margin: 0; border-radius: 0; border: none; }
-  .tabbar, .year-pill, .fab, #print-invoice, .sheet-header, .sheet-handle { display: none !important; }
+  .tabbar, .year-pill, .settings-btn, .fab, #print-invoice, .sheet-header, .sheet-handle { display: none !important; }
 }

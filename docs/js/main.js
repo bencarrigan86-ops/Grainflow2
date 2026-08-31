@@ -1,11 +1,11 @@
-import { db } from './storage.js?v=50';
-import { renderPosition } from './views/position.js?v=50';
-import { renderProduction } from './views/production.js?v=50';
-import { renderReports } from './views/reports.js?v=50';
-import { renderSales } from './views/sales.js?v=50';
-import { renderMovements } from './views/movements.js?v=50';
-import { renderStorage } from './views/storage.js?v=50';
-import { renderSettings } from './views/settings.js?v=50';
+import { db } from './storage.js?v=53';
+import { renderPosition } from './views/position.js?v=53';
+import { renderProduction } from './views/production.js?v=53';
+import { renderReports } from './views/reports.js?v=53';
+import { renderSales } from './views/sales.js?v=53';
+import { renderMovements } from './views/movements.js?v=53';
+import { renderStorage } from './views/storage.js?v=53';
+import { renderSettings } from './views/settings.js?v=53';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -13,13 +13,12 @@ import { renderSettings } from './views/settings.js?v=50';
 // currentColor fill, no strokes, chunky enough to hold up at 21px.
 const SILO_ICON = `<svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><polygon points="12,1.5 21,8 3,8"/><rect x="4" y="8.6" width="16" height="2.6"/><rect x="4" y="11.7" width="16" height="2.6"/><rect x="4" y="14.8" width="16" height="2.6"/><polygon points="4,18 20,18 13.2,23 10.8,23"/></svg>`;
 
-// A bin in cross-section, part full — how much grain is on hand, which is
-// what Position answers. The gap between the walls and the heap is what
-// makes the level readable at 21px.
-const POSITION_ICON = `<svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="3" width="3" height="18"/><rect x="19" y="3" width="3" height="18"/><rect x="2" y="18" width="20" height="3"/><polygon points="6.5,12.2 12,9 17.5,12.2 17.5,18 6.5,18"/></svg>`;
+// A map pin on the ground — location marker, per the reference.
+const POSITION_ICON = `<svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12 20c0 0-6-7-6-11.5a6 6 0 1 1 12 0C18 13 12 20 12 20z M12 6.1a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 1 0 0-4.8z"/><ellipse cx="12" cy="21.4" rx="7" ry="1.7"/></svg>`;
 
-// Furrows running to the horizon — a paddock, not a pot plant.
-const PRODUCTION_ICON = `<svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><polygon points="1,22 23,22 21,18.6 3,18.6"/><polygon points="3.5,17.6 20.5,17.6 19,14.4 5,14.4"/><polygon points="5.5,13.4 18.5,13.4 17.4,10.7 6.6,10.7"/><polygon points="7.1,9.7 16.9,9.7 16.1,7.4 7.9,7.4"/></svg>`;
+// Two crops, layered silhouettes rather than outlines — the fine branch
+// lines in the reference close up at 21px, the stacked shape does not.
+const PRODUCTION_ICON = `<svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><polygon points="6.8,1.8 10.2,7.6 3.4,7.6"/><polygon points="6.8,5.9 11.5,12.1 2.1,12.1"/><polygon points="6.8,10.3 12.8,16.6 0.8,16.6"/><rect x="6" y="16.6" width="1.7" height="5.4"/><polygon points="18.6,7.3 21.7,12.4 15.5,12.4"/><polygon points="18.6,10.6 23.2,17.6 14,17.6"/><rect x="17.8" y="17.6" width="1.7" height="4.4"/></svg>`;
 
 const REPORTS_ICON = `<svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="2.5" y="13" width="4.8" height="9"/><rect x="9.6" y="6.5" width="4.8" height="15.5"/><rect x="16.7" y="10" width="4.8" height="12"/></svg>`;
 
@@ -34,13 +33,20 @@ const MOVEMENT_ICON = `<svg viewBox="0 0 24 24" width="21" height="21" fill="cur
 // end of the tab bar.
 const SETTINGS_ICON = `<svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4.8" width="20" height="2.4"/><circle cx="8" cy="6" r="3.3"/><rect x="2" y="10.8" width="20" height="2.4"/><circle cx="16" cy="12" r="3.3"/><rect x="2" y="16.8" width="20" height="2.4"/><circle cx="10" cy="18" r="3.3"/></svg>`;
 
+// Six tabs in the bar. Settings is reached from the gear at top right —
+// see .settings-btn in styles.css for why it is not down here.
 const TABS = [
   { id: 'position', label: 'Position', icon: POSITION_ICON, render: renderPosition },
   { id: 'production', label: 'Production', icon: PRODUCTION_ICON, render: renderProduction },
-  { id: 'reports', label: 'Reports', icon: REPORTS_ICON, render: renderReports },
   { id: 'sales', label: 'Sales', icon: SALES_ICON, render: renderSales },
   { id: 'movement', label: 'Movement', icon: MOVEMENT_ICON, render: renderMovements },
   { id: 'storage', label: 'Storage', icon: SILO_ICON, render: renderStorage },
+  { id: 'reports', label: 'Reports', icon: REPORTS_ICON, render: renderReports },
+];
+
+// Every reachable view, including the ones not shown in the tab bar.
+const ROUTES = [
+  ...TABS,
   { id: 'settings', label: 'Settings', icon: SETTINGS_ICON, render: renderSettings },
 ];
 
@@ -49,7 +55,7 @@ const tabbar = document.getElementById('tabbar');
 
 function currentTabId() {
   const hash = location.hash.replace('#/', '');
-  return TABS.some((t) => t.id === hash) ? hash : 'position';
+  return ROUTES.some((t) => t.id === hash) ? hash : 'position';
 }
 
 function renderTabbar() {
@@ -67,12 +73,19 @@ function renderTabbar() {
   });
 }
 
+const settingsBtn = document.getElementById('settings-btn');
+settingsBtn.innerHTML = SETTINGS_ICON;
+settingsBtn.addEventListener('click', () => {
+  location.hash = '#/settings';
+});
+
 function renderActiveView() {
   const active = currentTabId();
-  const tab = TABS.find((t) => t.id === active);
+  const route = ROUTES.find((t) => t.id === active);
   app.innerHTML = '';
-  tab.render(app);
+  route.render(app);
   renderTabbar();
+  settingsBtn.classList.toggle('active', active === 'settings');
 }
 
 const yearPill = document.getElementById('year-pill');
