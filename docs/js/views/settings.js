@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=70';
-import { num, money, esc } from '../fmt.js?v=70';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=70';
-import { APP_VERSION } from '../version.js?v=70';
-import { exportRowsAsCSV } from '../csv.js?v=70';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=70';
-import { endpointLabel } from './movements.js?v=70';
+import { db } from '../storage.js?v=72';
+import { num, money, esc } from '../fmt.js?v=72';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=72';
+import { APP_VERSION } from '../version.js?v=72';
+import { exportRowsAsCSV } from '../csv.js?v=72';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=72';
+import { endpointLabel } from './movements.js?v=72';
 
 let unsub = null;
 
