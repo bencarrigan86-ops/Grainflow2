@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=72';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=72';
-import { num, tons, esc } from '../fmt.js?v=72';
-import { field, getVal, getNum } from '../ui.js?v=72';
+import { db } from '../storage.js?v=73';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=73';
+import { num, tons, esc } from '../fmt.js?v=73';
+import { field, getVal, getNum } from '../ui.js?v=73';
 
 let unsub = null;
 let view = 'fert';
@@ -147,7 +147,7 @@ function ureaTable(g, commodity) {
     <div class="group-label"><span>${esc(g.name)}</span></div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Field</th><th>Area</th><th>Soil N kg/ha</th><th>Soil equiv kg/ha</th><th>Target t/ha</th><th>Target calc kg/ha</th><th>Req kg/ha</th><th>App kg/ha</th><th>N avail kg/ha</th><th>Max t/ha</th><th>Left kg/ha</th><th>Req t</th><th>App t</th><th>Left t</th></tr></thead>
+        <thead><tr><th>Field</th><th>Area</th><th>Soil N kg/ha</th><th>Soil equiv kg/ha</th><th>Target t/ha</th><th>Target calc kg/ha</th><th>Req kg/ha</th><th>App kg/ha</th><th>Left kg/ha</th><th>Req t</th><th>App t</th><th>Left t</th><th>N avail kg/ha</th><th>Max t/ha</th></tr></thead>
         <tbody>
           ${rows.map(({ f, u, soilEquivKgHa, target, max }) => {
             const leftKgHaField = f.areaHa > 0 ? (u.leftTons * 1000) / f.areaHa : 0;
@@ -161,12 +161,12 @@ function ureaTable(g, commodity) {
               <td>${num(target.requiredKgHa, 0)}</td>
               <td>${num(f.ureaRequiredKgHa || 0, 0)}</td>
               <td>${num(ureaAppliedKgHaFor(f), 0)}</td>
-              <td>${num(max.nAvailableKgHa, 0)}</td>
-              <td>${max.maxYieldTHa > 0 ? num(max.maxYieldTHa, 2) : '—'}</td>
               <td>${num(leftKgHaField, 0)}</td>
               <td>${num(u.requiredTons, 2)}</td>
               <td>${num(u.appliedTons, 2)}</td>
               <td>${num(u.leftTons, 2)}</td>
+              <td>${num(max.nAvailableKgHa, 0)}</td>
+              <td>${max.maxYieldTHa > 0 ? num(max.maxYieldTHa, 2) : '—'}</td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -179,12 +179,12 @@ function ureaTable(g, commodity) {
           <td>${num(avgTargetCalc, 0)}</td>
           <td>${num(reqKgHa, 0)}</td>
           <td>${num(appKgHa, 0)}</td>
-          <td>${num(wtdNAvail, 0)}</td>
-          <td>${wtdMaxYield > 0 ? num(wtdMaxYield, 2) : '—'}</td>
           <td>${num(leftKgHa, 0)}</td>
           <td>${num(totals.reqT, 2)}</td>
           <td>${num(totals.appT, 2)}</td>
           <td>${num(totals.leftT, 2)}</td>
+          <td>${num(wtdNAvail, 0)}</td>
+          <td>${wtdMaxYield > 0 ? num(wtdMaxYield, 2) : '—'}</td>
         </tr></tfoot>
       </table>
     </div>
