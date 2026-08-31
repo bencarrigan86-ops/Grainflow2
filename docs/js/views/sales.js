@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=67';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=67';
-import { num, tons, money, esc } from '../fmt.js?v=67';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=67';
-import { renderRelatedMovements } from './movements.js?v=67';
-import { openInvoiceListSheet } from './invoice.js?v=67';
+import { db } from '../storage.js?v=68';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=68';
+import { num, tons, money, esc } from '../fmt.js?v=68';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=68';
+import { renderRelatedMovements } from './movements.js?v=68';
+import { openInvoiceListSheet } from './invoice.js?v=68';
 
 let unsub = null;
 

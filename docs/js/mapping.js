@@ -72,6 +72,13 @@ export function stateToRows(state, farmId) {
         n_per_tonne: n(c.nPerTonne), mtm_price: n(c.mtmPrice),
         opening_stock: n(c.openingStock), retained_seed: n(c.retainedSeed),
         gross_margin_cost: n(c.grossMarginCost),
+        // Cotton is counted in bales, not tonnes; without unit and the ginning
+        // ratio the whole lint/seed flow has nothing to work from.
+        unit: c.unit || 't',
+        bales_per_round_bale: n(c.balesPerRoundBale),
+        default_yield_t_ha: n(c.defaultYieldTHa),
+        target_yield_t_ha: n(c.targetYieldTHa),
+        notes: orNull(c.notes),
       });
     }
 
@@ -80,6 +87,9 @@ export function stateToRows(state, farmId) {
         id: f.id, farm_id: farmId, season_id: seasonId,
         name: s(f.name), area_ha: n(f.areaHa),
         commodity_id: orNull(f.commodityId),
+        // A note about a boggy corner or a locked gate belongs with the load,
+        // not behind the agronomy wall.
+        notes: orNull(f.notes),
       });
       // The agronomy half. Always written, even when empty — a missing row and
       // a zeroed row are different things, and the app expects the fields to
@@ -92,6 +102,13 @@ export function stateToRows(state, farmId) {
         urea_applied_kg_ha: n(f.ureaAppliedKgHa),
         seed_variety: orNull(f.seedVariety),
         seed_rate_kg_ha: n(f.seedRateKgHa),
+        soil_test_n_kg_ha: n(f.soilTestNKgHa),
+        target_yield_override_t_ha: n(f.targetYieldOverrideTHa),
+        starter_required_kg_ha: n(f.starterRequiredKgHa),
+        starter_applied_kg_ha: n(f.starterAppliedKgHa),
+        // Dated applications, kept whole. A running total cannot answer "when
+        // was the second pass" and a season of urea is a sequence, not a sum.
+        urea_applications: Array.isArray(f.ureaApplications) ? f.ureaApplications : [],
       });
     }
 
@@ -109,6 +126,7 @@ export function stateToRows(state, farmId) {
         current_height: n(st.currentHeight),
         fill_state: st.fillState || 'peak',
         opening_stock: n(st.openingStock),
+        unit_label: st.unitLabel || 't',
       });
     }
 
@@ -117,15 +135,35 @@ export function stateToRows(state, farmId) {
         id: sale.id, farm_id: farmId, season_id: seasonId,
         commodity_id: orNull(sale.commodityId),
         buyer: orNull(sale.buyer), contract_no: orNull(sale.contractNo),
-        grade: orNull(sale.grade), tonnes: n(sale.tonnes),
+        grade: orNull(sale.grade),
+        // The app spells it `tons`, the column `tonnes`. The mapping is exactly
+        // the place to reconcile that; reading sale.tonnes here — a key no
+        // build has ever written — is why contract tonnage was discarded.
+        tonnes: n(sale.tons),
         delivery_period: orNull(sale.deliveryPeriod),
         sale_date: orNull(sale.date),
+        location: orNull(sale.location),
+        delivery_start: orNull(sale.deliveryStart),
+        delivery_end: orNull(sale.deliveryEnd),
+        tons_delivered: n(sale.tonsDelivered),
+        tolerance_pct: n(sale.tolerancePct),
+        tolerance_cap_tons: n(sale.toleranceCapTons),
+        notes: orNull(sale.notes),
       });
       out.sale_terms.push({
         id: sale.__termsId || uid(), farm_id: farmId, sale_id: sale.id,
         price: n(sale.price),
         payment_terms_days: orNull(sale.paymentTermsDays),
         contract_value: orNull(sale.contractValue),
+        // Everything below moves the margin, which is why it lives in the table
+        // a field device never receives.
+        freight: n(sale.freight),
+        premium_discount: n(sale.premiumDiscount),
+        ginning: n(sale.ginning),
+        levies_pct: n(sale.leviesPct),
+        broker_note: orNull(sale.brokerNote),
+        buyer_abn: orNull(sale.buyerAbn),
+        buyer_address: orNull(sale.buyerAddress),
       });
     }
 
@@ -241,6 +279,11 @@ export function rowsToState(rows) {
         nPerTonne: n(c.n_per_tonne), mtmPrice: n(c.mtm_price),
         openingStock: n(c.opening_stock), retainedSeed: n(c.retained_seed),
         grossMarginCost: n(c.gross_margin_cost),
+        unit: c.unit ?? 't',
+        balesPerRoundBale: n(c.bales_per_round_bale),
+        defaultYieldTHa: n(c.default_yield_t_ha),
+        targetYieldTHa: n(c.target_yield_t_ha),
+        notes: c.notes ?? '',
       })),
 
       fields: inSeason(rows.fields, season.id).map((f) => {
@@ -255,6 +298,12 @@ export function rowsToState(rows) {
           ureaAppliedKgHa: n(a.urea_applied_kg_ha),
           seedVariety: a.seed_variety ?? '',
           seedRateKgHa: n(a.seed_rate_kg_ha),
+          soilTestNKgHa: n(a.soil_test_n_kg_ha),
+          targetYieldOverrideTHa: n(a.target_yield_override_t_ha),
+          starterRequiredKgHa: n(a.starter_required_kg_ha),
+          starterAppliedKgHa: n(a.starter_applied_kg_ha),
+          ureaApplications: Array.isArray(a.urea_applications) ? a.urea_applications : [],
+          notes: f.notes ?? '',
         };
       }),
 
@@ -269,6 +318,7 @@ export function rowsToState(rows) {
         currentHeight: n(st.current_height),
         fillState: st.fill_state,
         openingStock: n(st.opening_stock),
+        unitLabel: st.unit_label ?? 't',
       })),
 
       sales: inSeason(rows.sales, season.id).map((sale) => {
@@ -276,13 +326,28 @@ export function rowsToState(rows) {
         return {
           id: sale.id, commodityId: sale.commodity_id,
           buyer: sale.buyer ?? '', contractNo: sale.contract_no ?? '',
-          grade: sale.grade ?? '', tonnes: n(sale.tonnes),
+          grade: sale.grade ?? '',
+          tons: n(sale.tonnes),
           deliveryPeriod: sale.delivery_period ?? '',
           date: sale.sale_date ?? '',
+          location: sale.location ?? '',
+          deliveryStart: sale.delivery_start ?? '',
+          deliveryEnd: sale.delivery_end ?? '',
+          tonsDelivered: n(sale.tons_delivered),
+          tolerancePct: n(sale.tolerance_pct),
+          toleranceCapTons: n(sale.tolerance_cap_tons),
+          notes: sale.notes ?? '',
           __termsId: t.id,
           price: n(t.price),
           paymentTermsDays: t.payment_terms_days,
           contractValue: t.contract_value,
+          freight: n(t.freight),
+          premiumDiscount: n(t.premium_discount),
+          ginning: n(t.ginning),
+          leviesPct: n(t.levies_pct),
+          brokerNote: t.broker_note ?? '',
+          buyerAbn: t.buyer_abn ?? '',
+          buyerAddress: t.buyer_address ?? '',
         };
       }),
 
