@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Grainflow — what is actually stored</title>
+<style>
+  :root { color-scheme:light dark; --bg:#f2f3f5; --surface:#fff; --text:#14171a;
+          --dim:#6b7280; --border:#e3e5e8; --ok:#2e7d32; --bad:#c0392b; --warn:#b26a00; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0e1013; --surface:#1a1d21; --text:#f0f1f3; --dim:#9aa1a9;
+            --border:#2b2f34; --ok:#6adb7a; --bad:#ef8a7f; --warn:#e0a63a; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px 16px 60px; background:var(--bg); color:var(--text);
+         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         line-height:1.55; }
+  .wrap { max-width:660px; margin:0 auto; }
+  h1 { font-size:21px; margin:0 0 6px; }
+  .sub { color:var(--dim); font-size:13.5px; margin:0 0 20px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:13px;
+          padding:16px 18px; margin-bottom:12px; }
+  .big { font-size:17px; font-weight:600; }
+  .big.ok { color:var(--ok); } .big.bad { color:var(--bad); } .big.warn { color:var(--warn); }
+  .detail { color:var(--dim); font-size:13px; margin-top:6px; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; margin-top:10px; }
+  th { text-align:right; font-weight:600; color:var(--dim); font-size:12px;
+       padding:0 0 6px; border-bottom:1px solid var(--border); }
+  th:first-child { text-align:left; }
+  td { padding:5px 0; border-bottom:1px solid var(--border); text-align:right;
+       font-variant-numeric:tabular-nums; }
+  td:first-child { text-align:left; font-weight:600; }
+  tr:last-child td { border-bottom:none; }
+  code { font-family:ui-monospace,monospace; font-size:12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>What is actually stored</h1>
+  <p class="sub">Reads this device's saved copy of the farm directly, without going
+  through the app. Nothing is changed, sent, or deleted — this only reads.</p>
+  <div id="out"><div class="card"><div class="big">Reading&hellip;</div></div></div>
+  <p style="margin-top:22px;font-size:13px">
+    <a href="./" style="color:var(--dim)">&larr; Back to Grainflow</a>
+  </p>
+</div>
+
+<script>
+// Plain script, importing nothing.
+//
+// The point of this page is to answer "is the data there?" without trusting any
+// of the code that might be the reason it looks like it is not. If the views are
+// broken, or the sync layer replaced the state, or db.init() never finished,
+// this page still tells the truth — because it reads the same IndexedDB record
+// the app reads at boot, and does nothing else.
+
+const out = document.getElementById('out');
+out.innerHTML = '';
+
+function card(html) {
+  const d = document.createElement('div');
+  d.className = 'card';
+  d.innerHTML = html;
+  out.appendChild(d);
+  return d;
+}
+
+function openDb(name) {
+  return new Promise((resolve, reject) => {
+    // Deliberately no version number: opening with a version lower than the
+    // stored one throws, and a version higher would trigger an upgrade and
+    // write to a database this page has no business modifying.
+    const req = indexedDB.open(name);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function get(db, store, key) {
+  return new Promise((resolve, reject) => {
+    if (!db.objectStoreNames.contains(store)) return resolve(undefined);
+    const r = db.transaction(store).objectStore(store).get(key);
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+  });
+}
+
+function getAll(db, store) {
+  return new Promise((resolve, reject) => {
+    if (!db.objectStoreNames.contains(store)) return resolve([]);
+    const r = db.transaction(store).objectStore(store).getAll();
+    r.onsuccess = () => resolve(r.result || []);
+    r.onerror = () => reject(r.error);
+  });
+}
+
+(async () => {
+  card(`<div class="detail">Origin: <code>${location.origin}</code><br>
+    Storage belongs to one address in one browser. If the app was opened from a
+    different address or a different browser, its data is not visible here.</div>`);
+
+  // indexedDB.open() on a name that does not exist CREATES it, which would be a
+  // rude side effect for a page that promises only to read — and worse, would
+  // turn "you have never used this browser for Grainflow" into "you have an
+  // empty farm". Ask first where the browser allows it.
+  if (indexedDB.databases) {
+    try {
+      const names = (await indexedDB.databases()).map((d) => d.name);
+      if (!names.includes('grainflow')) {
+        return card(`<div class="big bad">Grainflow has never stored anything in this browser.</div>
+          <div class="detail">No local database exists at this address. If you have
+          been using the app somewhere else — a different browser, a different
+          device, or the home-screen icon rather than the browser — open this page
+          there instead.</div>`);
+      }
+    } catch (e) { /* fall through and open it the ordinary way */ }
+  }
+
+  let db;
+  try {
+    db = await openDb('grainflow');
+  } catch (e) {
+    return card(`<div class="big bad">Could not open local storage.</div>
+      <div class="detail">${e && e.message ? e.message : e}</div>`);
+  }
+
+  const stores = [...db.objectStoreNames];
+  if (!stores.includes('state')) {
+    return card(`<div class="big bad">No saved farm on this device.</div>
+      <div class="detail">The database exists but has no <code>state</code> store.
+      Stores present: <code>${stores.join(', ') || 'none'}</code>.</div>`);
+  }
+
+  const state = await get(db, 'state', 'current');
+
+  if (!state) {
+    card(`<div class="big bad">Nothing has been saved to this device.</div>
+      <div class="detail">The store exists but holds no farm. This is what it looks
+      like when the app never finished starting up — saves are skipped until it
+      has signed in and connected, so an import can appear to succeed in the
+      window and never reach disk. It would be lost on refresh.</div>`);
+  } else {
+    const years = Object.keys(state.years || {}).sort();
+    let total = 0;
+    const rows = years.map((y) => {
+      const v = state.years[y] || {};
+      const n = (a) => (Array.isArray(a) ? a.length : 0);
+      total += n(v.fields) + n(v.storages) + n(v.sales) + n(v.movements);
+      return `<tr><td>${y}${y === state.currentYear ? ' &larr; viewing' : ''}</td>
+        <td>${n(v.commodities)}</td><td>${n(v.fields)}</td><td>${n(v.storages)}</td>
+        <td>${n(v.sales)}</td><td>${n(v.movements)}</td><td>${n(v.invoices)}</td></tr>`;
+    }).join('');
+
+    card(`<div class="big ${total ? 'ok' : 'bad'}">${
+        total ? 'The farm is saved on this device.' : 'A farm is saved, but it is empty.'
+      }</div>
+      <div class="detail">${years.length} season(s); currently viewing
+      <strong>${state.currentYear || '(none)'}</strong>.${
+        state.currentYear && !years.includes(state.currentYear)
+          ? ' <strong>That season does not exist</strong> — which is why every screen would be blank.'
+          : ''}</div>
+      <table>
+        <tr><th>Season</th><th>Comm.</th><th>Paddocks</th><th>Storages</th>
+            <th>Sales</th><th>Moves</th><th>Inv.</th></tr>
+        ${rows || '<tr><td>no seasons</td><td colspan="6"></td></tr>'}
+      </table>`);
+  }
+
+  // The outbox is the other half of the story: work owed to the server. A long
+  // queue means the push is not draining, which is a different fault from the
+  // data not being here at all.
+  const outbox = await getAll(db, 'outbox');
+  const kinds = {};
+  for (const o of outbox) kinds[o.type] = (kinds[o.type] || 0) + 1;
+  card(`<div class="big ${outbox.length ? 'warn' : 'ok'}">
+      ${outbox.length ? `${outbox.length} item(s) still owed to the server.` : 'Nothing queued for the server.'}
+    </div>
+    <div class="detail">${
+      outbox.length
+        ? `By kind: <code>${Object.entries(kinds).map(([k, v]) => `${k} ${v}`).join(', ')}</code>.
+           Anything here has not reached Supabase yet. It is not lost — it sends on
+           the next successful push — but it is only on this device until it does.`
+        : 'Either everything has been pushed, or nothing has ever been queued.'
+    }</div>`);
+})();
+</script>
+</body>
+</html>
