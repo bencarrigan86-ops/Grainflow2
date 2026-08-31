@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=48';
-import { movementsForEndpoint } from '../derived.js?v=48';
-import { num, tons, esc } from '../fmt.js?v=48';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=48';
-import { compressAndStampImage } from '../img.js?v=48';
+import { db } from '../storage.js?v=49';
+import { movementsForEndpoint } from '../derived.js?v=49';
+import { num, tons, esc } from '../fmt.js?v=49';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=49';
+import { compressAndStampImage } from '../img.js?v=49';
 
 let unsub = null;
 
@@ -30,7 +30,10 @@ function paint(root) {
         <div class="stat"><div class="n">${num(totalTons, 1)} t</div><div class="l">Total moved</div></div>
       </div>
 
-      ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="log-ginning" style="margin-bottom:4px">+ Log ginning</button>` : ''}
+      <div class="swipe-actions" style="margin-bottom:4px">
+        ${movements.length > 0 ? `<button class="btn secondary small" id="repeat-movement">Repeat last movement</button>` : ''}
+        ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="log-ginning">+ Log ginning</button>` : ''}
+      </div>
 
       <div class="card input">
         <h2><span class="dot input"></span>Tickets</h2>
@@ -46,6 +49,8 @@ function paint(root) {
   root.querySelector('#add-movement').addEventListener('click', () => openMovementSheet(null));
   const ginBtn = root.querySelector('#log-ginning');
   if (ginBtn) ginBtn.addEventListener('click', () => openGinningSheet());
+  const repeatBtn = root.querySelector('#repeat-movement');
+  if (repeatBtn) repeatBtn.addEventListener('click', () => openMovementSheet(null, movements[movements.length - 1]));
 }
 
 function fieldOptions(fields) {
@@ -300,20 +305,30 @@ function openGinningSheet() {
   });
 }
 
-export function openMovementSheet(existing) {
+/**
+ * `template` pre-fills a brand-new movement from an existing one's details
+ * (the "Repeat last movement" shortcut) without editing that record —
+ * `existing` stays null so it still saves as a fresh ticket (new id/ticket
+ * number, no delete button, no related-movements section), while every
+ * field's starting value is sourced from the template. The photo is
+ * deliberately excluded — a photo documents one specific load, not a
+ * repeat of it.
+ */
+export function openMovementSheet(existing, template) {
   const { fields, storages, sales, commodities } = db.get();
+  const src = existing || template;
   const ctx = {
     fieldOpts: fieldOptions(fields),
     siloOpts: siloOptions(storages),
     saleOpts: saleOptions(sales, commodities),
   };
-  const existingFroms = existing?.froms?.length ? existing.froms : [{ type: '', id: '', tons: '' }];
-  const existingSiloTos = (existing?.tos || []).filter((t) => t.type === 'silo');
-  const existingSaleTo = (existing?.tos || []).find((t) => t.type === 'sale');
+  const existingFroms = src?.froms?.length ? src.froms : [{ type: '', id: '', tons: '' }];
+  const existingSiloTos = (src?.tos || []).filter((t) => t.type === 'silo');
+  const existingSaleTo = (src?.tos || []).find((t) => t.type === 'sale');
 
   openSheet(existing ? `Edit movement #${existing.ticketNo ?? ''}` : 'Add movement', (root) => {
     root.innerHTML = `
-      ${field({ label: 'Date', id: 'date', type: 'date', value: existing?.date })}
+      ${field({ label: 'Date', id: 'date', type: 'date', value: src?.date })}
       <div class="field"><label>From (add more if a load blends multiple silos/fields)</label></div>
       <div id="from-rows"></div>
       <button type="button" class="btn secondary small" id="add-from">+ Add source</button>
@@ -327,24 +342,24 @@ export function openMovementSheet(existing) {
       </div>
       <div id="to-body" style="margin-top:8px"></div>
       <div class="grid-2">
-        ${field({ label: 'Truck rego', id: 'truckRego', value: existing?.truckRego })}
-        ${field({ label: 'Driver', id: 'driver', value: existing?.driver })}
+        ${field({ label: 'Truck rego', id: 'truckRego', value: src?.truckRego })}
+        ${field({ label: 'Driver', id: 'driver', value: src?.driver })}
       </div>
       <hr class="sep" />
       <div class="field"><label>Weight</label></div>
       <div class="grid-2">
-        ${field({ label: 'Gross (t, optional)', id: 'gross', type: 'number', step: '0.01', value: existing?.grossWeight })}
-        ${field({ label: 'Tare (t, optional)', id: 'tare', type: 'number', step: '0.01', value: existing?.tareWeight })}
+        ${field({ label: 'Gross (t, optional)', id: 'gross', type: 'number', step: '0.01', value: src?.grossWeight })}
+        ${field({ label: 'Tare (t, optional)', id: 'tare', type: 'number', step: '0.01', value: src?.tareWeight })}
       </div>
-      ${field({ label: 'Net weight (t)', id: 'tons', type: 'number', step: '0.01', value: existing?.tons, hint: 'Auto-fills from Gross − Tare, or enter it directly if those are unknown' })}
+      ${field({ label: 'Net weight (t)', id: 'tons', type: 'number', step: '0.01', value: src?.tons, hint: 'Auto-fills from Gross − Tare, or enter it directly if those are unknown' })}
       <div class="field">
         <label>Weight status</label>
         <div class="segmented" id="m-status">
-          <button data-status="estimate" class="${(existing?.weightStatus || 'estimate') === 'estimate' ? 'active' : ''}">Estimate</button>
-          <button data-status="final" class="${existing?.weightStatus === 'final' ? 'active' : ''}">Final</button>
+          <button data-status="estimate" class="${(src?.weightStatus || 'estimate') === 'estimate' ? 'active' : ''}">Estimate</button>
+          <button data-status="final" class="${src?.weightStatus === 'final' ? 'active' : ''}">Final</button>
         </div>
       </div>
-      ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
+      ${field({ label: 'Notes', id: 'notes', value: src?.notes })}
       <div class="field">
         <label>Photo (e.g. truck rego)</label>
         <input id="m-photo-file" type="file" accept="image/*" capture="environment" />
@@ -412,7 +427,7 @@ export function openMovementSheet(existing) {
     grossEl.addEventListener('input', recomputeNet);
     tareEl.addEventListener('input', recomputeNet);
 
-    let weightStatus = existing?.weightStatus || 'estimate';
+    let weightStatus = src?.weightStatus || 'estimate';
     root.querySelector('#m-status').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-status]');
       if (!btn) return;
