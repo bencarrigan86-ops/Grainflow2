@@ -14,7 +14,7 @@
 // device. It presented as "the fertiliser detail didn't come through".
 
 import assert from 'node:assert';
-import { reconcileImport } from '../docs/js/reconcile.js';
+import { reconcileImport, adoptServerIds } from '../docs/js/reconcile.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -128,6 +128,50 @@ check('a malformed old record is skipped rather than crashing the import', () =>
   const retire = collect();
   assert.equal(reconcileImport(previous, next, retire), 1);
   assert.deepEqual(retire.calls, ['fields:ok']);
+});
+
+console.log('\n=== repairing a device that already imported ===');
+
+check('a season with no id adopts the one the server has', () => {
+  const local = { years: { 2026: year() } };
+  const server = { years: { 2026: year({ __seasonId: 'server-season' }) } };
+  assert.equal(adoptServerIds(local, server), 1);
+  assert.equal(local.years['2026'].__seasonId, 'server-season');
+});
+
+check('a stale id is replaced by the one that actually exists', () => {
+  const local = { years: { 2026: year({ __seasonId: 'invented' }) } };
+  const server = { years: { 2026: year({ __seasonId: 'real' }) } };
+  adoptServerIds(local, server);
+  assert.equal(local.years['2026'].__seasonId, 'real');
+});
+
+check('overheads identity is adopted as well', () => {
+  const local = { years: { 2026: year() } };
+  const server = { years: { 2026: year({ __seasonId: 's', __overheadsId: 'oh' }) } };
+  adoptServerIds(local, server);
+  assert.equal(local.years['2026'].__overheadsId, 'oh');
+});
+
+check('a season the server does not have keeps whatever it has', () => {
+  const local = { years: { 2027: year({ __seasonId: 'mine' }) } };
+  const server = { years: { 2026: year({ __seasonId: 'theirs' }) } };
+  assert.equal(adoptServerIds(local, server), 0);
+  assert.equal(local.years['2027'].__seasonId, 'mine');
+});
+
+check('no data is copied across, only row identity', () => {
+  const local = { years: { 2026: year({ fields: rows('local-1') }) } };
+  const server = { years: { 2026: year({ __seasonId: 's', fields: rows('server-1') }) } };
+  adoptServerIds(local, server);
+  assert.deepEqual(local.years['2026'].fields, rows('local-1'),
+    'boot.js decides whose data wins; this decides only which row it lands on');
+});
+
+check('missing or empty states do not throw', () => {
+  assert.equal(adoptServerIds(null, { years: {} }), 0);
+  assert.equal(adoptServerIds({ years: {} }, null), 0);
+  assert.equal(adoptServerIds(undefined, undefined), 0);
 });
 
 console.log('');

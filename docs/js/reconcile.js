@@ -53,3 +53,39 @@ export function reconcileImport(previous, next, retire) {
   }
   return retired;
 }
+
+/**
+ * Take the server's row identity for any season the device already holds.
+ *
+ * reconcileImport() above only runs during an import, which turned out not to
+ * be enough: a device that had already imported was left holding a season with
+ * no __seasonId, and every push from then on minted a fresh id and was rejected
+ * by seasons_farm_id_label_key. The queue could never drain, and no amount of
+ * waiting would fix it — the only escape was to import again, which is not
+ * something anyone should have to know.
+ *
+ * So the same reconciliation runs at startup, against whatever hydrate
+ * returned. A label is the farm's own name for a season and the server row is
+ * the one that exists, so where the two agree on a label, the server's id wins.
+ * Nothing else about the local copy is touched — this is about which row the
+ * changes land on, not about whose data is newer, which boot.js decides.
+ */
+export function adoptServerIds(localState, serverState) {
+  if (!localState?.years || !serverState?.years) return 0;
+  let adopted = 0;
+
+  for (const [label, local] of Object.entries(localState.years)) {
+    const remote = serverState.years[label];
+    if (!local || !remote) continue;
+
+    if (remote.__seasonId && local.__seasonId !== remote.__seasonId) {
+      local.__seasonId = remote.__seasonId;
+      adopted += 1;
+    }
+    if (remote.__overheadsId && local.__overheadsId !== remote.__overheadsId) {
+      local.__overheadsId = remote.__overheadsId;
+      adopted += 1;
+    }
+  }
+  return adopted;
+}

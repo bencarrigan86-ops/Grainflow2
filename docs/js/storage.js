@@ -18,15 +18,15 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=69';
+import { hydrate } from './hydrate.js?v=70';
 import {
   saveState, loadState, markDeleted, markDirty, outboxCount,
   loadFarmStamp, setAsideState,
-} from './local.js?v=69';
-import { chooseBootState } from './boot.js?v=69';
-import { reconcileImport } from './reconcile.js?v=69';
-import { schedulePush, pushOnReconnect } from './sync.js?v=69';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=69';
+} from './local.js?v=70';
+import { chooseBootState } from './boot.js?v=70';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=70';
+import { schedulePush, pushOnReconnect } from './sync.js?v=70';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=70';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -232,6 +232,16 @@ export const db = {
       data = deriveCounters(serverState);
       await saveState(data, farmId).catch((e) => console.error('Local save failed', e));
     } else if (decision.use === 'local') {
+      // The local copy wins, but the server still owns row identity. A device
+      // that imported a backup holds a season with no __seasonId, and every
+      // push from it mints a new one and is rejected by the unique constraint
+      // on (farm_id, label) — a queue that can never drain, with no way out
+      // short of importing again. Take the server's ids for the seasons both
+      // sides know about; nothing else about the local copy changes.
+      const adopted = adoptServerIds(localState, serverState);
+      if (adopted) {
+        console.info(`Adopted ${adopted} server row id(s) so this device's changes can be sent.`);
+      }
       data = deriveCounters(localState);
     } else {
       // Brand new farm: seed the default commodity list so Settings is not
