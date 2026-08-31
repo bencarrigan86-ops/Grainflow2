@@ -1,5 +1,6 @@
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 import assert from 'node:assert';
+import { ALLOWED } from '../docs/js/import.js';
 
 const FARM = '11111111-1111-1111-1111-111111111111';
 const u = () => crypto.randomUUID();
@@ -48,7 +49,7 @@ const state = {
           openingStock: 0 },
         { id: s2, kind: 'bunker', name: 'Bunker A', commodityId: null, radius: null,
           coneAngle: null, width: 20, length: 60, capacityTons: 4000, angleOfRepose: 26,
-          testWeight: 0.8, tarpOverhangM: 1.5, currentHeight: 3, fillState: 'level',
+          testWeight: 0.8, tarpOverhangM: 1.5, currentHeight: 3, fillState: 'flat',
           openingStock: 250 },
       ],
       sales: [
@@ -158,6 +159,25 @@ check("db 'storage' comes back as app 'silo'", () => {
   const m = back1.years['2026'].movements[0];
   assert.equal(m.froms[1].type, 'silo');
   assert.equal(m.tos[0].type, 'silo');
+});
+
+console.log('\n=== storage vocabulary ===');
+// The fixture in this file used to say fillState: 'flat', which no version of
+// the app has ever written — I invented it when I wrote the schema, then wrote
+// it again here, so the test agreed with the bug. ALLOWED is imported rather
+// than retyped precisely so that cannot happen a third time: enums.test.mjs
+// holds it against the migrations, this holds the mapped rows against it.
+check('every storage kind satisfies the db check constraint', () => {
+  for (const st of rows1.storages) {
+    assert.ok(ALLOWED.storageKind.includes(st.kind),
+      `kind '${st.kind}' would be rejected by storages_kind_check`);
+  }
+});
+check('every fill_state satisfies the db check constraint', () => {
+  for (const st of rows1.storages) {
+    assert.ok(ALLOWED.fillState.includes(st.fill_state),
+      `fill_state '${st.fill_state}' would be rejected by storages_fill_state_check`);
+  }
 });
 
 console.log('\n=== photos ===');

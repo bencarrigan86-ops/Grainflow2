@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=63';
-import { num, money, esc } from '../fmt.js?v=63';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=63';
-import { APP_VERSION } from '../version.js?v=63';
-import { exportRowsAsCSV } from '../csv.js?v=63';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=63';
-import { endpointLabel } from './movements.js?v=63';
+import { db } from '../storage.js?v=64';
+import { num, money, esc } from '../fmt.js?v=64';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=64';
+import { APP_VERSION } from '../version.js?v=64';
+import { exportRowsAsCSV } from '../csv.js?v=64';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=64';
+import { endpointLabel } from './movements.js?v=64';
 
 let unsub = null;
 
@@ -187,9 +187,20 @@ function paint(root) {
     if (!f) return;
     const text = await f.text();
     try {
-      db.importJSON(text);
+      const { remapped, stats } = db.importJSON(text);
+      alert(
+        `Imported.\n\n` +
+        `${stats.seasons} season(s), ${stats.paddocks} paddock(s), ` +
+        `${stats.storages} storage(s), ${stats.movements} movement(s), ` +
+        `${stats.sales} sale(s).\n` +
+        (remapped ? `\n${remapped} id(s) were reissued for the new database.` : '') +
+        (stats.photos ? `\n${stats.photos} photo(s) will upload in the background.` : '')
+      );
     } catch (e) {
-      alert('Could not read that file.');
+      // The old message was "Could not read that file", which was true of a
+      // corrupt file and misleading about every other failure. Say what is
+      // actually wrong — the file is usually fine and one value is not.
+      alert(`Import refused.\n\n${e.message}`);
     }
   });
   root.querySelector('#reset').addEventListener('click', () => {

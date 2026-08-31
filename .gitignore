@@ -3,3 +3,13 @@
 .claude/
 .DS_Store
 node_modules/
+
+# Real farm data. Backups carry movements, contracts, prices and the bank
+# details out of Settings, and this repo is public — a backup that gets
+# committed is public the moment it is pushed, and stays in the history even
+# after it is deleted. Never track one.
+backup.json
+*backup*.json
+grainflow-backup*.json
+.env
+.env.*

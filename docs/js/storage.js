@@ -18,9 +18,10 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=63';
-import { saveState, loadState, markDeleted } from './local.js?v=63';
-import { schedulePush, pushOnReconnect } from './sync.js?v=63';
+import { hydrate } from './hydrate.js?v=64';
+import { saveState, loadState, markDeleted } from './local.js?v=64';
+import { schedulePush, pushOnReconnect } from './sync.js?v=64';
+import { prepareImport } from './import.js?v=64';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -426,13 +427,34 @@ export const db = {
   exportJSON() { return JSON.stringify(data, null, 2); },
 
   /**
-   * Replace everything with an imported file. Used by the migration path at
-   * step 1.7 — note it goes through persist(), so an import is pushed to the
-   * server like any other change rather than needing its own route.
+   * Replace everything with an imported file.
+   *
+   * A backup from the localStorage era carries short ids like `msoad38fu5po5n`
+   * where the database wants UUIDs, so every id is reissued and every reference
+   * rewritten first. Then it is checked — and refused outright if anything
+   * fails, rather than written and half-rejected later.
+   *
+   * That check is not belt-and-braces. A reference that survives remapping but
+   * points nowhere does not error: the counts still look right, the position
+   * still adds up, and a load has quietly detached from the paddock it came out
+   * of. Better to refuse the file than to import a season that looks fine.
    */
   importJSON(json) {
-    data = deriveCounters(JSON.parse(json));
+    const { state, after, remapped } = prepareImport(json);
+
+    if (!after.ok) {
+      const err = new Error(
+        `${after.problems.length} problem(s) in that file:\n\n` +
+        after.problems.slice(0, 8).join('\n') +
+        (after.problems.length > 8 ? `\n… and ${after.problems.length - 8} more` : '')
+      );
+      err.problems = after.problems;
+      throw err;
+    }
+
+    data = deriveCounters(state);
     persist();
+    return { remapped, stats: after.stats };
   },
 
   resetAll() {

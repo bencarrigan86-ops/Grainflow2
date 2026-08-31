@@ -1,6 +1,12 @@
 {
   "name": "grainflow",
   "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node serve.js",
+    "test": "node tests/enums.test.mjs && node tests/mapping.test.mjs",
+    "check": "node tests/validate-import.mjs"
+  },
   "devDependencies": {
     "supabase": "^2.116.0"
   }
