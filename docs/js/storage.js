@@ -18,14 +18,14 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=66';
+import { hydrate } from './hydrate.js?v=67';
 import {
   saveState, loadState, markDeleted, markDirty, outboxCount,
   loadFarmStamp, setAsideState,
-} from './local.js?v=66';
-import { chooseBootState } from './boot.js?v=66';
-import { schedulePush, pushOnReconnect } from './sync.js?v=66';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=66';
+} from './local.js?v=67';
+import { chooseBootState } from './boot.js?v=67';
+import { schedulePush, pushOnReconnect } from './sync.js?v=67';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=67';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -192,17 +192,25 @@ export const db = {
     const localFarm = await loadFarmStamp().catch(() => null);
     const pending = await outboxCount().catch(() => 0);
 
+    // Reachable and reachable-but-empty are different answers, and boot.js
+    // needs both: an account with no seasons is a real "this farm is new",
+    // while no answer at all is "we are offline". Treating them the same is
+    // how an old farm gets poured into a new account.
     let serverState = null;
+    let serverReachable = false;
     if (navigator.onLine) {
       try {
         const { state } = await hydrate(farmId);
         serverState = state;
+        serverReachable = true;
       } catch (e) {
         console.warn('Hydrate failed; the copy on this device stands', e);
       }
     }
 
-    const decision = chooseBootState({ farmId, localState, localFarm, pending, serverState });
+    const decision = chooseBootState({
+      farmId, localState, localFarm, pending, serverState, serverReachable,
+    });
     console.info(`Grainflow start: using the ${decision.use} copy — ${decision.reason}.`);
 
     if (decision.orphan) {

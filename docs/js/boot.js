@@ -29,14 +29,21 @@
  *                                 Null for copies written before stamping
  *                                 existed — unknown, not "mine".
  * @param {number}  o.pending      queued items the server has not accepted
- * @param {object?} o.serverState  what hydrate() returned, or null if the
- *                                 server was unreachable or empty
+ * @param {object?} o.serverState  what hydrate() returned, or null
+ * @param {boolean} o.serverReachable  whether the server actually answered.
+ *                                 Distinct from serverState being empty: a
+ *                                 farm with no seasons is a real answer ("this
+ *                                 account is new"), while no answer at all
+ *                                 means we are simply offline. Conflating the
+ *                                 two lets one farm's data be adopted into
+ *                                 another's empty account.
  *
  * @returns {{use:'local'|'server'|'fresh', pushLocal:boolean,
  *            orphan:boolean, reason:string}}
  */
 export function chooseBootState({
-  farmId, localState = null, localFarm = null, pending = 0, serverState = null,
+  farmId, localState = null, localFarm = null, pending = 0,
+  serverState = null, serverReachable = serverState !== null,
 }) {
   const hasLocal = !!localState;
   const hasServer = !!serverState && Object.keys(serverState.years || {}).length > 0;
@@ -72,16 +79,24 @@ export function chooseBootState({
     };
   }
 
-  // 4. No server copy — offline, or an account with no seasons yet. Fall back
-  //    to the device, but only if the copy is plausibly this farm's. An
-  //    unstamped copy predates stamping; there is no way to tell whose it is,
-  //    and refusing it would strand people upgrading mid-season.
-  if (localIsMine || localIsUnstamped) {
+  // 4. No server copy. Two quite different situations, and telling them apart
+  //    matters:
+  //
+  //    - the server answered and this farm has no seasons: a genuinely new
+  //      account. Whatever is on the device belongs to something else.
+  //    - the server did not answer: we are offline, and the device is all
+  //      there is.
+  //
+  //    A copy stamped with this farm is ours either way. An unstamped copy
+  //    predates stamping and could belong to anyone, so it is used only when
+  //    the server is unreachable — which keeps someone upgrading mid-season in
+  //    a paddock working, without pouring an old farm into a new account.
+  if (localIsMine || (localIsUnstamped && !serverReachable)) {
     return {
       use: 'local', pushLocal: pending > 0, orphan: false,
-      reason: hasLocal && !hasServer
-        ? 'no server copy available, using the one on this device'
-        : 'using the copy on this device',
+      reason: serverReachable
+        ? 'the server has no seasons for this farm yet; the device copy stands'
+        : 'the server could not be reached, using the copy on this device',
     };
   }
 
@@ -90,7 +105,7 @@ export function chooseBootState({
   return {
     use: 'fresh', pushLocal: false, orphan: false,
     reason: hasLocal
-      ? 'the saved copy belongs to a different farm'
+      ? 'the saved copy belongs to a different farm, or to no farm we can name'
       : 'nothing saved on this device yet',
   };
 }

@@ -99,11 +99,25 @@ check('an empty server farm is not mistaken for a populated one', () => {
 
 console.log('\n=== copies written before stamping existed ===');
 
-check('an unstamped copy is used when there is no server copy', () => {
+check('an unstamped copy is used when the server cannot be reached', () => {
   const d = chooseBootState({
-    farmId: FARM, localState: season(30), localFarm: null, pending: 0, serverState: null,
+    farmId: FARM, localState: season(30), localFarm: null, pending: 0,
+    serverState: null, serverReachable: false,
   });
-  assert.equal(d.use, 'local', 'upgrading mid-season must not strand anyone');
+  assert.equal(d.use, 'local', 'upgrading mid-season in a paddock must not strand anyone');
+});
+
+check('but an unstamped copy is NOT poured into a new, empty account', () => {
+  // Signing in as a different user on the same laptop. The server answers and
+  // says this farm has no seasons — that is an answer, not silence. Adopting
+  // the copy left by the previous account would push one farm's records into
+  // another's, and it would look like a successful startup.
+  const d = chooseBootState({
+    farmId: FARM, localState: season(30), localFarm: null, pending: 0,
+    serverState: { years: {} }, serverReachable: true,
+  });
+  assert.equal(d.use, 'fresh');
+  assert.equal(d.pushLocal, false);
 });
 
 check('but the server still wins over an unstamped copy that owes nothing', () => {
@@ -137,7 +151,7 @@ check('no path returns without a reason', () => {
     }
   }
   for (const c of cases) {
-    const d = chooseBootState(c);
+    const d = chooseBootState({ ...c, serverReachable: c.serverState !== null });
     assert.ok(['local', 'server', 'fresh'].includes(d.use), `bad use for ${JSON.stringify(c)}`);
     assert.ok(d.reason && d.reason.length > 10, `no reason for ${JSON.stringify(c)}`);
     assert.equal(typeof d.pushLocal, 'boolean');
