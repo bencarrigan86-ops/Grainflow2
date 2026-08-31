@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Grainflow — connection test</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f2f3f5; --surface: #fff; --text: #14171a; --dim: #6b7280;
+    --border: #e3e5e8; --ok: #2e7d32; --bad: #c0392b; --warn: #b26a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1013; --surface: #1a1d21; --text: #f0f1f3; --dim: #9aa1a9;
+      --border: #2b2f34; --ok: #6adb7a; --bad: #ef8a7f; --warn: #e0a44a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 60px; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  .sub { color: var(--dim); font-size: 13.5px; margin: 0 0 20px; }
+  .verdict {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 20px; margin-bottom: 18px; font-size: 16px; font-weight: 600;
+  }
+  .verdict.ok  { border-left: 4px solid var(--ok);  color: var(--ok); }
+  .verdict.bad { border-left: 4px solid var(--bad); color: var(--bad); }
+  .verdict small { display: block; font-weight: 400; color: var(--dim); margin-top: 6px; font-size: 13px; }
+  .check {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 13px 16px; margin-bottom: 9px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .mark { font-weight: 700; flex: none; width: 20px; }
+  .mark.ok { color: var(--ok); } .mark.bad { color: var(--bad); } .mark.wait { color: var(--dim); }
+  .label { font-weight: 600; font-size: 14.5px; }
+  .detail { color: var(--dim); font-size: 12.5px; margin-top: 2px; }
+  .note { color: var(--dim); font-size: 12.5px; margin-top: 22px; }
+  code { font-size: 12px; background: var(--bg); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Connection test</h1>
+  <p class="sub">Checks that this browser can reach the Grainflow database, and that an unauthenticated visitor is refused by every table.</p>
+
+  <div class="verdict" id="verdict">Running…</div>
+  <div id="checks"></div>
+
+  <p class="note">
+    Delete <code>docs/connection-test.html</code> once Phase 1 is working — it is a
+    diagnostic, not part of the app.
+  </p>
+</div>
+
+<script type="module">
+import { supabase, SUPABASE_URL } from './js/supabase.js';
+
+const checksEl = document.getElementById('checks');
+const verdictEl = document.getElementById('verdict');
+const results = [];
+
+function render() {
+  checksEl.innerHTML = results.map((r) => `
+    <div class="check">
+      <span class="mark ${r.state}">${r.state === 'ok' ? '✓' : r.state === 'bad' ? '✗' : '·'}</span>
+      <span>
+        <span class="label">${r.label}</span>
+        <div class="detail">${r.detail}</div>
+      </span>
+    </div>`).join('');
+}
+
+function add(label, state, detail) {
+  results.push({ label, state, detail });
+  render();
+}
+
+// 1 — the client exists and points somewhere sensible
+add('Client created', supabase ? 'ok' : 'bad', SUPABASE_URL);
+
+// 2 — can we reach the project at all?
+let reachable = false;
+try {
+  const { error } = await supabase.auth.getSession();
+  reachable = !error;
+  add('Reached the project', reachable ? 'ok' : 'bad',
+      reachable ? 'Auth endpoint responded.' : `Auth error: ${error?.message}`);
+} catch (e) {
+  add('Reached the project', 'bad', `Network error: ${e.message}`);
+}
+
+// 3 — signed in? At this stage nobody is, and that is expected.
+const { data: sess } = await supabase.auth.getSession();
+add('Signed-in user', 'ok',
+    sess?.session ? `Signed in as ${sess.session.user.email}` :
+    'Nobody signed in — expected until step 1.2 builds the login screen.');
+
+// 4 — the important one. With RLS on and no session, every table must refuse.
+// Either an outright permission error or zero rows counts as a pass; what must
+// never happen is real data coming back.
+const TABLES = ['farms', 'movements', 'sales', 'sale_terms', 'overheads', 'invoices'];
+let leaks = 0;
+
+for (const table of TABLES) {
+  const { data, error } = await supabase.from(table).select('*').limit(1);
+  if (error) {
+    add(`${table} — refused`, 'ok', `Denied at the database (${error.code || 'error'}).`);
+  } else if (!data || data.length === 0) {
+    add(`${table} — no rows`, 'ok', 'Row-level security filtered everything out.');
+  } else {
+    leaks += 1;
+    add(`${table} — LEAKING`, 'bad', `Returned ${data.length} row(s) to an anonymous visitor.`);
+  }
+}
+
+// verdict
+if (!reachable) {
+  verdictEl.className = 'verdict bad';
+  verdictEl.innerHTML = 'Cannot reach the database.<small>Check the project URL and publishable key in js/supabase.js, and that the Supabase project is not paused.</small>';
+} else if (leaks > 0) {
+  verdictEl.className = 'verdict bad';
+  verdictEl.innerHTML = `${leaks} table(s) exposed to anonymous visitors.<small>Stop and fix this before going further — it means row-level security is not doing its job on those tables.</small>`;
+} else {
+  verdictEl.className = 'verdict ok';
+  verdictEl.innerHTML = 'Connected, and locked down.<small>The browser reached your project, and every table refused an unauthenticated request. That is Phase 0 working exactly as intended.</small>';
+}
+</script>
+</body>
+</html>

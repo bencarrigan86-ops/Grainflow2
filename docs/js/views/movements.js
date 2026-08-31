@@ -1,8 +1,9 @@
-import { db } from '../storage.js?v=50';
-import { movementsForEndpoint } from '../derived.js?v=50';
-import { num, tons, esc } from '../fmt.js?v=50';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=50';
-import { compressAndStampImage } from '../img.js?v=50';
+import { db } from '../storage.js?v=63';
+import { movementsForEndpoint } from '../derived.js?v=63';
+import { num, tons, esc } from '../fmt.js?v=63';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=63';
+import { compressAndStampImage } from '../img.js?v=63';
+import { displayUrlFor } from '../photos.js?v=63';
 
 let unsub = null;
 
@@ -138,7 +139,7 @@ export function movementRow(m, ctx) {
       </div>
       <div class="right">
         <div class="main">${tons(m.tons || 0)}</div>
-        <div class="meta"><span class="badge ${isFinal ? 'pos' : 'neg'}">${isFinal ? 'Final' : 'Estimate'}</span>${m.photoDataUrl ? ' 📷' : ''}</div>
+        <div class="meta"><span class="badge ${isFinal ? 'pos' : 'neg'}">${isFinal ? 'Final' : 'Estimate'}</span>${(m.photoDataUrl || m.photoPath) ? ' 📷' : ''}</div>
       </div>
     </div>
   `;
@@ -525,13 +526,19 @@ export function openMovementSheet(existing, template) {
     });
 
     let photoDataUrl = existing?.photoDataUrl || null;
+    // A photo already uploaded lives in the bucket, not the row. It is fetched
+    // through a short-lived signed URL rather than a public link, so it cannot
+    // be shared by copying the address out of the page.
+    let photoPath = existing?.photoPath || null;
     const photoPreview = root.querySelector('#m-photo-preview');
-    function renderPhotoPreview() {
-      photoPreview.innerHTML = photoDataUrl
-        ? `<img src="${photoDataUrl}" style="width:100%;border-radius:10px;display:block" /><button class="btn secondary small" id="m-photo-remove" style="margin-top:8px">Remove photo</button>`
+
+    async function renderPhotoPreview() {
+      const src = photoDataUrl || (photoPath ? await displayUrlFor({ photoPath }) : null);
+      photoPreview.innerHTML = src
+        ? `<img src="${src}" style="width:100%;border-radius:10px;display:block" /><button class="btn secondary small" id="m-photo-remove" style="margin-top:8px">Remove photo</button>`
         : '';
       const removeBtn = photoPreview.querySelector('#m-photo-remove');
-      if (removeBtn) removeBtn.addEventListener('click', () => { photoDataUrl = null; renderPhotoPreview(); });
+      if (removeBtn) removeBtn.addEventListener('click', () => { photoDataUrl = null; photoPath = null; renderPhotoPreview(); });
     }
     renderPhotoPreview();
     root.querySelector('#m-photo-file').addEventListener('change', async (e) => {
@@ -577,6 +584,7 @@ export function openMovementSheet(existing, template) {
         weightStatus,
         notes: getVal(root, 'notes')?.trim(),
         photoDataUrl,
+        photoPath,
       });
       closeSheet();
     });

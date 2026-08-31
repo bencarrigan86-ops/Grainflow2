@@ -1,11 +1,14 @@
-import { db } from './storage.js?v=54';
-import { renderPosition } from './views/position.js?v=54';
-import { renderProduction } from './views/production.js?v=54';
-import { renderReports } from './views/reports.js?v=54';
-import { renderSales } from './views/sales.js?v=54';
-import { renderMovements } from './views/movements.js?v=54';
-import { renderStorage } from './views/storage.js?v=54';
-import { renderSettings } from './views/settings.js?v=54';
+import { db } from './storage.js?v=63';
+import { renderPosition } from './views/position.js?v=63';
+import { renderProduction } from './views/production.js?v=63';
+import { renderReports } from './views/reports.js?v=63';
+import { renderSales } from './views/sales.js?v=63';
+import { renderMovements } from './views/movements.js?v=63';
+import { renderStorage } from './views/storage.js?v=63';
+import { renderSettings } from './views/settings.js?v=63';
+import { renderLogin } from './views/login.js?v=63';
+import { renderAccount } from './views/account.js?v=63';
+import { getSession, getMembership, onAuthChange } from './auth.js?v=63';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -45,9 +48,12 @@ const TABS = [
 ];
 
 // Every reachable view, including the ones not shown in the tab bar.
+// Account has no icon because it is reached from Settings, not the bar — see
+// the note at the top of views/account.js.
 const ROUTES = [
   ...TABS,
   { id: 'settings', label: 'Settings', icon: SETTINGS_ICON, render: renderSettings },
+  { id: 'account', label: 'Account', render: renderAccount },
 ];
 
 const app = document.getElementById('app');
@@ -96,16 +102,79 @@ yearPill.addEventListener('click', () => {
   location.hash = '#/settings';
 });
 db.subscribe(renderYearPill);
-renderYearPill();
 
-window.addEventListener('hashchange', renderActiveView);
-window.addEventListener('DOMContentLoaded', () => {
+// ---------------------------------------------------------------------------
+// Session gate
+//
+// Three states, and the app has to render sensibly in all of them:
+//
+//   no session          -> the login screen
+//   session, no farm    -> the farm-naming step, because a signed-in user with
+//                          no membership row can see nothing at all
+//   session and a farm  -> the app
+//
+// The chrome (tab bar, season pill, settings gear) is hidden while signed out.
+// Leaving a tab bar visible behind a login screen looks broken and invites taps
+// that go nowhere.
+// ---------------------------------------------------------------------------
+
+const chrome = [tabbar, yearPill, settingsBtn];
+function setChromeVisible(visible) {
+  chrome.forEach((el) => { el.hidden = !visible; });
+}
+
+async function boot() {
+  const session = await getSession();
+
+  if (!session) {
+    setChromeVisible(false);
+    renderLogin(app, { onDone: boot });
+    return;
+  }
+
+  const membership = await getMembership();
+  if (!membership) {
+    setChromeVisible(false);
+    renderLogin(app, { mode: 'farm', onDone: boot });
+    return;
+  }
+
+  // Load the farm before anything renders. A view that paints against an
+  // empty store and then repaints is a flash of wrong numbers, which on a
+  // position screen is worse than a moment of nothing.
+  setChromeVisible(true);
+  app.innerHTML = '<div class="empty">Loading your farm…</div>';
+  try {
+    await db.init({ farmId: membership.farmId, role: membership.role });
+  } catch (e) {
+    app.innerHTML = `<div class="view"><div class="card">
+      <h2>Could not load the farm</h2>
+      <div class="hint">${e.message}</div></div></div>`;
+    return;
+  }
+
   if (!location.hash) location.hash = '#/position';
+  renderActiveView();
+  renderYearPill();
+}
+
+// Signing in or out anywhere in the app re-runs the gate rather than trying to
+// patch the current screen into shape.
+onAuthChange((event) => {
+  if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') boot();
+});
+
+window.addEventListener('hashchange', () => {
+  // Ignore hash changes while signed out — otherwise a stale #/position in the
+  // address bar renders a view over the top of the login screen.
+  if (tabbar.hidden) return;
   renderActiveView();
 });
-if (document.readyState !== 'loading') {
-  if (!location.hash) location.hash = '#/position';
-  renderActiveView();
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
 }
 
 // The service worker is off while this app is under active development —

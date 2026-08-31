@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=50';
-import { num, money, esc } from '../fmt.js?v=50';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=50';
-import { APP_VERSION } from '../version.js?v=50';
-import { exportRowsAsCSV } from '../csv.js?v=50';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=50';
-import { endpointLabel } from './movements.js?v=50';
+import { db } from '../storage.js?v=63';
+import { num, money, esc } from '../fmt.js?v=63';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=63';
+import { APP_VERSION } from '../version.js?v=63';
+import { exportRowsAsCSV } from '../csv.js?v=63';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=63';
+import { endpointLabel } from './movements.js?v=63';
 
 let unsub = null;
 
@@ -29,6 +29,12 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      <div class="card">
+        <h2>Account</h2>
+        <div class="field hint" style="margin-bottom:8px">Who you are signed in as, your role on this farm, and the way out.</div>
+        <button class="btn secondary" id="go-account">Account &amp; sign out</button>
+      </div>
+
       <div class="card">
         <h2>Season</h2>
         ${field({ label: 'Viewing', id: 'year-select', type: 'select', value: currentYear, options: years.map((y) => ({ value: y, label: y })) })}
@@ -113,6 +119,10 @@ function paint(root) {
     el.addEventListener('click', () => openCommoditySheet(commodities.find((c) => c.id === el.dataset.editCommodity)));
   });
   root.querySelector('#add-commodity').addEventListener('click', () => openCommoditySheet(null));
+
+  root.querySelector('#go-account').addEventListener('click', () => {
+    location.hash = '#/account';
+  });
 
   root.querySelector('#year-select').addEventListener('change', (e) => {
     db.setCurrentYear(e.target.value);

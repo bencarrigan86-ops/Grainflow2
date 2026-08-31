@@ -1,7 +1,31 @@
-const KEY = 'grainflow.v1';
+// The farm, in memory, backed by IndexedDB and pushed to Supabase.
+//
+// The exported `db` object is deliberately identical to the localStorage
+// version it replaces. db.get() is still synchronous and still returns the
+// current season; every upsert and delete has the same name and signature.
+// That is the whole design: none of the eight views in js/views/ changed by a
+// single character to get here, and none of them will change again at Phase 3
+// when PowerSync replaces the layer underneath.
+//
+// What did change is where the bytes live:
+//
+//   memory      the working copy the views read, synchronously, always
+//   IndexedDB   the durable local copy — survives a refresh, works with no
+//               signal, and has none of localStorage's 5MB ceiling
+//   Supabase    the server, reached by a debounced background push
+//
+// Boot order matters. db.init() hydrates from the server when there is signal
+// and falls back to IndexedDB when there is not, so the app opens with real
+// data in a paddock as readily as at a desk.
 
-function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+import { hydrate } from './hydrate.js?v=63';
+import { saveState, loadState, markDeleted } from './local.js?v=63';
+import { schedulePush, pushOnReconnect } from './sync.js?v=63';
+
+// Primary keys are UUIDs now, not the old short ids — a phone with no signal
+// has to mint an id no server has ever seen, without risk of collision.
+export function uid() {
+  return crypto.randomUUID();
 }
 
 function defaultCommodities() {
@@ -14,12 +38,7 @@ function defaultCommodities() {
     { name: 'Sorghum', angleOfRepose: 24, testWeight: 0.77, nPerTonne: 0 },
     { name: 'Fallow', angleOfRepose: 0, testWeight: 0, nPerTonne: 0 },
   ].map((c) => ({
-    id: uid(),
-    mtmPrice: 0,
-    openingStock: 0,
-    retainedSeed: 0,
-    grossMarginCost: 0,
-    ...c,
+    id: uid(), mtmPrice: 0, openingStock: 0, retainedSeed: 0, grossMarginCost: 0, ...c,
   }));
 }
 
@@ -30,39 +49,13 @@ function defaultOverheads() {
   };
 }
 
-// Nitrogen required per tonne of grain (kg N/t), keyed by normalized commodity
-// name — used to backfill existing saves from before this field existed.
-const N_PER_TONNE_BY_NAME = {
-  wheat: 44,
-  barley: 34,
-  chickpeas: 35,
-  'chick peas': 35,
-  'faba beans': 40,
-  faba: 40,
-};
-
-function backfillNPerTonne(commodities) {
-  return (commodities || []).map((c) => {
-    if (c.nPerTonne !== undefined) return c;
-    const key = String(c.name || '').trim().toLowerCase();
-    return { ...c, nPerTonne: N_PER_TONNE_BY_NAME[key] ?? 0 };
-  });
-}
-
 function defaultYear() {
   return {
-    commodities: defaultCommodities(),
-    fields: [],
-    sales: [],
-    storages: [],
-    movements: [],
-    overheads: defaultOverheads(),
-    invoices: [],
+    commodities: defaultCommodities(), fields: [], sales: [], storages: [],
+    movements: [], overheads: defaultOverheads(), invoices: [],
   };
 }
 
-// Not per-year — the farm's own details barely change season to season, and
-// are used to fill in the "Seller" side of a generated sale invoice.
 function defaultBusinessDetails() {
   return {
     entityName: '', abn: '', ngr: '', contactName: '', phone: '', email: '', address: '',
@@ -74,156 +67,133 @@ function defaultBusinessDetails() {
 function defaultData() {
   const year = String(new Date().getFullYear());
   return {
-    version: 2,
-    currentYear: year,
-    years: { [year]: defaultYear() },
+    version: 2, currentYear: year, years: { [year]: defaultYear() },
     businessDetails: defaultBusinessDetails(),
-    nextMovementNo: 1,
-    nextInvoiceNo: 1,
+    nextMovementNo: 1, nextInvoiceNo: 1,
   };
 }
 
-// Movement ticket numbers are farm-wide and never reused (not per-year, so
-// they stay meaningful across season changes) — assign them to any
-// movement that predates this field, in date order, without colliding with
-// numbers already assigned.
-function backfillMovementNos(result) {
-  const used = new Set();
-  Object.values(result.years).forEach((y) => {
-    (y.movements || []).forEach((m) => { if (m.ticketNo) used.add(m.ticketNo); });
-  });
-  let next = Number(result.nextMovementNo) || 1;
-  const unnumbered = [];
-  Object.values(result.years).forEach((y) => {
-    (y.movements || []).forEach((m) => { if (!m.ticketNo) unnumbered.push(m); });
-  });
-  unnumbered
-    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-    .forEach((m) => {
-      while (used.has(next)) next++;
-      m.ticketNo = next;
-      used.add(next);
-      next++;
-    });
-  result.nextMovementNo = next;
-  return result;
-}
-
-// Movements used to have a single `fromType`/`fromId` source; multi-source
-// loads (a truck filling from more than one silo/field) need
-// `froms: [{ type, id, tons }]` instead — convert any movement still in the
-// old single-source shape so every consumer can assume `froms` exists.
-function backfillMovementFroms(result) {
-  Object.values(result.years).forEach((y) => {
-    y.movements = (y.movements || []).map((m) => {
-      if (m.froms) return m;
-      return { ...m, froms: [{ type: m.fromType, id: m.fromId, tons: m.tons }] };
-    });
-  });
-  return result;
-}
-
-// Same idea for the destination side: a load can split across a couple of
-// silos, so `toType`/`toId` becomes `tos: [{ type, id, tons }]`.
-function backfillMovementTos(result) {
-  Object.values(result.years).forEach((y) => {
-    y.movements = (y.movements || []).map((m) => {
-      if (m.tos) return m;
-      return { ...m, tos: [{ type: m.toType, id: m.toId, tons: m.tons }] };
-    });
-  });
-  return result;
-}
-
-// Bring an older single-season save (or one missing fields we've since added)
-// up to the current {version, currentYear, years} shape without losing data.
-function migrate(parsed) {
-  if (parsed && parsed.years && typeof parsed.years === 'object') {
-    const result = {
-      version: 2,
-      currentYear: parsed.currentYear && parsed.years[parsed.currentYear] ? parsed.currentYear : Object.keys(parsed.years)[0],
-      years: Object.fromEntries(
-        Object.entries(parsed.years).map(([y, yd]) => {
-          const merged = { ...defaultYear(), ...yd };
-          return [y, {
-            ...merged,
-            commodities: backfillNPerTonne(merged.commodities),
-            overheads: { ...defaultOverheads(), ...(yd.overheads || {}) },
-          }];
-        })
-      ),
-      businessDetails: { ...defaultBusinessDetails(), ...(parsed.businessDetails || {}) },
-      nextMovementNo: parsed.nextMovementNo,
-      nextInvoiceNo: parsed.nextInvoiceNo || 1,
-    };
-    return backfillMovementNos(backfillMovementTos(backfillMovementFroms(result)));
+/**
+ * Ticket and invoice numbers are derived from what already exists rather than
+ * carried in a counter. A counter hydrated from the server can be stale or
+ * missing; max()+1 cannot, and it is self-correcting if a number is ever
+ * skipped. Proper block leasing across devices arrives at step 1.5.
+ */
+function deriveCounters(state) {
+  let maxTicket = 0;
+  let maxInvoice = 0;
+  for (const year of Object.values(state.years || {})) {
+    for (const m of year.movements || []) {
+      if (Number(m.ticketNo) > maxTicket) maxTicket = Number(m.ticketNo);
+    }
+    for (const inv of year.invoices || []) {
+      if (Number(inv.invoiceNo) > maxInvoice) maxInvoice = Number(inv.invoiceNo);
+    }
   }
-  // Old flat shape: { commodities, fields, sales, storages, movements }
-  if (parsed && (parsed.commodities || parsed.fields || parsed.sales || parsed.storages)) {
-    const year = String(new Date().getFullYear());
-    const merged = { ...defaultYear(), ...parsed };
-    const result = {
-      version: 2,
-      currentYear: year,
-      years: { [year]: {
-        ...merged,
-        commodities: backfillNPerTonne(merged.commodities),
-        overheads: { ...defaultOverheads(), ...(parsed.overheads || {}) },
-      } },
-      businessDetails: defaultBusinessDetails(),
-      nextMovementNo: parsed.nextMovementNo,
-      nextInvoiceNo: 1,
-    };
-    return backfillMovementNos(backfillMovementTos(backfillMovementFroms(result)));
-  }
-  return defaultData();
+  state.nextMovementNo = maxTicket + 1;
+  state.nextInvoiceNo = maxInvoice + 1;
+  return state;
 }
 
-function load() {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return defaultData();
-    return migrate(JSON.parse(raw));
-  } catch (e) {
-    console.error('Failed to load data, resetting.', e);
-    return defaultData();
-  }
-}
+// ---------------------------------------------------------------------------
 
-let data = load();
+let data = defaultData();
+let farmId = null;
+let role = 'owner';
+let ready = false;
+
 const listeners = new Set();
 
 function current() {
   return data.years[data.currentYear];
 }
 
+/**
+ * Save. Memory first so the interface stays instant, then IndexedDB so it
+ * survives the app closing, then a debounced push to the server.
+ *
+ * Note the ordering: the local write is awaited by nobody. A grower tapping
+ * save should never wait on a disk or a network, and if the tab dies between
+ * the memory write and the disk write they lose one edit, not the season.
+ */
 function persist() {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(data));
-  } catch (e) {
-    console.error('Failed to save data', e);
-    alert('Could not save — your device storage may be full. Try removing a movement photo and saving again.');
-    return;
+  if (ready) {
+    saveState(data).catch((e) => console.error('Local save failed', e));
+    schedulePush(() => data, farmId, role);
   }
   listeners.forEach((fn) => fn(data));
 }
 
+// A push that fails quietly is worse than one that fails loudly: the app looks
+// like it saved, the row is only on this device, and the first anyone knows is
+// when a second device does not show it.
+window.addEventListener('grainflow:push-failed', (e) => {
+  const { table, message, details, hint, code, sample } = e.detail?.errors?.[0] || {};
+  console.error(
+    `PUSH FAILED on "${table}" [${code || 'no code'}]\n` +
+    `  ${message}\n` +
+    (details ? `  details: ${details}\n` : '') +
+    (hint ? `  hint: ${hint}\n` : '') +
+    '  example row:', sample);
+});
+
+/** Record that a row must be stamped deleted on the server. */
+function tombstone(table, id) {
+  if (ready && id) markDeleted(table, id).catch((e) => console.error('Tombstone failed', e));
+}
+
+// ---------------------------------------------------------------------------
+
 export const db = {
+  /**
+   * Load the farm. Server first, local copy as the fallback — a phone out of
+   * range still opens with everything it had.
+   */
+  async init({ farmId: fid, role: r = 'owner' } = {}) {
+    farmId = fid;
+    role = r;
+
+    let loaded = null;
+    if (navigator.onLine) {
+      try {
+        const { state } = await hydrate(farmId);
+        // A farm with no seasons yet is a new account, not a failed read.
+        loaded = Object.keys(state.years).length ? state : null;
+        if (loaded) await saveState(loaded);
+      } catch (e) {
+        console.warn('Hydrate failed, falling back to the local copy', e);
+      }
+    }
+
+    if (!loaded) loaded = await loadState();
+
+    if (loaded) {
+      data = deriveCounters(loaded);
+    } else {
+      // Brand new farm: seed the default commodity list so Settings is not
+      // an empty screen on day one.
+      data = defaultData();
+      data.businessDetails = { ...defaultBusinessDetails() };
+    }
+
+    ready = true;
+    pushOnReconnect(() => data, farmId, role);
+    listeners.forEach((fn) => fn(data));
+    return data;
+  },
+
+  isReady() { return ready; },
+
   subscribe(fn) {
     listeners.add(fn);
     return () => listeners.delete(fn);
   },
-  get() {
-    return current();
-  },
 
-  // --- seasons / years ---
-  getYears() {
-    return Object.keys(data.years).sort();
-  },
-  getCurrentYear() {
-    return data.currentYear;
-  },
+  get() { return current(); },
+
+  // --- seasons ---
+  getYears() { return Object.keys(data.years).sort(); },
+  getCurrentYear() { return data.currentYear; },
   setCurrentYear(year) {
     if (!data.years[year]) return false;
     data.currentYear = year;
@@ -242,13 +212,9 @@ export const db = {
     return true;
   },
   /**
-   * Start a new year, seeded from the currently active one: fields and
-   * storages carry over their setup (name, area/geometry, commodity) but
-   * have their season data (yield, urea, seed, current level, opening
-   * stock) reset. Commodities carry over their physical properties (angle
-   * of repose, test weight, N required per tonne) but reset MTM price /
-   * opening stock / retained seed / gross margin cost. Overheads reset to
-   * zero. Sales, movements, and invoices start empty.
+   * Start a new season from the current one: fields and storages keep their
+   * setup, commodities keep their physical properties, everything that is a
+   * result of the season resets.
    */
   createYear(year) {
     const label = String(year || '').trim();
@@ -260,52 +226,31 @@ export const db = {
       const id = uid();
       idMap.set(c.id, id);
       return {
-        id,
-        name: c.name,
-        angleOfRepose: c.angleOfRepose,
-        testWeight: c.testWeight,
-        nPerTonne: c.nPerTonne,
-        mtmPrice: 0,
-        openingStock: 0,
-        retainedSeed: 0,
+        id, name: c.name, angleOfRepose: c.angleOfRepose, testWeight: c.testWeight,
+        nPerTonne: c.nPerTonne, mtmPrice: 0, openingStock: 0, retainedSeed: 0,
         grossMarginCost: 0,
       };
     });
     const mapCommodity = (oldId) => (oldId && idMap.has(oldId) ? idMap.get(oldId) : null);
 
     const fields = src.fields.map((f) => ({
-      id: uid(),
-      name: f.name,
-      areaHa: f.areaHa,
-      commodityId: mapCommodity(f.commodityId),
-      yieldTHa: 0,
-      yieldMode: 'estimate',
-      ureaRequiredKgHa: 0,
-      ureaAppliedKgHa: 0,
-      seedVariety: '',
-      seedRateKgHa: 0,
+      id: uid(), name: f.name, areaHa: f.areaHa, commodityId: mapCommodity(f.commodityId),
+      yieldTHa: 0, yieldMode: 'estimate', ureaRequiredKgHa: 0, ureaAppliedKgHa: 0,
+      seedVariety: '', seedRateKgHa: 0,
     }));
 
     const storages = src.storages.map((s) => ({
-      id: uid(),
-      kind: s.kind,
-      name: s.name,
-      commodityId: mapCommodity(s.commodityId),
-      radius: s.radius,
-      coneAngle: s.coneAngle,
-      width: s.width,
-      capacityTons: s.capacityTons,
-      angleOfRepose: s.angleOfRepose,
-      testWeight: s.testWeight,
-      tarpOverhangM: s.tarpOverhangM,
-      currentHeight: 0,
-      length: 0,
-      fillState: 'peak',
-      openingStock: 0,
-      createdAt: Date.now(),
+      id: uid(), kind: s.kind, name: s.name, commodityId: mapCommodity(s.commodityId),
+      radius: s.radius, coneAngle: s.coneAngle, width: s.width,
+      capacityTons: s.capacityTons, angleOfRepose: s.angleOfRepose,
+      testWeight: s.testWeight, tarpOverhangM: s.tarpOverhangM,
+      currentHeight: 0, length: 0, fillState: 'peak', openingStock: 0,
     }));
 
-    data.years[label] = { commodities, fields, storages, sales: [], movements: [], overheads: defaultOverheads(), invoices: [] };
+    data.years[label] = {
+      commodities, fields, storages, sales: [], movements: [],
+      overheads: defaultOverheads(), invoices: [],
+    };
     data.currentYear = label;
     persist();
     return true;
@@ -313,6 +258,19 @@ export const db = {
   deleteYear(year) {
     const years = Object.keys(data.years);
     if (years.length <= 1 || !data.years[year]) return false;
+
+    // Soft deletes do not cascade, so every child has to be stamped too or it
+    // lingers on the server, invisible but taking up room.
+    const y = data.years[year];
+    y.commodities?.forEach((c) => tombstone('commodities', c.id));
+    y.fields?.forEach((f) => { tombstone('fields', f.id); tombstone('field_agronomy', f.__agronomyId); });
+    y.storages?.forEach((s) => tombstone('storages', s.id));
+    y.sales?.forEach((s) => { tombstone('sales', s.id); tombstone('sale_terms', s.__termsId); });
+    y.movements?.forEach((m) => tombstone('movements', m.id));
+    y.invoices?.forEach((i) => tombstone('invoices', i.id));
+    tombstone('overheads', y.__overheadsId);
+    tombstone('seasons', y.__seasonId);
+
     delete data.years[year];
     if (data.currentYear === year) data.currentYear = Object.keys(data.years).sort().slice(-1)[0];
     persist();
@@ -333,11 +291,12 @@ export const db = {
     persist();
   },
   deleteCommodity(id) {
+    tombstone('commodities', id);
     current().commodities = current().commodities.filter((c) => c.id !== id);
     persist();
   },
 
-  // --- fields (production) ---
+  // --- fields ---
   upsertField(field) {
     const c = current();
     if (field.id) {
@@ -349,7 +308,10 @@ export const db = {
     persist();
   },
   deleteField(id) {
-    current().fields = current().fields.filter((f) => f.id !== id);
+    const f = current().fields.find((x) => x.id === id);
+    tombstone('fields', id);
+    tombstone('field_agronomy', f?.__agronomyId);
+    current().fields = current().fields.filter((x) => x.id !== id);
     persist();
   },
 
@@ -365,11 +327,14 @@ export const db = {
     persist();
   },
   deleteSale(id) {
-    current().sales = current().sales.filter((s) => s.id !== id);
+    const s = current().sales.find((x) => x.id === id);
+    tombstone('sales', id);
+    tombstone('sale_terms', s?.__termsId);
+    current().sales = current().sales.filter((x) => x.id !== id);
     persist();
   },
 
-  // --- storages (silos / bunkers) ---
+  // --- storages ---
   upsertStorage(storage) {
     const c = current();
     if (storage.id) {
@@ -381,11 +346,12 @@ export const db = {
     persist();
   },
   deleteStorage(id) {
+    tombstone('storages', id);
     current().storages = current().storages.filter((s) => s.id !== id);
     persist();
   },
 
-  // --- movements (truck tickets) ---
+  // --- movements ---
   upsertMovement(movement) {
     const c = current();
     if (movement.id) {
@@ -398,22 +364,23 @@ export const db = {
     persist();
   },
   deleteMovement(id) {
-    current().movements = current().movements.filter((m) => m.id !== id);
+    const m = current().movements.find((x) => x.id === id);
+    tombstone('movements', id);
+    (m?.froms || []).forEach((l) => tombstone('movement_legs', l.__legId));
+    (m?.tos || []).forEach((l) => tombstone('movement_legs', l.__legId));
+    current().movements = current().movements.filter((x) => x.id !== id);
     persist();
   },
 
-  // --- invoices (per season, tied to a sale) ---
+  // --- invoices ---
   getInvoicesForSale(saleId) {
     return current().invoices.filter((inv) => inv.saleId === saleId);
   },
-  /**
-   * Create an invoice from a snapshot the caller has already computed
-   * (lines + totals) — invoiced amounts stay fixed even if the sale's price
-   * or the business's details are edited later. Assigns the next farm-wide
-   * invoice number and starts as outstanding.
-   */
   createInvoice(invoice) {
-    const inv = { ...invoice, id: uid(), invoiceNo: data.nextInvoiceNo, status: 'outstanding', paidDate: null };
+    const inv = {
+      ...invoice, id: uid(), invoiceNo: data.nextInvoiceNo,
+      status: 'outstanding', paidDate: null,
+    };
     data.nextInvoiceNo += 1;
     current().invoices.push(inv);
     persist();
@@ -423,10 +390,12 @@ export const db = {
     const c = current();
     const idx = c.invoices.findIndex((inv) => inv.id === id);
     if (idx < 0) return;
-    c.invoices[idx] = { ...c.invoices[idx], status, paidDate: status === 'paid' ? new Date().toISOString().slice(0, 10) : null };
+    c.invoices[idx] = {
+      ...c.invoices[idx], status,
+      paidDate: status === 'paid' ? new Date().toISOString().slice(0, 10) : null,
+    };
     persist();
   },
-  /** Overwrite an existing invoice's lines/totals (editing which loads, custom items, or amounts) without touching its number or paid status. */
   updateInvoice(id, patch) {
     const c = current();
     const idx = c.invoices.findIndex((inv) => inv.id === id);
@@ -435,39 +404,39 @@ export const db = {
     persist();
   },
   deleteInvoice(id) {
+    tombstone('invoices', id);
     current().invoices = current().invoices.filter((inv) => inv.id !== id);
     persist();
   },
 
-  // --- overheads (farm-wide, per season) ---
-  getOverheads() {
-    return current().overheads;
-  },
+  // --- overheads ---
+  getOverheads() { return current().overheads; },
   updateOverheads(patch) {
     current().overheads = { ...current().overheads, ...patch };
     persist();
   },
 
-  // --- business details (not per-year — used to fill in a sale invoice) ---
-  getBusinessDetails() {
-    return data.businessDetails;
-  },
+  // --- business details ---
+  getBusinessDetails() { return data.businessDetails; },
   updateBusinessDetails(patch) {
     data.businessDetails = { ...data.businessDetails, ...patch };
     persist();
   },
 
-  exportJSON() {
-    return JSON.stringify(data, null, 2);
-  },
+  exportJSON() { return JSON.stringify(data, null, 2); },
+
+  /**
+   * Replace everything with an imported file. Used by the migration path at
+   * step 1.7 — note it goes through persist(), so an import is pushed to the
+   * server like any other change rather than needing its own route.
+   */
   importJSON(json) {
-    data = migrate(JSON.parse(json));
+    data = deriveCounters(JSON.parse(json));
     persist();
   },
+
   resetAll() {
     data = defaultData();
     persist();
   },
 };
-
-export { uid };

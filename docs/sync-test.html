@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Grainflow — write test</title>
+<style>
+  :root { color-scheme:light dark; --bg:#f2f3f5; --surface:#fff; --text:#14171a;
+          --dim:#6b7280; --border:#e3e5e8; --ok:#2e7d32; --bad:#c0392b; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0e1013; --surface:#1a1d21; --text:#f0f1f3; --dim:#9aa1a9;
+            --border:#2b2f34; --ok:#6adb7a; --bad:#ef8a7f; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px 16px 60px; background:var(--bg); color:var(--text);
+         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; line-height:1.55; }
+  .wrap { max-width:660px; margin:0 auto; }
+  h1 { font-size:21px; margin:0 0 4px; }
+  .sub { color:var(--dim); font-size:13.5px; margin:0 0 18px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:13px;
+          padding:14px 17px; margin-bottom:9px; display:flex; gap:12px; align-items:flex-start; }
+  .mark { font-weight:700; width:18px; flex:none; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); } .dim { color:var(--dim); }
+  .label { font-weight:600; font-size:14.5px; }
+  .detail { color:var(--dim); font-size:12.5px; margin-top:2px; }
+  .verdict { font-weight:600; font-size:16px; padding:17px 19px; }
+  button { appearance:none; border:none; background:#2e7d32; color:#fff; font-weight:600;
+           font-size:15px; padding:13px 16px; border-radius:12px; width:100%; margin-bottom:14px; }
+  .note { color:var(--dim); font-size:12.5px; margin-top:20px; }
+  code { font-size:12px; background:var(--bg); padding:1px 5px; border-radius:4px; border:1px solid var(--border); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Write test</h1>
+  <p class="sub">Writes a small sample season into this farm, reads it straight back, and checks every figure survived. Run this on a test farm, not your real one — it leaves data behind.</p>
+  <button id="run">Run the write test</button>
+  <div id="out"></div>
+  <p class="note">Delete <code>docs/sync-test.html</code> once 1.3 is finished.</p>
+</div>
+
+<script type="module">
+import { supabase } from './js/supabase.js?v=59';
+import { getMembership } from './js/auth.js?v=59';
+import { hydrate } from './js/hydrate.js?v=59';
+import { saveState, markDirty, outboxCount } from './js/local.js?v=59';
+import { push } from './js/sync.js?v=59';
+
+const out = document.getElementById('out');
+const rows = [];
+const draw = () => { out.innerHTML = rows.join(''); };
+const line = (state, label, detail = '') => {
+  rows.push(`<div class="card"><span class="mark ${state}">${
+    state === 'ok' ? '✓' : state === 'bad' ? '✗' : '·'}</span>
+    <span><span class="label">${label}</span>${
+      detail ? `<div class="detail">${detail}</div>` : ''}</span></div>`);
+  draw();
+};
+const verdict = (state, text, sub) => {
+  rows.push(`<div class="card verdict ${state}"><span>${text}
+    <div class="detail">${sub}</div></span></div>`);
+  draw();
+};
+
+const u = () => crypto.randomUUID();
+
+document.getElementById('run').addEventListener('click', async () => {
+  rows.length = 0; draw();
+
+  const { data: sess } = await supabase.auth.getSession();
+  if (!sess?.session) return verdict('bad', 'Not signed in.', 'Sign in to the app first.');
+
+  const m = await getMembership();
+  if (!m) return verdict('bad', 'No farm.', 'Create one in the app first.');
+  line('ok', `Farm: ${m.farmName}`, `Role: ${m.role}`);
+
+  // A season with the awkward shapes in it, not the easy ones.
+  const cW = u(), f1 = u(), s1 = u(), s2 = u(), sale1 = u(), mov1 = u();
+  const stamp = new Date().toISOString().slice(11, 19);
+  const state = {
+    version: 2,
+    currentYear: 'TEST-' + stamp,
+    businessDetails: { entityName: m.farmName, abn: '', ngr: '', contactName: '',
+      phone: '', email: '', address: '', paymentTermsDays: 14, bankName: '',
+      accountName: '', bsb: '', accountNumber: '' },
+    years: {
+      ['TEST-' + stamp]: {
+        commodities: [{ id: cW, name: 'Wheat', angleOfRepose: 24, testWeight: 0.82,
+          nPerTonne: 44, mtmPrice: 412.5, openingStock: 120, retainedSeed: 8,
+          grossMarginCost: 310 }],
+        fields: [{ id: f1, name: 'Test Block', areaHa: 320, commodityId: cW,
+          yieldTHa: 3.2, yieldMode: 'actual', ureaRequiredKgHa: 140,
+          ureaAppliedKgHa: 120, seedVariety: 'Scepter', seedRateKgHa: 65 }],
+        storages: [
+          { id: s1, kind: 'silo', name: 'Test Silo', commodityId: cW, radius: 3.2,
+            coneAngle: 45, width: null, length: 0, capacityTons: 800,
+            angleOfRepose: 24, testWeight: 0.82, tarpOverhangM: null,
+            currentHeight: 6.4, fillState: 'peak', openingStock: 0 },
+          { id: s2, kind: 'bunker', name: 'Test Bunker', commodityId: null,
+            radius: null, coneAngle: null, width: 20, length: 60, capacityTons: 4000,
+            angleOfRepose: 26, testWeight: 0.8, tarpOverhangM: 1.5, currentHeight: 3,
+            fillState: 'level', openingStock: 250 }],
+        sales: [{ id: sale1, commodityId: cW, buyer: 'TEST BUYER', contractNo: 'T-1',
+          grade: 'APW1', tonnes: 500, deliveryPeriod: 'Jan', date: '2026-01-15',
+          price: 412.5, paymentTermsDays: 14, contractValue: 206250 }],
+        movements: [{ id: mov1, ticketNo: 9001, date: '2026-01-20', commodityId: cW,
+          status: 'open', truckRego: 'TEST01', driver: 'Tester', grossWeight: 42.5,
+          tareWeight: 10, tons: 32.5, weightStatus: 'final', notes: 'write test',
+          correctsId: null,
+          froms: [{ type: 'field', id: f1, tons: 20 }, { type: 'storage', id: s1, tons: 12.5 }],
+          tos: [{ type: 'storage', id: s2, tons: 22.5 }, { type: 'sale', id: sale1, tons: 10 }] }],
+        invoices: [],
+        overheads: { finance: 50000, equipmentRepayments: 0, depreciation: 0,
+          wages: 180000, drawings: 0, admin: 0, energy: 0, insurance: 0,
+          repairsMaintenance: 0, other: 0 },
+      },
+    },
+  };
+
+  try {
+    await saveState(state);
+    await markDirty();
+    line('ok', 'Saved locally', `Outbox: ${await outboxCount()} item(s) pending.`);
+  } catch (e) { return verdict('bad', 'Local save failed.', e.message); }
+
+  let result;
+  try {
+    result = await push(state, m.farmId, m.role);
+  } catch (e) { return verdict('bad', 'Push threw.', e.message); }
+
+  if (result.errors?.length) {
+    result.errors.forEach((er) => line('bad', `${er.table} rejected`, er.message));
+    return verdict('bad', 'Push failed.', 'The outbox was left intact — nothing was lost.');
+  }
+  const written = Object.entries(result.tables || {})
+    .map(([t, c]) => `${t} ${c}`).join(', ');
+  line('ok', `Pushed to Supabase as ${m.role}`, written);
+  line(await outboxCount() === 0 ? 'ok' : 'bad', 'Outbox drained',
+       `${await outboxCount()} item(s) left.`);
+
+  // read it back through the real query path
+  const { state: back } = await hydrate(m.farmId);
+  const year = back.years['TEST-' + stamp];
+  if (!year) return verdict('bad', 'Season did not come back.', 'Written but not readable.');
+
+  const checks = [
+    ['Season returned', !!year, 'TEST-' + stamp],
+    ['Commodity intact', year.commodities[0]?.mtmPrice === 412.5, 'MTM 412.50'],
+    ['Paddock agronomy intact', year.fields[0]?.seedVariety === 'Scepter', 'Scepter, 3.2 t/ha'],
+    ['Two storages', year.storages.length === 2, 'silo + bunker'],
+    ['Bunker geometry intact', year.storages.find(s => s.kind === 'bunker')?.length === 60, '20 x 60'],
+    ['Contract price intact', year.sales[0]?.price === 412.5, 'owner can read sale_terms'],
+    ['Movement returned', year.movements.length === 1, 'ticket 9001'],
+    ['Two sources survived', year.movements[0]?.froms.length === 2, '20 t + 12.5 t'],
+    ['Two destinations survived', year.movements[0]?.tos.length === 2, '22.5 t + 10 t'],
+    ['Leg to a contract survived', year.movements[0]?.tos.some(t => t.type === 'sale'), 'sale leg'],
+    ['Overheads intact', year.overheads?.wages === 180000, 'wages 180,000'],
+  ];
+
+  let bad = 0;
+  for (const [label, pass, detail] of checks) {
+    line(pass ? 'ok' : 'bad', label, detail);
+    if (!pass) bad += 1;
+  }
+
+  if (bad === 0) {
+    verdict('ok', 'Round trip clean.',
+      'Written to Postgres and read back with every figure intact — including the multi-source, multi-destination load.');
+  } else {
+    verdict('bad', `${bad} check(s) failed.`, 'Data changed shape on the way through.');
+  }
+});
+</script>
+</body>
+</html>
