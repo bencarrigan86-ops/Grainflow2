@@ -71,6 +71,79 @@ export function remapIds(input) {
   return { state, map };
 }
 
+// ---------------------------------------------------------------------------
+// The shape the current app expects
+//
+// A season saved by an early build does not have the keys a later build reads.
+// Overheads arrived after Ben's 2025 season was created, so his years have no
+// `overheads` object at all — and views/settings.js reads `overheads.finance`
+// straight out, with no guard. The import wrote the season, the settings view
+// re-rendered, and the whole thing came back as "Cannot read properties of
+// undefined (reading 'finance')".
+//
+// Nothing here invents data. It adds empty containers and zeroes so that a
+// season written before a feature existed opens in a build that has it.
+//
+// storage.js imports these rather than keeping its own copies, because two
+// lists of the same field names in two files is precisely how 'level' and
+// 'storage' happened.
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_OVERHEADS = {
+  finance: 0, equipmentRepayments: 0, depreciation: 0, wages: 0, drawings: 0,
+  admin: 0, energy: 0, insurance: 0, repairsMaintenance: 0, other: 0,
+};
+
+export const DEFAULT_BUSINESS_DETAILS = {
+  entityName: '', abn: '', ngr: '', contactName: '', phone: '', email: '', address: '',
+  paymentTermsDays: 14,
+  bankName: '', accountName: '', bsb: '', accountNumber: '',
+};
+
+const YEAR_LISTS = ['commodities', 'fields', 'sales', 'storages', 'movements', 'invoices'];
+
+/**
+ * Fill in anything the current app reads that an older season does not carry.
+ *
+ * Returns the list of what was added, so the caller can say so out loud rather
+ * than silently reshaping someone's records.
+ */
+export function normalise(input) {
+  const state = input;
+  const filled = [];
+
+  if (!state.businessDetails) {
+    state.businessDetails = { ...DEFAULT_BUSINESS_DETAILS };
+    filled.push('business details');
+  } else {
+    for (const [k, v] of Object.entries(DEFAULT_BUSINESS_DETAILS)) {
+      if (state.businessDetails[k] === undefined) state.businessDetails[k] = v;
+    }
+  }
+
+  for (const [label, year] of Object.entries(state.years || {})) {
+    if (!year || typeof year !== 'object') continue;
+
+    for (const key of YEAR_LISTS) {
+      if (!Array.isArray(year[key])) {
+        year[key] = [];
+        filled.push(`${label} ${key}`);
+      }
+    }
+
+    if (!year.overheads || typeof year.overheads !== 'object') {
+      year.overheads = { ...DEFAULT_OVERHEADS };
+      filled.push(`${label} overheads`);
+    } else {
+      for (const [k, v] of Object.entries(DEFAULT_OVERHEADS)) {
+        if (year.overheads[k] === undefined) year.overheads[k] = v;
+      }
+    }
+  }
+
+  return { state, filled };
+}
+
 // What the database will accept. Kept here rather than imported so the CLI
 // validator can run without pulling in anything browser-specific — and
 // exported so tests/enums.test.mjs can hold it against the check constraints
@@ -224,10 +297,16 @@ export function prepareImport(rawJson) {
   const parsed = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
   const before = validate(parsed);
   const { state, map } = remapIds(parsed);
+
+  // Shape before values: validate() walks year.movements and year.invoices, so
+  // a season that predates those keys has to gain them first.
+  const { filled } = normalise(state);
+
   const after = validate(state);
   return {
     state,
     remapped: map.size,
+    filled,
     before,
     after,
   };

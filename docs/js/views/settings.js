@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=64';
-import { num, money, esc } from '../fmt.js?v=64';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=64';
-import { APP_VERSION } from '../version.js?v=64';
-import { exportRowsAsCSV } from '../csv.js?v=64';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=64';
-import { endpointLabel } from './movements.js?v=64';
+import { db } from '../storage.js?v=65';
+import { num, money, esc } from '../fmt.js?v=65';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=65';
+import { APP_VERSION } from '../version.js?v=65';
+import { exportRowsAsCSV } from '../csv.js?v=65';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=65';
+import { endpointLabel } from './movements.js?v=65';
 
 let unsub = null;
 
@@ -187,13 +187,19 @@ function paint(root) {
     if (!f) return;
     const text = await f.text();
     try {
-      const { remapped, stats } = db.importJSON(text);
+      const { remapped, filled, stats } = db.importJSON(text);
       alert(
         `Imported.\n\n` +
         `${stats.seasons} season(s), ${stats.paddocks} paddock(s), ` +
         `${stats.storages} storage(s), ${stats.movements} movement(s), ` +
         `${stats.sales} sale(s).\n` +
         (remapped ? `\n${remapped} id(s) were reissued for the new database.` : '') +
+        // Say so rather than reshaping someone's records quietly. A season
+        // saved before overheads existed gains an empty overheads section, and
+        // the owner should hear that from the app, not discover it later.
+        (filled?.length
+          ? `\n\nAdded empty sections this season predates:\n  ${filled.join('\n  ')}`
+          : '') +
         (stats.photos ? `\n${stats.photos} photo(s) will upload in the background.` : '')
       );
     } catch (e) {

@@ -32,7 +32,7 @@ try {
   process.exit(1);
 }
 
-const { before, after, remapped, state } = result;
+const { before, after, remapped, filled, state } = result;
 const bytes = Buffer.byteLength(raw, 'utf8');
 
 const kb = (n) => `${(n / 1024).toFixed(0)} KB`;
@@ -55,6 +55,13 @@ if (before.problems.length && !after.problems.length) {
   console.log('  after remapping it is accepted.');
 } else if (!remapped) {
   console.log('  already UUIDs — nothing to change.');
+}
+
+if (filled?.length) {
+  console.log('\n=== sections this file predates ===');
+  console.log('  Not present in the file, added empty because the current app');
+  console.log('  reads them. No values were invented.');
+  for (const f of filled) console.log(`  + ${f}`);
 }
 
 const show = (title, list) => {

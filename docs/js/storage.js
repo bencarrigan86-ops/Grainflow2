@@ -18,10 +18,10 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=64';
-import { saveState, loadState, markDeleted } from './local.js?v=64';
-import { schedulePush, pushOnReconnect } from './sync.js?v=64';
-import { prepareImport } from './import.js?v=64';
+import { hydrate } from './hydrate.js?v=65';
+import { saveState, loadState, markDeleted } from './local.js?v=65';
+import { schedulePush, pushOnReconnect } from './sync.js?v=65';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=65';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -43,11 +43,11 @@ function defaultCommodities() {
   }));
 }
 
+// Defined in import.js and imported here, not restated. Two copies of the same
+// field list in two files is how the schema ended up accepting 'level' for a
+// fill state the app has never written.
 function defaultOverheads() {
-  return {
-    finance: 0, equipmentRepayments: 0, depreciation: 0, wages: 0, drawings: 0,
-    admin: 0, energy: 0, insurance: 0, repairsMaintenance: 0, other: 0,
-  };
+  return { ...DEFAULT_OVERHEADS };
 }
 
 function defaultYear() {
@@ -58,11 +58,7 @@ function defaultYear() {
 }
 
 function defaultBusinessDetails() {
-  return {
-    entityName: '', abn: '', ngr: '', contactName: '', phone: '', email: '', address: '',
-    paymentTermsDays: 14,
-    bankName: '', accountName: '', bsb: '', accountNumber: '',
-  };
+  return { ...DEFAULT_BUSINESS_DETAILS };
 }
 
 function defaultData() {
@@ -122,7 +118,19 @@ function persist() {
     saveState(data).catch((e) => console.error('Local save failed', e));
     schedulePush(() => data, farmId, role);
   }
-  listeners.forEach((fn) => fn(data));
+  // A view that throws while re-rendering must not take the write down with
+  // it. The save has already happened by this point; letting the exception out
+  // makes the caller believe it failed and, worse, report a rendering fault as
+  // whatever the caller was doing at the time. The import reported a missing
+  // `overheads` key as "Import refused" for exactly this reason — the season
+  // had in fact been written.
+  listeners.forEach((fn) => {
+    try {
+      fn(data);
+    } catch (e) {
+      console.error('A view failed to re-render after a change', e);
+    }
+  });
 }
 
 // A push that fails quietly is worse than one that fails loudly: the app looks
@@ -440,7 +448,7 @@ export const db = {
    * of. Better to refuse the file than to import a season that looks fine.
    */
   importJSON(json) {
-    const { state, after, remapped } = prepareImport(json);
+    const { state, after, remapped, filled } = prepareImport(json);
 
     if (!after.ok) {
       const err = new Error(
@@ -454,7 +462,7 @@ export const db = {
 
     data = deriveCounters(state);
     persist();
-    return { remapped, stats: after.stats };
+    return { remapped, filled, stats: after.stats };
   },
 
   resetAll() {

@@ -23,7 +23,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ALLOWED } from '../docs/js/import.js';
+import { ALLOWED, DEFAULT_OVERHEADS, normalise } from '../docs/js/import.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -194,6 +194,61 @@ for (const { key, allowed, patterns, files } of APP_PATTERNS) {
   } else {
     pass(`${key} — app uses ${[...found.keys()].sort().join(', ')}`);
   }
+}
+
+console.log('\n--- shared defaults vs schema columns ---');
+// DEFAULT_OVERHEADS is what an imported season gains when it predates the
+// overheads feature, and it is also what storage.js uses for a brand new
+// season. If it drifts from the overheads table, an import writes a season the
+// server cannot store — or worse, stores with a column silently left at zero.
+{
+  const sql = readFileSync(
+    join(ROOT, 'supabase', 'migrations', '20260831120000_initial_schema.sql'), 'utf8');
+  const body = sql.split(/create table overheads \(/)[1]?.split(/^\);/m)[0] ?? '';
+  const houseKeeping = new Set([
+    'id', 'farm_id', 'season_id',
+    'created_at', 'updated_at', 'created_by', 'updated_by', 'deleted_at',
+  ]);
+  const columns = [...body.matchAll(/^\s{2}(\w+)\s+numeric/gm)]
+    .map((m) => m[1])
+    .filter((c) => !houseKeeping.has(c));
+
+  const snake = (k) => k.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase());
+  const fromDefaults = Object.keys(DEFAULT_OVERHEADS).map(snake);
+
+  if (!columns.length) {
+    fail('overheads: could not read the table definition');
+  } else if (!same(columns, fromDefaults)) {
+    const missing = columns.filter((c) => !fromDefaults.includes(c));
+    const extra = fromDefaults.filter((c) => !columns.includes(c));
+    fail(`DEFAULT_OVERHEADS vs overheads table — ${
+      missing.length ? `missing ${missing.join(', ')}; ` : ''}${
+      extra.length ? `unknown ${extra.join(', ')}` : ''}`);
+  } else {
+    pass(`DEFAULT_OVERHEADS covers all ${columns.length} overhead columns`);
+  }
+}
+
+console.log('\n--- normalising an older season ---');
+// The crash this guards against: views/settings.js reads overheads.finance with
+// no guard, and a season saved before overheads existed has no such object.
+{
+  const old = { currentYear: '2025', years: { 2025: { fields: [], storages: [] } } };
+  const { state, filled } = normalise(old);
+  const y = state.years['2025'];
+  const missing = ['commodities', 'fields', 'sales', 'storages', 'movements', 'invoices']
+    .filter((k) => !Array.isArray(y[k]));
+  if (missing.length) fail(`normalise left ${missing.join(', ')} unusable`);
+  else pass('every season list exists after normalising');
+
+  if (y.overheads?.finance !== 0) fail('normalise did not supply overheads.finance');
+  else pass('overheads.finance is readable — the crash cannot recur');
+
+  if (!state.businessDetails) fail('normalise did not supply businessDetails');
+  else pass('businessDetails exists after normalising');
+
+  if (!filled.length) fail('normalise reshaped the season without reporting it');
+  else pass(`what was added is reported (${filled.length} item(s))`);
 }
 
 console.log('\n--- mapping translation ---');
