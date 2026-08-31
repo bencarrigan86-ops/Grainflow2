@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "currentYear": "2026",
+  "years": {
+    "2026": {
+      "commodities": [
+        {"id":"msoaclr41fqqln","mtmPrice":340,"openingStock":0,"retainedSeed":20,"name":"Wheat","angleOfRepose":24,"testWeight":0.82},
+        {"id":"msoaclr4wmiuqh","mtmPrice":265,"openingStock":0,"retainedSeed":15,"name":"Barley","angleOfRepose":27,"testWeight":0.69},
+        {"id":"msoaclr4mmfx5i","mtmPrice":720,"openingStock":0,"retainedSeed":10,"name":"Chickpeas","angleOfRepose":28,"testWeight":0.76},
+        {"id":"msoaclr4x9ok1n","mtmPrice":0,"openingStock":0,"retainedSeed":0,"name":"Faba Beans","angleOfRepose":25,"testWeight":0.785},
+        {"id":"msoaclr4ta45xl","mtmPrice":0,"openingStock":0,"retainedSeed":0,"name":"Canola","angleOfRepose":26,"testWeight":0.67},
+        {"id":"msoaclr4iuzus2","mtmPrice":0,"openingStock":0,"retainedSeed":0,"name":"Sorghum","angleOfRepose":24,"testWeight":0.77},
+        {"id":"msoaclr4jtyzgd","mtmPrice":0,"openingStock":0,"retainedSeed":0,"name":"Fallow","angleOfRepose":0,"testWeight":0}
+      ],
+      "fields": [
+        {"id":"msoactt1a1hbqj","name":"North Paddock","areaHa":210,"commodityId":"msoaclr41fqqln","yieldTHa":4.9,"yieldMode":"estimate","ureaRequiredKgHa":90,"ureaAppliedKgHa":90,"seedVariety":"Scepter","seedRateKgHa":65},
+        {"id":"msoactx686ftou","name":"South Paddock","areaHa":175,"commodityId":"msoaclr41fqqln","yieldTHa":5.2,"yieldMode":"estimate","ureaRequiredKgHa":90,"ureaAppliedKgHa":60,"seedVariety":"Scepter","seedRateKgHa":65},
+        {"id":"msoacu14yzyr41","name":"River Block","areaHa":140,"commodityId":"msoaclr4wmiuqh","yieldTHa":5.6,"yieldMode":"estimate","ureaRequiredKgHa":75,"ureaAppliedKgHa":75,"seedVariety":"Spartacus CL","seedRateKgHa":70},
+        {"id":"msoacu4lhqzjhb","name":"Home Paddock","areaHa":95,"commodityId":"msoaclr4mmfx5i","yieldTHa":2.1,"yieldMode":"estimate","ureaRequiredKgHa":0,"ureaAppliedKgHa":0,"seedVariety":"Kyabra","seedRateKgHa":90}
+      ],
+      "sales": [
+        {"id":"msoad38fu5po5n","date":"","commodityId":"msoaclr41fqqln","grade":"APW1","buyer":"CBH","contractNo":"C-10245","location":"Wagga Wagga","deliveryStart":"2026-11-15","deliveryEnd":"2026-12-15","tons":900,"tonsDelivered":400,"price":350,"freight":22,"premiumDiscount":0,"leviesPct":0.0102,"tolerancePct":5,"toleranceCapTons":20,"brokerNote":"","notes":""},
+        {"id":"msoad3chrx534o","date":"","commodityId":"msoaclr4wmiuqh","grade":"F1","buyer":"Cargill","contractNo":"C-10301","location":"Junee","deliveryStart":"2026-12-01","deliveryEnd":"2026-12-31","tons":400,"tonsDelivered":0,"price":285,"freight":18,"premiumDiscount":0,"leviesPct":0.0102,"tolerancePct":5,"toleranceCapTons":20,"brokerNote":"","notes":""}
+      ],
+      "storages": [
+        {"id":"msoadgd3xpn0t4","kind":"silo","name":"Silo 1 (155t)","commodityId":"msoaclr41fqqln","openingStock":40,"capacityTons":155,"angleOfRepose":null,"testWeight":null,"radius":2.95,"coneAngle":35,"currentHeight":4.8,"fillState":"peak","createdAt":1786430127639},
+        {"id":"msoadgjk4qccfc","kind":"bunker","name":"Bunker 1","commodityId":"msoaclr4wmiuqh","openingStock":0,"capacityTons":null,"angleOfRepose":24,"testWeight":null,"width":24,"length":60,"tarpOverhangM":1.5,"createdAt":1786430127872}
+      ],
+      "movements": [
+        {"id":"msoadgrgpr8t2s","date":"2026-11-18","fromType":"field","fromId":"msoactt1a1hbqj","toType":"silo","toId":"msoadgd3xpn0t4","truckRego":"1ABC234","driver":"Dave","tons":22.4,"weightStatus":"final","notes":""}
+      ]
+    }
+  }
+}

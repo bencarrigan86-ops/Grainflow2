@@ -51,16 +51,32 @@ function paint(root) {
   if (repeatBtn) repeatBtn.addEventListener('click', () => openMovementSheet(null, movements[movements.length - 1]));
 }
 
-function fieldOptions(fields) {
-  return [{ value: '', label: 'Select…' }, ...fields.map((f) => ({ value: `field:${f.id}`, label: f.name }))];
+/**
+ * Every picker on the movement sheet narrows to the commodity being moved.
+ * Fields and silos with no commodity assigned always stay in the list — an
+ * empty silo can take any grain, and a paddock that has not been set up yet
+ * should not disappear. Contracts match strictly: a wheat contract cannot
+ * take barley, and offering it invites exactly the delivery you cannot undo.
+ */
+function matchesCommodity(entity, commodityId) {
+  if (!commodityId) return true;
+  if (!entity.commodityId) return true;
+  return entity.commodityId === commodityId;
 }
 
-function siloOptions(storages) {
-  return [{ value: '', label: 'Select…' }, ...storages.map((s) => ({ value: `silo:${s.id}`, label: s.name }))];
+function fieldOptions(fields, commodityId) {
+  const list = fields.filter((f) => matchesCommodity(f, commodityId));
+  return [{ value: '', label: 'Select…' }, ...list.map((f) => ({ value: `field:${f.id}`, label: f.name }))];
 }
 
-function saleOptions(sales, commodities) {
-  const opts = sales.map((s) => {
+function siloOptions(storages, commodityId) {
+  const list = storages.filter((s) => matchesCommodity(s, commodityId));
+  return [{ value: '', label: 'Select…' }, ...list.map((s) => ({ value: `silo:${s.id}`, label: s.name }))];
+}
+
+function saleOptions(sales, commodities, commodityId) {
+  const list = commodityId ? sales.filter((s) => s.commodityId === commodityId) : sales;
+  const opts = list.map((s) => {
     const c = commodities.find((cc) => cc.id === s.commodityId);
     const label = [c?.name, s.buyer, s.contractNo ? `#${s.contractNo}` : null].filter(Boolean).join(' · ') || 'Sale';
     return { value: `sale:${s.id}`, label };
@@ -153,12 +169,20 @@ function addFromRow(container, ctx, onChange, existingFrom) {
   container.appendChild(row);
 
   const selectEl = row.querySelector('.from-select');
+  let firstRender = true;
   function renderSelect() {
-    const options = kind === 'silo' ? ctx.siloOpts : ctx.fieldOpts;
-    const selectedVal = existingFrom?.type === kind ? `${existingFrom.type}:${existingFrom.id}` : '';
+    const options = kind === 'silo' ? ctx.siloOpts() : ctx.fieldOpts();
+    // On a commodity change, keep what is already chosen if it survives the
+    // new filter; if it does not, fall back to Select… so the wrong source
+    // cannot be saved silently.
+    const selectedVal = firstRender
+      ? (existingFrom?.type === kind ? `${existingFrom.type}:${existingFrom.id}` : '')
+      : selectEl.value;
+    firstRender = false;
     selectEl.innerHTML = options.map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
   }
   renderSelect();
+  ctx.refreshers.push(renderSelect);
 
   row.querySelector('.from-kind').addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-kind]');
@@ -189,16 +213,14 @@ function readFromRows(container) {
 // A load can split across several silos (e.g. topping up two bins), but
 // never several contracts — a delivery to more than one buyer is always a
 // separate movement — so only the silo destination is repeatable.
-function addToRow(container, siloOpts, onChange, existingTo) {
+function addToRow(container, ctx, onChange, existingTo) {
   const row = document.createElement('div');
   row.className = 'to-row';
   row.style.cssText = 'display:flex;gap:8px;align-items:flex-end;margin-bottom:10px';
-  const selectedVal = existingTo?.id ? `silo:${existingTo.id}` : '';
-  const opts = siloOpts.map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
   row.innerHTML = `
     <div class="field" style="flex:2;margin-bottom:0">
       <label>Silo</label>
-      <select class="to-select">${opts}</select>
+      <select class="to-select"></select>
     </div>
     <div class="field" style="flex:1;margin-bottom:0">
       <label>Tons</label>
@@ -207,6 +229,21 @@ function addToRow(container, siloOpts, onChange, existingTo) {
     <button type="button" class="btn danger small to-remove" style="width:auto">&times;</button>
   `;
   container.appendChild(row);
+
+  const toSelectEl = row.querySelector('.to-select');
+  let toFirstRender = true;
+  function renderToSelect() {
+    const selectedVal = toFirstRender
+      ? (existingTo?.id ? `silo:${existingTo.id}` : '')
+      : toSelectEl.value;
+    toFirstRender = false;
+    toSelectEl.innerHTML = ctx.siloOpts()
+      .map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
+  }
+  renderToSelect();
+  renderToSelect.ownedByToBody = true;
+  ctx.refreshers.push(renderToSelect);
+
   row.querySelector('.to-tons').addEventListener('input', onChange);
   row.querySelector('.to-select').addEventListener('change', onChange);
   row.querySelector('.to-remove').addEventListener('click', () => {
@@ -315,18 +352,47 @@ function openGinningSheet() {
 export function openMovementSheet(existing, template) {
   const { fields, storages, sales, commodities } = db.get();
   const src = existing || template;
-  const ctx = {
-    fieldOpts: fieldOptions(fields),
-    siloOpts: siloOptions(storages),
-    saleOpts: saleOptions(sales, commodities),
-  };
   const existingFroms = src?.froms?.length ? src.froms : [{ type: '', id: '', tons: '' }];
   const existingSiloTos = (src?.tos || []).filter((t) => t.type === 'silo');
   const existingSaleTo = (src?.tos || []).find((t) => t.type === 'sale');
 
+  // Opening an existing ticket should show it already narrowed, so work the
+  // commodity back out of whatever the load was against — the contract first,
+  // then the source it came out of.
+  function inferCommodityId() {
+    if (existingSaleTo) {
+      const s = sales.find((ss) => ss.id === existingSaleTo.id);
+      if (s?.commodityId) return s.commodityId;
+    }
+    const firstFrom = existingFroms.find((f) => f.id);
+    if (firstFrom) {
+      const pool = firstFrom.type === 'silo' ? storages : fields;
+      const entity = pool.find((e) => e.id === firstFrom.id);
+      if (entity?.commodityId) return entity.commodityId;
+    }
+    return '';
+  }
+
+  const ctx = {
+    commodityId: inferCommodityId(),
+    refreshers: [],
+    fieldOpts() { return fieldOptions(fields, this.commodityId); },
+    siloOpts() { return siloOptions(storages, this.commodityId); },
+    saleOpts() { return saleOptions(sales, commodities, this.commodityId); },
+    refreshAll() { this.refreshers.forEach((fn) => fn()); },
+  };
+
   openSheet(existing ? `Edit movement #${existing.ticketNo ?? ''}` : 'Add movement', (root) => {
     root.innerHTML = `
       ${field({ label: 'Date', id: 'date', type: 'date', value: src?.date })}
+      <div class="field">
+        <label>Commodity</label>
+        <select id="m-commodity">
+          <option value="">All commodities</option>
+          ${commodities.map((c) => `<option value="${c.id}" ${c.id === ctx.commodityId ? 'selected' : ''}>${c.name}</option>`).join('')}
+        </select>
+        <div class="hint">Narrows the paddocks, silos and contracts below to this grain.</div>
+      </div>
       <div class="field"><label>From (add more if a load blends multiple silos/fields)</label></div>
       <div id="from-rows"></div>
       <button type="button" class="btn secondary small" id="add-from">+ Add source</button>
@@ -378,13 +444,38 @@ export function openMovementSheet(existing, template) {
     root.querySelector('#add-from').addEventListener('click', () => addFromRow(fromRowsEl, ctx, recomputeSourcesTotal));
     recomputeSourcesTotal();
 
+    root.querySelector('#m-commodity').addEventListener('change', (e) => {
+      ctx.commodityId = e.target.value;
+      ctx.refreshAll();
+      recomputeSourcesTotal();
+    });
+
     let toKind = existingSaleTo ? 'sale' : 'silo';
     const toBody = root.querySelector('#to-body');
     function renderToBody() {
+      // The To side is rebuilt wholesale when the kind flips, so discard any
+      // refreshers pointing at DOM that is about to be replaced.
+      ctx.refreshers = ctx.refreshers.filter((fn) => !fn.ownedByToBody);
       if (toKind === 'sale') {
         const selectedVal = existingSaleTo ? `sale:${existingSaleTo.id}` : '';
-        const opts = ctx.saleOpts.map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
-        toBody.innerHTML = `<select id="to-sale-select">${opts}</select>`;
+        const opts = ctx.saleOpts().map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
+        // Wrapped in .field so it picks up the app's control styling — a bare
+        // <select> falls back to the browser default, which is unreadably
+        // small on a phone and triggers iOS zoom on focus.
+        toBody.innerHTML = `
+          <div class="field" style="margin-bottom:0">
+            <label>Contract</label>
+            <select id="to-sale-select">${opts}</select>
+            ${ctx.saleOpts().length <= 1 ? `<div class="hint">No contracts for this commodity — add one in Sales, or widen the commodity above.</div>` : ''}
+          </div>`;
+        const saleSelectEl = toBody.querySelector('#to-sale-select');
+        const refreshSale = () => {
+          const keep = saleSelectEl.value;
+          saleSelectEl.innerHTML = ctx.saleOpts()
+            .map((o) => `<option value="${o.value}" ${String(o.value) === keep ? 'selected' : ''}>${o.label}</option>`).join('');
+        };
+        refreshSale.ownedByToBody = true;
+        ctx.refreshers.push(refreshSale);
       } else {
         toBody.innerHTML = `
           <div id="to-rows"></div>
@@ -398,8 +489,8 @@ export function openMovementSheet(existing, template) {
           destTotalEl.textContent = tons(total);
         }
         const initialTos = existingSiloTos.length > 0 ? existingSiloTos : [{ type: '', id: '', tons: '' }];
-        initialTos.forEach((t) => addToRow(toRowsEl, ctx.siloOpts, recomputeDestTotal, t));
-        toBody.querySelector('#add-to').addEventListener('click', () => addToRow(toRowsEl, ctx.siloOpts, recomputeDestTotal));
+        initialTos.forEach((t) => addToRow(toRowsEl, ctx, recomputeDestTotal, t));
+        toBody.querySelector('#add-to').addEventListener('click', () => addToRow(toRowsEl, ctx, recomputeDestTotal));
         recomputeDestTotal();
       }
     }

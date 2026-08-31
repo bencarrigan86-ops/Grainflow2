@@ -1,11 +1,11 @@
-import { db } from './storage.js?v=53';
-import { renderPosition } from './views/position.js?v=53';
-import { renderProduction } from './views/production.js?v=53';
-import { renderReports } from './views/reports.js?v=53';
-import { renderSales } from './views/sales.js?v=53';
-import { renderMovements } from './views/movements.js?v=53';
-import { renderStorage } from './views/storage.js?v=53';
-import { renderSettings } from './views/settings.js?v=53';
+import { db } from './storage.js?v=54';
+import { renderPosition } from './views/position.js?v=54';
+import { renderProduction } from './views/production.js?v=54';
+import { renderReports } from './views/reports.js?v=54';
+import { renderSales } from './views/sales.js?v=54';
+import { renderMovements } from './views/movements.js?v=54';
+import { renderStorage } from './views/storage.js?v=54';
+import { renderSettings } from './views/settings.js?v=54';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
