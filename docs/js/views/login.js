@@ -5,7 +5,8 @@
 // rather than new styling, so it looks like the rest of Grainflow rather than
 // a login page bolted onto the front of it.
 
-import { signIn, signUp, createFarm } from '../auth.js?v=85';
+import { signIn, signUp, createFarm } from '../auth.js?v=86';
+import { wantSampleData } from '../demo.js?v=86';
 
 export function renderLogin(root, { mode = 'signin', onDone, invited = false } = {}) {
   let busy = false;
@@ -97,9 +98,20 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false } =
   function farmForm() {
     return `
       <div class="field">
-        <label>Farm or business name</label>
+        <label>Farm or property name</label>
         <input id="farm-name" type="text" autocapitalize="words" />
-        <div class="hint">This is the entity that appears on your invoices. You can change it later in Settings.</div>
+        <div class="hint">What you call the place. The trading entity for your invoices is
+          set separately in Settings.</div>
+      </div>
+      <div class="field">
+        <label for="farm-seed">Start with</label>
+        <select id="farm-seed">
+          <option value="sample">A sample farm, so you can see how it works</option>
+          <option value="empty">An empty farm</option>
+        </select>
+        <div class="hint">The sample is an invented property in a season called
+          "Sample 2026" &mdash; delete that season in Settings once you have had a look, and
+          start your own.</div>
       </div>
       <button class="btn" id="create-farm">Create farm</button>
     `;
@@ -167,10 +179,16 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false } =
         draw('farm', 'Give the farm a name.', 'error');
         return;
       }
+      // Asked for before the farm is created, remembered across the reload that
+      // boot() does next — it is boot(), not this screen, that has a farm to
+      // put the data into.
+      const withSample = root.querySelector('#farm-seed')?.value !== 'empty';
+
       busy = true;
       btn.textContent = 'Creating…';
       try {
         await createFarm(name);
+        if (withSample) wantSampleData();
         busy = false;
         onDone?.();
       } catch (err) {

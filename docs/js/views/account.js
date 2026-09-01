@@ -5,7 +5,7 @@
 // navigation per role, and that is when this gets a proper home in the
 // interface. Until then it is reachable at #/account.
 
-import { getSession, getMembership, signOut } from '../auth.js?v=85';
+import { getSession, getMembership, signOut } from '../auth.js?v=86';
 
 const ROLE_LABELS = {
   owner: 'Owner',

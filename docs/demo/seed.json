@@ -1,0 +1,1740 @@
+{
+  "version": 2,
+  "currentYear": "Sample 2026",
+  "years": {
+    "Sample 2026": {
+      "commodities": [
+        {
+          "unit": "t",
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": "",
+          "id": "wheat",
+          "name": "Wheat",
+          "angleOfRepose": 24,
+          "testWeight": 0.82,
+          "nPerTonne": 44,
+          "mtmPrice": 372,
+          "targetYieldTHa": 4,
+          "defaultYieldTHa": 3.8,
+          "grossMarginCost": 412000
+        },
+        {
+          "unit": "t",
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": "",
+          "id": "barley",
+          "name": "Barley",
+          "angleOfRepose": 27,
+          "testWeight": 0.69,
+          "nPerTonne": 34,
+          "mtmPrice": 318,
+          "targetYieldTHa": 4.4,
+          "defaultYieldTHa": 4.2,
+          "grossMarginCost": 168000
+        },
+        {
+          "unit": "t",
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": "",
+          "id": "chickpeas",
+          "name": "Chickpeas",
+          "angleOfRepose": 28,
+          "testWeight": 0.76,
+          "nPerTonne": 35,
+          "mtmPrice": 754,
+          "targetYieldTHa": 2,
+          "defaultYieldTHa": 1.9,
+          "grossMarginCost": 149000
+        },
+        {
+          "unit": "t",
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": "",
+          "id": "canola",
+          "name": "Canola",
+          "angleOfRepose": 26,
+          "testWeight": 0.67,
+          "nPerTonne": 0,
+          "mtmPrice": 812,
+          "targetYieldTHa": 2.2,
+          "defaultYieldTHa": 2.1,
+          "grossMarginCost": 141000
+        }
+      ],
+      "fields": [
+        {
+          "id": "fld-boundary",
+          "name": "Boundary",
+          "areaHa": 210,
+          "commodityId": "wheat",
+          "yieldTHa": 4.1,
+          "yieldMode": "actual",
+          "soilTestNKgHa": 36,
+          "ureaRequiredKgHa": 304,
+          "ureaApplications": [
+            {
+              "date": "2026-06-02",
+              "rateKgHa": 258,
+              "product": "Urea"
+            }
+          ],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 60,
+          "starterAppliedKgHa": 60,
+          "targetYieldOverrideTHa": 0,
+          "notes": ""
+        },
+        {
+          "id": "fld-river",
+          "name": "River Block",
+          "areaHa": 178,
+          "commodityId": "wheat",
+          "yieldTHa": 4.4,
+          "yieldMode": "actual",
+          "soilTestNKgHa": 40,
+          "ureaRequiredKgHa": 296,
+          "ureaApplications": [
+            {
+              "date": "2026-05-18",
+              "rateKgHa": 296,
+              "product": "Urea"
+            }
+          ],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 60,
+          "starterAppliedKgHa": 60,
+          "targetYieldOverrideTHa": 0,
+          "notes": ""
+        },
+        {
+          "id": "fld-long",
+          "name": "Long Paddock",
+          "areaHa": 165,
+          "commodityId": "wheat",
+          "yieldTHa": 3.7,
+          "yieldMode": "actual",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 383,
+          "ureaApplications": [],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 60,
+          "starterAppliedKgHa": 60,
+          "targetYieldOverrideTHa": 0,
+          "notes": ""
+        },
+        {
+          "id": "fld-airstrip",
+          "name": "Airstrip",
+          "areaHa": 142,
+          "commodityId": "wheat",
+          "yieldTHa": 3.9,
+          "yieldMode": "actual",
+          "soilTestNKgHa": 44,
+          "ureaRequiredKgHa": 287,
+          "ureaApplications": [
+            {
+              "date": "2026-05-18",
+              "rateKgHa": 287,
+              "product": "Urea"
+            }
+          ],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 60,
+          "starterAppliedKgHa": 60,
+          "targetYieldOverrideTHa": 0,
+          "notes": ""
+        },
+        {
+          "id": "fld-stony",
+          "name": "Stony Rise",
+          "areaHa": 118,
+          "commodityId": "wheat",
+          "yieldTHa": 3.2,
+          "yieldMode": "actual",
+          "soilTestNKgHa": 49,
+          "ureaRequiredKgHa": 276,
+          "ureaApplications": [
+            {
+              "date": "2026-06-02",
+              "rateKgHa": 235,
+              "product": "Urea"
+            }
+          ],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 60,
+          "starterAppliedKgHa": 60,
+          "targetYieldOverrideTHa": 0,
+          "notes": ""
+        },
+        {
+          "id": "fld-woolshed",
+          "name": "Woolshed",
+          "areaHa": 155,
+          "commodityId": "barley",
+          "yieldTHa": 4.6,
+          "yieldMode": "actual",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 325,
+          "ureaApplications": [],
+          "seedVariety": "Compass",
+          "seedRateKgHa": 65,
+          "starterRequiredKgHa": 60,
+          "starterAppliedKgHa": 60,
+          "targetYieldOverrideTHa": 0,
+          "notes": ""
+        },
+        {
+          "id": "fld-backcreek",
+          "name": "Back Creek",
+          "areaHa": 132,
+          "commodityId": "barley",
+          "yieldTHa": 4.3,
+          "yieldMode": "actual",
+          "soilTestNKgHa": 34,
+          "ureaRequiredKgHa": 251,
+          "ureaApplications": [
+            {
+              "date": "2026-06-02",
+              "rateKgHa": 213,
+              "product": "Urea"
+            }
+          ],
+          "seedVariety": "Compass",
+          "seedRateKgHa": 65,
+          "starterRequiredKgHa": 60,
+          "starterAppliedKgHa": 60,
+          "targetYieldOverrideTHa": 0,
+          "notes": ""
+        },
+        {
+          "id": "fld-dam",
+          "name": "Dam Paddock",
+          "areaHa": 96,
+          "commodityId": "barley",
+          "yieldTHa": 4,
+          "yieldMode": "actual",
+          "soilTestNKgHa": 50,
+          "ureaRequiredKgHa": 217,
+          "ureaApplications": [
+            {
+              "date": "2026-05-18",
+              "rateKgHa": 217,
+              "product": "Urea"
+            }
+          ],
+          "seedVariety": "Compass",
+          "seedRateKgHa": 65,
+          "starterRequiredKgHa": 60,
+          "starterAppliedKgHa": 60,
+          "targetYieldOverrideTHa": 0,
+          "notes": ""
+        },
+        {
+          "id": "fld-ironbark",
+          "name": "Ironbark",
+          "areaHa": 148,
+          "commodityId": "chickpeas",
+          "yieldTHa": 2.1,
+          "yieldMode": "actual",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 152,
+          "ureaApplications": [],
+          "seedVariety": "Seamer",
+          "seedRateKgHa": 90,
+          "starterRequiredKgHa": 60,
+          "starterAppliedKgHa": 60,
+          "targetYieldOverrideTHa": 0,
+          "notes": ""
+        },
+        {
+          "id": "fld-bore",
+          "name": "Bore Paddock",
+          "areaHa": 121,
+          "commodityId": "chickpeas",
+          "yieldTHa": 1.8,
+          "yieldMode": "actual",
+          "soilTestNKgHa": 34,
+          "ureaRequiredKgHa": 78,
+          "ureaApplications": [
+            {
+              "date": "2026-05-18",
+              "rateKgHa": 78,
+              "product": "Urea"
+            }
+          ],
+          "seedVariety": "Seamer",
+          "seedRateKgHa": 90,
+          "starterRequiredKgHa": 60,
+          "starterAppliedKgHa": 60,
+          "targetYieldOverrideTHa": 0,
+          "notes": ""
+        },
+        {
+          "id": "fld-homestead",
+          "name": "Homestead",
+          "areaHa": 134,
+          "commodityId": "canola",
+          "yieldTHa": 2.3,
+          "yieldMode": "actual",
+          "soilTestNKgHa": 40,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Hyola 410XX",
+          "seedRateKgHa": 3,
+          "starterRequiredKgHa": 60,
+          "starterAppliedKgHa": 60,
+          "targetYieldOverrideTHa": 0,
+          "notes": ""
+        },
+        {
+          "id": "fld-siloblock",
+          "name": "Silo Block",
+          "areaHa": 108,
+          "commodityId": "canola",
+          "yieldTHa": 2,
+          "yieldMode": "actual",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Hyola 410XX",
+          "seedRateKgHa": 3,
+          "starterRequiredKgHa": 60,
+          "starterAppliedKgHa": 60,
+          "targetYieldOverrideTHa": 0,
+          "notes": ""
+        }
+      ],
+      "storages": [
+        {
+          "openingStock": 0,
+          "unitLabel": "t",
+          "id": "silo-a",
+          "kind": "silo",
+          "name": "Silo A",
+          "commodityId": "wheat",
+          "radius": 4.6,
+          "coneAngle": 35,
+          "currentHeight": 9.2,
+          "fillState": "peak",
+          "capacityTons": 620
+        },
+        {
+          "openingStock": 0,
+          "unitLabel": "t",
+          "id": "silo-b",
+          "kind": "silo",
+          "name": "Silo B",
+          "commodityId": "wheat",
+          "radius": 4.6,
+          "coneAngle": 35,
+          "currentHeight": 6.1,
+          "fillState": "flat",
+          "capacityTons": 620
+        },
+        {
+          "openingStock": 0,
+          "unitLabel": "t",
+          "id": "silo-c",
+          "kind": "silo",
+          "name": "Silo C",
+          "commodityId": "barley",
+          "radius": 3.8,
+          "coneAngle": 35,
+          "currentHeight": 7.4,
+          "fillState": "decline",
+          "capacityTons": 410
+        },
+        {
+          "openingStock": 0,
+          "unitLabel": "t",
+          "id": "silo-d",
+          "kind": "silo",
+          "name": "Silo D",
+          "commodityId": "canola",
+          "radius": 3.2,
+          "coneAngle": 35,
+          "currentHeight": 5.8,
+          "fillState": "peak",
+          "capacityTons": 265
+        },
+        {
+          "openingStock": 0,
+          "unitLabel": "t",
+          "id": "bunker-1",
+          "kind": "bunker",
+          "name": "Bunker 1",
+          "commodityId": "wheat",
+          "width": 24,
+          "length": 62,
+          "currentHeight": 4.1,
+          "fillState": "peak",
+          "capacityTons": 2400,
+          "tarpOverhangM": 1.5
+        },
+        {
+          "openingStock": 0,
+          "unitLabel": "t",
+          "id": "bunker-2",
+          "kind": "bunker",
+          "name": "Bunker 2",
+          "commodityId": "barley",
+          "width": 20,
+          "length": 48,
+          "currentHeight": 3.4,
+          "fillState": "flat",
+          "capacityTons": 1500,
+          "tarpOverhangM": 1.5
+        }
+      ],
+      "sales": [
+        {
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 0.05,
+          "toleranceCapTons": 0,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 150.91,
+          "deliveryPeriod": "",
+          "id": "sale-1",
+          "commodityId": "wheat",
+          "buyer": "Riverina Grain Traders",
+          "contractNo": "RGT-4471",
+          "grade": "APW1",
+          "tons": 1200,
+          "price": 379,
+          "date": "2026-06-14",
+          "location": "Delivered Newbridge",
+          "deliveryStart": "2026-11-01",
+          "deliveryEnd": "2026-12-20",
+          "freight": 21.5,
+          "leviesPct": 0.011
+        },
+        {
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 0.05,
+          "toleranceCapTons": 0,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 0,
+          "deliveryPeriod": "",
+          "id": "sale-2",
+          "commodityId": "wheat",
+          "buyer": "Kurrajong Milling Co",
+          "contractNo": "KM-2208",
+          "grade": "H2",
+          "tons": 800,
+          "price": 402,
+          "date": "2026-07-02",
+          "location": "Delivered Millgate",
+          "deliveryStart": "2026-11-15",
+          "deliveryEnd": "2027-01-31",
+          "freight": 18,
+          "leviesPct": 0.011
+        },
+        {
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 0.05,
+          "toleranceCapTons": 0,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 115.05,
+          "deliveryPeriod": "",
+          "id": "sale-3",
+          "commodityId": "barley",
+          "buyer": "Coastal Feeds Pty Ltd",
+          "contractNo": "CF-1094",
+          "grade": "BAR1",
+          "tons": 900,
+          "price": 324,
+          "date": "2026-06-28",
+          "location": "Ex farm",
+          "deliveryStart": "2026-11-01",
+          "deliveryEnd": "2026-12-31",
+          "freight": 0,
+          "leviesPct": 0.011
+        },
+        {
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 0.05,
+          "toleranceCapTons": 0,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 0,
+          "deliveryPeriod": "",
+          "id": "sale-4",
+          "commodityId": "chickpeas",
+          "buyer": "Southern Pulse Exporters",
+          "contractNo": "SPE-0733",
+          "grade": "No.1 Chickpea",
+          "tons": 400,
+          "price": 771,
+          "date": "2026-08-05",
+          "location": "Delivered Port",
+          "deliveryStart": "2026-12-01",
+          "deliveryEnd": "2027-02-28",
+          "freight": 46,
+          "leviesPct": 0.011
+        },
+        {
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 0.05,
+          "toleranceCapTons": 0,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 73.52,
+          "deliveryPeriod": "",
+          "id": "sale-5",
+          "commodityId": "canola",
+          "buyer": "Meridian Oilseeds",
+          "contractNo": "MO-5512",
+          "grade": "CAN",
+          "tons": 350,
+          "price": 828,
+          "date": "2026-07-19",
+          "location": "Delivered Crushplant",
+          "deliveryStart": "2026-11-20",
+          "deliveryEnd": "2027-01-15",
+          "freight": 33,
+          "leviesPct": 0.011
+        },
+        {
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 0.05,
+          "toleranceCapTons": 0,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 0,
+          "deliveryPeriod": "",
+          "id": "sale-6",
+          "commodityId": "wheat",
+          "buyer": "Northbound Commodities",
+          "contractNo": "NBC-8820",
+          "grade": "APW1",
+          "tons": 600,
+          "price": 368,
+          "date": "2026-08-22",
+          "location": "Delivered Newbridge",
+          "deliveryStart": "2027-01-05",
+          "deliveryEnd": "2027-02-28",
+          "freight": 21.5,
+          "leviesPct": 0.011
+        }
+      ],
+      "movements": [
+        {
+          "id": "mv-1001",
+          "ticketNo": 1001,
+          "date": "2026-11-14",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 430.5,
+          "weightStatus": "final",
+          "grossWeight": 446.9,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-boundary",
+              "tons": 430.5
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-a",
+              "tons": 430.5
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1002",
+          "ticketNo": 1002,
+          "date": "2026-11-15",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 430.5,
+          "weightStatus": "final",
+          "grossWeight": 446.9,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-boundary",
+              "tons": 430.5
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-b",
+              "tons": 430.5
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1003",
+          "ticketNo": 1003,
+          "date": "2026-11-16",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 261.07,
+          "weightStatus": "final",
+          "grossWeight": 277.47,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-river",
+              "tons": 261.07
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-a",
+              "tons": 261.07
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1004",
+          "ticketNo": 1004,
+          "date": "2026-11-17",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "ABC 42Q",
+          "driver": "Sample Driver",
+          "tons": 261.07,
+          "weightStatus": "final",
+          "grossWeight": 277.47,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-river",
+              "tons": 261.07
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-b",
+              "tons": 261.07
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1005",
+          "ticketNo": 1005,
+          "date": "2026-11-18",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 261.06,
+          "weightStatus": "final",
+          "grossWeight": 277.46,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-river",
+              "tons": 261.06
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "bunker-1",
+              "tons": 261.06
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1006",
+          "ticketNo": 1006,
+          "date": "2026-11-19",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 305.25,
+          "weightStatus": "final",
+          "grossWeight": 321.65,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-long",
+              "tons": 305.25
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-a",
+              "tons": 305.25
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1007",
+          "ticketNo": 1007,
+          "date": "2026-11-20",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 305.25,
+          "weightStatus": "final",
+          "grossWeight": 321.65,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-long",
+              "tons": 305.25
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-b",
+              "tons": 305.25
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1008",
+          "ticketNo": 1008,
+          "date": "2026-11-21",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "ABC 42Q",
+          "driver": "Sample Driver",
+          "tons": 184.6,
+          "weightStatus": "final",
+          "grossWeight": 201,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-airstrip",
+              "tons": 184.6
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-a",
+              "tons": 184.6
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1009",
+          "ticketNo": 1009,
+          "date": "2026-11-22",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 184.6,
+          "weightStatus": "final",
+          "grossWeight": 201,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-airstrip",
+              "tons": 184.6
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-b",
+              "tons": 184.6
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1010",
+          "ticketNo": 1010,
+          "date": "2026-11-23",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 184.6,
+          "weightStatus": "final",
+          "grossWeight": 201,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-airstrip",
+              "tons": 184.6
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "bunker-1",
+              "tons": 184.6
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1011",
+          "ticketNo": 1011,
+          "date": "2026-11-24",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 188.8,
+          "weightStatus": "final",
+          "grossWeight": 205.2,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-stony",
+              "tons": 188.8
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-a",
+              "tons": 188.8
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1012",
+          "ticketNo": 1012,
+          "date": "2026-11-03",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "ABC 42Q",
+          "driver": "Sample Driver",
+          "tons": 188.8,
+          "weightStatus": "final",
+          "grossWeight": 205.2,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-stony",
+              "tons": 188.8
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-b",
+              "tons": 188.8
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1013",
+          "ticketNo": 1013,
+          "date": "2026-11-04",
+          "commodityId": "barley",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 237.67,
+          "weightStatus": "final",
+          "grossWeight": 254.07,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-woolshed",
+              "tons": 237.67
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-c",
+              "tons": 237.67
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1014",
+          "ticketNo": 1014,
+          "date": "2026-11-05",
+          "commodityId": "barley",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 237.67,
+          "weightStatus": "final",
+          "grossWeight": 254.07,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-woolshed",
+              "tons": 237.67
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "bunker-2",
+              "tons": 237.67
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1015",
+          "ticketNo": 1015,
+          "date": "2026-11-06",
+          "commodityId": "barley",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 237.66,
+          "weightStatus": "final",
+          "grossWeight": 254.06,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-woolshed",
+              "tons": 237.66
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-c",
+              "tons": 237.66
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1016",
+          "ticketNo": 1016,
+          "date": "2026-11-07",
+          "commodityId": "barley",
+          "status": "closed",
+          "truckRego": "ABC 42Q",
+          "driver": "Sample Driver",
+          "tons": 283.8,
+          "weightStatus": "final",
+          "grossWeight": 300.2,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-backcreek",
+              "tons": 283.8
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-c",
+              "tons": 283.8
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1017",
+          "ticketNo": 1017,
+          "date": "2026-11-08",
+          "commodityId": "barley",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 283.8,
+          "weightStatus": "final",
+          "grossWeight": 300.2,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-backcreek",
+              "tons": 283.8
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "bunker-2",
+              "tons": 283.8
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1018",
+          "ticketNo": 1018,
+          "date": "2026-11-09",
+          "commodityId": "barley",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 128,
+          "weightStatus": "final",
+          "grossWeight": 144.4,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-dam",
+              "tons": 128
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-c",
+              "tons": 128
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1019",
+          "ticketNo": 1019,
+          "date": "2026-11-10",
+          "commodityId": "barley",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 128,
+          "weightStatus": "final",
+          "grossWeight": 144.4,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-dam",
+              "tons": 128
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "bunker-2",
+              "tons": 128
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1020",
+          "ticketNo": 1020,
+          "date": "2026-11-11",
+          "commodityId": "barley",
+          "status": "closed",
+          "truckRego": "ABC 42Q",
+          "driver": "Sample Driver",
+          "tons": 128,
+          "weightStatus": "final",
+          "grossWeight": 144.4,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-dam",
+              "tons": 128
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-c",
+              "tons": 128
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1021",
+          "ticketNo": 1021,
+          "date": "2026-11-12",
+          "commodityId": "chickpeas",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 155.4,
+          "weightStatus": "final",
+          "grossWeight": 171.8,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-ironbark",
+              "tons": 155.4
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "bunker-2",
+              "tons": 155.4
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1022",
+          "ticketNo": 1022,
+          "date": "2026-11-13",
+          "commodityId": "chickpeas",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 155.4,
+          "weightStatus": "final",
+          "grossWeight": 171.8,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-ironbark",
+              "tons": 155.4
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "bunker-2",
+              "tons": 155.4
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1023",
+          "ticketNo": 1023,
+          "date": "2026-11-14",
+          "commodityId": "chickpeas",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 72.6,
+          "weightStatus": "final",
+          "grossWeight": 89,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-bore",
+              "tons": 72.6
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "bunker-2",
+              "tons": 72.6
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1024",
+          "ticketNo": 1024,
+          "date": "2026-11-15",
+          "commodityId": "chickpeas",
+          "status": "closed",
+          "truckRego": "ABC 42Q",
+          "driver": "Sample Driver",
+          "tons": 72.6,
+          "weightStatus": "final",
+          "grossWeight": 89,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-bore",
+              "tons": 72.6
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "bunker-2",
+              "tons": 72.6
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1025",
+          "ticketNo": 1025,
+          "date": "2026-11-16",
+          "commodityId": "chickpeas",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 72.6,
+          "weightStatus": "final",
+          "grossWeight": 89,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-bore",
+              "tons": 72.6
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "bunker-2",
+              "tons": 72.6
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1026",
+          "ticketNo": 1026,
+          "date": "2026-11-17",
+          "commodityId": "canola",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 154.1,
+          "weightStatus": "final",
+          "grossWeight": 170.5,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-homestead",
+              "tons": 154.1
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-d",
+              "tons": 154.1
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1027",
+          "ticketNo": 1027,
+          "date": "2026-11-18",
+          "commodityId": "canola",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 154.1,
+          "weightStatus": "final",
+          "grossWeight": 170.5,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-homestead",
+              "tons": 154.1
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-d",
+              "tons": 154.1
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1028",
+          "ticketNo": 1028,
+          "date": "2026-11-19",
+          "commodityId": "canola",
+          "status": "closed",
+          "truckRego": "ABC 42Q",
+          "driver": "Sample Driver",
+          "tons": 72,
+          "weightStatus": "final",
+          "grossWeight": 88.4,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-siloblock",
+              "tons": 72
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-d",
+              "tons": 72
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1029",
+          "ticketNo": 1029,
+          "date": "2026-11-20",
+          "commodityId": "canola",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 72,
+          "weightStatus": "final",
+          "grossWeight": 88.4,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-siloblock",
+              "tons": 72
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-d",
+              "tons": 72
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1030",
+          "ticketNo": 1030,
+          "date": "2026-11-21",
+          "commodityId": "canola",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 72,
+          "weightStatus": "final",
+          "grossWeight": 88.4,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-siloblock",
+              "tons": 72
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "silo-d",
+              "tons": 72
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1031",
+          "ticketNo": 1031,
+          "date": "2026-12-13",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 40.13,
+          "weightStatus": "final",
+          "grossWeight": 56.53,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "silo",
+              "id": "silo-a",
+              "tons": 40.13
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-1",
+              "tons": 40.13
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1032",
+          "ticketNo": 1032,
+          "date": "2026-12-14",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "ABC 42Q",
+          "driver": "Sample Driver",
+          "tons": 37.39,
+          "weightStatus": "final",
+          "grossWeight": 53.79,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "silo",
+              "id": "silo-b",
+              "tons": 37.39
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-1",
+              "tons": 37.39
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1033",
+          "ticketNo": 1033,
+          "date": "2026-12-15",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 39.35,
+          "weightStatus": "final",
+          "grossWeight": 55.75,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "silo",
+              "id": "bunker-1",
+              "tons": 39.35
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-1",
+              "tons": 39.35
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1034",
+          "ticketNo": 1034,
+          "date": "2026-12-16",
+          "commodityId": "wheat",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 34.04,
+          "weightStatus": "final",
+          "grossWeight": 50.44,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "silo",
+              "id": "silo-a",
+              "tons": 34.04
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-1",
+              "tons": 34.04
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1035",
+          "ticketNo": 1035,
+          "date": "2026-12-17",
+          "commodityId": "barley",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 39.13,
+          "weightStatus": "final",
+          "grossWeight": 55.53,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "silo",
+              "id": "silo-c",
+              "tons": 39.13
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-3",
+              "tons": 39.13
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1036",
+          "ticketNo": 1036,
+          "date": "2026-12-18",
+          "commodityId": "barley",
+          "status": "closed",
+          "truckRego": "ABC 42Q",
+          "driver": "Sample Driver",
+          "tons": 37.07,
+          "weightStatus": "final",
+          "grossWeight": 53.47,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "silo",
+              "id": "bunker-2",
+              "tons": 37.07
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-3",
+              "tons": 37.07
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1037",
+          "ticketNo": 1037,
+          "date": "2026-12-19",
+          "commodityId": "barley",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 38.85,
+          "weightStatus": "final",
+          "grossWeight": 55.25,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "silo",
+              "id": "silo-c",
+              "tons": 38.85
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-3",
+              "tons": 38.85
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1038",
+          "ticketNo": 1038,
+          "date": "2026-12-20",
+          "commodityId": "canola",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 35.23,
+          "weightStatus": "final",
+          "grossWeight": 51.63,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "silo",
+              "id": "silo-d",
+              "tons": 35.23
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-5",
+              "tons": 35.23
+            }
+          ],
+          "notes": ""
+        },
+        {
+          "id": "mv-1039",
+          "ticketNo": 1039,
+          "date": "2026-12-21",
+          "commodityId": "canola",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 38.29,
+          "weightStatus": "final",
+          "grossWeight": 54.69,
+          "tareWeight": 16.4,
+          "froms": [
+            {
+              "type": "silo",
+              "id": "silo-d",
+              "tons": 38.29
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-5",
+              "tons": 38.29
+            }
+          ],
+          "notes": ""
+        }
+      ],
+      "invoices": [
+        {
+          "id": "inv-1",
+          "saleId": "sale-1",
+          "invoiceNo": 1,
+          "issueDate": "2026-12-18",
+          "dueDate": "2027-01-17",
+          "status": "outstanding",
+          "totalTons": 150.91,
+          "subtotalExGST": 57194.89,
+          "freightTotal": 3244.57,
+          "levies": 629.14,
+          "gst": 5332.12,
+          "totalPayable": 58653.3,
+          "lines": [
+            {
+              "description": "APW1 Riverina Grain Traders",
+              "tons": 150.91,
+              "price": 379
+            }
+          ],
+          "totals": {
+            "subtotalExGST": 57194.89,
+            "freightTotal": 3244.57,
+            "levies": 629.14
+          }
+        },
+        {
+          "id": "inv-2",
+          "saleId": "sale-3",
+          "invoiceNo": 2,
+          "issueDate": "2026-12-20",
+          "dueDate": "2027-01-19",
+          "status": "paid",
+          "paidDate": "2027-01-12",
+          "totalTons": 115.05,
+          "subtotalExGST": 37276.2,
+          "freightTotal": 0,
+          "levies": 410.04,
+          "gst": 3686.62,
+          "totalPayable": 40552.78,
+          "lines": [
+            {
+              "description": "BAR1 Coastal Feeds Pty Ltd",
+              "tons": 115.05,
+              "price": 324
+            }
+          ],
+          "totals": {
+            "subtotalExGST": 37276.2,
+            "freightTotal": 0,
+            "levies": 410.04
+          }
+        }
+      ],
+      "overheads": {
+        "finance": 186000,
+        "equipmentRepayments": 214000,
+        "depreciation": 168000,
+        "wages": 152000,
+        "drawings": 120000,
+        "admin": 34000,
+        "energy": 46000,
+        "insurance": 58000,
+        "repairsMaintenance": 96000,
+        "other": 22000
+      }
+    }
+  },
+  "businessDetails": {
+    "farmName": "Kurrajong Downs",
+    "entityName": "Kurrajong Downs Pty Ltd",
+    "abn": "00 000 000 000",
+    "ngr": "SAMPLE01",
+    "contactName": "Sample User",
+    "phone": "",
+    "email": "",
+    "address": "Sample address",
+    "paymentTermsDays": 30,
+    "bankName": "",
+    "accountName": "",
+    "bsb": "",
+    "accountNumber": ""
+  },
+  "nextMovementNo": 1040,
+  "nextInvoiceNo": 3
+}

@@ -1,18 +1,19 @@
-import { db } from './storage.js?v=85';
-import { renderPosition } from './views/position.js?v=85';
-import { renderProduction } from './views/production.js?v=85';
-import { renderReports } from './views/reports.js?v=85';
-import { renderSales } from './views/sales.js?v=85';
-import { renderMovements } from './views/movements.js?v=85';
-import { renderStorage } from './views/storage.js?v=85';
-import { renderSettings } from './views/settings.js?v=85';
-import { renderLogin } from './views/login.js?v=85';
-import { renderAccount } from './views/account.js?v=85';
-import { getSession, getMembership, onAuthChange, acceptInvitation, signOut } from './auth.js?v=85';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=85';
-import { tokenFromHash } from './invites.js?v=85';
-import { esc } from './fmt.js?v=85';
-import { APP_VERSION } from './version.js?v=85';
+import { db } from './storage.js?v=86';
+import { renderPosition } from './views/position.js?v=86';
+import { renderProduction } from './views/production.js?v=86';
+import { renderReports } from './views/reports.js?v=86';
+import { renderSales } from './views/sales.js?v=86';
+import { renderMovements } from './views/movements.js?v=86';
+import { renderStorage } from './views/storage.js?v=86';
+import { renderSettings } from './views/settings.js?v=86';
+import { renderLogin } from './views/login.js?v=86';
+import { renderAccount } from './views/account.js?v=86';
+import { getSession, getMembership, onAuthChange, acceptInvitation, signOut } from './auth.js?v=86';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=86';
+import { tokenFromHash } from './invites.js?v=86';
+import { esc } from './fmt.js?v=86';
+import { APP_VERSION } from './version.js?v=86';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=86';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -281,6 +282,23 @@ async function boot() {
       <h2>Could not load the farm</h2>
       <div class="hint">${e.message}</div></div></div>`;
     return;
+  }
+
+  // A brand new trial that asked for sample data. After db.init, deliberately:
+  // the farm has to exist and be loaded before there is anywhere to put a
+  // season, and importing through the ordinary path means it reconciles and
+  // pushes exactly like a restored backup rather than by some private route.
+  if (takeSampleDataRequest()) {
+    app.innerHTML = '<div class="empty">Setting up your sample farm…</div>';
+    try {
+      const state = await fetchSampleFarm(membership.farmName);
+      db.importJSON(JSON.stringify(state));
+    } catch (e) {
+      // Not fatal. They asked for a demonstration and will get an empty farm
+      // instead, which is disappointing rather than broken — and far better
+      // than a new account that will not open at all.
+      console.error('Could not load the sample farm', e);
+    }
   }
 
   // Land where this role can actually work — a driver opening onto an empty
