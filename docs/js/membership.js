@@ -51,7 +51,7 @@ export function recallMembership(saved, userId) {
   return saved.membership ?? null;
 }
 
-export function pickMembership(rows, userId) {
+export function pickMembership(rows, userId, preferredFarmId = null) {
   if (!Array.isArray(rows) || !userId) return null;
 
   const mine = rows.filter((r) => r && r.user_id === userId);
@@ -62,7 +62,14 @@ export function pickMembership(rows, userId) {
   // app opens the same farm every time rather than flipping between them on
   // whatever order the server happened to return.
   mine.sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
-  const row = mine[0];
+
+  // Except when they have said which one they want, and accepting an
+  // invitation is saying so. Oldest-wins on its own put the first real invitee
+  // into the empty farm he had created twenty-five minutes earlier and left him
+  // there: he joined the right farm, the app kept opening the wrong one, and
+  // nothing on any screen explained why. An explicit choice outranks an
+  // accident of order.
+  const row = mine.find((r) => preferredFarmId && r.farm_id === preferredFarmId) || mine[0];
 
   return {
     farmId: row.farm_id,

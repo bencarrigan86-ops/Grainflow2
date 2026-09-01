@@ -5,7 +5,11 @@
 // navigation per role, and that is when this gets a proper home in the
 // interface. Until then it is reachable at #/account.
 
-import { getSession, getMembership, signOut } from '../auth.js?v=86';
+import {
+  getSession, getMembership, signOut, listMyInvitations, acceptInvitation,
+} from '../auth.js?v=87';
+import { roleLabel, expiryText } from '../invites.js?v=87';
+import { esc } from '../fmt.js?v=87';
 
 const ROLE_LABELS = {
   owner: 'Owner',
@@ -33,6 +37,12 @@ export async function renderAccount(root) {
   const session = await getSession();
   const user = session?.user ?? null;
   const membership = await getMembership(user?.id);
+
+  // Also checked here, not only on the way in. Somebody who already belongs to
+  // a farm never sees the join screen — which is exactly the state the first
+  // real invitee ended up in, sitting in an empty farm of his own with an
+  // invitation to a full one that nothing on any screen mentioned. Account is
+  // where a person looks when they cannot work out what is going on.
 
   root.innerHTML = `
     <div class="topbar">
@@ -63,13 +73,63 @@ export async function renderAccount(root) {
             owner needs to invite you, or you can create one.</div>
         </div>` : ''}
 
+      <div id="pending-invites"></div>
+
       <button class="btn secondary" id="sign-out" style="margin-top:12px">Sign out</button>
     </div>
   `;
+
+  showPendingInvitations(root, membership);
 
   root.querySelector('#sign-out').addEventListener('click', async () => {
     await signOut();
     // The auth listener in main.js picks this up and re-renders to the login
     // screen — no manual navigation needed here.
+  });
+}
+
+/**
+ * Any farm still waiting for this person to join it.
+ *
+ * Loaded after the screen has painted rather than blocking it — an invitation
+ * lookup is a nicety and must never be the reason Account will not open, which
+ * is the screen somebody reaches for when they want the Sign out button.
+ */
+async function showPendingInvitations(root, membership) {
+  const slot = root.querySelector('#pending-invites');
+  if (!slot) return;
+
+  let invitations = [];
+  try { invitations = await listMyInvitations(); } catch { return; }
+  // Only the ones for farms they are not already in.
+  invitations = invitations.filter((i) => i.farmId !== membership?.farmId);
+  if (!invitations.length || !slot.isConnected) return;
+
+  slot.innerHTML = invitations.map((inv, i) => `
+    <div class="card input">
+      <h2><span class="dot input"></span>Invitation to ${esc(inv.farmName)}</h2>
+      <div class="field hint" style="margin-bottom:10px">You have been invited to join
+        ${esc(inv.farmName)} as ${esc(roleLabel(inv.role))}. ${esc(expiryText(inv.expiresAt))}.
+        ${membership ? 'Joining opens that farm instead of this one.' : ''}</div>
+      <button class="btn" data-accept="${i}">Join ${esc(inv.farmName)}</button>
+    </div>`).join('');
+
+  slot.querySelectorAll('[data-accept]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const inv = invitations[Number(btn.dataset.accept)];
+      btn.disabled = true;
+      btn.textContent = 'Joining…';
+      try {
+        await acceptInvitation(inv.token);
+        // A full reload rather than a re-render: the farm underneath the whole
+        // app has changed, and every view is holding data from the old one.
+        location.hash = '#/';
+        location.reload();
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = `Join ${inv.farmName}`;
+        alert(`Could not join.\n\n${e.message}`);
+      }
+    });
   });
 }

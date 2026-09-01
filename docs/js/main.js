@@ -1,19 +1,21 @@
-import { db } from './storage.js?v=86';
-import { renderPosition } from './views/position.js?v=86';
-import { renderProduction } from './views/production.js?v=86';
-import { renderReports } from './views/reports.js?v=86';
-import { renderSales } from './views/sales.js?v=86';
-import { renderMovements } from './views/movements.js?v=86';
-import { renderStorage } from './views/storage.js?v=86';
-import { renderSettings } from './views/settings.js?v=86';
-import { renderLogin } from './views/login.js?v=86';
-import { renderAccount } from './views/account.js?v=86';
-import { getSession, getMembership, onAuthChange, acceptInvitation, signOut } from './auth.js?v=86';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=86';
-import { tokenFromHash } from './invites.js?v=86';
-import { esc } from './fmt.js?v=86';
-import { APP_VERSION } from './version.js?v=86';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=86';
+import { db } from './storage.js?v=87';
+import { renderPosition } from './views/position.js?v=87';
+import { renderProduction } from './views/production.js?v=87';
+import { renderReports } from './views/reports.js?v=87';
+import { renderSales } from './views/sales.js?v=87';
+import { renderMovements } from './views/movements.js?v=87';
+import { renderStorage } from './views/storage.js?v=87';
+import { renderSettings } from './views/settings.js?v=87';
+import { renderLogin } from './views/login.js?v=87';
+import { renderAccount } from './views/account.js?v=87';
+import {
+  getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
+} from './auth.js?v=87';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=87';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=87';
+import { esc } from './fmt.js?v=87';
+import { APP_VERSION } from './version.js?v=87';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=87';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -215,6 +217,61 @@ function renderInviteRefused(message) {
   });
 }
 
+/**
+ * "You have been invited to Sunnyridge" — shown instead of the farm-naming
+ * screen to somebody who has an invitation outstanding.
+ *
+ * Creating a farm is still offered, underneath, because a person can genuinely
+ * have both: invited to somebody else's farm and wanting one of their own. But
+ * it is no longer the only thing on offer, which is what turned one mis-tap
+ * into a second farm, two memberships, and an app that kept opening the empty
+ * one.
+ */
+function renderInvitationsWaiting(invitations) {
+  setChromeVisible(false);
+  app.innerHTML = `
+    <div class="topbar"><div><h1>Grainflow</h1><div class="sub">You have been invited</div></div></div>
+    <div class="view">
+      ${invitations.map((inv, i) => `
+        <div class="card input">
+          <h2><span class="dot input"></span>${esc(inv.farmName)}</h2>
+          <div class="field hint" style="margin-bottom:10px">You have been invited to join as
+            ${esc(roleLabel(inv.role))}. ${esc(expiryText(inv.expiresAt))}.</div>
+          <button class="btn" data-join="${i}">Join ${esc(inv.farmName)}</button>
+        </div>`).join('')}
+      <div class="card">
+        <h2>Or start your own</h2>
+        <div class="field hint" style="margin-bottom:10px">Only if you are setting up a
+          separate farm. You do not need to do this to join the one above.</div>
+        <button class="btn secondary" id="make-own">Create my own farm&hellip;</button>
+      </div>
+      <div id="join-problem"></div>
+    </div>
+  `;
+
+  app.querySelectorAll('[data-join]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const inv = invitations[Number(btn.dataset.join)];
+      btn.disabled = true;
+      btn.textContent = 'Joining…';
+      try {
+        clearInvite();          // whichever route brought them here, it is spent
+        await acceptInvitation(inv.token);
+        boot();
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = `Join ${inv.farmName}`;
+        app.querySelector('#join-problem').innerHTML =
+          `<div class="card"><div class="hint" style="color:var(--danger)">${esc(e.message)}</div></div>`;
+      }
+    });
+  });
+
+  app.querySelector('#make-own').addEventListener('click', () => {
+    renderLogin(app, { mode: 'farm', onDone: boot });
+  });
+}
+
 async function boot() {
   const session = await getSession();
   const pendingInvite = readInvite();
@@ -246,6 +303,18 @@ async function boot() {
   const membership = await getMembership(session?.user?.id);
   if (!membership) {
     setChromeVisible(false);
+
+    // Before offering to create a farm, ask whether one is already waiting for
+    // this address. The link is a convenience, not the mechanism — and the
+    // first real invitee proved it, by signing up at the app's address, being
+    // shown this screen, and dutifully creating a farm he did not want.
+    app.innerHTML = '<div class="empty">Checking for invitations…</div>';
+    const invitations = await listMyInvitations();
+    if (invitations.length) {
+      renderInvitationsWaiting(invitations);
+      return;
+    }
+
     renderLogin(app, { mode: 'farm', onDone: boot });
     return;
   }

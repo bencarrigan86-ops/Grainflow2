@@ -9,9 +9,9 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase } from './supabase.js?v=86';
-import { pickMembership, recallMembership } from './membership.js?v=86';
-import { newToken, expiryFrom } from './invites.js?v=86';
+import { supabase } from './supabase.js?v=87';
+import { pickMembership, recallMembership } from './membership.js?v=87';
+import { newToken, expiryFrom } from './invites.js?v=87';
 
 /** The signed-in user, or null. */
 export async function getUser() {
@@ -72,7 +72,7 @@ export async function getMembership(userId) {
   // to show.
   if (error) return recallMembership(readRemembered(), userId);
 
-  const picked = pickMembership(data ?? [], userId);
+  const picked = pickMembership(data ?? [], userId, readPreferredFarm());
 
   // An empty list with no error is a real answer: they have been taken off the
   // farm. Forget, so the next offline start does not let them back in to a
@@ -100,6 +100,22 @@ function writeRemembered(userId, membership) {
 
 function clearRemembered() {
   try { localStorage.removeItem(REMEMBERED_KEY); } catch { /* nothing to do */ }
+}
+
+// Which farm to open when someone belongs to more than one.
+//
+// Set by accepting an invitation, because that is the one moment a person says
+// out loud which farm they mean. Without it pickMembership falls back to the
+// oldest membership, which put the first real invitee into an empty farm he had
+// made by accident half an hour earlier and kept him there.
+const PREFERRED_FARM_KEY = 'grainflow.preferredFarm';
+
+function readPreferredFarm() {
+  try { return localStorage.getItem(PREFERRED_FARM_KEY); } catch { return null; }
+}
+
+function writePreferredFarm(farmId) {
+  try { localStorage.setItem(PREFERRED_FARM_KEY, farmId); } catch { /* private mode */ }
 }
 
 export async function signIn(email, password) {
@@ -290,7 +306,33 @@ export async function removeMember(farmId, userId) {
 export async function acceptInvitation(token) {
   const { data, error } = await supabase.rpc('accept_invitation', { p_token: token });
   if (error) throw new Error(error.message);
+
+  // Accepting is a person choosing a farm. Remembered here so that somebody who
+  // already had one of their own opens the farm they just joined rather than
+  // the one they happened to create first.
+  if (data?.farm_id) writePreferredFarm(data.farm_id);
+
   return { farmId: data?.farm_id, role: data?.role, farmName: data?.farm_name ?? '' };
+}
+
+/**
+ * Invitations addressed to the signed-in person, wherever they came in from.
+ *
+ * The link is a convenience, not the mechanism. Somebody who types the app's
+ * address instead of opening it — or who signs up in a mail app's browser and
+ * confirms in a different one, which is where the token gets lost — should
+ * still be offered the farm they were invited to rather than pushed into
+ * creating one of their own.
+ */
+export async function listMyInvitations() {
+  const { data, error } = await supabase.rpc('invitations_for_me');
+  // Deliberately soft: this runs on the boot path, and an invitation lookup
+  // failing must never be the reason somebody cannot get into their farm.
+  if (error) { console.error('Could not check for invitations', error); return []; }
+  return (data ?? []).map((r) => ({
+    id: r.id, farmId: r.farm_id, farmName: r.farm_name,
+    role: r.role, token: r.token, expiresAt: r.expires_at,
+  }));
 }
 
 function friendlyInvite(error) {

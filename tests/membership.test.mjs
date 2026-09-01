@@ -87,6 +87,52 @@ check('the oldest membership wins, so the app opens the same farm each time', ()
   assert.equal(pickMembership([...rows].reverse(), 'u1').farmId, 'older');
 });
 
+check('a farm they explicitly joined beats the one they happened to create first', () => {
+  // The fault this covers, exactly as it happened. Mark went to the app's
+  // address, was shown "name your farm" because he belonged to none, and
+  // created one at 06:27. He opened the invitation link and joined the real
+  // farm at 06:52. Oldest-wins then opened his own empty farm every single
+  // time — all six tabs, not a paddock in any of them, and nothing on any
+  // screen to say why.
+  const rows = [
+    row('u1', 'owner', { farm_id: 'his-own-empty-one', created_at: '2026-09-01T06:27:01Z' }),
+    row('u1', 'owner', { farm_id: 'the-real-farm', created_at: '2026-09-01T06:52:20Z' }),
+  ];
+  assert.equal(pickMembership(rows, 'u1').farmId, 'his-own-empty-one', 'the old behaviour');
+  assert.equal(pickMembership(rows, 'u1', 'the-real-farm').farmId, 'the-real-farm');
+  // Order from the server must not matter either.
+  assert.equal(pickMembership([...rows].reverse(), 'u1', 'the-real-farm').farmId, 'the-real-farm');
+});
+
+check('a preference for a farm they are not on is ignored, not obeyed', () => {
+  // Left over from a farm they were removed from, or another device's. Falling
+  // back to the oldest is right; returning nothing would lock them out.
+  const rows = [row('u1', 'owner', { farm_id: 'a', created_at: '2026-01-01T00:00:00Z' })];
+  assert.equal(pickMembership(rows, 'u1', 'somewhere-else').farmId, 'a');
+});
+
+check('no preference behaves exactly as before', () => {
+  const rows = [
+    row('u1', 'driver', { farm_id: 'newer', created_at: '2026-08-31T10:00:00Z' }),
+    row('u1', 'owner', { farm_id: 'older', created_at: '2026-01-04T09:00:00Z' }),
+  ];
+  for (const pref of [undefined, null, '']) {
+    assert.equal(pickMembership(rows, 'u1', pref).farmId, 'older', String(pref));
+  }
+});
+
+check('the role comes from the chosen farm, not the oldest one', () => {
+  // Worth its own check: handing back the right farm id with the wrong role
+  // would offer a driver the whole tab bar again.
+  const rows = [
+    row('u1', 'owner', { farm_id: 'mine', created_at: '2026-01-01T00:00:00Z' }),
+    row('u1', 'driver', { farm_id: 'theirs', created_at: '2026-06-01T00:00:00Z' }),
+  ];
+  const m = pickMembership(rows, 'u1', 'theirs');
+  assert.equal(m.farmId, 'theirs');
+  assert.equal(m.role, 'driver');
+});
+
 check('the count is reported rather than hidden', () => {
   const rows = [
     row('u1', 'owner', { farm_id: 'a', created_at: '2026-01-01T00:00:00Z' }),
@@ -220,6 +266,20 @@ check('getMembership asks only for this user\'s rows', () => {
   const auth = readFileSync(new URL('../docs/js/auth.js', import.meta.url), 'utf8');
   assert.ok(auth.includes(".eq('user_id'"), 'auth.js no longer filters by user_id');
   assert.ok(auth.includes('pickMembership'), 'auth.js no longer uses pickMembership');
+});
+
+check('auth.js actually passes the preferred farm through', () => {
+  // pickMembership can only honour a preference it is given. Deleting the third
+  // argument broke nothing in the suite — every unit test calls pickMembership
+  // directly and never exercises the caller — which is the same shape as the
+  // pickMembership-not-imported fault that started tests/modules.test.mjs.
+  const src = readFileSync(new URL('../docs/js/auth.js', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
+  assert.match(src, /pickMembership\([^)]*,\s*readPreferredFarm\(\)\s*\)/,
+    'getMembership no longer passes the preferred farm, so joining a farm will not open it');
+  assert.match(src, /writePreferredFarm\(data\?\.farm_id\)|writePreferredFarm\(/,
+    'accepting an invitation no longer records which farm was chosen');
 });
 
 check('nothing calls getMembership() without telling it who', () => {

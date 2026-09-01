@@ -55,14 +55,123 @@ const files = walk(JS).map((path) => ({
   src: readFileSync(path, 'utf8'),
 }));
 
-/** Strip comments and string literals so a mention in prose is not a usage. */
+/**
+ * Strip comments and string text, so a mention in prose is not a usage — but
+ * KEEP what is inside `${...}`, which is code.
+ *
+ * The first version of this blanked template literals whole, and that made the
+ * check useless on exactly the files it most needed to work on. Every view in
+ * this app renders through one big template, so nearly every call it makes sits
+ * inside backticks and was invisible. It was caught the honest way: account.js
+ * shipped a call to esc() with no import, the browser would have thrown
+ * ReferenceError the moment anyone opened Account, and this file said ALL PASS.
+ *
+ * A regex cannot do it — `${a ? `${b}` : ''}` nests — so this walks the source
+ * once with a small state machine and keeps the interpolations.
+ */
 function code(src) {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ')
-    .replace(/`(?:\\.|[^`\\])*`/g, '``')
-    .replace(/'(?:\\.|[^'\\])*'/g, "''")
-    .replace(/"(?:\\.|[^"\\])*"/g, '""');
+  let out = '';
+  let i = 0;
+  // Stack of open template literals; each holds the brace depth at which its
+  // current ${...} ends. Empty means we are in ordinary code.
+  const templates = [];
+  let inExpr = 0;        // brace depth inside the innermost ${ }
+
+  const inTemplateText = () => templates.length > 0 && inExpr === 0;
+
+  while (i < src.length) {
+    const c = src[i];
+    const next = src[i + 1];
+
+    // Comments — only when not inside a string of any kind.
+    if (!inTemplateText() && c === '/' && next === '*') {
+      const end = src.indexOf('*/', i + 2);
+      i = end === -1 ? src.length : end + 2;
+      out += ' ';
+      continue;
+    }
+    if (!inTemplateText() && c === '/' && next === '/') {
+      const end = src.indexOf('\n', i);
+      i = end === -1 ? src.length : end;
+      out += ' ';
+      continue;
+    }
+
+    // Regex literals, before quotes — because a regex can contain one.
+    // csv.js has s.replace(/"/g, '""'), and without this the scanner read that
+    // stray " as the start of a string and swallowed the rest of the file,
+    // which is why exportRowsAsCSV appeared not to be exported by a module
+    // whose last line exports it.
+    //
+    // Telling a regex from a division needs the parser this is not, so it goes
+    // on what precedes: after an operator or an opening bracket a slash starts
+    // a pattern, after a value it divides.
+    if (!inTemplateText() && c === '/') {
+      const prev = out.replace(/\s+$/, '').slice(-1);
+      if (prev === '' || '(,=:[!&|?{};+-*%~^<>'.includes(prev)) {
+        i += 1;
+        while (i < src.length && src[i] !== '/') {
+          if (src[i] === '\\') i += 1;
+          else if (src[i] === '[') {           // a class can hold an unescaped /
+            i += 1;
+            while (i < src.length && src[i] !== ']') i += src[i] === '\\' ? 2 : 1;
+          }
+          i += 1;
+        }
+        i += 1;
+        while (i < src.length && /[gimsuyd]/.test(src[i])) i += 1;
+        out += ' ';
+        continue;
+      }
+    }
+
+    // Ordinary quoted strings: skipped entirely, they hold no code. Checked
+    // with inTemplateText() rather than the stack depth, so a quote inside a
+    // ${ } expression is still skipped.
+    if (!inTemplateText() && (c === "'" || c === '"')) {
+      i += 1;
+      while (i < src.length && src[i] !== c) i += src[i] === '\\' ? 2 : 1;
+      i += 1;
+      out += '""';
+      continue;
+    }
+
+    if (c === '\\' && inTemplateText()) { i += 2; continue; }
+
+    if (c === '`') {
+      // The brace depth is per-template, not global. Treating it as global was
+      // the first bug in this scanner: entering a nested template inside a
+      // ${ } expression left inExpr at 1, so inTemplateText() read false, so
+      // the nested template's text was scanned as code and the closing
+      // backtick never matched. Everything after the first `${x ? `y` : ''}`
+      // in a file was then misread — which in ui.js meant its last two exports
+      // vanished and six view files were reported as importing names that were
+      // sitting right there.
+      if (inTemplateText()) inExpr = templates.pop();   // restore the outer depth
+      else { templates.push(inExpr); inExpr = 0; }      // start fresh inside
+      i += 1;
+      out += ' ';
+      continue;
+    }
+
+    if (inTemplateText() && c === '$' && next === '{') {
+      inExpr += 1;
+      i += 2;
+      out += ' ';
+      continue;
+    }
+
+    if (templates.length && inExpr > 0) {
+      if (c === '{') inExpr += 1;
+      else if (c === '}') { inExpr -= 1; out += ' '; i += 1; continue; }
+    }
+
+    // Template text is dropped; everything else — including the inside of
+    // ${ } — is kept.
+    out += inTemplateText() ? ' ' : c;
+    i += 1;
+  }
+  return out;
 }
 
 const IMPORT_RE = /import\s+(?:\{([^}]*)\}|(\w+))\s+from\s+['"]([^'"]+)['"]/g;
