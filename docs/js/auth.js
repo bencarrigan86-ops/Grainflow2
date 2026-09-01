@@ -9,9 +9,9 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase } from './supabase.js?v=84';
-import { pickMembership } from './membership.js?v=84';
-import { newToken, expiryFrom } from './invites.js?v=84';
+import { supabase } from './supabase.js?v=85';
+import { pickMembership, recallMembership } from './membership.js?v=85';
+import { newToken, expiryFrom } from './invites.js?v=85';
 
 /** The signed-in user, or null. */
 export async function getUser() {
@@ -65,8 +65,41 @@ export async function getMembership(userId) {
     .eq('user_id', userId)
     .is('deleted_at', null);
 
-  if (error || !data) return null;
-  return pickMembership(data, userId);
+  // An error is "could not ask", not "you are not on a farm", and collapsing
+  // the two into null is what made the app offer to create a farm every time
+  // it was opened with no signal. The last known answer is used instead — the
+  // season is already on this device in IndexedDB, so there is something real
+  // to show.
+  if (error) return recallMembership(readRemembered(), userId);
+
+  const picked = pickMembership(data ?? [], userId);
+
+  // An empty list with no error is a real answer: they have been taken off the
+  // farm. Forget, so the next offline start does not let them back in to a
+  // stale copy of a farm they have left.
+  if (picked) writeRemembered(userId, picked);
+  else clearRemembered();
+  return picked;
+}
+
+// Deliberately localStorage rather than IndexedDB: this is read on the boot
+// path before anything is initialised, and one synchronous read of a few
+// hundred bytes is simpler than another async dependency in the one code path
+// that must not hang. Every access is wrapped — private mode throws on write.
+const REMEMBERED_KEY = 'grainflow.membership';
+
+function readRemembered() {
+  try { return JSON.parse(localStorage.getItem(REMEMBERED_KEY) || 'null'); }
+  catch { return null; }
+}
+
+function writeRemembered(userId, membership) {
+  try { localStorage.setItem(REMEMBERED_KEY, JSON.stringify({ userId, membership })); }
+  catch { /* private mode; the app still works, just not offline */ }
+}
+
+function clearRemembered() {
+  try { localStorage.removeItem(REMEMBERED_KEY); } catch { /* nothing to do */ }
 }
 
 export async function signIn(email, password) {

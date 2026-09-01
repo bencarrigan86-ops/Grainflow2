@@ -13,7 +13,7 @@ import assert from 'node:assert';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pickMembership } from '../docs/js/membership.js';
+import { pickMembership, recallMembership } from '../docs/js/membership.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -157,6 +157,57 @@ check('canWriteProduction is a boolean whatever the column says', () => {
   }
   assert.equal(pickMembership([row('u1', 'driver', { can_write_production: true })], 'u1')
     .canWriteProduction, true);
+});
+
+console.log('\n=== opening the app with no signal ===');
+
+const saved = (userId, over = {}) => ({
+  userId,
+  membership: { farmId: FARM, role: 'driver', canWriteProduction: false,
+    farmName: 'Sunnyridge', memberships: 1, ...over },
+});
+
+check('the last known membership is used when the server cannot be asked', () => {
+  // Without this the app opened offline, could not reach farm_users, read the
+  // error as "you have no farm" and offered to create one — on top of a season
+  // already sitting in IndexedDB on that device.
+  const m = recallMembership(saved('u1'), 'u1');
+  assert.equal(m.role, 'driver');
+  assert.equal(m.farmId, FARM);
+});
+
+check('a different person on the same device gets nothing', () => {
+  // A shared ute laptop. Whoever signed in last must not inherit the role of
+  // whoever signed in before them.
+  assert.equal(recallMembership(saved('u1'), 'u2'), null);
+});
+
+check('no user id matches nothing', () => {
+  for (const id of [null, undefined, '']) {
+    assert.equal(recallMembership(saved('u1'), id), null, String(id));
+  }
+});
+
+check('nothing remembered, or unreadable, is null rather than a guess', () => {
+  for (const s of [null, undefined, '', 0, 'not json', [], { nope: 1 }]) {
+    assert.equal(recallMembership(s, 'u1'), null, JSON.stringify(s));
+  }
+  assert.equal(recallMembership({ userId: 'u1' }, 'u1'), null, 'no membership on the record');
+});
+
+check('being asked and told "no farm" is not the same as being unable to ask', () => {
+  // The distinction the whole fix rests on. auth.js must recall only on an
+  // error; an empty list with no error means they have been removed, and the
+  // remembered copy has to be dropped or a removed worker keeps a stale farm.
+  const src = readFileSync(new URL('../docs/js/auth.js', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
+  assert.ok(!/if \(error \|\| !data\) return null;/.test(src),
+    'auth.js still collapses a network error into "you have no farm"');
+  assert.match(src, /if \(error\) return recallMembership/,
+    'auth.js no longer falls back to the last known membership when offline');
+  assert.match(src, /else clearRemembered\(\)/,
+    'auth.js no longer forgets a membership that the server says is gone');
 });
 
 console.log('\n=== the query is filtered at the server too ===');

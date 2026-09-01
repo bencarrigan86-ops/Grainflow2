@@ -27,6 +27,30 @@
  * @param {string} userId the signed-in user
  * @returns {object|null} the membership, or null if none of them is this user's
  */
+/**
+ * The membership remembered from the last time the server could be reached.
+ *
+ * Being unable to *ask* whether someone is on a farm is not the same answer as
+ * "they are not on one", and the app used to conflate the two: offline, the
+ * query errored, getMembership() returned null, and boot() read that as a
+ * brand-new account and offered to name a farm. On a phone in a paddock — the
+ * one place this app is supposed to work — it greeted you by proposing to
+ * create a second farm over the top of your season.
+ *
+ * Keyed by user id, so a device two people share never hands one of them the
+ * other's role. Anything unreadable is treated as nothing remembered.
+ *
+ * Worth being clear about what this is not: it is not a security decision. The
+ * role only chooses which tabs are offered. What can actually be read stays
+ * with the RLS policies on the server, which do not care what this device
+ * wrote down about itself.
+ */
+export function recallMembership(saved, userId) {
+  if (!userId || !saved || typeof saved !== 'object') return null;
+  if (saved.userId !== userId) return null;
+  return saved.membership ?? null;
+}
+
 export function pickMembership(rows, userId) {
   if (!Array.isArray(rows) || !userId) return null;
 
