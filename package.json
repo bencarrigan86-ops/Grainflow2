@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node serve.js",
-    "test": "node tests/modules.test.mjs && node tests/boot.test.mjs && node tests/reconcile.test.mjs && node tests/nav.test.mjs && node tests/membership.test.mjs && node tests/invites.test.mjs && node tests/sw.test.mjs && node tests/demo.test.mjs && node tests/enums.test.mjs && node tests/nitrogen.test.mjs && node tests/mapping.test.mjs && node tests/roundtrip.test.mjs",
+    "test": "node tests/modules.test.mjs && node tests/boot.test.mjs && node tests/reconcile.test.mjs && node tests/nav.test.mjs && node tests/membership.test.mjs && node tests/invites.test.mjs && node tests/sw.test.mjs && node tests/demo.test.mjs && node tests/tables.test.mjs && node tests/enums.test.mjs && node tests/nitrogen.test.mjs && node tests/mapping.test.mjs && node tests/roundtrip.test.mjs",
     "check": "node tests/validate-import.mjs"
   },
   "devDependencies": {
