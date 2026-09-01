@@ -14,7 +14,7 @@
 // stays a data URL until there is signal to upload it, and displays fine in
 // the meantime.
 
-import { supabase } from './supabase.js?v=77';
+import { supabase } from './supabase.js?v=78';
 
 const BUCKET = 'movement-photos';
 const SIGNED_URL_TTL = 60 * 60; // an hour is plenty for a screen, short enough to not be a link

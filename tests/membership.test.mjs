@@ -131,6 +131,25 @@ check('getMembership asks only for this user\'s rows', () => {
   assert.ok(auth.includes('pickMembership'), 'auth.js no longer uses pickMembership');
 });
 
+check('getMembership makes no auth call of its own', () => {
+  // It ran one for a while, and the app hung on sign-in. getMembership is
+  // called from boot(), boot() is called from the onAuthStateChange callback,
+  // and supabase-js serialises auth calls behind a lock that callback is
+  // already holding — so the await never returned. No error, no console line,
+  // just "Loading your farm…" forever, which is the worst kind of failure to
+  // diagnose because there is nothing at all to go on.
+  //
+  // The user id is passed in from the session boot() already has.
+  const auth = readFileSync(new URL('../docs/js/auth.js', import.meta.url), 'utf8');
+  const start = auth.indexOf('export async function getMembership');
+  assert.ok(start > -1, 'getMembership not found');
+  const body = auth.slice(start, auth.indexOf('\nexport ', start + 10));
+  const calls = body.split('\n').filter((l) => !l.trim().startsWith('//'))
+    .filter((l) => l.includes('supabase.auth'));
+  assert.deepEqual(calls, [], `getMembership calls supabase.auth: ${calls.join(' | ')}`);
+  assert.ok(/getMembership\(\s*userId\s*\)/.test(auth), 'getMembership no longer takes the id');
+});
+
 console.log('');
 if (failures) { console.log(`${failures} FAILURES`); process.exit(1); }
 console.log('ALL PASS');

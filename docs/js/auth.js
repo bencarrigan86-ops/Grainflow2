@@ -9,7 +9,7 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase } from './supabase.js?v=77';
+import { supabase } from './supabase.js?v=78';
 
 /** The signed-in user, or null. */
 export async function getUser() {
@@ -46,9 +46,15 @@ export async function getSession() {
  * nothing looked wrong from the outside, and the only symptom was a driver
  * seeing tabs they should not have.
  */
-export async function getMembership() {
-  const { data: userData } = await supabase.auth.getUser();
-  const userId = userData?.user?.id;
+export async function getMembership(userId) {
+  // The id is passed in, deliberately. Calling supabase.auth.getUser() here
+  // hung the app on sign-in: getMembership runs inside boot(), boot() runs from
+  // the onAuthStateChange callback, and supabase-js serialises auth calls
+  // behind a lock the callback itself is holding. The await never returns and
+  // the app sits on "Loading your farm…" forever — no error, no console line,
+  // just a screen that never changes.
+  //
+  // boot() already has the session, so the id costs nothing to hand over.
   if (!userId) return null;
 
   const { data, error } = await supabase
