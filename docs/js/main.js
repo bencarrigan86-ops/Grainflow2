@@ -1,15 +1,17 @@
-import { db } from './storage.js?v=80';
-import { renderPosition } from './views/position.js?v=80';
-import { renderProduction } from './views/production.js?v=80';
-import { renderReports } from './views/reports.js?v=80';
-import { renderSales } from './views/sales.js?v=80';
-import { renderMovements } from './views/movements.js?v=80';
-import { renderStorage } from './views/storage.js?v=80';
-import { renderSettings } from './views/settings.js?v=80';
-import { renderLogin } from './views/login.js?v=80';
-import { renderAccount } from './views/account.js?v=80';
-import { getSession, getMembership, onAuthChange } from './auth.js?v=80';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=80';
+import { db } from './storage.js?v=81';
+import { renderPosition } from './views/position.js?v=81';
+import { renderProduction } from './views/production.js?v=81';
+import { renderReports } from './views/reports.js?v=81';
+import { renderSales } from './views/sales.js?v=81';
+import { renderMovements } from './views/movements.js?v=81';
+import { renderStorage } from './views/storage.js?v=81';
+import { renderSettings } from './views/settings.js?v=81';
+import { renderLogin } from './views/login.js?v=81';
+import { renderAccount } from './views/account.js?v=81';
+import { getSession, getMembership, onAuthChange, acceptInvitation, signOut } from './auth.js?v=81';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=81';
+import { tokenFromHash } from './invites.js?v=81';
+import { esc } from './fmt.js?v=81';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -143,14 +145,100 @@ function setChromeVisible(visible) {
   chrome.forEach((el) => { el.hidden = !visible; });
 }
 
+// ---------------------------------------------------------------------------
+// Invitation links
+//
+// An invitation arrives as https://…/#/join/<token>, and the person opening it
+// usually has no account yet. So between arriving and being able to accept,
+// they sign up, and — if Supabase is holding the account for email
+// confirmation — they finish in a *different tab*, opened by their mail app,
+// at the plain app address with no token in it.
+//
+// The token therefore has to be put somewhere that survives all of that, which
+// rules out a variable and rules out sessionStorage. localStorage it is: on the
+// invitee's own device, and useless to anyone else because the server refuses
+// anyone signed in as a different address.
+//
+// It is read out of the address bar at load and taken straight back out again,
+// so a reload after joining does not try to spend an invitation twice.
+// ---------------------------------------------------------------------------
+
+const INVITE_KEY = 'grainflow.pendingInvite';
+
+function stashInviteFromHash() {
+  const token = tokenFromHash(location.hash);
+  if (!token) return;
+  try { localStorage.setItem(INVITE_KEY, token); } catch { /* private mode */ }
+  // Same document, different fragment — this does not reload the page, and
+  // replace() rather than assignment so Back does not walk into a spent link.
+  location.replace(`${location.pathname}${location.search}#/`);
+}
+
+function readInvite() {
+  try { return localStorage.getItem(INVITE_KEY); } catch { return null; }
+}
+
+function clearInvite() {
+  try { localStorage.removeItem(INVITE_KEY); } catch { /* nothing to do */ }
+}
+
+stashInviteFromHash();
+
+/**
+ * The invitation was refused by the server, and the reason is worth showing.
+ *
+ * Both buttons matter. "Sign out" is the way through the common case — someone
+ * already signed in as themselves opening a link sent to a work address — and
+ * it keeps the token, so signing back in as the right person finishes the job.
+ * "Continue" is the way out for an invitation that is genuinely dead, so nobody
+ * is stuck on this screen with a link they cannot use and cannot dismiss.
+ */
+function renderInviteRefused(message) {
+  setChromeVisible(false);
+  app.innerHTML = `
+    <div class="topbar"><div><h1>Grainflow</h1><div class="sub">Invitation</div></div></div>
+    <div class="view">
+      <div class="card">
+        <h2>That invitation was not accepted</h2>
+        <div class="hint" style="margin-top:6px">${esc(message)}</div>
+        <button class="btn" id="inv-signout" style="margin-top:14px">Sign out and try again</button>
+        <button class="btn secondary" id="inv-continue" style="margin-top:8px">Continue as I am</button>
+      </div>
+    </div>
+  `;
+  app.querySelector('#inv-signout').addEventListener('click', () => signOut());
+  app.querySelector('#inv-continue').addEventListener('click', () => {
+    clearInvite();
+    boot();
+  });
+}
+
 async function boot() {
   const session = await getSession();
+  const pendingInvite = readInvite();
 
   if (!session) {
     currentRole = null;
     setChromeVisible(false);
-    renderLogin(app, { onDone: boot });
+    // The login screen says why they are looking at it. Arriving on an
+    // invitation link and being shown a bare sign-in form reads as a dead link.
+    renderLogin(app, { onDone: boot, invited: !!pendingInvite });
     return;
+  }
+
+  let joined = null;
+  if (pendingInvite) {
+    setChromeVisible(false);
+    app.innerHTML = '<div class="empty">Joining the farm…</div>';
+    try {
+      joined = await acceptInvitation(pendingInvite);
+      clearInvite();
+    } catch (e) {
+      // The token is deliberately kept. Every failure here except a genuinely
+      // dead link is fixed by signing in as somebody else.
+      renderInviteRefused(e.message);
+      return;
+    }
   }
 
   const membership = await getMembership(session?.user?.id);
@@ -158,6 +246,25 @@ async function boot() {
     setChromeVisible(false);
     renderLogin(app, { mode: 'farm', onDone: boot });
     return;
+  }
+
+  // Joining a second farm is not something this app can show yet: one farm is
+  // open at a time and pickMembership() opens the oldest, so accepting would
+  // otherwise look like nothing happened at all. Say so instead.
+  if (joined && joined.farmId && joined.farmId !== membership.farmId) {
+    setChromeVisible(false);
+    app.innerHTML = `
+      <div class="topbar"><div><h1>Grainflow</h1><div class="sub">Invitation accepted</div></div></div>
+      <div class="view"><div class="card">
+        <h2>You have joined ${esc(joined.farmName || 'that farm')}</h2>
+        <div class="hint" style="margin-top:6px">Grainflow shows one farm at a time, and this
+          account is already on ${esc(membership.farmName || 'another farm')} — which is the one
+          that will open. Switching between farms is not built yet.</div>
+        <button class="btn" id="inv-ok" style="margin-top:14px">Open ${esc(membership.farmName || 'Grainflow')}</button>
+      </div></div>`;
+    await new Promise((resolve) => {
+      app.querySelector('#inv-ok').addEventListener('click', resolve, { once: true });
+    });
   }
 
   // Load the farm before anything renders. A view that paints against an

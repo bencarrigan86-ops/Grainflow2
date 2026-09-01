@@ -9,8 +9,9 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase } from './supabase.js?v=80';
-import { pickMembership } from './membership.js?v=80';
+import { supabase } from './supabase.js?v=81';
+import { pickMembership } from './membership.js?v=81';
+import { newToken, expiryFrom } from './invites.js?v=81';
 
 /** The signed-in user, or null. */
 export async function getUser() {
@@ -110,6 +111,140 @@ export async function createFarm(entityName) {
 
 export async function signOut() {
   await supabase.auth.signOut();
+}
+
+// ---------------------------------------------------------------------------
+// Getting other people onto the farm
+//
+// Five calls, and the split between them is the security model: reading who is
+// here and writing an invitation are ordinary table operations an owner is
+// allowed to do, so they go straight through the client and the RLS policies
+// judge them. Accepting is the one thing the invitee is *not* allowed to do —
+// they have no membership row yet, so every policy on farm_users refuses them
+// — and that goes through the definer function, which checks the token, the
+// expiry and the email before it writes anything.
+//
+// See supabase/migrations/20260901100000_invitations.sql for the other half.
+// ---------------------------------------------------------------------------
+
+/**
+ * Write an invitation and return the link to send.
+ *
+ * Nothing is emailed. The owner gets a URL and sends it however they already
+ * talk to that person. The link is not the secret — the email match on the
+ * server is — so it can travel over a text message without worry.
+ */
+export async function createInvitation({ farmId, email, role, canWriteProduction = false }) {
+  const session = await getSession();
+  const me = session?.user?.id ?? null;
+  const token = newToken();
+
+  const { error } = await supabase.from('invitations').insert({
+    id: crypto.randomUUID(),
+    farm_id: farmId,
+    email: String(email).trim().toLowerCase(),
+    role,
+    can_write_production: !!canWriteProduction,
+    token,
+    expires_at: expiryFrom().toISOString(),
+    created_by: me,
+    updated_by: me,
+  });
+
+  // A duplicate token is not a thing that happens to 256 bits, but the column
+  // is unique and pretending otherwise would hide a real fault behind a
+  // meaningless message.
+  if (error) throw new Error(friendlyInvite(error));
+  return { token };
+}
+
+/**
+ * Everyone on this farm, with their email addresses.
+ *
+ * Through a function rather than a select, because farm_users holds user ids
+ * and the addresses live in auth.users — which no client may read, correctly,
+ * since it is every user of the platform and not just this farm's.
+ */
+export async function listMembers(farmId) {
+  const { data, error } = await supabase.rpc('farm_members', { p_farm: farmId });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => ({
+    userId: r.user_id,
+    email: r.email,
+    role: r.role,
+    canWriteProduction: !!r.can_write_production,
+    joinedAt: r.joined_at,
+  }));
+}
+
+/** Invitations sent and not yet taken up. Owners only — the function says so. */
+export async function listPendingInvitations(farmId) {
+  const { data, error } = await supabase.rpc('pending_invitations', { p_farm: farmId });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    email: r.email,
+    role: r.role,
+    canWriteProduction: !!r.can_write_production,
+    token: r.token,
+    expiresAt: r.expires_at,
+    createdAt: r.created_at,
+  }));
+}
+
+/**
+ * Withdraw an invitation.
+ *
+ * Soft delete, matching every other table here: the row stays so the history
+ * of who was asked and when survives, and accept_invitation() skips it because
+ * it only looks at rows with deleted_at null.
+ */
+export async function revokeInvitation(id) {
+  const { error } = await supabase
+    .from('invitations')
+    .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Take someone off the farm.
+ *
+ * Also a soft delete, and deliberately reversible: re-inviting them un-deletes
+ * this same row, which is what bringing back a seasonal worker should do.
+ */
+export async function removeMember(farmId, userId) {
+  const { error } = await supabase
+    .from('farm_users')
+    .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('farm_id', farmId)
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Turn an invitation into a membership.
+ *
+ * Everything that matters happens on the server. This function cannot be made
+ * to write a membership by lying to it: the token has to exist, be unused, be
+ * unexpired, and have been issued to the address the caller is signed in as.
+ * The errors come back already written for a person to read.
+ */
+export async function acceptInvitation(token) {
+  const { data, error } = await supabase.rpc('accept_invitation', { p_token: token });
+  if (error) throw new Error(error.message);
+  return { farmId: data?.farm_id, role: data?.role, farmName: data?.farm_name ?? '' };
+}
+
+function friendlyInvite(error) {
+  const m = String(error?.message || '').toLowerCase();
+  if (error?.code === '42501' || m.includes('row-level security')) {
+    return 'Only the farm owner can invite people.';
+  }
+  if (error?.code === '23505') {
+    return 'That invitation could not be created — try again.';
+  }
+  return error?.message || 'Could not create the invitation.';
 }
 
 export function onAuthChange(callback) {

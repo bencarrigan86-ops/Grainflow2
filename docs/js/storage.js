@@ -18,15 +18,15 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=80';
+import { hydrate } from './hydrate.js?v=81';
 import {
   saveState, loadState, markDeleted, markDirty, outboxCount,
   loadFarmStamp, setAsideState,
-} from './local.js?v=80';
-import { chooseBootState } from './boot.js?v=80';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=80';
-import { schedulePush, pushOnReconnect } from './sync.js?v=80';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=80';
+} from './local.js?v=81';
+import { chooseBootState } from './boot.js?v=81';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=81';
+import { schedulePush, pushOnReconnect } from './sync.js?v=81';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=81';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -263,6 +263,13 @@ export const db = {
   },
 
   isReady() { return ready; },
+
+  // Who is looking at this farm, and which farm. Both are already held here
+  // because the push needs them; exposing them saves every view re-asking the
+  // server a question the app answered at sign-in. Views use these to decide
+  // what to *offer* — the server still decides what to allow.
+  getFarmId() { return farmId; },
+  getRole() { return role; },
 
   subscribe(fn) {
     listeners.add(fn);

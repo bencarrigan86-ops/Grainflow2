@@ -5,7 +5,7 @@
 // navigation per role, and that is when this gets a proper home in the
 // interface. Until then it is reachable at #/account.
 
-import { getUser, getMembership, signOut } from '../auth.js?v=80';
+import { getSession, getMembership, signOut } from '../auth.js?v=81';
 
 const ROLE_LABELS = {
   owner: 'Owner',
@@ -21,7 +21,18 @@ export async function renderAccount(root) {
     <div class="view"><div class="empty">Loading…</div></div>
   `;
 
-  const [user, membership] = await Promise.all([getUser(), getMembership()]);
+  // getMembership() takes the user id now — it used to fetch it itself, and
+  // doing that inside an auth callback deadlocks supabase-js. This screen was
+  // still calling it with no arguments, so it returned null every time and
+  // Account told everybody they had no farm. Sequential rather than
+  // Promise.all, because the second call needs the first one's answer.
+  //
+  // getSession() rather than getUser(): it reads the session already in local
+  // storage instead of asking the server, so it cannot hang, and it carries
+  // the same email and id.
+  const session = await getSession();
+  const user = session?.user ?? null;
+  const membership = await getMembership(user?.id);
 
   root.innerHTML = `
     <div class="topbar">

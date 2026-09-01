@@ -5,10 +5,18 @@
 // rather than new styling, so it looks like the rest of Grainflow rather than
 // a login page bolted onto the front of it.
 
-import { signIn, signUp, createFarm } from '../auth.js?v=80';
+import { signIn, signUp, createFarm } from '../auth.js?v=81';
 
-export function renderLogin(root, { mode = 'signin', onDone } = {}) {
+export function renderLogin(root, { mode = 'signin', onDone, invited = false } = {}) {
   let busy = false;
+
+  // Someone arriving on an invitation link has no account, so the useful screen
+  // is "create one" rather than "sign in". The banner stays across both, because
+  // the one thing they must get right — the address the invitation was sent to
+  // — is not something the app can fill in for them: the token deliberately
+  // carries nothing about who it is for, so nobody who finds the link can learn
+  // whose it is.
+  if (invited && mode === 'signin') mode = 'signup';
 
   function draw(current, message, messageKind) {
     const isSignUp = current === 'signup';
@@ -24,6 +32,12 @@ export function renderLogin(root, { mode = 'signin', onDone } = {}) {
         </div>
       </div>
       <div class="view">
+        ${invited && !isFarm ? `
+          <div class="card input">
+            <h2><span class="dot input"></span>You have been invited to a farm</h2>
+            <div class="hint">Use the email address the invitation was sent to — it only
+              works for that address. Already have an account on it? Sign in instead.</div>
+          </div>` : ''}
         <div class="card">
           ${isFarm ? farmForm() : credentialsForm(isSignUp)}
           ${message ? `<div class="hint" style="margin-top:12px;color:${
@@ -118,6 +132,11 @@ export function renderLogin(root, { mode = 'signin', onDone } = {}) {
             return;
           }
           busy = false;
+          // An invitee is joining a farm that already exists. Sending them to
+          // "name your farm" would create a second one and leave them standing
+          // in it, wondering where everybody else is — boot() takes it from
+          // here and spends the invitation.
+          if (invited) { onDone?.(); return; }
           draw('farm');
           return;
         }

@@ -10,7 +10,9 @@
 // by the server — but the tab bar offered the lot.
 
 import assert from 'node:assert';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { pickMembership } from '../docs/js/membership.js';
 
 let failures = 0;
@@ -129,6 +131,38 @@ check('getMembership asks only for this user\'s rows', () => {
   const auth = readFileSync(new URL('../docs/js/auth.js', import.meta.url), 'utf8');
   assert.ok(auth.includes(".eq('user_id'"), 'auth.js no longer filters by user_id');
   assert.ok(auth.includes('pickMembership'), 'auth.js no longer uses pickMembership');
+});
+
+check('nothing calls getMembership() without telling it who', () => {
+  // getMembership used to fetch the user id itself. Moving it to a parameter
+  // fixed a deadlock, and left every existing caller silently broken: with no
+  // argument it returns null, so the Account screen told everyone they had no
+  // farm and offered to create one. Nothing threw, nothing logged, and the
+  // screen looked plausible — which is why this is a test and not a comment.
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'docs', 'js');
+  const walk = (dir, out = []) => {
+    for (const e of readdirSync(dir)) {
+      const p = join(dir, e);
+      if (statSync(p).isDirectory()) walk(p, out);
+      else if (p.endsWith('.js')) out.push(p);
+    }
+    return out;
+  };
+
+  // Comments out first. Both this module and account.js explain the fault in
+  // prose, and a description of a bug is not the bug — the same trap
+  // modules.test.mjs already sidesteps for the same reason.
+  const code = (src) => src
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
+
+  const bad = [];
+  for (const path of walk(root)) {
+    if (/getMembership\(\s*\)/.test(code(readFileSync(path, 'utf8')))) {
+      bad.push(path.slice(path.indexOf('docs')).replace(/\\/g, '/'));
+    }
+  }
+  assert.deepEqual([...new Set(bad)], [], `getMembership() called with no user id in: ${[...new Set(bad)].join(', ')}`);
 });
 
 check('getMembership makes no auth call of its own', () => {

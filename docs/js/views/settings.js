@@ -1,10 +1,14 @@
-import { db } from '../storage.js?v=80';
-import { num, money, esc } from '../fmt.js?v=80';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=80';
-import { APP_VERSION } from '../version.js?v=80';
-import { exportRowsAsCSV } from '../csv.js?v=80';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=80';
-import { endpointLabel } from './movements.js?v=80';
+import { db } from '../storage.js?v=81';
+import { num, money, esc } from '../fmt.js?v=81';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=81';
+import { APP_VERSION } from '../version.js?v=81';
+import { exportRowsAsCSV } from '../csv.js?v=81';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=81';
+import { endpointLabel } from './movements.js?v=81';
+import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText } from '../invites.js?v=81';
+import {
+  createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
+} from '../auth.js?v=81';
 
 let unsub = null;
 
@@ -34,6 +38,8 @@ function paint(root) {
         <div class="field hint" style="margin-bottom:8px">Who you are signed in as, your role on this farm, and the way out.</div>
         <button class="btn secondary" id="go-account">Account &amp; sign out</button>
       </div>
+
+      ${db.getRole() === 'owner' ? '<div class="card" id="people-card"></div>' : ''}
 
       <div class="card">
         <h2>Season</h2>
@@ -114,6 +120,22 @@ function paint(root) {
     </div>
     <button class="fab" id="add-commodity">+</button>
   `;
+
+  // Fenced off deliberately. Everything below this line in Settings — seasons,
+  // commodities, overheads, the backup buttons — is the screen the farm
+  // actually runs on, and it renders after this point. A fault in the newest
+  // card on the page must not take the rest of it with it.
+  const peopleCard = root.querySelector('#people-card');
+  if (peopleCard) {
+    try {
+      paintPeople(peopleCard);
+    } catch (e) {
+      console.error('The People card failed to render', e);
+      peopleCard.innerHTML = `<h2>People</h2>
+        <div class="field hint" style="color:var(--danger)">This card failed to load:
+        ${esc(e.message)}</div>`;
+    }
+  }
 
   root.querySelectorAll('[data-edit-commodity]').forEach((el) => {
     el.addEventListener('click', () => openCommoditySheet(commodities.find((c) => c.id === el.dataset.editCommodity)));
@@ -223,6 +245,286 @@ function paint(root) {
       await Promise.all(keys.map((k) => caches.delete(k)));
     }
     location.reload();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// People
+//
+// The owner's roster: who is on the farm, who has been asked, and the way to
+// ask somebody else. Owner only — every function behind it is restricted to
+// owners on the server as well, so a manager who reaches this by other means
+// gets an empty list rather than a leak.
+//
+// The list is cached at module level rather than re-fetched inside paint().
+// paint() re-runs on every db change, and Settings is the screen where an owner
+// saves overheads and commodities, so binding two round trips to the server to
+// each of those would be a network request every time they touched Save.
+// ---------------------------------------------------------------------------
+
+let people = null;          // { members, pending } once fetched
+let peopleLoading = false;
+let peopleError = null;
+let peopleNode = null;      // the live card, so an async load can repaint it
+
+async function loadPeople() {
+  if (peopleLoading) return;
+  peopleLoading = true;
+  const farmId = db.getFarmId();
+  try {
+    // Two calls, but they do not depend on each other and the screen needs both
+    // before it can say anything useful.
+    const [members, pending] = await Promise.all([
+      listMembers(farmId), listPendingInvitations(farmId),
+    ]);
+    people = { members, pending };
+    peopleError = null;
+  } catch (e) {
+    peopleError = e.message;
+  }
+  peopleLoading = false;
+  if (peopleNode?.isConnected) paintPeople(peopleNode);
+}
+
+function refreshPeople() {
+  people = null;
+  peopleError = null;
+  if (peopleNode?.isConnected) paintPeople(peopleNode);
+}
+
+function paintPeople(card) {
+  peopleNode = card;
+
+  if (peopleError) {
+    card.innerHTML = `
+      <h2>People</h2>
+      <div class="field hint" style="color:var(--danger)">${esc(peopleError)}</div>
+      <button class="btn secondary small" id="people-retry" style="margin-top:8px">Try again</button>`;
+    card.querySelector('#people-retry').addEventListener('click', refreshPeople);
+    return;
+  }
+
+  if (people === null) {
+    card.innerHTML = '<h2>People</h2><div class="empty">Loading…</div>';
+    loadPeople();
+    return;
+  }
+
+  const { members, pending } = people;
+  card.innerHTML = `
+    <h2>People</h2>
+    <div class="field hint" style="margin-bottom:8px">Who can open this farm, and what they can do.</div>
+    ${members.map(memberRow).join('')}
+    ${pending.length ? `
+      <hr class="sep" />
+      <h2 style="margin:0 0 4px">Waiting to join</h2>
+      <div class="field hint" style="margin-bottom:8px">Send them the link again if they have not got to it.</div>
+      ${pending.map(pendingRow).join('')}` : ''}
+    <hr class="sep" />
+    <button class="btn" id="invite-someone">Invite someone&hellip;</button>
+  `;
+
+  card.querySelector('#invite-someone').addEventListener('click', () => openInviteSheet());
+
+  card.querySelectorAll('[data-copy-invite]').forEach((el) => {
+    el.addEventListener('click', () => sendInviteLink(el.dataset.copyInvite, el));
+  });
+
+  card.querySelectorAll('[data-revoke-invite]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const email = el.dataset.email;
+      confirmDelete(`Withdraw the invitation to ${email}? Their link stops working immediately.`, async () => {
+        try {
+          await revokeInvitation(el.dataset.revokeInvite);
+          refreshPeople();
+        } catch (e) { alert(`Could not withdraw that invitation.\n\n${e.message}`); }
+      });
+    });
+  });
+
+  card.querySelectorAll('[data-remove-member]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const email = el.dataset.email;
+      confirmDelete(`Remove ${email} from this farm? They keep their account but lose access to the farm's data. Inviting them again brings them straight back.`, async () => {
+        try {
+          await removeMember(db.getFarmId(), el.dataset.removeMember);
+          refreshPeople();
+        } catch (e) { alert(`Could not remove them.\n\n${e.message}`); }
+      });
+    });
+  });
+}
+
+function memberRow(m) {
+  // No Remove button on the owner. Removing the only owner leaves a farm nobody
+  // can administer, and there is no second owner to reinstate them.
+  const extra = m.canWriteProduction && (m.role === 'farm_worker' || m.role === 'driver')
+    ? ' · can record production' : '';
+  return `
+    <div class="list-item">
+      <div>
+        <div class="main">${esc(m.email)}</div>
+        <div class="meta">${esc(roleLabel(m.role))}${extra}</div>
+      </div>
+      <div class="right">
+        ${m.role === 'owner'
+          ? '<div class="meta">Owner</div>'
+          : `<button class="btn danger small" data-remove-member="${esc(m.userId)}" data-email="${esc(m.email)}">Remove</button>`}
+      </div>
+    </div>`;
+}
+
+function pendingRow(i) {
+  return `
+    <div class="list-item">
+      <div>
+        <div class="main">${esc(i.email)}</div>
+        <div class="meta">${esc(roleLabel(i.role))} · ${esc(expiryText(i.expiresAt))}</div>
+      </div>
+      <div class="right swipe-actions">
+        <button class="btn secondary small" data-copy-invite="${esc(i.token)}">Send link</button>
+        <button class="btn danger small" data-revoke-invite="${esc(i.id)}" data-email="${esc(i.email)}">Revoke</button>
+      </div>
+    </div>`;
+}
+
+/**
+ * Get the link to the person.
+ *
+ * The share sheet first, because on the phone this is going into a text message
+ * and the share sheet is the shortest path to one. Clipboard second. Both can
+ * fail — share is missing on desktop, clipboard needs a secure context and can
+ * be refused outright — so the last resort shows the link in a box the owner
+ * can select by hand, which always works.
+ */
+async function sendInviteLink(token, btn) {
+  const link = inviteLink(token, location.origin, location.pathname);
+  const said = (text) => {
+    const was = btn.textContent;
+    btn.textContent = text;
+    setTimeout(() => { btn.textContent = was; }, 1600);
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: 'Grainflow', text: 'Join my farm on Grainflow:', url: link });
+      return;
+    }
+  } catch (e) {
+    // A cancelled share sheet throws. That is not a failure worth falling
+    // through on — the owner changed their mind.
+    if (e?.name === 'AbortError') return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(link);
+    said('Copied');
+    return;
+  } catch { /* no clipboard — show it instead */ }
+
+  showLinkSheet(link);
+}
+
+function showLinkSheet(link) {
+  openSheet('Invitation link', (root) => {
+    root.innerHTML = `
+      <div class="field hint" style="margin-bottom:10px">Send this to them however you normally would. It only works for the address it was issued to.</div>
+      <div class="field">
+        <input id="inv-link" type="text" value="${esc(link)}" readonly />
+      </div>
+      <button class="btn" id="inv-link-copy">Copy link</button>
+    `;
+    const input = root.querySelector('#inv-link');
+    input.addEventListener('focus', () => input.select());
+    root.querySelector('#inv-link-copy').addEventListener('click', async () => {
+      input.select();
+      try { await navigator.clipboard.writeText(link); } catch { /* the selection is the fallback */ }
+    });
+  });
+}
+
+function openInviteSheet() {
+  openSheet('Invite someone', (root) => {
+    root.innerHTML = `
+      <div class="field">
+        <label for="inv-email">Email address</label>
+        <input id="inv-email" type="email" inputmode="email" autocomplete="off"
+               autocapitalize="none" spellcheck="false" placeholder="them@example.com" />
+        <div class="hint">The address they will sign in with. The invitation only works for
+          this address, so a typo here is an invitation nobody can accept.</div>
+      </div>
+      ${field({ label: 'They will be a', id: 'inv-role', type: 'select', value: 'driver',
+        options: INVITABLE_ROLES.map((r) => ({ value: r.value, label: r.label })) })}
+      <div class="field hint" id="inv-blurb" style="margin-top:-6px"></div>
+      <div id="inv-prod-wrap" style="display:none">
+        ${field({ label: 'Can record production', id: 'inv-prod', type: 'select', value: 'no',
+          options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }],
+          hint: 'Lets them enter yields and fertiliser as well as their own loads.' })}
+      </div>
+      <div class="field hint">Nothing is emailed. You get a link to send them yourself.</div>
+      <div id="inv-problems"></div>
+      <button class="btn" id="inv-create">Create invitation</button>
+    `;
+
+    const roleEl = root.querySelector('#inv-role');
+    const blurbEl = root.querySelector('#inv-blurb');
+    const prodWrap = root.querySelector('#inv-prod-wrap');
+    const problemsEl = root.querySelector('#inv-problems');
+    const btn = root.querySelector('#inv-create');
+
+    const syncRole = () => {
+      const r = INVITABLE_ROLES.find((x) => x.value === roleEl.value);
+      blurbEl.textContent = r?.blurb ?? '';
+      // Only the two field roles have production withheld in the first place,
+      // so the question is meaningless for the others.
+      prodWrap.style.display = (roleEl.value === 'farm_worker' || roleEl.value === 'driver')
+        ? 'block' : 'none';
+    };
+    roleEl.addEventListener('change', syncRole);
+    syncRole();
+
+    let busy = false;
+    btn.addEventListener('click', async () => {
+      if (busy) return;
+      const email = getVal(root, 'inv-email');
+      const role = roleEl.value;
+
+      // Checked here against what is already on the screen, so the owner is
+      // told "they are already on this farm" rather than watching a link they
+      // send get refused a day later.
+      const v = validateInvite({
+        email, role,
+        existingMembers: people?.members ?? [],
+        pendingInvites: people?.pending ?? [],
+      });
+      if (!v.ok) {
+        problemsEl.innerHTML = v.problems
+          .map((p) => `<div class="hint" style="color:var(--danger);margin-bottom:4px">${esc(p)}</div>`)
+          .join('');
+        return;
+      }
+      problemsEl.innerHTML = '';
+
+      busy = true;
+      btn.textContent = 'Creating…';
+      try {
+        const { token } = await createInvitation({
+          farmId: db.getFarmId(),
+          email: v.email,
+          role: v.role,
+          canWriteProduction: getVal(root, 'inv-prod') === 'yes',
+        });
+        refreshPeople();
+        // Straight to the link. The invitation is worth nothing until it is
+        // actually sent, and an owner who closes this sheet without sending it
+        // has created a row and told nobody.
+        showLinkSheet(inviteLink(token, location.origin, location.pathname));
+      } catch (e) {
+        busy = false;
+        btn.textContent = 'Create invitation';
+        problemsEl.innerHTML = `<div class="hint" style="color:var(--danger);margin-bottom:4px">${esc(e.message)}</div>`;
+      }
+    });
   });
 }
 
