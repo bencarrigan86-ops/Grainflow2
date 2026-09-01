@@ -1,15 +1,15 @@
-import { db } from './storage.js?v=78';
-import { renderPosition } from './views/position.js?v=78';
-import { renderProduction } from './views/production.js?v=78';
-import { renderReports } from './views/reports.js?v=78';
-import { renderSales } from './views/sales.js?v=78';
-import { renderMovements } from './views/movements.js?v=78';
-import { renderStorage } from './views/storage.js?v=78';
-import { renderSettings } from './views/settings.js?v=78';
-import { renderLogin } from './views/login.js?v=78';
-import { renderAccount } from './views/account.js?v=78';
-import { getSession, getMembership, onAuthChange } from './auth.js?v=78';
-import { tabsForRole, landingTabFor, canOpen } from './nav.js?v=78';
+import { db } from './storage.js?v=79';
+import { renderPosition } from './views/position.js?v=79';
+import { renderProduction } from './views/production.js?v=79';
+import { renderReports } from './views/reports.js?v=79';
+import { renderSales } from './views/sales.js?v=79';
+import { renderMovements } from './views/movements.js?v=79';
+import { renderStorage } from './views/storage.js?v=79';
+import { renderSettings } from './views/settings.js?v=79';
+import { renderLogin } from './views/login.js?v=79';
+import { renderAccount } from './views/account.js?v=79';
+import { getSession, getMembership, onAuthChange } from './auth.js?v=79';
+import { tabsForRole, landingTabFor, canOpen } from './nav.js?v=79';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
