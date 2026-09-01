@@ -9,9 +9,9 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase } from './supabase.js?v=82';
-import { pickMembership } from './membership.js?v=82';
-import { newToken, expiryFrom } from './invites.js?v=82';
+import { supabase } from './supabase.js?v=83';
+import { pickMembership } from './membership.js?v=83';
+import { newToken, expiryFrom } from './invites.js?v=83';
 
 /** The signed-in user, or null. */
 export async function getUser() {
@@ -61,7 +61,7 @@ export async function getMembership(userId) {
 
   const { data, error } = await supabase
     .from('farm_users')
-    .select('user_id, farm_id, role, can_write_production, created_at, farms ( entity_name )')
+    .select('user_id, farm_id, role, can_write_production, created_at, farms ( farm_name, entity_name )')
     .eq('user_id', userId)
     .is('deleted_at', null);
 

@@ -44,7 +44,10 @@ export function pickMembership(rows, userId) {
     farmId: row.farm_id,
     role: row.role,
     canWriteProduction: !!row.can_write_production,
-    farmName: row.farms?.entity_name ?? '',
+    // The property name if it has been set, the trading entity if not. A farm
+    // created before these were separate columns has only the entity, and
+    // showing nothing would be worse than showing the name it has always had.
+    farmName: row.farms?.farm_name || row.farms?.entity_name || '',
     // Kept so a later farm switcher has something to offer, and so the account
     // screen can say "1 of 2 farms" rather than pretending there is only one.
     memberships: mine.length,

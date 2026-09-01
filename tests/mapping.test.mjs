@@ -15,7 +15,7 @@ const state = {
   version: 2,
   currentYear: '2026',
   businessDetails: {
-    entityName: 'Carrigan Farms', abn: '12345678901', ngr: 'NGR123',
+    farmName: 'Sunnyridge', entityName: 'Carrigan Farms', abn: '12345678901', ngr: 'NGR123',
     contactName: 'Ben', phone: '0400000000', email: 'b@example.com',
     address: '123 Road', paymentTermsDays: 21,
     bankName: 'NAB', accountName: 'Carrigan', bsb: '084-000', accountNumber: '12345678',

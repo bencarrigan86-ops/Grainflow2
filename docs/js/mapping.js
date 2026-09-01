@@ -48,6 +48,12 @@ export function stateToRows(state, farmId) {
   const b = state.businessDetails || {};
   out.farms.push({
     id: farmId,
+    // Two names, deliberately. farm_name is the property — Sunnyridge — and is
+    // what the app calls this place, what an invitation says you are joining,
+    // and what the Account screen shows. entity_name is the ABN holder that
+    // appears as the Seller on an invoice. They were one column and one of them
+    // was always wrong wherever it was shown.
+    farm_name: orNull(b.farmName),
     entity_name: s(b.entityName),
     abn: orNull(b.abn), ngr: orNull(b.ngr),
     contact_name: orNull(b.contactName), phone: orNull(b.phone),
@@ -411,6 +417,9 @@ export function rowsToState(rows) {
     currentYear: currentYear || Object.keys(years)[0] || String(new Date().getFullYear()),
     years,
     businessDetails: {
+      // Falls back to the entity while a farm predates the split, so an older
+      // farm reads as named rather than blank until somebody sets it.
+      farmName: farm.farm_name ?? farm.entity_name ?? '',
       entityName: farm.entity_name ?? '',
       abn: farm.abn ?? '', ngr: farm.ngr ?? '',
       contactName: farm.contact_name ?? '', phone: farm.phone ?? '',

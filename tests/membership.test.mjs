@@ -112,6 +112,44 @@ check('a farm with no name given yet reads as empty, not undefined', () => {
   assert.equal(m.farmName, '');
 });
 
+console.log('\n=== the property and the entity are different names ===');
+
+check('the property name wins when it has been set', () => {
+  // Sunnyridge is the farm. Carrigan Agricultural Co Pty Ltd is the ABN holder
+  // on the invoices. The app should say the first one.
+  const m = pickMembership([row('u1', 'owner', {
+    farms: { farm_name: 'Sunnyridge', entity_name: 'Carrigan Agricultural Co Pty Ltd' },
+  })], 'u1');
+  assert.equal(m.farmName, 'Sunnyridge');
+});
+
+check('a farm from before the split falls back to its entity name', () => {
+  // Every farm that existed before this change has only entity_name. Showing
+  // nothing would be a regression; showing the name it has always had is not.
+  for (const farms of [
+    { entity_name: 'Sunnyridge' },
+    { farm_name: null, entity_name: 'Sunnyridge' },
+    { farm_name: '', entity_name: 'Sunnyridge' },
+  ]) {
+    assert.equal(pickMembership([row('u1', 'owner', { farms })], 'u1').farmName,
+      'Sunnyridge', JSON.stringify(farms));
+  }
+});
+
+check('neither name set still reads as empty rather than undefined', () => {
+  const m = pickMembership([row('u1', 'owner', { farms: { farm_name: null, entity_name: null } })], 'u1');
+  assert.equal(m.farmName, '');
+});
+
+check('the query asks the server for both columns', () => {
+  // pickMembership can only prefer a column the query actually selected. This
+  // is the pairing that a rename would silently break: the fallback would keep
+  // working, so every farm would quietly show its entity name forever.
+  const auth = readFileSync(new URL('../docs/js/auth.js', import.meta.url), 'utf8');
+  assert.match(auth, /farms\s*\(\s*farm_name\s*,\s*entity_name\s*\)/,
+    'auth.js no longer selects farm_name — the split would be invisible');
+});
+
 check('canWriteProduction is a boolean whatever the column says', () => {
   for (const v of [null, undefined, 0, 'false']) {
     const m = pickMembership([row('u1', 'driver', { can_write_production: v })], 'u1');

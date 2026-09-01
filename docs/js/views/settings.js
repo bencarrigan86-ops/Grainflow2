@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=82';
-import { num, money, esc } from '../fmt.js?v=82';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=82';
-import { APP_VERSION } from '../version.js?v=82';
-import { exportRowsAsCSV } from '../csv.js?v=82';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=82';
-import { endpointLabel } from './movements.js?v=82';
+import { db } from '../storage.js?v=83';
+import { num, money, esc } from '../fmt.js?v=83';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=83';
+import { APP_VERSION } from '../version.js?v=83';
+import { exportRowsAsCSV } from '../csv.js?v=83';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=83';
+import { endpointLabel } from './movements.js?v=83';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=82';
+} from '../invites.js?v=83';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=82';
+} from '../auth.js?v=83';
 
 let unsub = null;
 
@@ -43,6 +43,16 @@ function paint(root) {
       </div>
 
       ${db.getRole() === 'owner' ? '<div class="card" id="people-card"></div>' : ''}
+
+      <div class="card">
+        <h2>Farm</h2>
+        <div class="field hint" style="margin-bottom:6px">The property. This is what the app
+          calls this place, what someone is told they are joining when you invite them, and
+          what shows on the Account screen. The trading entity that appears on invoices is
+          separate — that's Business details, below.</div>
+        ${field({ label: 'Farm / property name', id: 'bd-farm', value: business.farmName, placeholder: 'e.g. Sunnyridge' })}
+        <button class="btn" id="save-farm">Save farm name</button>
+      </div>
 
       <div class="card">
         <h2>Season</h2>
@@ -77,7 +87,9 @@ function paint(root) {
 
       <div class="card">
         <h2>Business details</h2>
-        <div class="field hint" style="margin-bottom:6px">Used as the "Seller" on invoices you generate in Sales.</div>
+        <div class="field hint" style="margin-bottom:6px">The entity that holds the ABN and the
+          bank account. Used as the "Seller" on invoices you generate in Sales — not as the
+          name of the farm, which is set above.</div>
         ${field({ label: 'Entity / business name', id: 'bd-entity', value: business.entityName, placeholder: 'e.g. Carrigan Agricultural Co Pty Ltd' })}
         <div class="grid-2">
           ${field({ label: 'ABN', id: 'bd-abn', value: business.abn })}
@@ -166,6 +178,10 @@ function paint(root) {
       repairsMaintenance: getNum(root, 'oh-rm'),
       other: getNum(root, 'oh-other'),
     });
+  });
+
+  root.querySelector('#save-farm').addEventListener('click', () => {
+    db.updateBusinessDetails({ farmName: getVal(root, 'bd-farm')?.trim() });
   });
 
   root.querySelector('#save-business').addEventListener('click', () => {

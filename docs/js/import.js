@@ -95,7 +95,7 @@ export const DEFAULT_OVERHEADS = {
 };
 
 export const DEFAULT_BUSINESS_DETAILS = {
-  entityName: '', abn: '', ngr: '', contactName: '', phone: '', email: '', address: '',
+  farmName: '', entityName: '', abn: '', ngr: '', contactName: '', phone: '', email: '', address: '',
   paymentTermsDays: 14,
   bankName: '', accountName: '', bsb: '', accountNumber: '',
 };
