@@ -1,21 +1,21 @@
-import { db } from './storage.js?v=93';
-import { renderPosition } from './views/position.js?v=93';
-import { renderProduction } from './views/production.js?v=93';
-import { renderReports } from './views/reports.js?v=93';
-import { renderSales } from './views/sales.js?v=93';
-import { renderMovements } from './views/movements.js?v=93';
-import { renderStorage } from './views/storage.js?v=93';
-import { renderSettings } from './views/settings.js?v=93';
-import { renderLogin } from './views/login.js?v=93';
-import { renderAccount } from './views/account.js?v=93';
+import { db } from './storage.js?v=94';
+import { renderPosition } from './views/position.js?v=94';
+import { renderProduction } from './views/production.js?v=94';
+import { renderReports } from './views/reports.js?v=94';
+import { renderSales } from './views/sales.js?v=94';
+import { renderMovements } from './views/movements.js?v=94';
+import { renderStorage } from './views/storage.js?v=94';
+import { renderSettings } from './views/settings.js?v=94';
+import { renderLogin } from './views/login.js?v=94';
+import { renderAccount } from './views/account.js?v=94';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=93';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=93';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=93';
-import { esc } from './fmt.js?v=93';
-import { APP_VERSION } from './version.js?v=93';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=93';
+} from './auth.js?v=94';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=94';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=94';
+import { esc } from './fmt.js?v=94';
+import { APP_VERSION } from './version.js?v=94';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=94';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set

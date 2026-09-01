@@ -18,15 +18,15 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=93';
+import { hydrate } from './hydrate.js?v=94';
 import {
   saveState, loadState, markDeleted, markDirty, outboxCount,
   loadFarmStamp, setAsideState,
-} from './local.js?v=93';
-import { chooseBootState } from './boot.js?v=93';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=93';
-import { schedulePush, pushOnReconnect } from './sync.js?v=93';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=93';
+} from './local.js?v=94';
+import { chooseBootState } from './boot.js?v=94';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=94';
+import { schedulePush, pushOnReconnect } from './sync.js?v=94';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=94';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -156,8 +156,17 @@ function persist() {
 // A push that fails quietly is worse than one that fails loudly: the app looks
 // like it saved, the row is only on this device, and the first anyone knows is
 // when a second device does not show it.
+let lastPushError = null;
+
+window.addEventListener('grainflow:push-ok', () => { lastPushError = null; });
+
 window.addEventListener('grainflow:push-failed', (e) => {
   const { table, message, details, hint, code, sample } = e.detail?.errors?.[0] || {};
+  // Kept, not just logged. A console is not reachable on a phone, and this is
+  // exactly the fault a phone hits: seven changes owed, every push refused, and
+  // — because unsent work outranks the server — the device quietly ignoring
+  // everything the farm has done since. It has to be visible in the app.
+  lastPushError = { table, message, details, hint, code, at: new Date().toISOString() };
   console.error(
     `PUSH FAILED on "${table}" [${code || 'no code'}]\n` +
     `  ${message}\n` +
@@ -263,6 +272,25 @@ export const db = {
   },
 
   isReady() { return ready; },
+
+  /**
+   * What this device still owes the server, and why it is stuck.
+   *
+   * Async because the count lives in IndexedDB. Anything above zero means this
+   * device is on its own copy and is not taking updates from anyone else —
+   * which is correct behaviour, and needs saying out loud rather than being
+   * left for somebody to deduce.
+   */
+  async getSyncStatus() {
+    const pending = await outboxCount().catch(() => 0);
+    return { pending, lastError: lastPushError };
+  },
+
+  /** Try now, rather than waiting for the next edit. */
+  pushNow() {
+    if (!farmId) return;
+    schedulePush(() => data, farmId, role, { delay: 0 });
+  },
 
   // Who is looking at this farm, and which farm. Both are already held here
   // because the push needs them; exposing them saves every view re-asking the

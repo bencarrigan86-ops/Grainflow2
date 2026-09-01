@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=93';
-import { num, money, esc } from '../fmt.js?v=93';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=93';
-import { APP_VERSION } from '../version.js?v=93';
-import { exportRowsAsCSV } from '../csv.js?v=93';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=93';
-import { endpointLabel } from './movements.js?v=93';
+import { db } from '../storage.js?v=94';
+import { num, money, esc } from '../fmt.js?v=94';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=94';
+import { APP_VERSION } from '../version.js?v=94';
+import { exportRowsAsCSV } from '../csv.js?v=94';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=94';
+import { endpointLabel } from './movements.js?v=94';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=93';
+} from '../invites.js?v=94';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=93';
+} from '../auth.js?v=94';
 
 let unsub = null;
 
@@ -126,6 +126,8 @@ function paint(root) {
         <input type="file" id="import-file" accept="application/json" style="display:none" />
       </div>
 
+      <div class="card" id="sync-card"></div>
+
       <div class="card">
         <h2>App</h2>
         <div class="row"><span class="label">Version</span><span class="value">${esc(APP_VERSION)}</span></div>
@@ -154,6 +156,8 @@ function paint(root) {
   // commodities, overheads, the backup buttons — is the screen the farm
   // actually runs on, and it renders after this point. A fault in the newest
   // card on the page must not take the rest of it with it.
+  paintSyncCard(root);
+
   const peopleCard = root.querySelector('#people-card');
   if (peopleCard) {
     try {
@@ -649,6 +653,63 @@ function openInviteSheet() {
         problemsEl.innerHTML = `<div class="hint" style="color:var(--danger);margin-bottom:4px">${esc(e.message)}</div>`;
       }
     });
+  });
+}
+
+/**
+ * Whether this device is up to date with the server, in words.
+ *
+ * Written after a phone sat seven changes behind for a day. Every push was
+ * being refused, the only record of that was a console line nobody can reach on
+ * a phone, and — because unsent work outranks the server — the device was also
+ * silently ignoring everything done anywhere else. Three separate things were
+ * wrong and the app's answer to all of them was to look completely normal.
+ */
+async function paintSyncCard(root) {
+  const card = root.querySelector('#sync-card');
+  if (!card) return;
+
+  let status = { pending: 0, lastError: null };
+  try { status = await db.getSyncStatus(); } catch { /* leave it saying nothing */ }
+  if (!card.isConnected) return;
+
+  // Nothing owed and nothing wrong is the normal case, and it should not take
+  // up a card telling you so.
+  if (!status.pending && !status.lastError) {
+    card.innerHTML = `
+      <h2>Sync</h2>
+      <div class="row"><span class="label">This device</span><span class="value">Up to date</span></div>`;
+    return;
+  }
+
+  const e = status.lastError;
+  card.className = 'card input';
+  card.innerHTML = `
+    <h2><span class="dot input"></span>Not yet on the server</h2>
+    <div class="row">
+      <span class="label">Changes waiting</span>
+      <span class="value">${status.pending}</span>
+    </div>
+    <div class="field hint" style="margin-top:6px">While anything is waiting, this device keeps
+      its own copy and does not take updates made on other devices &mdash; that is deliberate, so
+      work cannot be overwritten before it has been saved. It sorts itself out once these
+      go up.</div>
+    ${e ? `
+      <hr class="sep" />
+      <div class="row"><span class="label">Refused at</span><span class="value">${esc(e.table || '?')}</span></div>
+      <div class="field hint" style="color:var(--danger);margin-top:4px">
+        ${esc(e.message || 'The server refused the change.')}${e.code ? ` (${esc(e.code)})` : ''}
+      </div>
+      ${e.hint ? `<div class="field hint">${esc(e.hint)}</div>` : ''}` : ''}
+    <button class="btn secondary small" id="sync-retry" style="margin-top:8px">Try sending now</button>
+  `;
+
+  card.querySelector('#sync-retry').addEventListener('click', async (ev) => {
+    ev.target.disabled = true;
+    ev.target.textContent = 'Sending…';
+    db.pushNow();
+    // The push is fire-and-forget; give it a moment, then report what is left.
+    setTimeout(() => paintSyncCard(root), 2500);
   });
 }
 

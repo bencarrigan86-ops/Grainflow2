@@ -11,10 +11,10 @@
 // far harder to get subtly wrong than a changelog, which is the beginning of
 // exactly the machinery we are deferring.
 
-import { supabase } from './supabase.js?v=93';
-import { stateToRows } from './mapping.js?v=93';
-import { markDirty, markDeleted, outboxItems, clearOutboxUpTo } from './local.js?v=93';
-import { flushPendingPhotos } from './photos.js?v=93';
+import { supabase } from './supabase.js?v=94';
+import { stateToRows } from './mapping.js?v=94';
+import { markDirty, markDeleted, outboxItems, clearOutboxUpTo } from './local.js?v=94';
+import { flushPendingPhotos } from './photos.js?v=94';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -156,6 +156,11 @@ export async function push(state, farmId, role = 'owner') {
     const out = await inFlight;
     if (out?.errors?.length) {
       window.dispatchEvent(new CustomEvent('grainflow:push-failed', { detail: out }));
+    } else {
+      // Success was silent, and that is half of why a phone could sit seven
+      // changes behind for a day with nothing on any screen admitting it.
+      // Something has to clear the warning as well as raise it.
+      window.dispatchEvent(new CustomEvent('grainflow:push-ok', { detail: out }));
     }
     return out;
   } finally {
