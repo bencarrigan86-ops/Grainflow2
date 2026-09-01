@@ -9,7 +9,7 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase } from './supabase.js?v=76';
+import { supabase } from './supabase.js?v=77';
 
 /** The signed-in user, or null. */
 export async function getUser() {
@@ -31,22 +31,34 @@ export async function getSession() {
  * One row is expected. A user on several farms is a Phase 4 problem — when it
  * arrives this returns a list and the app grows a farm switcher.
  */
+/**
+ * The signed-in user's membership: which farm, and as what.
+ *
+ * The user_id filter is not decoration. The farm_users policy lets any member
+ * see everyone on their farm — which is right, a farm should know who is on it
+ * — so an unfiltered query returns every membership row and the old `.limit(1)`
+ * took whichever came back first. A driver signing in was handed the owner's
+ * role, and the tab bar with it. Every screen was still empty, because the
+ * server refused the data, but the app offered the whole book.
+ *
+ * pickMembership() checks the same thing again on the way out. Two lines of
+ * defence for one question, because the failure was silent: nothing errored,
+ * nothing looked wrong from the outside, and the only symptom was a driver
+ * seeing tabs they should not have.
+ */
 export async function getMembership() {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData?.user?.id;
+  if (!userId) return null;
+
   const { data, error } = await supabase
     .from('farm_users')
-    .select('farm_id, role, can_write_production, farms ( entity_name )')
-    .is('deleted_at', null)
-    .limit(1);
+    .select('user_id, farm_id, role, can_write_production, created_at, farms ( entity_name )')
+    .eq('user_id', userId)
+    .is('deleted_at', null);
 
-  if (error || !data || data.length === 0) return null;
-
-  const row = data[0];
-  return {
-    farmId: row.farm_id,
-    role: row.role,
-    canWriteProduction: row.can_write_production,
-    farmName: row.farms?.entity_name ?? '',
-  };
+  if (error || !data) return null;
+  return pickMembership(data, userId);
 }
 
 export async function signIn(email, password) {
