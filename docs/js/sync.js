@@ -11,10 +11,10 @@
 // far harder to get subtly wrong than a changelog, which is the beginning of
 // exactly the machinery we are deferring.
 
-import { supabase } from './supabase.js?v=94';
-import { stateToRows } from './mapping.js?v=94';
-import { markDirty, markDeleted, outboxItems, clearOutboxUpTo } from './local.js?v=94';
-import { flushPendingPhotos } from './photos.js?v=94';
+import { supabase } from './supabase.js?v=95';
+import { stateToRows } from './mapping.js?v=95';
+import { markDirty, markDeleted, outboxItems, clearOutboxUpTo } from './local.js?v=95';
+import { flushPendingPhotos } from './photos.js?v=95';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -45,6 +45,31 @@ const WRITABLE = {
   bookkeeper: ['sales', 'sale_terms', 'sale_documents', 'invoices', 'overheads'],
   farm_worker: ['fields', 'field_agronomy', 'movements', 'movement_legs', 'movement_photos'],
   driver: ['movements', 'movement_legs', 'movement_photos'],
+};
+
+/**
+ * Which column decides "this is the same row" for each table.
+ *
+ * The default is the primary key, and for most tables that is right. Four
+ * tables hold exactly one row per parent and say so with a unique constraint,
+ * and for those the primary key is the WRONG identity: a device whose copy of a
+ * sale has lost its __termsId mints a brand new UUID on every push, so the
+ * insert collides with the terms row already sitting against that sale. It
+ * fails, mints another new UUID, and fails again, forever. One phone sat seven
+ * changes behind for a day on exactly this, and because unsent work outranks
+ * the server it also stopped accepting anything the farm did elsewhere.
+ *
+ * Deliberately NOT here: movements (farm_id, ticket_no) and invoices (farm_id,
+ * invoice_no). Those are unique too, but two devices offline can genuinely mint
+ * the same ticket number for two different loads — that is the whole reason
+ * number leasing is still on the list. Upserting on it would silently merge two
+ * real loads into one, which is far worse than a push that stops and says so.
+ */
+const CONFLICT_KEY = {
+  seasons: 'farm_id,label',   // one season per label
+  field_agronomy: 'field_id', // one agronomy row per paddock
+  sale_terms: 'sale_id',      // one terms row per contract
+  overheads: 'season_id',     // one overheads row per season
 };
 
 const CHUNK = 500;
@@ -113,7 +138,8 @@ export async function push(state, farmId, role = 'owner') {
       const list = rows[table] || [];
       if (list.length === 0) continue;
       for (const part of chunk(list)) {
-        const { error } = await supabase.from(table).upsert(part, { onConflict: 'id' });
+        const onConflict = CONFLICT_KEY[table] || 'id';
+        const { error } = await supabase.from(table).upsert(part, { onConflict });
         if (error) {
           // Stop at the first failure and leave the outbox intact. A partial
           // push that reports success is how you end up with a farm that is
@@ -175,4 +201,4 @@ export function pushOnReconnect(getState, farmId, role) {
   return () => window.removeEventListener('online', attempt);
 }
 
-export { ORDER as PUSH_ORDER, WRITABLE, chunk };
+export { ORDER as PUSH_ORDER, WRITABLE, CONFLICT_KEY, chunk };
