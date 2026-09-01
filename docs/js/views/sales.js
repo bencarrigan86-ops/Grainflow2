@@ -1,12 +1,13 @@
-import { db } from '../storage.js?v=91';
+import { db } from '../storage.js?v=92';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=91';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=91';
-import { num, tons, money, esc } from '../fmt.js?v=91';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=91';
-import { renderRelatedMovements } from './movements.js?v=91';
-import { openInvoiceListSheet } from './invoice.js?v=91';
+} from '../documents.js?v=92';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=92';
+import { num, tons, money, esc } from '../fmt.js?v=92';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=92';
+import { renderRelatedMovements } from './movements.js?v=92';
+import { openInvoiceListSheet } from './invoice.js?v=92';
+import { openContractDocSheet } from './contract.js?v=92';
 
 let unsub = null;
 
@@ -163,31 +164,6 @@ function openSaleSheet(existing) {
         ${field({ label: 'Delivery start', id: 'deliveryStart', type: 'date', value: existing?.deliveryStart })}
         ${field({ label: 'Delivery finish', id: 'deliveryEnd', type: 'date', value: existing?.deliveryEnd })}
       </div>
-      <div class="grid-2">
-        ${field({ label: 'Tons', id: 'tons', type: 'number', step: '0.01', value: existing?.tons })}
-        ${field({ label: 'Tons delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a Movement' })}
-      </div>
-      ${movementDelivered > 0 ? `<div class="row"><span class="label">+ Delivered via movements</span><span class="value" id="movement-delivered-value">${num(movementDelivered, 1)} t</span></div>` : ''}
-      <div class="grid-2">
-        ${field({ label: 'Price ($/t)', id: 'price', type: 'number', step: '0.01', value: existing?.price })}
-        ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
-      </div>
-      <div class="grid-2">
-        ${field({ label: 'Premium/discount ($/t)', id: 'premium', type: 'number', step: '0.01', value: existing?.premiumDiscount ?? 0, allowNegative: true, hint: 'Negative for a discount' })}
-        ${field({ label: 'Levies (%)', id: 'levies', type: 'number', step: '0.01', value: existing ? existing.leviesPct * 100 : 1.02, hint: 'e.g. GRDC + state levy' })}
-      </div>
-      <div class="grid-2">
-        ${field({ label: 'Tolerance (%)', id: 'tolPct', type: 'number', step: '0.1', value: existing?.tolerancePct ?? DEFAULT_TOLERANCE_PCT })}
-        ${field({ label: 'Tolerance cap (t)', id: 'tolCap', type: 'number', step: '0.1', value: existing?.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS, hint: 'Lesser of the two applies' })}
-      </div>
-      <div class="row"><span class="label">Tolerance range</span><span class="value" id="tol-preview">—</span></div>
-      ${field({ label: 'Ginning cost ($)', id: 'ginning', type: 'number', step: '0.01', value: existing?.ginning ?? 0, hint: 'Net ginning deduction — e.g. for a cotton seed sale. A total dollar amount, not a rate.' })}
-      ${field({ label: 'Broker note', id: 'brokerNote', value: existing?.brokerNote })}
-      ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
-      <div class="grid-2">
-        ${field({ label: 'Buyer ABN (optional)', id: 'buyerAbn', value: existing?.buyerAbn, hint: 'For invoices' })}
-        ${field({ label: 'Buyer address (optional)', id: 'buyerAddress', value: existing?.buyerAddress })}
-      </div>
       <hr class="sep" />
       <h2 style="margin:0 0 4px">Contract terms</h2>
       <div class="field hint" style="margin-bottom:10px">What the buyer's contract confirmation
@@ -230,6 +206,31 @@ function openSaleSheet(existing) {
         ${field({ label: 'Carry starts', id: 'carryFrom', type: 'date', value: existing?.carryFrom })}
       </div>
       ${field({ label: 'Trade rules', id: 'tradeRules', value: existing?.tradeRules, placeholder: 'e.g. GTA contract 3' })}
+      <div class="grid-2">
+        ${field({ label: 'Tons', id: 'tons', type: 'number', step: '0.01', value: existing?.tons })}
+        ${field({ label: 'Tons delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a Movement' })}
+      </div>
+      ${movementDelivered > 0 ? `<div class="row"><span class="label">+ Delivered via movements</span><span class="value" id="movement-delivered-value">${num(movementDelivered, 1)} t</span></div>` : ''}
+      <div class="grid-2">
+        ${field({ label: 'Price ($/t)', id: 'price', type: 'number', step: '0.01', value: existing?.price })}
+        ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
+      </div>
+      <div class="grid-2">
+        ${field({ label: 'Premium/discount ($/t)', id: 'premium', type: 'number', step: '0.01', value: existing?.premiumDiscount ?? 0, allowNegative: true, hint: 'Negative for a discount' })}
+        ${field({ label: 'Levies (%)', id: 'levies', type: 'number', step: '0.01', value: existing ? existing.leviesPct * 100 : 1.02, hint: 'e.g. GRDC + state levy' })}
+      </div>
+      <div class="grid-2">
+        ${field({ label: 'Tolerance (%)', id: 'tolPct', type: 'number', step: '0.1', value: existing?.tolerancePct ?? DEFAULT_TOLERANCE_PCT })}
+        ${field({ label: 'Tolerance cap (t)', id: 'tolCap', type: 'number', step: '0.1', value: existing?.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS, hint: 'Lesser of the two applies' })}
+      </div>
+      <div class="row"><span class="label">Tolerance range</span><span class="value" id="tol-preview">—</span></div>
+      ${field({ label: 'Ginning cost ($)', id: 'ginning', type: 'number', step: '0.01', value: existing?.ginning ?? 0, hint: 'Net ginning deduction — e.g. for a cotton seed sale. A total dollar amount, not a rate.' })}
+      ${field({ label: 'Broker note', id: 'brokerNote', value: existing?.brokerNote })}
+      ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
+      <div class="grid-2">
+        ${field({ label: 'Buyer ABN (optional)', id: 'buyerAbn', value: existing?.buyerAbn, hint: 'For invoices' })}
+        ${field({ label: 'Buyer address (optional)', id: 'buyerAddress', value: existing?.buyerAddress })}
+      </div>
       ${existing ? `
         <hr class="sep" />
         <h2 style="margin:0 0 4px">Documents</h2>
@@ -249,11 +250,21 @@ function openSaleSheet(existing) {
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn secondary" id="view-invoice" style="margin-top:8px">${invoiceButtonLabel(existing)}</button>` : ''}
+      ${existing ? `<button class="btn secondary" id="view-contract" style="margin-top:8px">Confirmation of sale (PDF)&hellip;</button>` : ''}
       ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete sale</button>` : ''}
     `;
     if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'sale', existing.id);
     const invoiceBtn = root.querySelector('#view-invoice');
     if (invoiceBtn) invoiceBtn.addEventListener('click', () => openInvoiceListSheet(existing));
+    const contractBtn = root.querySelector('#view-contract');
+    // Reads the saved sale rather than the form, so the document can never show
+    // a figure that has not been saved yet.
+    if (contractBtn) {
+      contractBtn.addEventListener('click', () => {
+        const fresh = db.get().sales.find((x) => x.id === existing.id) || existing;
+        openContractDocSheet(fresh);
+      });
+    }
 
     const tolPreview = root.querySelector('#tol-preview');
     let currentUnit = 't';

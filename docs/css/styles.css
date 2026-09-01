@@ -507,5 +507,5 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
   body * { visibility: hidden; }
   .invoice-doc, .invoice-doc * { visibility: visible; }
   .invoice-doc { position: absolute; top: 0; left: 0; width: 100%; margin: 0; border-radius: 0; border: none; }
-  .tabbar, .year-pill, .settings-btn, .fab, #print-invoice, .sheet-header, .sheet-handle { display: none !important; }
+  .tabbar, .year-pill, .settings-btn, .fab, #print-invoice, .doc-actions, .sheet-header, .sheet-handle { display: none !important; }
 }
