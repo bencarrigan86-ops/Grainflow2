@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=89';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=89';
-import { num, tons, money, esc } from '../fmt.js?v=89';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=89';
-import { renderRelatedMovements } from './movements.js?v=89';
-import { openInvoiceListSheet } from './invoice.js?v=89';
+import { db } from '../storage.js?v=90';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=90';
+import { num, tons, money, esc } from '../fmt.js?v=90';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=90';
+import { renderRelatedMovements } from './movements.js?v=90';
+import { openInvoiceListSheet } from './invoice.js?v=90';
 
 let unsub = null;
 
@@ -185,6 +185,48 @@ function openSaleSheet(existing) {
         ${field({ label: 'Buyer ABN (optional)', id: 'buyerAbn', value: existing?.buyerAbn, hint: 'For invoices' })}
         ${field({ label: 'Buyer address (optional)', id: 'buyerAddress', value: existing?.buyerAddress })}
       </div>
+      <hr class="sep" />
+      <h2 style="margin:0 0 4px">Contract terms</h2>
+      <div class="field hint" style="margin-bottom:10px">What the buyer's contract confirmation
+        says. Fill in what you have — anything left blank is simply not shown.</div>
+      <div class="grid-2">
+        ${field({ label: 'Crop year', id: 'cropYear', value: existing?.cropYear, placeholder: 'e.g. 2025/2026', hint: 'As the contract writes it' })}
+        ${field({ label: 'Contract type', id: 'contractType', value: existing?.contractType, placeholder: 'e.g. Ex Farm' })}
+      </div>
+      <div class="grid-2">
+        ${field({ label: 'Pricing point', id: 'pricingPoint', value: existing?.pricingPoint, placeholder: 'e.g. Goondiwindi - 45km S/W', hint: 'Where the price is struck' })}
+        ${field({ label: 'Weights to govern', id: 'weightsToGovern', type: 'select', value: existing?.weightsToGovern ?? '', options: [
+          { value: '', label: '—' },
+          { value: 'destination', label: 'Destination' },
+          { value: 'origin', label: 'Origin' },
+        ], hint: 'Whose weighbridge settles it' })}
+      </div>
+      ${field({ label: 'Delivery terms', id: 'deliveryTerms', value: existing?.deliveryTerms, placeholder: "e.g. Buyer's call, 5 business days notice" })}
+      ${field({ label: 'Buyer contact / trader', id: 'buyerContact', value: existing?.buyerContact, placeholder: 'Who to ring about a load' })}
+      <div class="grid-2">
+        ${field({ label: 'Broker', id: 'broker', value: existing?.broker, placeholder: 'e.g. Knight Commodities' })}
+        ${field({ label: 'Broker reference', id: 'brokerRef', value: existing?.brokerRef, placeholder: 'Their contract ref' })}
+      </div>
+      ${field({ label: 'Brokerage paid by', id: 'brokeragePaidBy', type: 'select', value: existing?.brokeragePaidBy ?? '', options: [
+        { value: '', label: '—' },
+        { value: 'seller', label: 'Seller (you)' },
+        { value: 'buyer', label: 'Buyer' },
+      ] })}
+      <div class="grid-2">
+        ${field({ label: 'Payment terms (days)', id: 'paymentTermsDays', type: 'number', step: '1', value: existing?.paymentTermsDays ?? '' })}
+        ${field({ label: 'Counted from', id: 'paymentTermsBasis', type: 'select', value: existing?.paymentTermsBasis ?? '', options: [
+          { value: '', label: '—' },
+          { value: 'end of week of delivery', label: 'End of week of delivery' },
+          { value: 'end of week of transfer', label: 'End of week of transfer' },
+          { value: 'date of delivery', label: 'Date of delivery' },
+          { value: 'invoice date', label: 'Invoice date' },
+        ], hint: '"30 days" and "30 days from end of week" are up to six days apart' })}
+      </div>
+      <div class="grid-2">
+        ${field({ label: 'Carry ($/t/month)', id: 'carryRate', type: 'number', step: '0.01', value: existing?.carryRate ?? 0, hint: 'Paid to leave grain on farm' })}
+        ${field({ label: 'Carry starts', id: 'carryFrom', type: 'date', value: existing?.carryFrom })}
+      </div>
+      ${field({ label: 'Trade rules', id: 'tradeRules', value: existing?.tradeRules, placeholder: 'e.g. GTA contract 3' })}
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn secondary" id="view-invoice" style="margin-top:8px">${invoiceButtonLabel(existing)}</button>` : ''}
@@ -248,6 +290,20 @@ function openSaleSheet(existing) {
         notes: getVal(root, 'notes')?.trim(),
         buyerAbn: getVal(root, 'buyerAbn')?.trim(),
         buyerAddress: getVal(root, 'buyerAddress')?.trim(),
+        cropYear: getVal(root, 'cropYear')?.trim(),
+        contractType: getVal(root, 'contractType')?.trim(),
+        pricingPoint: getVal(root, 'pricingPoint')?.trim(),
+        weightsToGovern: getVal(root, 'weightsToGovern'),
+        deliveryTerms: getVal(root, 'deliveryTerms')?.trim(),
+        buyerContact: getVal(root, 'buyerContact')?.trim(),
+        broker: getVal(root, 'broker')?.trim(),
+        brokerRef: getVal(root, 'brokerRef')?.trim(),
+        brokeragePaidBy: getVal(root, 'brokeragePaidBy'),
+        paymentTermsDays: getNum(root, 'paymentTermsDays'),
+        paymentTermsBasis: getVal(root, 'paymentTermsBasis'),
+        carryRate: getNum(root, 'carryRate'),
+        carryFrom: getVal(root, 'carryFrom'),
+        tradeRules: getVal(root, 'tradeRules')?.trim(),
       });
       closeSheet();
     });

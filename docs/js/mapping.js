@@ -155,6 +155,15 @@ export function stateToRows(state, farmId) {
         tolerance_pct: n(sale.tolerancePct),
         tolerance_cap_tons: n(sale.toleranceCapTons),
         notes: orNull(sale.notes),
+        // What a real contract says, and this app used to lose. See the
+        // migration for why each one is here; the short version is that a
+        // grower who cannot record them keeps the PDF open beside the app.
+        crop_year: orNull(sale.cropYear),
+        contract_type: orNull(sale.contractType),
+        pricing_point: orNull(sale.pricingPoint),
+        weights_to_govern: orNull(sale.weightsToGovern),
+        delivery_terms: orNull(sale.deliveryTerms),
+        buyer_contact: orNull(sale.buyerContact),
       });
       out.sale_terms.push({
         id: sale.__termsId || uid(), farm_id: farmId, sale_id: sale.id,
@@ -170,6 +179,16 @@ export function stateToRows(state, farmId) {
         broker_note: orNull(sale.brokerNote),
         buyer_abn: orNull(sale.buyerAbn),
         buyer_address: orNull(sale.buyerAddress),
+        // The commercial half of a contract's terms: who the broker is, who
+        // pays them, what the buyer pays to leave grain on farm, and which
+        // rulebook governs when there is an argument.
+        broker: orNull(sale.broker),
+        broker_ref: orNull(sale.brokerRef),
+        brokerage_paid_by: orNull(sale.brokeragePaidBy),
+        carry_rate: n(sale.carryRate),
+        carry_from: orNull(sale.carryFrom),
+        payment_terms_basis: orNull(sale.paymentTermsBasis),
+        trade_rules: orNull(sale.tradeRules),
       });
     }
 
@@ -354,6 +373,19 @@ export function rowsToState(rows) {
           brokerNote: t.broker_note ?? '',
           buyerAbn: t.buyer_abn ?? '',
           buyerAddress: t.buyer_address ?? '',
+          cropYear: sale.crop_year ?? '',
+          contractType: sale.contract_type ?? '',
+          pricingPoint: sale.pricing_point ?? '',
+          weightsToGovern: sale.weights_to_govern ?? '',
+          deliveryTerms: sale.delivery_terms ?? '',
+          buyerContact: sale.buyer_contact ?? '',
+          broker: t.broker ?? '',
+          brokerRef: t.broker_ref ?? '',
+          brokeragePaidBy: t.brokerage_paid_by ?? '',
+          carryRate: n(t.carry_rate),
+          carryFrom: t.carry_from ?? '',
+          paymentTermsBasis: t.payment_terms_basis ?? '',
+          tradeRules: t.trade_rules ?? '',
         };
       }),
 

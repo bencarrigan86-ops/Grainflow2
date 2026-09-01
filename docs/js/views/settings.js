@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=89';
-import { num, money, esc } from '../fmt.js?v=89';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=89';
-import { APP_VERSION } from '../version.js?v=89';
-import { exportRowsAsCSV } from '../csv.js?v=89';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=89';
-import { endpointLabel } from './movements.js?v=89';
+import { db } from '../storage.js?v=90';
+import { num, money, esc } from '../fmt.js?v=90';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=90';
+import { APP_VERSION } from '../version.js?v=90';
+import { exportRowsAsCSV } from '../csv.js?v=90';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=90';
+import { endpointLabel } from './movements.js?v=90';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=89';
+} from '../invites.js?v=90';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=89';
+} from '../auth.js?v=90';
 
 let unsub = null;
 
@@ -710,6 +710,22 @@ function exportSalesCSV(year, stamp) {
     { label: 'Total value ($)', get: (s) => num(saleEconomics(s, movements).totalValue, 2) },
     { label: 'Broker note', get: (s) => s.brokerNote ?? '' },
     { label: 'Notes', get: (s) => s.notes ?? '' },
+    // The contract's own terms. On the end rather than interleaved, so anyone
+    // with a spreadsheet built on the old column order keeps it.
+    { label: 'Crop year', get: (s) => s.cropYear ?? '' },
+    { label: 'Contract type', get: (s) => s.contractType ?? '' },
+    { label: 'Pricing point', get: (s) => s.pricingPoint ?? '' },
+    { label: 'Weights to govern', get: (s) => s.weightsToGovern ?? '' },
+    { label: 'Delivery terms', get: (s) => s.deliveryTerms ?? '' },
+    { label: 'Buyer contact', get: (s) => s.buyerContact ?? '' },
+    { label: 'Broker', get: (s) => s.broker ?? '' },
+    { label: 'Broker reference', get: (s) => s.brokerRef ?? '' },
+    { label: 'Brokerage paid by', get: (s) => s.brokeragePaidBy ?? '' },
+    { label: 'Payment terms (days)', get: (s) => s.paymentTermsDays ?? '' },
+    { label: 'Payment counted from', get: (s) => s.paymentTermsBasis ?? '' },
+    { label: 'Carry ($/t/month)', get: (s) => s.carryRate ?? '' },
+    { label: 'Carry starts', get: (s) => s.carryFrom ?? '' },
+    { label: 'Trade rules', get: (s) => s.tradeRules ?? '' },
   ]);
 }
 

@@ -76,7 +76,18 @@ const state = {
           notes: 'split delivery',
           freight: 18.5, premiumDiscount: -4, ginning: 0, leviesPct: 0.0102,
           brokerNote: 'via Clear Grain', buyerAbn: '11 222 333 444',
-          buyerAddress: '1 Port Road' },
+          buyerAddress: '1 Port Road',
+          // The terms a real purchase contract carries. Invented values — the
+          // six documents these were modelled on are live trades and none of
+          // their figures belong in a public repo.
+          cropYear: '2025/2026', contractType: 'Ex Farm',
+          pricingPoint: 'Kwinana - 30km E', weightsToGovern: 'destination',
+          deliveryTerms: "Buyer's call, 5 business days notice",
+          buyerContact: 'A Trader',
+          broker: 'Example Commodities', brokerRef: 'EX0001234',
+          brokeragePaidBy: 'seller', carryRate: 2.5, carryFrom: '2026-09-01',
+          paymentTermsBasis: 'end of week of delivery',
+          tradeRules: 'GTA contract 3' },
       ],
       movements: [
         { id: mov1, ticketNo: 1, date: '2026-01-20', commodityId: cWheat, status: 'open',
