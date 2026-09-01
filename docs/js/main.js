@@ -1,17 +1,18 @@
-import { db } from './storage.js?v=83';
-import { renderPosition } from './views/position.js?v=83';
-import { renderProduction } from './views/production.js?v=83';
-import { renderReports } from './views/reports.js?v=83';
-import { renderSales } from './views/sales.js?v=83';
-import { renderMovements } from './views/movements.js?v=83';
-import { renderStorage } from './views/storage.js?v=83';
-import { renderSettings } from './views/settings.js?v=83';
-import { renderLogin } from './views/login.js?v=83';
-import { renderAccount } from './views/account.js?v=83';
-import { getSession, getMembership, onAuthChange, acceptInvitation, signOut } from './auth.js?v=83';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=83';
-import { tokenFromHash } from './invites.js?v=83';
-import { esc } from './fmt.js?v=83';
+import { db } from './storage.js?v=84';
+import { renderPosition } from './views/position.js?v=84';
+import { renderProduction } from './views/production.js?v=84';
+import { renderReports } from './views/reports.js?v=84';
+import { renderSales } from './views/sales.js?v=84';
+import { renderMovements } from './views/movements.js?v=84';
+import { renderStorage } from './views/storage.js?v=84';
+import { renderSettings } from './views/settings.js?v=84';
+import { renderLogin } from './views/login.js?v=84';
+import { renderAccount } from './views/account.js?v=84';
+import { getSession, getMembership, onAuthChange, acceptInvitation, signOut } from './auth.js?v=84';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=84';
+import { tokenFromHash } from './invites.js?v=84';
+import { esc } from './fmt.js?v=84';
+import { APP_VERSION } from './version.js?v=84';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -313,18 +314,22 @@ if (document.readyState === 'loading') {
   boot();
 }
 
-// The service worker is off while this app is under active development —
-// an installed SW is exactly what makes a device get stuck on stale code,
-// which defeats the "force refresh" button meant to fix that. Self-heal any
-// device that already has one registered from an earlier build, and re-enable
-// registration (see git history) once the app is ready to ship for real.
+// The service worker is back on, and the app works with no signal again.
+//
+// It was off because the first one served version 74 for hours after 75
+// shipped. The new one is built so that cannot happen: its cache is named after
+// the build, so a new version cannot read the old one's, and index.html is
+// never answered from cache while there is a network — it is the only file
+// whose own URL carries no ?v=, so it is the only thing that can tell a device
+// a new build exists.
+//
+// The version goes in the registration URL rather than being read inside the
+// worker. That keeps version.js as the single source of truth, and it means the
+// script itself is a new URL every release, which is what makes the browser
+// notice there is something to install.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.getRegistrations().then((regs) => {
-      regs.forEach((r) => r.unregister());
-    });
-    if ('caches' in window) {
-      caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
-    }
+    navigator.serviceWorker.register(`./sw.js?v=${APP_VERSION}`)
+      .catch((e) => console.error('Service worker did not register', e));
   });
 }
