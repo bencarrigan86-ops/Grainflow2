@@ -11,10 +11,10 @@
 // far harder to get subtly wrong than a changelog, which is the beginning of
 // exactly the machinery we are deferring.
 
-import { supabase } from './supabase.js?v=90';
-import { stateToRows } from './mapping.js?v=90';
-import { markDirty, markDeleted, outboxItems, clearOutboxUpTo } from './local.js?v=90';
-import { flushPendingPhotos } from './photos.js?v=90';
+import { supabase } from './supabase.js?v=91';
+import { stateToRows } from './mapping.js?v=91';
+import { markDirty, markDeleted, outboxItems, clearOutboxUpTo } from './local.js?v=91';
+import { flushPendingPhotos } from './photos.js?v=91';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -26,7 +26,8 @@ import { flushPendingPhotos } from './photos.js?v=90';
 // details are pushed as a plain UPDATE instead, further down.
 const ORDER = [
   'seasons', 'commodities', 'fields', 'field_agronomy',
-  'storages', 'sales', 'sale_terms', 'movements', 'movement_legs', 'movement_photos',
+  'storages', 'sales', 'sale_terms', 'sale_documents',
+  'movements', 'movement_legs', 'movement_photos',
   'invoices', 'overheads',
 ];
 
@@ -39,8 +40,9 @@ const ORDER = [
 const WRITABLE = {
   owner: ORDER,
   manager: ['seasons', 'commodities', 'fields', 'field_agronomy', 'storages',
+            'sale_documents',
             'movements', 'movement_legs', 'movement_photos'],
-  bookkeeper: ['sales', 'sale_terms', 'invoices', 'overheads'],
+  bookkeeper: ['sales', 'sale_terms', 'sale_documents', 'invoices', 'overheads'],
   farm_worker: ['fields', 'field_agronomy', 'movements', 'movement_legs', 'movement_photos'],
   driver: ['movements', 'movement_legs', 'movement_photos'],
 };

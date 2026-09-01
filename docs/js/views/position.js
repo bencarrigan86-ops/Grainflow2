@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=90';
-import { position, positionTotals, farmProfitLoss } from '../derived.js?v=90';
-import { num, tons, money, pct } from '../fmt.js?v=90';
+import { db } from '../storage.js?v=91';
+import { position, positionTotals, farmProfitLoss } from '../derived.js?v=91';
+import { num, tons, money, pct } from '../fmt.js?v=91';
 
 let unsub = null;
 
@@ -85,19 +85,19 @@ function commodityCard(r) {
   return `
     <div class="card summary">
       <h2><span class="dot summary"></span>${r.commodity.name} ${pctSoldBadge}</h2>
-      <div class="row"><span class="label">Area</span><span class="value">${num(r.area, 1)} ha</span></div>
+      <div class="row"><span class="label">Area</span><span class="value">${num(r.area, 0)} ha</span></div>
       <div class="row"><span class="label">Yield</span><span class="value">${num(r.yieldTHa, 2)} t/ha</span></div>
-      <div class="row"><span class="label">Production</span><span class="value">${tons(r.productionTons)}</span></div>
+      <div class="row"><span class="label">Production</span><span class="value">${tons(r.productionTons, 0)}</span></div>
       <hr class="sep" />
-      <div class="row"><span class="label">Sold</span><span class="value">${tons(r.soldTons)}</span></div>
+      <div class="row"><span class="label">Sold</span><span class="value">${tons(r.soldTons, 0)}</span></div>
       <div class="row"><span class="label">Avg sold price</span><span class="value">${money(r.avgSoldPrice, 2)}/t</span></div>
       <div class="row"><span class="label">Sold value</span><span class="value">${money(r.soldValue, 0)}</span></div>
       <hr class="sep" />
       ${r.opening || r.retainedSeed ? `
-      <div class="row"><span class="label">Opening stock</span><span class="value">${tons(r.opening)}</span></div>
-      <div class="row"><span class="label">Retained seed</span><span class="value">${tons(r.retainedSeed)}</span></div>
+      <div class="row"><span class="label">Opening stock</span><span class="value">${tons(r.opening, 0)}</span></div>
+      <div class="row"><span class="label">Retained seed</span><span class="value">${tons(r.retainedSeed, 0)}</span></div>
       ` : ''}
-      <div class="row"><span class="label">Unsold</span><span class="value">${tons(r.unsoldTons)}</span></div>
+      <div class="row"><span class="label">Unsold</span><span class="value">${tons(r.unsoldTons, 0)}</span></div>
       <div class="row"><span class="label">MTM price</span><span class="value">${money(r.mtmPrice, 2)}/t</span></div>
       <div class="row"><span class="label">Unsold value</span><span class="value">${money(r.unsoldValue, 0)}</span></div>
       <hr class="sep" />

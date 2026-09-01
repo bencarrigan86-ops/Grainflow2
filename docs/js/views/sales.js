@@ -1,9 +1,12 @@
-import { db } from '../storage.js?v=90';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=90';
-import { num, tons, money, esc } from '../fmt.js?v=90';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=90';
-import { renderRelatedMovements } from './movements.js?v=90';
-import { openInvoiceListSheet } from './invoice.js?v=90';
+import { db } from '../storage.js?v=91';
+import {
+  DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
+} from '../documents.js?v=91';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=91';
+import { num, tons, money, esc } from '../fmt.js?v=91';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=91';
+import { renderRelatedMovements } from './movements.js?v=91';
+import { openInvoiceListSheet } from './invoice.js?v=91';
 
 let unsub = null;
 
@@ -227,6 +230,22 @@ function openSaleSheet(existing) {
         ${field({ label: 'Carry starts', id: 'carryFrom', type: 'date', value: existing?.carryFrom })}
       </div>
       ${field({ label: 'Trade rules', id: 'tradeRules', value: existing?.tradeRules, placeholder: 'e.g. GTA contract 3' })}
+      ${existing ? `
+        <hr class="sep" />
+        <h2 style="margin:0 0 4px">Documents</h2>
+        <div class="field hint" style="margin-bottom:8px">Keep the buyer's contract and the
+          broker's note with the sale, so the paper the figures came from is one tap away
+          instead of in an inbox.</div>
+        <div id="doc-list"></div>
+        ${field({ label: 'What is it', id: 'doc-kind', type: 'select', value: 'contract',
+          options: DOCUMENT_KINDS.map((k) => ({ value: k.value, label: k.label })) })}
+        <input type="file" id="doc-file" accept="application/pdf,image/*" style="display:none" />
+        <button class="btn secondary small" id="doc-attach">Attach a file&hellip;</button>
+        <div id="doc-problem"></div>
+      ` : `
+        <div class="field hint" style="margin-top:10px">Save the sale first, then you can
+          attach the buyer's contract and the broker's note to it.</div>
+      `}
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       <button class="btn" id="save" style="margin-top:12px">Save</button>
       ${existing ? `<button class="btn secondary" id="view-invoice" style="margin-top:8px">${invoiceButtonLabel(existing)}</button>` : ''}
@@ -266,6 +285,104 @@ function openSaleSheet(existing) {
     root.querySelector('#commodity').addEventListener('change', syncUnitLabels);
     syncUnitLabels();
 
+    // --- documents -------------------------------------------------------
+    //
+    // Attaching saves immediately rather than waiting for the Save button.
+    // Uploading a 2MB contract and then losing it because you closed the sheet
+    // is the same fault as the fertiliser application that was discarded
+    // unless you pressed "Add" first, and it is worse here because the file
+    // has already gone to the server by then.
+    let documents = (existing?.documents || []).slice();
+    const docListEl = root.querySelector('#doc-list');
+    const docProblemEl = root.querySelector('#doc-problem');
+    const fileEl = root.querySelector('#doc-file');
+
+    const saveDocuments = () => db.upsertSale({ id: existing.id, documents });
+
+    const sayProblem = (msg) => {
+      if (docProblemEl) {
+        docProblemEl.innerHTML = msg
+          ? `<div class="hint" style="color:var(--danger);margin-top:8px">${esc(msg)}</div>` : '';
+      }
+    };
+
+    const renderDocuments = () => {
+      if (!docListEl) return;
+      if (!documents.length) {
+        docListEl.innerHTML = '<div class="field hint" style="margin-bottom:8px">Nothing attached yet.</div>';
+        return;
+      }
+      docListEl.innerHTML = documents.map((d) => `
+        <div class="list-item" style="padding:8px 4px">
+          <div>
+            <div class="main">${esc(d.fileName || 'Document')}</div>
+            <div class="meta">${esc(kindLabel(d.kind))}${d.byteSize ? ` &middot; ${Math.round(d.byteSize / 1024)} KB` : ''}</div>
+          </div>
+          <div class="right swipe-actions">
+            <button type="button" class="btn secondary small" data-open-doc="${esc(d.id)}">Open</button>
+            <button type="button" class="btn danger small" data-remove-doc="${esc(d.id)}">&times;</button>
+          </div>
+        </div>`).join('');
+
+      docListEl.querySelectorAll('[data-open-doc]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const d = documents.find((x) => x.id === btn.dataset.openDoc);
+          btn.textContent = 'Opening…';
+          const url = await signedUrlFor(d?.storagePath);
+          btn.textContent = 'Open';
+          if (!url) { sayProblem('That document could not be opened. It may still be uploading.'); return; }
+          window.open(url, '_blank', 'noopener');
+        });
+      });
+
+      docListEl.querySelectorAll('[data-remove-doc]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const d = documents.find((x) => x.id === btn.dataset.removeDoc);
+          confirmDelete(`Remove ${d?.fileName || 'this document'} from the sale? The file is deleted for good.`, async () => {
+            documents = documents.filter((x) => x.id !== d.id);
+            renderDocuments();
+            saveDocuments();
+            await removeSaleDocument(d?.storagePath);
+          });
+        });
+      });
+    };
+
+    const attachBtn = root.querySelector('#doc-attach');
+    if (attachBtn) {
+      renderDocuments();
+      attachBtn.addEventListener('click', () => fileEl.click());
+      fileEl.addEventListener('change', async () => {
+        const file = fileEl.files?.[0];
+        fileEl.value = '';                       // so the same file can be re-picked
+        if (!file) return;
+        const problem = checkFile(file);
+        if (problem) { sayProblem(problem); return; }
+
+        sayProblem('');
+        attachBtn.disabled = true;
+        attachBtn.textContent = 'Uploading…';
+        try {
+          const stored = await uploadSaleDocument(file, {
+            farmId: db.getFarmId(), saleId: existing.id,
+          });
+          documents.push({
+            id: crypto.randomUUID(),
+            kind: getVal(root, 'doc-kind') || 'contract',
+            uploadedAt: new Date().toISOString(),
+            ...stored,
+          });
+          renderDocuments();
+          saveDocuments();
+        } catch (e) {
+          sayProblem(e.message);
+        } finally {
+          attachBtn.disabled = false;
+          attachBtn.textContent = 'Attach a file…';
+        }
+      });
+    }
+
     root.querySelector('#save').addEventListener('click', () => {
       db.upsertSale({
         id: existing?.id,
@@ -304,6 +421,7 @@ function openSaleSheet(existing) {
         carryRate: getNum(root, 'carryRate'),
         carryFrom: getVal(root, 'carryFrom'),
         tradeRules: getVal(root, 'tradeRules')?.trim(),
+        documents,
       });
       closeSheet();
     });

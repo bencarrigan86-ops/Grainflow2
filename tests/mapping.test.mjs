@@ -9,7 +9,8 @@ const u = () => crypto.randomUUID();
 // two sources and splitting across two destinations, an unassigned paddock,
 // a paid invoice, a silo with partial geometry.
 const cWheat = u(), cBarley = u(), f1 = u(), f2 = u(), s1 = u(), s2 = u(),
-      sale1 = u(), mov1 = u(), mov2 = u(), inv1 = u();
+      sale1 = u(), mov1 = u(), mov2 = u(), inv1 = u(),
+      doc1 = u(), doc2 = u();
 
 const state = {
   version: 2,
@@ -87,7 +88,17 @@ const state = {
           broker: 'Example Commodities', brokerRef: 'EX0001234',
           brokeragePaidBy: 'seller', carryRate: 2.5, carryFrom: '2026-09-01',
           paymentTermsBasis: 'end of week of delivery',
-          tradeRules: 'GTA contract 3' },
+          tradeRules: 'GTA contract 3',
+          // The buyer's contract and the broker's note, kept beside the sale.
+          // Only the path travels in the row; the file is in object storage.
+          documents: [
+            { id: doc1, kind: 'contract', fileName: 'Contract 10245.pdf',
+              storagePath: `${FARM}/${sale1}/aaa.pdf`, byteSize: 193400,
+              uploadedAt: '2026-01-16T02:00:00.000Z' },
+            { id: doc2, kind: 'broker_note', fileName: 'Broker advice.pdf',
+              storagePath: `${FARM}/${sale1}/bbb.pdf`, byteSize: 54700,
+              uploadedAt: '2026-01-16T02:05:00.000Z' },
+          ] },
       ],
       movements: [
         { id: mov1, ticketNo: 1, date: '2026-01-20', commodityId: cWheat, status: 'open',

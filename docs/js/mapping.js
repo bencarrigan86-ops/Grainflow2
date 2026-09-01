@@ -42,7 +42,7 @@ export function stateToRows(state, farmId) {
   const out = {
     farms: [], seasons: [], commodities: [], fields: [], field_agronomy: [],
     storages: [], sales: [], sale_terms: [], movements: [], movement_legs: [],
-    movement_photos: [], invoices: [], overheads: [],
+    movement_photos: [], invoices: [], overheads: [], sale_documents: [],
   };
 
   const b = state.businessDetails || {};
@@ -190,6 +190,23 @@ export function stateToRows(state, farmId) {
         payment_terms_basis: orNull(sale.paymentTermsBasis),
         trade_rules: orNull(sale.tradeRules),
       });
+
+      // The buyer's contract and the broker's note. Only the path travels in
+      // the row; the file itself is in object storage, exactly as a movement
+      // photo is. A document with no path is one whose upload did not finish,
+      // and writing that row would leave a name on screen with nothing behind
+      // it.
+      for (const doc of sale.documents || []) {
+        if (!doc?.storagePath) continue;
+        out.sale_documents.push({
+          id: doc.id, farm_id: farmId, sale_id: sale.id,
+          kind: doc.kind || 'contract',
+          file_name: orNull(doc.fileName),
+          storage_path: doc.storagePath,
+          byte_size: doc.byteSize ?? null,
+          uploaded_at: doc.uploadedAt || new Date().toISOString(),
+        });
+      }
     }
 
     for (const m of year.movements || []) {
@@ -279,6 +296,12 @@ export function rowsToState(rows) {
   const termsBySale = byId(rows.sale_terms, 'sale_id');
 
   const photoByMovement = byId(rows.movement_photos, 'movement_id');
+
+  const docsBySale = new Map();
+  for (const d of rows.sale_documents || []) {
+    if (!docsBySale.has(d.sale_id)) docsBySale.set(d.sale_id, []);
+    docsBySale.get(d.sale_id).push(d);
+  }
 
   const legsByMovement = new Map();
   for (const leg of rows.movement_legs || []) {
@@ -386,6 +409,13 @@ export function rowsToState(rows) {
           carryFrom: t.carry_from ?? '',
           paymentTermsBasis: t.payment_terms_basis ?? '',
           tradeRules: t.trade_rules ?? '',
+          documents: (docsBySale.get(sale.id) || []).map((d) => ({
+            id: d.id, kind: d.kind || 'contract',
+            fileName: d.file_name ?? '',
+            storagePath: d.storage_path,
+            byteSize: d.byte_size ?? 0,
+            uploadedAt: d.uploaded_at ?? '',
+          })),
         };
       }),
 

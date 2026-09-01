@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=90';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=90';
-import { num, tons, ha, esc } from '../fmt.js?v=90';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=90';
-import { renderRelatedMovements } from './movements.js?v=90';
+import { db } from '../storage.js?v=91';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=91';
+import { num, tons, ha, esc } from '../fmt.js?v=91';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=91';
+import { renderRelatedMovements } from './movements.js?v=91';
 
 let unsub = null;
 
@@ -37,16 +37,16 @@ function paint(root) {
               ${rollup.map((r) => `
                 <tr>
                   <td>${esc(r.commodity.name)}</td>
-                  <td>${num(r.area, 1)}</td>
+                  <td>${num(r.area, 0)}</td>
                   <td>${num(r.yieldTHa, 2)}</td>
-                  <td>${num(r.tons, 1)}</td>
+                  <td>${num(r.tons, 0)}</td>
                 </tr>`).join('')}
             </tbody>
             <tfoot><tr>
               <td>Total</td>
-              <td>${num(productionTotals.area, 1)}</td>
+              <td>${num(productionTotals.area, 0)}</td>
               <td>${num(productionTotals.yieldTHa, 2)}</td>
-              <td>${num(productionTotals.tons, 1)}</td>
+              <td>${num(productionTotals.tons, 0)}</td>
             </tr></tfoot>
           </table>
         </div>`}
@@ -55,7 +55,7 @@ function paint(root) {
       <div class="card input">
         <h2><span class="dot input"></span>Fields</h2>
         ${groups.length === 0 ? `<div class="empty">Tap + to add your first field.</div>` : groups.map((g) => `
-          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${tons(g.totalTons)}</span></div>
+          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${tons(g.totalTons, 0)}</span></div>
           ${g.fields.map((f) => fieldRow(f, movements)).join('')}
         `).join('')}
       </div>
@@ -79,11 +79,11 @@ function fieldRow(f, movements) {
     <div class="list-item" data-edit-field="${f.id}">
       <div>
         <div class="main">${esc(f.name)}</div>
-        <div class="meta">${ha(f.areaHa)} · <span class="badge ${isActual ? 'pos' : 'neg'}">${isActual ? 'Actual' : 'Estimate'}</span></div>
-        ${!isActual && actualTons > 0 ? `<div class="meta">Actual (movements): ${num(actualTons, 1)} t · ${num(actualYieldTHa, 2)} t/ha</div>` : ''}
+        <div class="meta">${ha(f.areaHa, 0)} · <span class="badge ${isActual ? 'pos' : 'neg'}">${isActual ? 'Actual' : 'Estimate'}</span></div>
+        ${!isActual && actualTons > 0 ? `<div class="meta">Actual (movements): ${num(actualTons, 0)} t · ${num(actualYieldTHa, 2)} t/ha</div>` : ''}
       </div>
       <div class="right">
-        <div class="main">${tons(t)}</div>
+        <div class="main">${tons(t, 0)}</div>
         <div class="meta">${num(yieldTHa, 2)} t/ha</div>
       </div>
     </div>
@@ -110,7 +110,7 @@ function openFieldSheet(existing) {
           <button data-mode="estimate" class="${(existing?.yieldMode || 'estimate') === 'estimate' ? 'active' : ''}">Estimate</button>
           <button data-mode="actual" class="${existing?.yieldMode === 'actual' ? 'active' : ''}">Actual (movements)</button>
         </div>
-        <div class="hint" id="actual-hint">Actual sums the Movement tickets carted off this field${actualTons > 0 ? ` — currently ${num(actualTons, 1)} t` : ''}.</div>
+        <div class="hint" id="actual-hint">Actual sums the Movement tickets carted off this field${actualTons > 0 ? ` — currently ${num(actualTons, 0)} t` : ''}.</div>
       </div>
       <div class="row"><span class="label" id="tons-label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
       <hr class="sep" />
@@ -233,7 +233,7 @@ function openFieldSheet(existing) {
       const unitPerHa = isBales ? 'bales/ha' : 't/ha';
       yieldLabelEl.textContent = `Yield estimate (${unitPerHa})`;
       tonsLabelEl.textContent = isBales ? 'Total bales' : 'Total tons';
-      actualHintEl.textContent = `Actual sums the Movement tickets carted off this field${actualTons > 0 ? ` — currently ${num(actualTons, 1)} ${unit}` : ''}.`;
+      actualHintEl.textContent = `Actual sums the Movement tickets carted off this field${actualTons > 0 ? ` — currently ${num(actualTons, 0)} ${unit}` : ''}.`;
 
       const tonsVal = yieldMode === 'actual'
         ? actualTons
