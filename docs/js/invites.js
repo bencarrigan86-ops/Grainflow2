@@ -16,11 +16,24 @@
 /**
  * Roles an owner can hand out.
  *
- * Owner is deliberately absent. A second owner can change the business details,
- * the bank account and everyone else's role, and that is a decision to make
- * deliberately in the database rather than from a dropdown next to "driver".
+ * Owner is on this list. It was left off at first on the reasoning that a second
+ * owner can change the bank details and remove everybody else, so it should be a
+ * deliberate act in the database rather than a dropdown choice. That reasoning
+ * suits a company and not a farm: a family partnership has several owners by
+ * definition, and making the others go through a hand-typed SQL statement does
+ * not make the decision more considered, it just makes it someone else's job.
+ *
+ * The database never had the restriction — farm_users has no single-owner
+ * constraint and the invitations check constraint has always allowed 'owner'.
+ * This was only ever a rule in the interface, so the honest fix is to state the
+ * consequence plainly in the blurb and let the owner decide.
+ *
+ * The one thing an owner still cannot do is remove themselves, which is what
+ * keeps every farm with at least one.
  */
 export const INVITABLE_ROLES = [
+  { value: 'owner',       label: 'Owner',
+    blurb: 'Full access, including bank details, contract pricing, and inviting or removing anyone else — including you.' },
   { value: 'manager',     label: 'Farm manager',
     blurb: 'Everything except the bank details and contract pricing.' },
   { value: 'bookkeeper',  label: 'Bookkeeper',
@@ -89,8 +102,25 @@ export function validateInvite({ email, role, existingMembers = [], pendingInvit
   return { ok: problems.length === 0, email: clean, role, problems };
 }
 
+/**
+ * May the person looking at the People card change this member?
+ *
+ * Everyone except themselves. It reads like a courtesy and it is actually the
+ * only thing keeping a farm administrable: with several owners allowed, the
+ * only person who can strip the last owner's access is that owner, and this is
+ * the rule that says no. Every other combination is somebody else's decision to
+ * make — an owner demoting another owner is a partnership matter, not a
+ * software one.
+ *
+ * Unknown ids fail closed. A screen that could not work out who is looking at
+ * it should offer nothing rather than everything.
+ */
+export function canEditMember(member, meId) {
+  if (!meId || !member?.userId) return false;
+  return member.userId !== meId;
+}
+
 export function roleLabel(role) {
-  if (role === 'owner') return 'Owner';
   return INVITABLE_ROLES.find((r) => r.value === role)?.label ?? role;
 }
 

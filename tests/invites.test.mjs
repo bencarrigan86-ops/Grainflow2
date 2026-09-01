@@ -11,9 +11,10 @@
 // what gets written in the first place, and the link that carries it.
 
 import assert from 'node:assert';
+import { readFileSync } from 'node:fs';
 import {
   INVITABLE_ROLES, DEFAULT_EXPIRY_DAYS,
-  newToken, inviteLink, tokenFromHash, validateInvite, roleLabel,
+  newToken, inviteLink, tokenFromHash, validateInvite, roleLabel, canEditMember,
   expiryFrom, expiryText,
 } from '../docs/js/invites.js';
 
@@ -77,14 +78,39 @@ check('junk does not throw', () => {
 
 console.log('\n=== what an owner may hand out ===');
 
-check('owner is not one of the choices', () => {
-  assert.ok(!INVITABLE_ROLES.some((r) => r.value === 'owner'),
-    'a second owner should be a deliberate decision, not a dropdown');
+check('owner is one of the choices — a family farm has several', () => {
+  // This assertion is the reverse of the one it replaces. The first version
+  // withheld owner on the grounds that a second one is a serious decision;
+  // a partnership has several owners by definition, and the database never
+  // restricted it, so the interface should not either.
+  assert.ok(INVITABLE_ROLES.some((r) => r.value === 'owner'),
+    'a farm with more than one owner must be invitable, not a SQL statement');
+});
+
+check('the owner blurb says what it costs', () => {
+  // The safeguard is now informed consent rather than a missing option, so the
+  // wording is load-bearing: it has to name the two things that actually matter
+  // before somebody picks it off a dropdown next to "driver".
+  const owner = INVITABLE_ROLES.find((r) => r.value === 'owner');
+  assert.match(owner.blurb, /bank/i, 'the blurb does not mention the bank details');
+  assert.match(owner.blurb, /removing|remove/i, 'the blurb does not say they can remove people');
 });
 
 check('every offered role is one the app knows', () => {
-  const known = ['manager', 'bookkeeper', 'farm_worker', 'driver'];
+  const known = ['owner', 'manager', 'bookkeeper', 'farm_worker', 'driver'];
   assert.deepEqual(INVITABLE_ROLES.map((r) => r.value).sort(), [...known].sort());
+});
+
+check('the roles offered match the roles the database will accept', () => {
+  // Read out of the schema rather than restated here — an invitation carrying a
+  // role the check constraint rejects fails at the insert, after the owner has
+  // typed an address and picked from a list that looked fine.
+  const sql = readFileSync(
+    new URL('../supabase/migrations/20260831120000_initial_schema.sql', import.meta.url), 'utf8');
+  const block = sql.slice(sql.indexOf('create table invitations'));
+  const allowed = block.match(/check \(role in \(([^)]*)\)\)/)[1]
+    .split(',').map((s) => s.trim().replace(/'/g, '')).sort();
+  assert.deepEqual(INVITABLE_ROLES.map((r) => r.value).sort(), allowed);
 });
 
 check('every role has a label and a plain-English blurb', () => {
@@ -117,8 +143,15 @@ check('something that is not an address is caught', () => {
 
 check('a role that was never chosen is caught', () => {
   assert.equal(ok({ role: '' }).ok, false);
-  assert.equal(ok({ role: 'owner' }).ok, false, 'owner must not be invitable');
   assert.equal(ok({ role: 'admin' }).ok, false);
+  assert.equal(ok({ role: undefined }).ok, false);
+});
+
+check('owner passes now, and this assertion used to say the opposite', () => {
+  // Left as its own named check rather than folded into the line above, because
+  // the line above previously asserted that owner was refused. A rule that
+  // reverses is worth a test that says so out loud.
+  assert.equal(ok({ role: 'owner' }).ok, true, ok({ role: 'owner' }).problems.join('; '));
 });
 
 check('someone already on the farm is caught, and named by their role', () => {
@@ -142,6 +175,51 @@ check('a second invitation to the same person is caught', () => {
 check('every problem is reported, not just the first', () => {
   const r = validateInvite({ email: 'nonsense', role: 'admin' });
   assert.equal(r.problems.length, 2, r.problems.join('; '));
+});
+
+console.log('\n=== who may change whom ===');
+
+const member = (userId, role = 'driver') => ({ userId, email: `${userId}@x.dev`, role });
+
+check('you cannot change yourself — the rule that keeps a farm administrable', () => {
+  // With several owners allowed, the only person who could remove the last
+  // owner's access is that owner. This is the line that refuses.
+  assert.equal(canEditMember(member('u1', 'owner'), 'u1'), false);
+  assert.equal(canEditMember(member('u1', 'driver'), 'u1'), false);
+});
+
+check('an owner may change another owner', () => {
+  // Deliberately allowed. Two people who own a farm together sorting out who
+  // does what is a partnership decision, not one for the software to veto.
+  assert.equal(canEditMember(member('u2', 'owner'), 'u1'), true);
+});
+
+check('everybody else is editable', () => {
+  for (const r of ['manager', 'bookkeeper', 'farm_worker', 'driver']) {
+    assert.equal(canEditMember(member('u2', r), 'u1'), true, r);
+  }
+});
+
+check('an unknown viewer or member is refused, not waved through', () => {
+  assert.equal(canEditMember(member('u2'), null), false);
+  assert.equal(canEditMember(member('u2'), undefined), false);
+  assert.equal(canEditMember(member('u2'), ''), false);
+  assert.equal(canEditMember(null, 'u1'), false);
+  assert.equal(canEditMember({}, 'u1'), false);
+  assert.equal(canEditMember(undefined, 'u1'), false);
+});
+
+check('at least one member of any farm is always uneditable — whoever is looking', () => {
+  // The property that matters, checked as a property rather than a case: for
+  // any roster and any viewer on it, exactly the viewer is protected. If that
+  // ever stops holding, a farm can be left with nobody who can administer it.
+  const roster = [member('a', 'owner'), member('b', 'owner'), member('c', 'manager'),
+    member('d', 'driver')];
+  for (const viewer of roster) {
+    const locked = roster.filter((m) => !canEditMember(m, viewer.userId));
+    assert.deepEqual(locked.map((m) => m.userId), [viewer.userId],
+      `viewer ${viewer.userId} protected the wrong people`);
+  }
 });
 
 console.log('\n=== expiry ===');

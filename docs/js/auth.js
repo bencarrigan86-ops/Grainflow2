@@ -9,9 +9,9 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase } from './supabase.js?v=81';
-import { pickMembership } from './membership.js?v=81';
-import { newToken, expiryFrom } from './invites.js?v=81';
+import { supabase } from './supabase.js?v=82';
+import { pickMembership } from './membership.js?v=82';
+import { newToken, expiryFrom } from './invites.js?v=82';
 
 /** The signed-in user, or null. */
 export async function getUser() {
@@ -204,6 +204,30 @@ export async function revokeInvitation(id) {
     .from('invitations')
     .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Change what somebody on the farm can do.
+ *
+ * An ordinary update — farm_users_update is already restricted to owners, so
+ * the server refuses this from anybody else without needing a function.
+ *
+ * There is no guard here against changing your own role, and that is on
+ * purpose: this layer should do what it is told, and the rule about not
+ * demoting yourself belongs where the user can be told why. See the People
+ * card, which does not offer it.
+ */
+export async function changeMemberRole(farmId, userId, role, canWriteProduction = false) {
+  const { error } = await supabase
+    .from('farm_users')
+    .update({
+      role,
+      can_write_production: !!canWriteProduction,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('farm_id', farmId)
+    .eq('user_id', userId);
   if (error) throw new Error(error.message);
 }
 

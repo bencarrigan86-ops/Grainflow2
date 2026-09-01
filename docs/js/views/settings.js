@@ -1,14 +1,17 @@
-import { db } from '../storage.js?v=81';
-import { num, money, esc } from '../fmt.js?v=81';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=81';
-import { APP_VERSION } from '../version.js?v=81';
-import { exportRowsAsCSV } from '../csv.js?v=81';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=81';
-import { endpointLabel } from './movements.js?v=81';
-import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText } from '../invites.js?v=81';
+import { db } from '../storage.js?v=82';
+import { num, money, esc } from '../fmt.js?v=82';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=82';
+import { APP_VERSION } from '../version.js?v=82';
+import { exportRowsAsCSV } from '../csv.js?v=82';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=82';
+import { endpointLabel } from './movements.js?v=82';
+import {
+  INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
+} from '../invites.js?v=82';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
-} from '../auth.js?v=81';
+  changeMemberRole, getSession,
+} from '../auth.js?v=82';
 
 let unsub = null;
 
@@ -272,12 +275,14 @@ async function loadPeople() {
   peopleLoading = true;
   const farmId = db.getFarmId();
   try {
-    // Two calls, but they do not depend on each other and the screen needs both
-    // before it can say anything useful.
-    const [members, pending] = await Promise.all([
-      listMembers(farmId), listPendingInvitations(farmId),
+    // Three calls, none depending on the others, and the screen needs all of
+    // them. The session is in there because a farm can have several owners now,
+    // so "the owner" is no longer a useful way to identify the person looking
+    // at the screen — only their own user id is.
+    const [members, pending, session] = await Promise.all([
+      listMembers(farmId), listPendingInvitations(farmId), getSession(),
     ]);
-    people = { members, pending };
+    people = { members, pending, meId: session?.user?.id ?? null };
     peopleError = null;
   } catch (e) {
     peopleError = e.message;
@@ -310,11 +315,11 @@ function paintPeople(card) {
     return;
   }
 
-  const { members, pending } = people;
+  const { members, pending, meId } = people;
   card.innerHTML = `
     <h2>People</h2>
-    <div class="field hint" style="margin-bottom:8px">Who can open this farm, and what they can do.</div>
-    ${members.map(memberRow).join('')}
+    <div class="field hint" style="margin-bottom:8px">Who can open this farm, and what they can do. Tap someone to change their access.</div>
+    ${members.map((m) => memberRow(m, meId)).join('')}
     ${pending.length ? `
       <hr class="sep" />
       <h2 style="margin:0 0 4px">Waiting to join</h2>
@@ -325,6 +330,12 @@ function paintPeople(card) {
   `;
 
   card.querySelector('#invite-someone').addEventListener('click', () => openInviteSheet());
+
+  card.querySelectorAll('[data-edit-member]').forEach((el) => {
+    el.addEventListener('click', () => {
+      openMemberSheet(members.find((m) => m.userId === el.dataset.editMember));
+    });
+  });
 
   card.querySelectorAll('[data-copy-invite]').forEach((el) => {
     el.addEventListener('click', () => sendInviteLink(el.dataset.copyInvite, el));
@@ -342,36 +353,111 @@ function paintPeople(card) {
     });
   });
 
-  card.querySelectorAll('[data-remove-member]').forEach((el) => {
-    el.addEventListener('click', () => {
-      const email = el.dataset.email;
-      confirmDelete(`Remove ${email} from this farm? They keep their account but lose access to the farm's data. Inviting them again brings them straight back.`, async () => {
-        try {
-          await removeMember(db.getFarmId(), el.dataset.removeMember);
-          refreshPeople();
-        } catch (e) { alert(`Could not remove them.\n\n${e.message}`); }
-      });
-    });
-  });
 }
 
-function memberRow(m) {
-  // No Remove button on the owner. Removing the only owner leaves a farm nobody
-  // can administer, and there is no second owner to reinstate them.
+/**
+ * One person on the farm.
+ *
+ * Everybody except you is tappable. The rule used to be "not the owner", which
+ * was only ever a proxy for "not you" — and it stops being even that once a
+ * farm can have several owners, at which point it would have locked every one
+ * of them out of editing each other.
+ *
+ * You cannot change or remove yourself, and that single rule is what guarantees
+ * a farm always has at least one owner: the only person who could take the last
+ * owner's access away is that owner, and they are the one person the screen
+ * will not act on.
+ */
+function memberRow(m, meId) {
+  const editable = canEditMember(m, meId);
   const extra = m.canWriteProduction && (m.role === 'farm_worker' || m.role === 'driver')
     ? ' · can record production' : '';
   return `
-    <div class="list-item">
+    <div class="list-item" ${editable ? `data-edit-member="${esc(m.userId)}"` : ''}>
       <div>
         <div class="main">${esc(m.email)}</div>
         <div class="meta">${esc(roleLabel(m.role))}${extra}</div>
       </div>
       <div class="right">
-        ${m.role === 'owner'
-          ? '<div class="meta">Owner</div>'
-          : `<button class="btn danger small" data-remove-member="${esc(m.userId)}" data-email="${esc(m.email)}">Remove</button>`}
+        <div class="meta">${m.userId === meId ? 'You' : (editable ? 'Change&hellip;' : '')}</div>
       </div>
     </div>`;
+}
+
+/**
+ * Change what one person can do, or take their access away.
+ *
+ * Same sheet for both, because they are the same decision made at different
+ * strengths, and splitting them across two screens is how an owner ends up
+ * removing somebody they only meant to demote.
+ */
+function openMemberSheet(m) {
+  if (!m) return;
+  openSheet(m.email, (root) => {
+    const isField = (r) => r === 'farm_worker' || r === 'driver';
+    root.innerHTML = `
+      ${field({ label: 'Access level', id: 'mem-role', type: 'select', value: m.role,
+        options: INVITABLE_ROLES.map((r) => ({ value: r.value, label: r.label })) })}
+      <div class="field hint" id="mem-blurb" style="margin-top:-6px"></div>
+      <div id="mem-prod-wrap" style="display:none">
+        ${field({ label: 'Can record production', id: 'mem-prod', type: 'select',
+          value: m.canWriteProduction ? 'yes' : 'no',
+          options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }],
+          hint: 'Lets them enter yields and fertiliser as well as their own loads.' })}
+      </div>
+      <div class="field hint">Takes effect the next time they open the app.</div>
+      <div id="mem-problem"></div>
+      <button class="btn" id="mem-save">Save changes</button>
+      <button class="btn danger" id="mem-remove" style="margin-top:8px">Remove from farm</button>
+    `;
+
+    const roleEl = root.querySelector('#mem-role');
+    const blurbEl = root.querySelector('#mem-blurb');
+    const prodWrap = root.querySelector('#mem-prod-wrap');
+    const problemEl = root.querySelector('#mem-problem');
+    const saveBtn = root.querySelector('#mem-save');
+
+    const syncRole = () => {
+      blurbEl.textContent = INVITABLE_ROLES.find((r) => r.value === roleEl.value)?.blurb ?? '';
+      prodWrap.style.display = isField(roleEl.value) ? 'block' : 'none';
+    };
+    roleEl.addEventListener('change', syncRole);
+    syncRole();
+
+    let busy = false;
+    saveBtn.addEventListener('click', async () => {
+      if (busy) return;
+      const role = roleEl.value;
+      // Promoting somebody to owner hands them the bank details and the ability
+      // to remove you. Worth one deliberate pause; nothing else here is.
+      if (role === 'owner' && m.role !== 'owner'
+          && !window.confirm(`Make ${m.email} an owner? They will be able to see the bank details and contract pricing, and to remove anyone from this farm — including you.`)) {
+        return;
+      }
+      busy = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        await changeMemberRole(db.getFarmId(), m.userId, role,
+          isField(role) && getVal(root, 'mem-prod') === 'yes');
+        refreshPeople();
+        closeSheet();
+      } catch (e) {
+        busy = false;
+        saveBtn.textContent = 'Save changes';
+        problemEl.innerHTML = `<div class="hint" style="color:var(--danger);margin-bottom:4px">${esc(e.message)}</div>`;
+      }
+    });
+
+    root.querySelector('#mem-remove').addEventListener('click', () => {
+      confirmDelete(`Remove ${m.email} from this farm? They keep their account but lose access to the farm's data. Inviting them again brings them straight back.`, async () => {
+        try {
+          await removeMember(db.getFarmId(), m.userId);
+          refreshPeople();
+          closeSheet();
+        } catch (e) { alert(`Could not remove them.\n\n${e.message}`); }
+      });
+    });
+  });
 }
 
 function pendingRow(i) {
@@ -504,6 +590,14 @@ function openInviteSheet() {
         return;
       }
       problemsEl.innerHTML = '';
+
+      // The same deliberate pause as promoting someone. Owner sits at the top
+      // of the same dropdown as driver, so the only thing separating a family
+      // partner from a mis-tap is being asked once.
+      if (v.role === 'owner'
+          && !window.confirm(`Invite ${v.email} as an owner? They will be able to see the bank details and contract pricing, and to remove anyone from this farm — including you.`)) {
+        return;
+      }
 
       busy = true;
       btn.textContent = 'Creating…';
