@@ -10,6 +10,7 @@
 // question it.
 
 import assert from 'node:assert';
+import { readFileSync } from 'node:fs';
 import {
   nitrogenCalc, soilNUreaEquivalent, maxYieldFromUrea, fieldMaxYield,
   checkNPerTonne, ureaAppliedKgHaFor, UREA_N_PCT,
@@ -144,6 +145,53 @@ check('a different urea grade flows through both directions', () => {
     nPerTonne: 44, soilTestN: 38, ureaAppliedKgHa: r.additionalUreaRequired, ureaNPct: 40,
   });
   near(back.maxYieldTHa, 4);
+});
+
+console.log('\n=== a typed application is not thrown away ===');
+
+// Reported by Ben twice. You open a paddock, fill in the date, machine and
+// rate under "Add application", press Save — the obvious thing to do, the
+// button is right there — and the entry is gone. It only ever landed if you
+// pressed "Add application" first.
+//
+// I said this was fixed once already and it was not: the function I described
+// extracting was never in the file. So this is a test rather than another
+// assurance. It reads production.js, because the fault is in the wiring
+// between two click handlers and there is nothing pure to call.
+
+const production = readFileSync(new URL('../docs/js/views/production.js', import.meta.url), 'utf8')
+  .replace(/\/\*[\s\S]*?\*\//g, ' ')
+  .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
+
+check('Save commits whatever is in the application form first', () => {
+  const saveAt = production.indexOf("querySelector('#save')");
+  assert.ok(saveAt > -1, 'the Save handler has moved or been renamed');
+
+  const commitAt = production.indexOf('commitPendingApplication()', saveAt);
+  const upsertAt = production.indexOf('db.upsertField(', saveAt);
+  assert.ok(upsertAt > -1, 'Save no longer writes the field');
+  assert.ok(commitAt > -1 && commitAt < upsertAt,
+    'Save writes the field without first taking what is typed in the application form — '
+    + 'a rate entered and not "Added" is discarded');
+});
+
+check('Add and Save share one implementation, so they cannot drift apart', () => {
+  // Two copies of "build an application from the form" is how one of them ends
+  // up handling the date field and the other does not.
+  const defs = production.match(/const commitPendingApplication\s*=/g) || [];
+  assert.equal(defs.length, 1, `commitPendingApplication is defined ${defs.length} times`);
+  const uses = production.match(/commitPendingApplication\(\)/g) || [];
+  assert.ok(uses.length >= 2,
+    'only one caller — the Add button and Save should both go through it');
+});
+
+check('the rate is what decides there is something to save', () => {
+  // An empty form must not push a phantom application every time somebody
+  // opens a paddock and presses Save.
+  const fn = production.slice(production.indexOf('const commitPendingApplication'));
+  const body = fn.slice(0, fn.indexOf('};'));
+  assert.match(body, /getNum\(root, 'ua-rate'\)/, 'it no longer reads the rate');
+  assert.match(body, /if \(!rate\) return false;/, 'an empty form is no longer rejected');
 });
 
 console.log('');

@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=87';
-import { movementsForEndpoint } from '../derived.js?v=87';
-import { num, tons, esc } from '../fmt.js?v=87';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=87';
-import { compressAndStampImage } from '../img.js?v=87';
-import { displayUrlFor } from '../photos.js?v=87';
+import { db } from '../storage.js?v=88';
+import { movementsForEndpoint } from '../derived.js?v=88';
+import { num, tons, esc } from '../fmt.js?v=88';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=88';
+import { compressAndStampImage } from '../img.js?v=88';
+import { displayUrlFor } from '../photos.js?v=88';
 
 let unsub = null;
 

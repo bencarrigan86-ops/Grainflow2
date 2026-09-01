@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=87';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=87';
-import { num, tons, ha, esc } from '../fmt.js?v=87';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=87';
-import { renderRelatedMovements } from './movements.js?v=87';
+import { db } from '../storage.js?v=88';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=88';
+import { num, tons, ha, esc } from '../fmt.js?v=88';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=88';
+import { renderRelatedMovements } from './movements.js?v=88';
 
 let unsub = null;
 
@@ -303,9 +303,19 @@ function openFieldSheet(existing) {
       const formEl = root.querySelector('#urea-app-form');
       formEl.style.display = formEl.style.display === 'none' ? 'block' : 'none';
     });
-    root.querySelector('#ua-add').addEventListener('click', () => {
+    /**
+     * Take whatever is typed in the application form and put it on the list.
+     * Returns false when there is nothing there — no rate means nothing to log.
+     *
+     * Extracted so that Save calls it too. Typing a rate and pressing Save is
+     * not a mistake, it is the obvious thing to do: the fields are on the
+     * screen, filled in, above a button marked Save. Requiring "Add
+     * application" first and silently discarding the entry otherwise made the
+     * app quietly lose work somebody had just typed, twice.
+     */
+    const commitPendingApplication = () => {
       const rate = getNum(root, 'ua-rate');
-      if (!rate) { root.querySelector('#ua-rate').focus(); return; }
+      if (!rate) return false;
       applications.push({
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
         date: getVal(root, 'ua-date') || '',
@@ -321,6 +331,13 @@ function openFieldSheet(existing) {
       root.querySelector('#ua-comment').value = '';
       renderApplications();
       recompute();
+      return true;
+    };
+
+    root.querySelector('#ua-add').addEventListener('click', () => {
+      // The button still does what it says, and is still the way to log two
+      // applications without closing the sheet in between.
+      if (!commitPendingApplication()) { root.querySelector('#ua-rate').focus(); return; }
       persistApplications();
     });
     root.querySelector('#soilTestN').addEventListener('input', recompute);
@@ -345,6 +362,10 @@ function openFieldSheet(existing) {
     root.querySelector('#save').addEventListener('click', () => {
       const name = getVal(root, 'name')?.trim();
       if (!name) { root.querySelector('#name').focus(); return; }
+      // Anything still sitting in the application form is part of what they
+      // are saving. Must happen before the payload below is built, because
+      // that reads `applications` as it stands.
+      commitPendingApplication();
       db.upsertField({
         id: existing?.id,
         name,
