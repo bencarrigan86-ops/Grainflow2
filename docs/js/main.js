@@ -1,15 +1,15 @@
-import { db } from './storage.js?v=79';
-import { renderPosition } from './views/position.js?v=79';
-import { renderProduction } from './views/production.js?v=79';
-import { renderReports } from './views/reports.js?v=79';
-import { renderSales } from './views/sales.js?v=79';
-import { renderMovements } from './views/movements.js?v=79';
-import { renderStorage } from './views/storage.js?v=79';
-import { renderSettings } from './views/settings.js?v=79';
-import { renderLogin } from './views/login.js?v=79';
-import { renderAccount } from './views/account.js?v=79';
-import { getSession, getMembership, onAuthChange } from './auth.js?v=79';
-import { tabsForRole, landingTabFor, canOpen } from './nav.js?v=79';
+import { db } from './storage.js?v=80';
+import { renderPosition } from './views/position.js?v=80';
+import { renderProduction } from './views/production.js?v=80';
+import { renderReports } from './views/reports.js?v=80';
+import { renderSales } from './views/sales.js?v=80';
+import { renderMovements } from './views/movements.js?v=80';
+import { renderStorage } from './views/storage.js?v=80';
+import { renderSettings } from './views/settings.js?v=80';
+import { renderLogin } from './views/login.js?v=80';
+import { renderAccount } from './views/account.js?v=80';
+import { getSession, getMembership, onAuthChange } from './auth.js?v=80';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=80';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -99,7 +99,7 @@ function renderTabbar() {
 const settingsBtn = document.getElementById('settings-btn');
 settingsBtn.innerHTML = SETTINGS_ICON;
 settingsBtn.addEventListener('click', () => {
-  location.hash = '#/settings';
+  location.hash = `#/${gearTargetFor(currentRole)}`;
 });
 
 function renderActiveView() {
@@ -108,9 +108,10 @@ function renderActiveView() {
   app.innerHTML = '';
   route.render(app);
   renderTabbar();
-  // The gear is the only way to Settings, so it goes when Settings does.
-  settingsBtn.hidden = !canOpen(currentRole, 'settings');
-  settingsBtn.classList.toggle('active', active === 'settings');
+  // The gear stays for every role. It was hidden from a driver along with
+  // Settings, which also removed the only route to Account — and so the only
+  // way to sign out. It now goes wherever that role can actually get to.
+  settingsBtn.classList.toggle('active', active === gearTargetFor(currentRole));
 }
 
 const yearPill = document.getElementById('year-pill');

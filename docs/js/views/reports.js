@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=79';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=79';
-import { num, tons, esc } from '../fmt.js?v=79';
-import { field, getVal, getNum } from '../ui.js?v=79';
+import { db } from '../storage.js?v=80';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=80';
+import { num, tons, esc } from '../fmt.js?v=80';
+import { field, getVal, getNum } from '../ui.js?v=80';
 
 let unsub = null;
 let view = 'fert';

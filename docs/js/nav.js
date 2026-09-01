@@ -88,6 +88,21 @@ export function landingTabFor(role) {
 }
 
 /**
+ * Where the gear at the top right goes for this role.
+ *
+ * Account is reached from the Settings screen, so hiding the gear from a driver
+ * hid the only route to it — and with it the only way to sign out. A driver
+ * with no way out of the app is worse than a driver who can see a settings
+ * page, particularly on a laptop that lives in a ute and gets handed around.
+ *
+ * So the gear stays for everyone and changes destination: Settings for those
+ * who have it, Account for those who do not.
+ */
+export function gearTargetFor(role) {
+  return canOpen(role, 'settings') ? 'settings' : 'account';
+}
+
+/**
  * May this role open this route?
  *
  * Used to guard the address bar as well as the tab bar. Hiding a tab is a

@@ -16,7 +16,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   ROLES, TABS_BY_ROLE, OFF_BAR_BY_ROLE, TAB_NEEDS,
-  tabsForRole, routesForRole, landingTabFor, canOpen,
+  tabsForRole, routesForRole, landingTabFor, canOpen, gearTargetFor,
 } from '../docs/js/nav.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -92,6 +92,29 @@ check('a driver gets movements and nothing else', () => {
 
 check('a driver can still reach Account, or they cannot sign out', () => {
   assert.equal(canOpen('driver', 'account'), true);
+});
+
+check('and there is a way to get there from the screen', () => {
+  // Being allowed to open a route is not the same as having a route to it.
+  // Account lives behind the Settings screen, so hiding the gear from a driver
+  // hid the only door — they could see one tab and had no way to sign out.
+  for (const role of ROLES) {
+    const target = gearTargetFor(role);
+    assert.ok(canOpen(role, target), `${role}'s gear goes to ${target}, which it cannot open`);
+  }
+  assert.equal(gearTargetFor('driver'), 'account');
+  assert.equal(gearTargetFor('farm_worker'), 'account');
+  assert.equal(gearTargetFor('owner'), 'settings');
+});
+
+check('every role has a reachable way to sign out', () => {
+  // Account is where signOut lives. Reachable means: in the tab bar, or where
+  // the gear goes. Anything else is a route only a developer knows about.
+  for (const role of ROLES) {
+    const reachable = new Set([...tabsForRole(role), gearTargetFor(role)]);
+    assert.ok(reachable.has('account') || reachable.has('settings'),
+      `${role} has no way to reach the sign-out button`);
+  }
 });
 
 check('a worker gets no Sales tab', () => {
