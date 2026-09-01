@@ -1,14 +1,15 @@
-import { db } from './storage.js?v=75';
-import { renderPosition } from './views/position.js?v=75';
-import { renderProduction } from './views/production.js?v=75';
-import { renderReports } from './views/reports.js?v=75';
-import { renderSales } from './views/sales.js?v=75';
-import { renderMovements } from './views/movements.js?v=75';
-import { renderStorage } from './views/storage.js?v=75';
-import { renderSettings } from './views/settings.js?v=75';
-import { renderLogin } from './views/login.js?v=75';
-import { renderAccount } from './views/account.js?v=75';
-import { getSession, getMembership, onAuthChange } from './auth.js?v=75';
+import { db } from './storage.js?v=76';
+import { renderPosition } from './views/position.js?v=76';
+import { renderProduction } from './views/production.js?v=76';
+import { renderReports } from './views/reports.js?v=76';
+import { renderSales } from './views/sales.js?v=76';
+import { renderMovements } from './views/movements.js?v=76';
+import { renderStorage } from './views/storage.js?v=76';
+import { renderSettings } from './views/settings.js?v=76';
+import { renderLogin } from './views/login.js?v=76';
+import { renderAccount } from './views/account.js?v=76';
+import { getSession, getMembership, onAuthChange } from './auth.js?v=76';
+import { tabsForRole, landingTabFor, canOpen } from './nav.js?v=76';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -56,17 +57,33 @@ const ROUTES = [
   { id: 'account', label: 'Account', render: renderAccount },
 ];
 
+// The signed-in role, held for as long as the session lasts. Everything the
+// tab bar and the router decide comes from here; before sign-in it is null and
+// the chrome is hidden anyway.
+let currentRole = null;
+
 const app = document.getElementById('app');
 const tabbar = document.getElementById('tabbar');
 
 function currentTabId() {
   const hash = location.hash.replace('#/', '');
-  return ROUTES.some((t) => t.id === hash) ? hash : 'position';
+  const known = ROUTES.some((t) => t.id === hash);
+  // Hiding a tab is a courtesy; the address bar is still typeable, and a
+  // half-loaded screen a role cannot fill is worse than not offering it. The
+  // actual enforcement is the RLS policies, which refuse the data regardless.
+  if (known && canOpen(currentRole, hash)) return hash;
+  return landingTabFor(currentRole);
 }
 
 function renderTabbar() {
   const active = currentTabId();
-  tabbar.innerHTML = TABS.map((t) => `
+  const allowed = tabsForRole(currentRole);
+  const bar = allowed.map((id) => TABS.find((t) => t.id === id)).filter(Boolean);
+  // A driver's bar holds a single tab, which is arguably a label rather than a
+  // bar. It stays anyway: the layout reserves that strip at the bottom of the
+  // screen, and removing it leaves a gap rather than reclaiming the space.
+  // Worth revisiting alongside the driver screen itself.
+  tabbar.innerHTML = bar.map((t) => `
     <button data-tab="${t.id}" class="${t.id === active ? 'active' : ''}">
       <span class="icon">${t.icon}</span>
       <span>${t.label}</span>
@@ -91,6 +108,8 @@ function renderActiveView() {
   app.innerHTML = '';
   route.render(app);
   renderTabbar();
+  // The gear is the only way to Settings, so it goes when Settings does.
+  settingsBtn.hidden = !canOpen(currentRole, 'settings');
   settingsBtn.classList.toggle('active', active === 'settings');
 }
 
@@ -127,6 +146,7 @@ async function boot() {
   const session = await getSession();
 
   if (!session) {
+    currentRole = null;
     setChromeVisible(false);
     renderLogin(app, { onDone: boot });
     return;
@@ -145,6 +165,7 @@ async function boot() {
   setChromeVisible(true);
   app.innerHTML = '<div class="empty">Loading your farm…</div>';
   try {
+    currentRole = membership.role;
     await db.init({ farmId: membership.farmId, role: membership.role });
   } catch (e) {
     app.innerHTML = `<div class="view"><div class="card">
@@ -153,7 +174,12 @@ async function boot() {
     return;
   }
 
-  if (!location.hash) location.hash = '#/position';
+  // Land where this role can actually work — a driver opening onto an empty
+  // Position screen is a poor first impression of an app they did not ask for.
+  const landing = landingTabFor(currentRole);
+  if (!location.hash || !canOpen(currentRole, location.hash.replace('#/', ''))) {
+    location.hash = `#/${landing}`;
+  }
   renderActiveView();
   renderYearPill();
 }
@@ -166,8 +192,10 @@ onAuthChange((event) => {
 
 window.addEventListener('hashchange', () => {
   // Ignore hash changes while signed out — otherwise a stale #/position in the
-  // address bar renders a view over the top of the login screen.
-  if (tabbar.hidden) return;
+  // address bar renders a view over the top of the login screen. Keyed on the
+  // role rather than on tabbar.hidden, which used to mean "signed out" and now
+  // also means "this role has one tab".
+  if (!currentRole) return;
   renderActiveView();
 });
 
