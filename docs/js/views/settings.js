@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=92';
-import { num, money, esc } from '../fmt.js?v=92';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=92';
-import { APP_VERSION } from '../version.js?v=92';
-import { exportRowsAsCSV } from '../csv.js?v=92';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=92';
-import { endpointLabel } from './movements.js?v=92';
+import { db } from '../storage.js?v=93';
+import { num, money, esc } from '../fmt.js?v=93';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=93';
+import { APP_VERSION } from '../version.js?v=93';
+import { exportRowsAsCSV } from '../csv.js?v=93';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=93';
+import { endpointLabel } from './movements.js?v=93';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=92';
+} from '../invites.js?v=93';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=92';
+} from '../auth.js?v=93';
 
 let unsub = null;
 
@@ -131,6 +131,20 @@ function paint(root) {
         <div class="row"><span class="label">Version</span><span class="value">${esc(APP_VERSION)}</span></div>
         <div class="field hint" style="margin-top:6px">If something looks out of date after an update, tap this to force the app to fetch the latest version.</div>
         <button class="btn secondary small" id="force-refresh" style="margin-top:6px">Force refresh app</button>
+        <hr class="sep" />
+        <div class="field hint" style="margin-bottom:6px">What this device has stored, and
+          anything still waiting to reach the server. Useful when two devices disagree.</div>
+        <!--
+          A plain relative anchor, deliberately, and for the same reason as the
+          recovery link on the login screen: on iOS a home-screen app has its
+          own storage container, sealed off from Safari. Opening this page in
+          Safari inspects Safari's storage and reports that nothing has ever
+          been saved — which is true of Safari and says nothing at all about
+          the app. Navigating within scope keeps it inside the home-screen app,
+          looking at the container that actually holds the farm.
+        -->
+        <a href="./state.html" class="btn secondary small"
+           style="display:block;text-align:center;text-decoration:none;margin-top:6px">Storage diagnostics</a>
       </div>
     </div>
     <button class="fab" id="add-commodity">+</button>

@@ -7,9 +7,9 @@
 
 import {
   getSession, getMembership, signOut, listMyInvitations, acceptInvitation,
-} from '../auth.js?v=92';
-import { roleLabel, expiryText } from '../invites.js?v=92';
-import { esc } from '../fmt.js?v=92';
+} from '../auth.js?v=93';
+import { roleLabel, expiryText } from '../invites.js?v=93';
+import { esc } from '../fmt.js?v=93';
 
 const ROLE_LABELS = {
   owner: 'Owner',
