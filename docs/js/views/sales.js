@@ -1,13 +1,13 @@
-import { db } from '../storage.js?v=96';
+import { db } from '../storage.js?v=97';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=96';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=96';
-import { num, tons, money, esc } from '../fmt.js?v=96';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=96';
-import { renderRelatedMovements } from './movements.js?v=96';
-import { openInvoiceListSheet } from './invoice.js?v=96';
-import { openContractDocSheet } from './contract.js?v=96';
+} from '../documents.js?v=97';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=97';
+import { num, tons, money, esc } from '../fmt.js?v=97';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=97';
+import { renderRelatedMovements } from './movements.js?v=97';
+import { openInvoiceListSheet } from './invoice.js?v=97';
+import { openContractDocSheet } from './contract.js?v=97';
 
 let unsub = null;
 
@@ -191,6 +191,18 @@ function openSaleSheet(existing) {
           { value: 'invoice date', label: 'Invoice date' },
         ], hint: '"30 days" and "30 days from end of week" are up to six days apart' })}
       </div>
+      <div class="grid-2">
+        ${field({ label: 'Broker', id: 'broker', value: existing?.broker, placeholder: 'e.g. Knight Commodities' })}
+        ${field({ label: 'Broker reference', id: 'brokerRef', value: existing?.brokerRef, placeholder: 'Their contract ref' })}
+      </div>
+      <div class="grid-2">
+        ${field({ label: 'Brokerage paid by', id: 'brokeragePaidBy', type: 'select', value: existing?.brokeragePaidBy ?? '', options: [
+          { value: '', label: '—' },
+          { value: 'seller', label: 'Seller (you)' },
+          { value: 'buyer', label: 'Buyer' },
+        ] })}
+        ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
+      </div>
       <hr class="sep" />
       <h2 style="margin:0 0 4px">Contract terms</h2>
       <div class="field hint" style="margin-bottom:10px">What the buyer's contract confirmation
@@ -203,15 +215,6 @@ function openSaleSheet(existing) {
       ${field({ label: 'Delivery terms', id: 'deliveryTerms', value: existing?.deliveryTerms, placeholder: "e.g. Buyer's call, 5 business days notice" })}
       ${field({ label: 'Buyer contact / trader', id: 'buyerContact', value: existing?.buyerContact, placeholder: 'Who to ring about a load' })}
       <div class="grid-2">
-        ${field({ label: 'Broker', id: 'broker', value: existing?.broker, placeholder: 'e.g. Knight Commodities' })}
-        ${field({ label: 'Broker reference', id: 'brokerRef', value: existing?.brokerRef, placeholder: 'Their contract ref' })}
-      </div>
-      ${field({ label: 'Brokerage paid by', id: 'brokeragePaidBy', type: 'select', value: existing?.brokeragePaidBy ?? '', options: [
-        { value: '', label: '—' },
-        { value: 'seller', label: 'Seller (you)' },
-        { value: 'buyer', label: 'Buyer' },
-      ] })}
-      <div class="grid-2">
         ${field({ label: 'Carry ($/t/month)', id: 'carryRate', type: 'number', step: '0.01', value: existing?.carryRate ?? 0, hint: 'Paid to leave grain on farm' })}
         ${field({ label: 'Carry starts', id: 'carryFrom', type: 'date', value: existing?.carryFrom })}
       </div>
@@ -221,13 +224,10 @@ function openSaleSheet(existing) {
       <div class="field hint" style="margin-bottom:10px">Taken off (or added to) the price above to
         get the net price ex-farm.</div>
       <div class="grid-2">
-        ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
         ${field({ label: 'Premium/discount ($/t)', id: 'premium', type: 'number', step: '0.01', value: existing?.premiumDiscount ?? 0, allowNegative: true, hint: 'Negative for a discount' })}
-      </div>
-      <div class="grid-2">
         ${field({ label: 'Levies (%)', id: 'levies', type: 'number', step: '0.01', value: existing ? existing.leviesPct * 100 : 1.02, hint: 'e.g. GRDC + state levy' })}
-        ${field({ label: 'Ginning cost ($)', id: 'ginning', type: 'number', step: '0.01', value: existing?.ginning ?? 0, hint: 'Net ginning deduction, e.g. cotton seed. A total, not a rate.' })}
       </div>
+      ${field({ label: 'Ginning cost ($)', id: 'ginning', type: 'number', step: '0.01', value: existing?.ginning ?? 0, hint: 'Net ginning deduction, e.g. cotton seed. A total, not a rate.' })}
       <hr class="sep" />
       <h2 style="margin:0 0 4px">Delivered &amp; other</h2>
       ${field({ label: 'Tons delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a Movement' })}
