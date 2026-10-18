@@ -14,8 +14,7 @@ grainflow-backup*.json
 .env
 .env.*
 
-# Real feedyard data. The Grassdale seed and the spreadsheet answers it is
-# checked against carry named suppliers, contract numbers and prices. The
-# feedlot page and tests use them when they are here and fall back to the
-# anonymised demo seed when they are not.
+# Real feedyard data from the feedlot prototype, which has moved to its own
+# repo (Feedlot Position). Any private/ folder left here still holds named
+# suppliers and prices, so it stays ignored.
 private/
