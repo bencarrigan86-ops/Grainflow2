@@ -672,3 +672,6 @@ details.fold > summary .sub { font-size: 12px; color: var(--text-dim); margin-to
 .list-item .li-foot > .meta { flex: 1; min-width: 0; }
 .list-item .li-foot { flex-wrap: nowrap; }
 .save-bar.solo .btn { width: 100%; }
+.trio.quad { grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0 4px; }
+.kv.sm .v { font-size: 14px; }
+.kv.sm .l { font-size: 11px; }

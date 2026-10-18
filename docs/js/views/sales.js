@@ -1,13 +1,13 @@
-import { db } from '../storage.js?v=100';
+import { db } from '../storage.js?v=101';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=100';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=100';
-import { num, tons, money, esc, shortDate, todayLocal } from '../fmt.js?v=100';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=100';
-import { renderRelatedMovements } from './movements.js?v=100';
-import { openInvoiceListSheet } from './invoice.js?v=100';
-import { openContractDocSheet } from './contract.js?v=100';
+} from '../documents.js?v=101';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=101';
+import { num, tons, money, esc, shortDate, todayLocal } from '../fmt.js?v=101';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=101';
+import { renderRelatedMovements } from './movements.js?v=101';
+import { openInvoiceListSheet } from './invoice.js?v=101';
+import { openContractDocSheet } from './contract.js?v=101';
 
 let unsub = null;
 
@@ -37,11 +37,30 @@ function paint(root) {
     </div>
     <div class="view">
       ${rollup.length === 0 ? '' : `
-      <div class="stat-grid">
-        <div class="stat"><div class="n">${num(salesTotals.tons, 0)}</div><div class="l">Sold (contracted)</div></div>
-        <div class="stat"><div class="n">${num(salesTotals.tonsDue, 0)}</div><div class="l">Still to deliver</div></div>
-        <div class="stat"><div class="n">${money(salesTotals.totalValue, 0)}</div><div class="l">Contract value</div></div>
-        <div class="stat"><div class="n">${money(salesTotals.avgPrice, 0)}</div><div class="l">Average net price</div></div>
+      <div class="card report">
+        <h2><span class="dot report"></span>By commodity</h2>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Commodity</th><th>Sold t</th><th>Due t</th><th>Avg $/t</th><th>Total $</th></tr></thead>
+            <tbody>
+              ${rollup.map((r) => `
+                <tr>
+                  <td>${esc(r.commodity.name)}</td>
+                  <td>${num(r.tons, 0)}</td>
+                  <td>${num(Math.max(0, r.tonsDue), 0)}</td>
+                  <td>${num(r.avgPrice, 0)}</td>
+                  <td>${num(r.totalValue, 0)}</td>
+                </tr>`).join('')}
+            </tbody>
+            <tfoot><tr>
+              <td>Total</td>
+              <td>${num(salesTotals.tons, 0)}</td>
+              <td>${num(salesTotals.tonsDue, 0)}</td>
+              <td>${num(salesTotals.avgPrice, 0)}</td>
+              <td>${num(salesTotals.totalValue, 0)}</td>
+            </tr></tfoot>
+          </table>
+        </div>
       </div>`}
 
       <div class="card input">
@@ -51,33 +70,6 @@ function paint(root) {
           ${g.sales.map((s) => saleRow(s, movements, commodities)).join('')}
         `).join('')}
       </div>
-
-      ${rollup.length === 0 ? '' : `
-      <div class="card report">
-        <h2><span class="dot report"></span>By commodity</h2>
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>Commodity</th><th>Sold</th><th>To deliver</th><th>Avg $/t</th><th>Total $</th></tr></thead>
-            <tbody>
-              ${rollup.map((r) => `
-                <tr>
-                  <td>${esc(r.commodity.name)}</td>
-                  <td>${num(r.tons, 1)}</td>
-                  <td>${num(Math.max(0, r.tonsDue), 1)}</td>
-                  <td>${num(r.avgPrice, 2)}</td>
-                  <td>${num(r.totalValue, 0)}</td>
-                </tr>`).join('')}
-            </tbody>
-            <tfoot><tr>
-              <td>Total</td>
-              <td>${num(salesTotals.tons, 1)}</td>
-              <td>${num(salesTotals.tonsDue, 1)}</td>
-              <td>${num(salesTotals.avgPrice, 2)}</td>
-              <td>${num(salesTotals.totalValue, 0)}</td>
-            </tr></tfoot>
-          </table>
-        </div>
-      </div>`}
     </div>
     <button class="fab" id="add-sale">+</button>
   `;

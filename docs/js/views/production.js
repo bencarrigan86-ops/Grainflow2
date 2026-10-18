@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=100';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=100';
-import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=100';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=100';
-import { renderRelatedMovements } from './movements.js?v=100';
+import { db } from '../storage.js?v=101';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=101';
+import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=101';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=101';
+import { renderRelatedMovements } from './movements.js?v=101';
 
 let unsub = null;
 
@@ -28,19 +28,6 @@ function paint(root) {
     </div>
     <div class="view">
       ${rollup.length === 0 ? '' : `
-      <div class="stat-grid">
-        <div class="stat"><div class="n">${num(productionTotals.area, 0)} ha</div><div class="l">Total area</div></div>
-        <div class="stat"><div class="n">${num(productionTotals.tons, 0)} t</div><div class="l">Total production</div></div>
-      </div>`}
-
-      <div class="card input">
-        <h2><span class="dot input"></span>Fields</h2>
-        ${groups.length === 0 ? `<div class="empty">No fields yet.<br/><button class="btn" id="empty-add-field">Add your first field</button></div>` : groups.map((g) => `
-          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${tons(g.totalTons, 0)}</span></div>
-          ${g.fields.map((f) => fieldRow(f, movements)).join('')}
-        `).join('')}
-      </div>
-      ${rollup.length === 0 ? '' : `
       <div class="card report">
         <h2><span class="dot report"></span>By commodity</h2>
         <div class="table-scroll">
@@ -64,6 +51,14 @@ function paint(root) {
           </table>
         </div>
       </div>`}
+
+      <div class="card input">
+        <h2><span class="dot input"></span>Fields</h2>
+        ${groups.length === 0 ? `<div class="empty">No fields yet.<br/><button class="btn" id="empty-add-field">Add your first field</button></div>` : groups.map((g) => `
+          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${tons(g.totalTons, 0)}</span></div>
+          ${g.fields.map((f) => fieldRow(f, movements)).join('')}
+        `).join('')}
+      </div>
     </div>
     <button class="fab" id="add-field">+</button>
   `;

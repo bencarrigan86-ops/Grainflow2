@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=100';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=100';
-import { num, tons, money, pct, esc } from '../fmt.js?v=100';
+import { db } from '../storage.js?v=101';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=101';
+import { num, tons, money, pct, esc } from '../fmt.js?v=101';
 
 let unsub = null;
 
@@ -89,13 +89,17 @@ function commodityCard(r) {
         <div class="kv"><div class="l">Sold</div><div class="v">${tons(r.soldTons, 0)}</div></div>
         <div class="kv"><div class="l">Unsold</div><div class="v">${tons(r.unsoldTons, 0)}</div></div>
       </div>
+      <div class="trio quad">
+        <div class="kv sm"><div class="l">Area</div><div class="v">${num(r.area, 0)} ha</div></div>
+        <div class="kv sm"><div class="l">Yield</div><div class="v">${num(r.yieldTHa, 2)} t/ha</div></div>
+        <div class="kv sm"><div class="l">Avg sold</div><div class="v">${money(r.avgSoldPrice, 0)}/t</div></div>
+        <div class="kv sm"><div class="l">MTM</div><div class="v">${money(r.mtmPrice, 0)}/t</div></div>
+      </div>
       <div class="gauge" role="img" aria-label="${Math.round(sold * 100)} percent sold"><i style="width:${sold * 100}%"></i></div>
       <div class="row" style="margin-top:8px"><span class="label">Total position value</span><span class="value">${money(r.totalValue, 0)}</span></div>
       <div class="row"><span class="label">Gross margin</span><span class="value">${money(r.grossMargin, 0)} <span class="badge ${r.grossMargin >= 0 ? 'pos' : 'neg'}">${pct(r.grossMarginPct)}</span></span></div>
       <details class="fold">
-        <summary><div><h2>Full breakdown</h2><div class="sub">Area, yield, prices and costs</div></div></summary>
-        <div class="row"><span class="label">Area</span><span class="value">${num(r.area, 0)} ha</span></div>
-        <div class="row"><span class="label">Yield</span><span class="value">${num(r.yieldTHa, 2)} t/ha</span></div>
+        <summary><div><h2>Full breakdown</h2><div class="sub">Values, stock and costs</div></div></summary>
         <div class="row"><span class="label">Avg sold price</span><span class="value">${money(r.avgSoldPrice, 2)}/t</span></div>
         <div class="row"><span class="label">Sold value</span><span class="value">${money(r.soldValue, 0)}</span></div>
         ${r.opening || r.retainedSeed ? `
