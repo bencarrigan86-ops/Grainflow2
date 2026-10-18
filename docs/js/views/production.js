@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=97';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=97';
-import { num, tons, ha, esc } from '../fmt.js?v=97';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=97';
-import { renderRelatedMovements } from './movements.js?v=97';
+import { db } from '../storage.js?v=98';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=98';
+import { num, tons, ha, esc } from '../fmt.js?v=98';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=98';
+import { renderRelatedMovements } from './movements.js?v=98';
 
 let unsub = null;
 

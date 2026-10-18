@@ -11,10 +11,10 @@
 // far harder to get subtly wrong than a changelog, which is the beginning of
 // exactly the machinery we are deferring.
 
-import { supabase } from './supabase.js?v=97';
-import { stateToRows } from './mapping.js?v=97';
-import { markDirty, markDeleted, outboxItems, clearOutboxUpTo } from './local.js?v=97';
-import { flushPendingPhotos } from './photos.js?v=97';
+import { supabase } from './supabase.js?v=98';
+import { stateToRows } from './mapping.js?v=98';
+import { markDirty, markDeleted, outboxItems, clearOutboxUpTo } from './local.js?v=98';
+import { flushPendingPhotos } from './photos.js?v=98';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.

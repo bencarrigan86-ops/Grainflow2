@@ -405,6 +405,16 @@ export function position(commodities, fields, sales, movements = []) {
   });
 }
 
+/**
+ * The commodities that have anything to report. A farm that has not sold or
+ * stored anything yet still has a position: production alone is enough, and
+ * so is an area with no yield entered yet.
+ */
+export function positionRows(commodities, fields, sales, movements = []) {
+  return position(commodities, fields, sales, movements)
+    .filter((r) => r.area > 0 || r.productionTons > 0 || r.soldTons > 0 || r.opening > 0 || r.retainedSeed > 0);
+}
+
 export function positionTotals(rows) {
   return rows.reduce((acc, r) => ({
     area: acc.area + r.area,

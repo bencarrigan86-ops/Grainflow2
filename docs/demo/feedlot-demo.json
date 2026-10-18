@@ -1,0 +1,3606 @@
+{
+ "yard": "Demo Feedyard",
+ "inventoryDate": "2016-07-05",
+ "intakeDM": {
+  "sfBullock": 10.7,
+  "sfTrade": 9.7,
+  "lf": 8
+ },
+ "bullockExitDays": 100,
+ "longFedClasses": [
+  "7 O"
+ ],
+ "rations": {
+  "SF": [
+   {
+    "fromMonth": 0,
+    "name": "Short Fed 2/3Wheat 1/3Sorghum Diet",
+    "stages": [
+     {
+      "name": "Hay",
+      "share": 0.016,
+      "dryMatter": 0.9,
+      "nem": 0,
+      "inclusions": {
+       "Barley": 0,
+       "Wheat": 0,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0,
+       "Cotton Seed": 0,
+       "Hay Lucerne": 0.5,
+       "Hay Cereal & Straw": 0.5,
+       "Silage": 0,
+       "Oil": 0
+      }
+     },
+     {
+      "name": "Ration 1",
+      "share": 0.041,
+      "dryMatter": 0.782,
+      "nem": 1.105,
+      "inclusions": {
+       "Barley": 0.315,
+       "Wheat": 0.155,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0.14,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0.06,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0.035,
+       "Cotton Seed": 0.065,
+       "Hay Lucerne": 0.1,
+       "Hay Cereal & Straw": 0.05,
+       "Silage": 0.08,
+       "Oil": 0
+      }
+     },
+     {
+      "name": "Ration 3",
+      "share": 0.055,
+      "dryMatter": 0.7862,
+      "nem": 1.308,
+      "inclusions": {
+       "Barley": 0.41,
+       "Wheat": 0.205,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0.08,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0.06,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0.02,
+       "Cotton Seed": 0.085,
+       "Hay Lucerne": 0.04,
+       "Hay Cereal & Straw": 0.035,
+       "Silage": 0.053,
+       "Oil": 0.012
+      }
+     },
+     {
+      "name": "Ration 4",
+      "share": 0.888,
+      "dryMatter": 0.7892,
+      "nem": 1.518,
+      "inclusions": {
+       "Barley": 0.49,
+       "Wheat": 0.24,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0.028,
+       "Liquid Finisher": 0.06,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0.02,
+       "Cotton Seed": 0.105,
+       "Hay Lucerne": 0,
+       "Hay Cereal & Straw": 0,
+       "Silage": 0.033,
+       "Oil": 0.024
+      }
+     }
+    ],
+    "ingredients": [
+     "Barley",
+     "Wheat",
+     "Wet Distillers",
+     "Cotton Hulls",
+     "Liquid Finisher",
+     "Liquid Starter",
+     "Liquid Waygu",
+     "Cotton Meats",
+     "Cotton Seed",
+     "Hay Lucerne",
+     "Hay Cereal & Straw",
+     "Silage",
+     "Oil"
+    ]
+   },
+   {
+    "fromMonth": 4,
+    "name": "Short Fed 2/3Wheat 1/3Sorghum Diet",
+    "stages": [
+     {
+      "name": "Hay",
+      "share": 0.016,
+      "dryMatter": 0.9,
+      "nem": 0,
+      "inclusions": {
+       "Barley": 0,
+       "Wheat": 0,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0,
+       "Cotton Seed": 0,
+       "Hay Lucerne": 0.5,
+       "Hay Cereal & Straw": 0.5,
+       "Silage": 0,
+       "Oil": 0
+      }
+     },
+     {
+      "name": "Ration 1",
+      "share": 0.041,
+      "dryMatter": 0.782,
+      "nem": 1.105,
+      "inclusions": {
+       "Barley": 0,
+       "Wheat": 0.735,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0.14,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0.06,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0.035,
+       "Cotton Seed": 0.065,
+       "Hay Lucerne": 0.1,
+       "Hay Cereal & Straw": 0.05,
+       "Silage": 0.08,
+       "Oil": 0
+      }
+     },
+     {
+      "name": "Ration 3",
+      "share": 0.055,
+      "dryMatter": 0.7862,
+      "nem": 1.308,
+      "inclusions": {
+       "Barley": 0.41,
+       "Wheat": 0.705,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0.08,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0.06,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0.02,
+       "Cotton Seed": 0.085,
+       "Hay Lucerne": 0.04,
+       "Hay Cereal & Straw": 0.035,
+       "Silage": 0.053,
+       "Oil": 0.012
+      }
+     },
+     {
+      "name": "Ration 4",
+      "share": 0.888,
+      "dryMatter": 0.7892,
+      "nem": 1.518,
+      "inclusions": {
+       "Barley": 0.49,
+       "Wheat": 0.24,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0.028,
+       "Liquid Finisher": 0.06,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0.02,
+       "Cotton Seed": 0.105,
+       "Hay Lucerne": 0,
+       "Hay Cereal & Straw": 0,
+       "Silage": 0.033,
+       "Oil": 0.024
+      }
+     }
+    ],
+    "ingredients": [
+     "Barley",
+     "Wheat",
+     "Wet Distillers",
+     "Cotton Hulls",
+     "Liquid Finisher",
+     "Liquid Starter",
+     "Liquid Waygu",
+     "Cotton Meats",
+     "Cotton Seed",
+     "Hay Lucerne",
+     "Hay Cereal & Straw",
+     "Silage",
+     "Oil"
+    ]
+   },
+   {
+    "fromMonth": 5,
+    "name": "Short Fed 2/3Wheat 1/3Sorghum Diet",
+    "stages": [
+     {
+      "name": "Hay",
+      "share": 0.016,
+      "dryMatter": 0.9,
+      "nem": 0,
+      "inclusions": {
+       "Barley": 0,
+       "Wheat": 0,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0,
+       "Cotton Seed": 0,
+       "Hay Lucerne": 0.5,
+       "Hay Cereal & Straw": 0.5,
+       "Silage": 0,
+       "Oil": 0
+      }
+     },
+     {
+      "name": "Ration 1",
+      "share": 0.041,
+      "dryMatter": 0.782,
+      "nem": 1.105,
+      "inclusions": {
+       "Barley": 0.315,
+       "Wheat": 0.155,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0.14,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0.06,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0.035,
+       "Cotton Seed": 0.065,
+       "Hay Lucerne": 0.1,
+       "Hay Cereal & Straw": 0.05,
+       "Silage": 0.08,
+       "Oil": 0
+      }
+     },
+     {
+      "name": "Ration 3",
+      "share": 0.055,
+      "dryMatter": 0.7862,
+      "nem": 1.308,
+      "inclusions": {
+       "Barley": 0.41,
+       "Wheat": 0.205,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0.08,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0.06,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0.02,
+       "Cotton Seed": 0.085,
+       "Hay Lucerne": 0.04,
+       "Hay Cereal & Straw": 0.035,
+       "Silage": 0.053,
+       "Oil": 0.012
+      }
+     },
+     {
+      "name": "Ration 4",
+      "share": 0.888,
+      "dryMatter": 0.7892,
+      "nem": 1.518,
+      "inclusions": {
+       "Barley": 0.49,
+       "Wheat": 0.24,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0.028,
+       "Liquid Finisher": 0.06,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0.02,
+       "Cotton Seed": 0.105,
+       "Hay Lucerne": 0,
+       "Hay Cereal & Straw": 0,
+       "Silage": 0.033,
+       "Oil": 0.024
+      }
+     }
+    ],
+    "ingredients": [
+     "Barley",
+     "Wheat",
+     "Wet Distillers",
+     "Cotton Hulls",
+     "Liquid Finisher",
+     "Liquid Starter",
+     "Liquid Waygu",
+     "Cotton Meats",
+     "Cotton Seed",
+     "Hay Lucerne",
+     "Hay Cereal & Straw",
+     "Silage",
+     "Oil"
+    ]
+   }
+  ],
+  "LF": [
+   {
+    "fromMonth": 0,
+    "name": "Long Fed All Wheat",
+    "stages": [
+     {
+      "name": "Hay",
+      "share": 0,
+      "dryMatter": 0,
+      "nem": 0,
+      "inclusions": {
+       "Barley": 0,
+       "Wheat": 0,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0,
+       "Cotton Seed": 0,
+       "Hay Lucerne": 0,
+       "Hay Cereal & Straw": 0,
+       "Silage": 0,
+       "Oil": 0
+      }
+     },
+     {
+      "name": "Ration 2",
+      "share": 0,
+      "dryMatter": 0,
+      "nem": 0,
+      "inclusions": {
+       "Barley": 0,
+       "Wheat": 0,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0,
+       "Cotton Seed": 0,
+       "Hay Lucerne": 0,
+       "Hay Cereal & Straw": 0,
+       "Silage": 0,
+       "Oil": 0
+      }
+     },
+     {
+      "name": "Ration 3",
+      "share": 0.5,
+      "dryMatter": 0.7289,
+      "nem": 1.257,
+      "inclusions": {
+       "Barley": 0.425,
+       "Wheat": 0.21,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0.085,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0.05,
+       "Cotton Meats": 0.025,
+       "Cotton Seed": 0,
+       "Hay Lucerne": 0,
+       "Hay Cereal & Straw": 0.045,
+       "Silage": 0.149,
+       "Oil": 0.011
+      }
+     },
+     {
+      "name": "Ration 4",
+      "share": 0.5,
+      "dryMatter": 0.7498,
+      "nem": 1.353,
+      "inclusions": {
+       "Barley": 0.48,
+       "Wheat": 0.24,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0.055,
+       "Liquid Finisher": 0.025,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0.029,
+       "Cotton Meats": 0.02,
+       "Cotton Seed": 0,
+       "Hay Lucerne": 0,
+       "Hay Cereal & Straw": 0.035,
+       "Silage": 0.1,
+       "Oil": 0.016
+      }
+     }
+    ],
+    "ingredients": [
+     "Barley",
+     "Wheat",
+     "Wet Distillers",
+     "Cotton Hulls",
+     "Liquid Finisher",
+     "Liquid Starter",
+     "Liquid Waygu",
+     "Cotton Meats",
+     "Cotton Seed",
+     "Hay Lucerne",
+     "Hay Cereal & Straw",
+     "Silage",
+     "Oil"
+    ]
+   },
+   {
+    "fromMonth": 5,
+    "name": "Long Fed All Wheat",
+    "stages": [
+     {
+      "name": "Hay",
+      "share": 0,
+      "dryMatter": 0,
+      "nem": 0,
+      "inclusions": {
+       "Barley": 0,
+       "Wheat": 0,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0,
+       "Cotton Seed": 0,
+       "Hay Lucerne": 0,
+       "Hay Cereal & Straw": 0,
+       "Silage": 0,
+       "Oil": 0
+      }
+     },
+     {
+      "name": "Ration 1",
+      "share": 0,
+      "dryMatter": 0,
+      "nem": 0,
+      "inclusions": {
+       "Barley": 0,
+       "Wheat": 0,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0,
+       "Cotton Meats": 0,
+       "Cotton Seed": 0,
+       "Hay Lucerne": 0,
+       "Hay Cereal & Straw": 0,
+       "Silage": 0,
+       "Oil": 0
+      }
+     },
+     {
+      "name": "Ration 3",
+      "share": 0.5,
+      "dryMatter": 0.7289,
+      "nem": 1.257,
+      "inclusions": {
+       "Barley": 0.425,
+       "Wheat": 0.21,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0.085,
+       "Liquid Finisher": 0,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0.05,
+       "Cotton Meats": 0.025,
+       "Cotton Seed": 0,
+       "Hay Lucerne": 0,
+       "Hay Cereal & Straw": 0.045,
+       "Silage": 0.149,
+       "Oil": 0.011
+      }
+     },
+     {
+      "name": "Ration 4",
+      "share": 0.5,
+      "dryMatter": 0.7498,
+      "nem": 1.353,
+      "inclusions": {
+       "Barley": 0.48,
+       "Wheat": 0.24,
+       "Wet Distillers": 0,
+       "Cotton Hulls": 0.055,
+       "Liquid Finisher": 0.025,
+       "Liquid Starter": 0,
+       "Liquid Waygu": 0.029,
+       "Cotton Meats": 0.02,
+       "Cotton Seed": 0,
+       "Hay Lucerne": 0,
+       "Hay Cereal & Straw": 0.035,
+       "Silage": 0.1,
+       "Oil": 0.016
+      }
+     }
+    ],
+    "ingredients": [
+     "Barley",
+     "Wheat",
+     "Wet Distillers",
+     "Cotton Hulls",
+     "Liquid Finisher",
+     "Liquid Starter",
+     "Liquid Waygu",
+     "Cotton Meats",
+     "Cotton Seed",
+     "Hay Lucerne",
+     "Hay Cereal & Straw",
+     "Silage",
+     "Oil"
+    ]
+   }
+  ]
+ },
+ "shrink": {
+  "Barley": 0.14,
+  "Wheat": 0.13,
+  "Wet Distillers": 0,
+  "Cotton Hulls": -0.015,
+  "Liquid Finisher": -0.01,
+  "Liquid Starter": -0.01,
+  "Liquid Waygu": -0.01,
+  "Cotton Meats": -0.02,
+  "Cotton Seed": -0.02,
+  "Hay Lucerne": -0.04,
+  "Hay Cereal & Straw": -0.04,
+  "Silage": 0,
+  "Oil": -0.01
+ },
+ "months": [
+  {
+   "end": "2016-07-31",
+   "days": 27,
+   "sfTotalHead": 39500,
+   "sfTradeHead": 0,
+   "lfTotalHead": 2300
+  },
+  {
+   "end": "2016-08-31",
+   "days": 31,
+   "sfTotalHead": 40000,
+   "sfTradeHead": 8000,
+   "lfTotalHead": 2300
+  },
+  {
+   "end": "2016-09-30",
+   "days": 30,
+   "sfTotalHead": 40000,
+   "sfTradeHead": 12000,
+   "lfTotalHead": 2300
+  },
+  {
+   "end": "2016-10-31",
+   "days": 31,
+   "sfTotalHead": 40000,
+   "sfTradeHead": 12000,
+   "lfTotalHead": 2300
+  },
+  {
+   "end": "2016-11-30",
+   "days": 30,
+   "sfTotalHead": 43000,
+   "sfTradeHead": 12000,
+   "lfTotalHead": 2300
+  },
+  {
+   "end": "2016-12-31",
+   "days": 31,
+   "sfTotalHead": 46000,
+   "sfTradeHead": 12000,
+   "lfTotalHead": 2300
+  },
+  {
+   "end": "2017-01-31",
+   "days": 31,
+   "sfTotalHead": 50700,
+   "sfTradeHead": 12000,
+   "lfTotalHead": 2300
+  },
+  {
+   "end": "2017-02-28",
+   "days": 28,
+   "sfTotalHead": 50700,
+   "sfTradeHead": 12000,
+   "lfTotalHead": 2300
+  },
+  {
+   "end": "2017-03-31",
+   "days": 31,
+   "sfTotalHead": 50700,
+   "sfTradeHead": 12000,
+   "lfTotalHead": 2300
+  },
+  {
+   "end": "2017-04-30",
+   "days": 30,
+   "sfTotalHead": 50700,
+   "sfTradeHead": 12000,
+   "lfTotalHead": 2300
+  },
+  {
+   "end": "2017-05-31",
+   "days": 31,
+   "sfTotalHead": 50700,
+   "sfTradeHead": 12000,
+   "lfTotalHead": 2300
+  },
+  {
+   "end": "2017-06-30",
+   "days": 30,
+   "sfTotalHead": 50700,
+   "sfTradeHead": 12000,
+   "lfTotalHead": 2300
+  }
+ ],
+ "lots": [
+  {
+   "id": "L001",
+   "cattleClass": "1 T",
+   "inWeight": 347.813559322034,
+   "sex": "S",
+   "daysOnFeed": 2,
+   "head": 117,
+   "exitDays": 88
+  },
+  {
+   "id": "L002",
+   "cattleClass": "1 T",
+   "inWeight": 377.624,
+   "sex": "S",
+   "daysOnFeed": 3,
+   "head": 250,
+   "exitDays": 88
+  },
+  {
+   "id": "L003",
+   "cattleClass": "1 T",
+   "inWeight": 359.074585635359,
+   "sex": "S",
+   "daysOnFeed": 6,
+   "head": 362,
+   "exitDays": 88
+  },
+  {
+   "id": "L004",
+   "cattleClass": "1 T",
+   "inWeight": 374.104109589041,
+   "sex": "S",
+   "daysOnFeed": 17,
+   "head": 365,
+   "exitDays": 88
+  },
+  {
+   "id": "L005",
+   "cattleClass": "1 T",
+   "inWeight": 385.494339622642,
+   "sex": "S",
+   "daysOnFeed": 17,
+   "head": 264,
+   "exitDays": 88
+  },
+  {
+   "id": "L006",
+   "cattleClass": "1 T",
+   "inWeight": 341.568421052632,
+   "sex": "S",
+   "daysOnFeed": 17,
+   "head": 379,
+   "exitDays": 88
+  },
+  {
+   "id": "L007",
+   "cattleClass": "1 T",
+   "inWeight": 296.906077348066,
+   "sex": "S",
+   "daysOnFeed": 26,
+   "head": 180,
+   "exitDays": 88
+  },
+  {
+   "id": "L008",
+   "cattleClass": "1 T",
+   "inWeight": 354.755555555556,
+   "sex": "S",
+   "daysOnFeed": 33,
+   "head": 269,
+   "exitDays": 88
+  },
+  {
+   "id": "L009",
+   "cattleClass": "1 T",
+   "inWeight": 362.732193732194,
+   "sex": "S",
+   "daysOnFeed": 36,
+   "head": 346,
+   "exitDays": 88
+  },
+  {
+   "id": "L010",
+   "cattleClass": "1 T",
+   "inWeight": 403.833962264151,
+   "sex": "S",
+   "daysOnFeed": 43,
+   "head": 263,
+   "exitDays": 88
+  },
+  {
+   "id": "L011",
+   "cattleClass": "1 T",
+   "inWeight": 359.442857142857,
+   "sex": "S",
+   "daysOnFeed": 50,
+   "head": 280,
+   "exitDays": 88
+  },
+  {
+   "id": "L012",
+   "cattleClass": "1 T",
+   "inWeight": 339.756457564576,
+   "sex": "S",
+   "daysOnFeed": 54,
+   "head": 264,
+   "exitDays": 88
+  },
+  {
+   "id": "L013",
+   "cattleClass": "1 T",
+   "inWeight": 386.722222222222,
+   "sex": "S",
+   "daysOnFeed": 57,
+   "head": 136,
+   "exitDays": 88
+  },
+  {
+   "id": "L014",
+   "cattleClass": "1 T",
+   "inWeight": 390.569230769231,
+   "sex": "S",
+   "daysOnFeed": 62,
+   "head": 259,
+   "exitDays": 88
+  },
+  {
+   "id": "L015",
+   "cattleClass": "1 T",
+   "inWeight": 429.548387096774,
+   "sex": "S",
+   "daysOnFeed": 68,
+   "head": 243,
+   "exitDays": 88
+  },
+  {
+   "id": "L016",
+   "cattleClass": "1 T",
+   "inWeight": 383.432330827068,
+   "sex": "S",
+   "daysOnFeed": 71,
+   "head": 260,
+   "exitDays": 88
+  },
+  {
+   "id": "L017",
+   "cattleClass": "1 T",
+   "inWeight": 340.989071038251,
+   "sex": "S",
+   "daysOnFeed": 76,
+   "head": 183,
+   "exitDays": 88
+  },
+  {
+   "id": "L018",
+   "cattleClass": "1 T",
+   "inWeight": 340.818421052632,
+   "sex": "S",
+   "daysOnFeed": 82,
+   "head": 346,
+   "exitDays": 88
+  },
+  {
+   "id": "L019",
+   "cattleClass": "1 T",
+   "inWeight": 347.435714285714,
+   "sex": "S",
+   "daysOnFeed": 86,
+   "head": 249,
+   "exitDays": 88
+  },
+  {
+   "id": "L020",
+   "cattleClass": "1 T",
+   "inWeight": 327.476315789474,
+   "sex": "S",
+   "daysOnFeed": 91,
+   "head": 319,
+   "exitDays": 105
+  },
+  {
+   "id": "L021",
+   "cattleClass": "1 T",
+   "inWeight": 335.483695652174,
+   "sex": "S",
+   "daysOnFeed": 107,
+   "head": 161,
+   "exitDays": 110
+  },
+  {
+   "id": "L022",
+   "cattleClass": "1 T",
+   "inWeight": 349.5,
+   "sex": "S",
+   "daysOnFeed": 124,
+   "head": 1,
+   "exitDays": 130
+  },
+  {
+   "id": "L023",
+   "cattleClass": "1 T",
+   "inWeight": 329.65,
+   "sex": "S",
+   "daysOnFeed": 141,
+   "head": 2,
+   "exitDays": 145
+  },
+  {
+   "id": "L024",
+   "cattleClass": "10",
+   "inWeight": 304.841726618705,
+   "sex": "S",
+   "daysOnFeed": 20,
+   "head": 278,
+   "exitDays": 88
+  },
+  {
+   "id": "L025",
+   "cattleClass": "10",
+   "inWeight": 312.818181818182,
+   "sex": "S",
+   "daysOnFeed": 36,
+   "head": 270,
+   "exitDays": 88
+  },
+  {
+   "id": "L026",
+   "cattleClass": "10",
+   "inWeight": 322.246575342466,
+   "sex": "S",
+   "daysOnFeed": 41,
+   "head": 359,
+   "exitDays": 88
+  },
+  {
+   "id": "L027",
+   "cattleClass": "10",
+   "inWeight": 231.080882352941,
+   "sex": "S",
+   "daysOnFeed": 111,
+   "head": 174,
+   "exitDays": 115
+  },
+  {
+   "id": "L028",
+   "cattleClass": "10",
+   "inWeight": 255.405904059041,
+   "sex": "S",
+   "daysOnFeed": 111,
+   "head": 104,
+   "exitDays": 115
+  },
+  {
+   "id": "L029",
+   "cattleClass": "11",
+   "inWeight": 407.428571428571,
+   "sex": "S",
+   "daysOnFeed": 6,
+   "head": 7,
+   "exitDays": 88
+  },
+  {
+   "id": "L030",
+   "cattleClass": "11",
+   "inWeight": 394.52,
+   "sex": "S",
+   "daysOnFeed": 68,
+   "head": 8,
+   "exitDays": 88
+  },
+  {
+   "id": "L031",
+   "cattleClass": "11",
+   "inWeight": 405.453608247423,
+   "sex": "S",
+   "daysOnFeed": 156,
+   "head": 4,
+   "exitDays": 160
+  },
+  {
+   "id": "L032",
+   "cattleClass": "13",
+   "inWeight": 411.06008583691,
+   "sex": "S",
+   "daysOnFeed": 2,
+   "head": 233,
+   "exitDays": 88
+  },
+  {
+   "id": "L033",
+   "cattleClass": "13",
+   "inWeight": 415.449056603774,
+   "sex": "S",
+   "daysOnFeed": 7,
+   "head": 265,
+   "exitDays": 88
+  },
+  {
+   "id": "L034",
+   "cattleClass": "13",
+   "inWeight": 436.177358490566,
+   "sex": "S",
+   "daysOnFeed": 7,
+   "head": 265,
+   "exitDays": 88
+  },
+  {
+   "id": "L035",
+   "cattleClass": "13",
+   "inWeight": 364.965250965251,
+   "sex": "S",
+   "daysOnFeed": 9,
+   "head": 259,
+   "exitDays": 88
+  },
+  {
+   "id": "L036",
+   "cattleClass": "13",
+   "inWeight": 414.227722772277,
+   "sex": "S",
+   "daysOnFeed": 14,
+   "head": 101,
+   "exitDays": 88
+  },
+  {
+   "id": "L037",
+   "cattleClass": "13",
+   "inWeight": 438.709433962264,
+   "sex": "S",
+   "daysOnFeed": 29,
+   "head": 264,
+   "exitDays": 88
+  },
+  {
+   "id": "L038",
+   "cattleClass": "13",
+   "inWeight": 377.482191780822,
+   "sex": "S",
+   "daysOnFeed": 33,
+   "head": 362,
+   "exitDays": 88
+  },
+  {
+   "id": "L039",
+   "cattleClass": "13",
+   "inWeight": 396.912087912088,
+   "sex": "S",
+   "daysOnFeed": 35,
+   "head": 181,
+   "exitDays": 88
+  },
+  {
+   "id": "L040",
+   "cattleClass": "13",
+   "inWeight": 422.720994475138,
+   "sex": "S",
+   "daysOnFeed": 40,
+   "head": 360,
+   "exitDays": 88
+  },
+  {
+   "id": "L041",
+   "cattleClass": "13",
+   "inWeight": 421.898113207547,
+   "sex": "S",
+   "daysOnFeed": 43,
+   "head": 258,
+   "exitDays": 88
+  },
+  {
+   "id": "L042",
+   "cattleClass": "13",
+   "inWeight": 320.081180811808,
+   "sex": "S",
+   "daysOnFeed": 48,
+   "head": 270,
+   "exitDays": 88
+  },
+  {
+   "id": "L043",
+   "cattleClass": "13",
+   "inWeight": 410.945147679325,
+   "sex": "S",
+   "daysOnFeed": 54,
+   "head": 233,
+   "exitDays": 88
+  },
+  {
+   "id": "L044",
+   "cattleClass": "13",
+   "inWeight": 423.413793103448,
+   "sex": "S",
+   "daysOnFeed": 65,
+   "head": 116,
+   "exitDays": 88
+  },
+  {
+   "id": "L045",
+   "cattleClass": "13",
+   "inWeight": 426.397727272727,
+   "sex": "S",
+   "daysOnFeed": 84,
+   "head": 262,
+   "exitDays": 88
+  },
+  {
+   "id": "L046",
+   "cattleClass": "13",
+   "inWeight": 432.255639097744,
+   "sex": "S",
+   "daysOnFeed": 127,
+   "head": 88,
+   "exitDays": 461
+  },
+  {
+   "id": "L047",
+   "cattleClass": "13",
+   "inWeight": 436.777358490566,
+   "sex": "S",
+   "daysOnFeed": 153,
+   "head": 14,
+   "exitDays": 491
+  },
+  {
+   "id": "L048",
+   "cattleClass": "2 T",
+   "inWeight": 334.6875,
+   "sex": "H",
+   "daysOnFeed": 56,
+   "head": 62,
+   "exitDays": 88
+  },
+  {
+   "id": "L049",
+   "cattleClass": "2 T",
+   "inWeight": 347.077348066298,
+   "sex": "H",
+   "daysOnFeed": 62,
+   "head": 180,
+   "exitDays": 88
+  },
+  {
+   "id": "L050",
+   "cattleClass": "2 T",
+   "inWeight": 386.74025974026,
+   "sex": "H",
+   "daysOnFeed": 79,
+   "head": 147,
+   "exitDays": 88
+  },
+  {
+   "id": "L051",
+   "cattleClass": "2 T",
+   "inWeight": 396.434426229508,
+   "sex": "H",
+   "daysOnFeed": 92,
+   "head": 171,
+   "exitDays": 105
+  },
+  {
+   "id": "L052",
+   "cattleClass": "2 T",
+   "inWeight": 374.502631578947,
+   "sex": "H",
+   "daysOnFeed": 108,
+   "head": 263,
+   "exitDays": 105
+  },
+  {
+   "id": "L053",
+   "cattleClass": "3 O",
+   "inWeight": 422.747945205479,
+   "sex": "S",
+   "daysOnFeed": 24,
+   "head": 360,
+   "exitDays": 105
+  },
+  {
+   "id": "L054",
+   "cattleClass": "3 O",
+   "inWeight": 337.857142857143,
+   "sex": "S",
+   "daysOnFeed": 27,
+   "head": 265,
+   "exitDays": 105
+  },
+  {
+   "id": "L055",
+   "cattleClass": "4 T",
+   "inWeight": 369.639285714286,
+   "sex": "S",
+   "daysOnFeed": 15,
+   "head": 278,
+   "exitDays": 105
+  },
+  {
+   "id": "L056",
+   "cattleClass": "4 T",
+   "inWeight": 347.596226415094,
+   "sex": "S",
+   "daysOnFeed": 45,
+   "head": 261,
+   "exitDays": 105
+  },
+  {
+   "id": "L057",
+   "cattleClass": "4 T",
+   "inWeight": 349.835164835165,
+   "sex": "S",
+   "daysOnFeed": 47,
+   "head": 363,
+   "exitDays": 105
+  },
+  {
+   "id": "L058",
+   "cattleClass": "4 T",
+   "inWeight": 373.91103202847,
+   "sex": "S",
+   "daysOnFeed": 48,
+   "head": 280,
+   "exitDays": 105
+  },
+  {
+   "id": "L059",
+   "cattleClass": "4 T",
+   "inWeight": 370.590361445783,
+   "sex": "S",
+   "daysOnFeed": 62,
+   "head": 83,
+   "exitDays": 105
+  },
+  {
+   "id": "L060",
+   "cattleClass": "4 T",
+   "inWeight": 340.742857142857,
+   "sex": "S",
+   "daysOnFeed": 68,
+   "head": 278,
+   "exitDays": 105
+  },
+  {
+   "id": "L061",
+   "cattleClass": "4 T",
+   "inWeight": 342.895027624309,
+   "sex": "S",
+   "daysOnFeed": 85,
+   "head": 178,
+   "exitDays": 105
+  },
+  {
+   "id": "L062",
+   "cattleClass": "4 T",
+   "inWeight": 339.853846153846,
+   "sex": "S",
+   "daysOnFeed": 96,
+   "head": 183,
+   "exitDays": 105
+  },
+  {
+   "id": "L063",
+   "cattleClass": "4 T",
+   "inWeight": 365.548648648649,
+   "sex": "S",
+   "daysOnFeed": 96,
+   "head": 314,
+   "exitDays": 105
+  },
+  {
+   "id": "L064",
+   "cattleClass": "4 T",
+   "inWeight": 344.844444444444,
+   "sex": "S",
+   "daysOnFeed": 103,
+   "head": 125,
+   "exitDays": 105
+  },
+  {
+   "id": "L065",
+   "cattleClass": "4 T",
+   "inWeight": 395.411764705882,
+   "sex": "S",
+   "daysOnFeed": 105,
+   "head": 61,
+   "exitDays": 105
+  },
+  {
+   "id": "L066",
+   "cattleClass": "4 T",
+   "inWeight": 337.067924528302,
+   "sex": "S",
+   "daysOnFeed": 112,
+   "head": 39,
+   "exitDays": 105
+  },
+  {
+   "id": "L067",
+   "cattleClass": "5 O",
+   "inWeight": 420.460317460317,
+   "sex": "S",
+   "daysOnFeed": 4,
+   "head": 314,
+   "exitDays": 105
+  },
+  {
+   "id": "L068",
+   "cattleClass": "5 O",
+   "inWeight": 408.15625,
+   "sex": "S",
+   "daysOnFeed": 6,
+   "head": 32,
+   "exitDays": 105
+  },
+  {
+   "id": "L069",
+   "cattleClass": "5 O",
+   "inWeight": 355.250896057348,
+   "sex": "S",
+   "daysOnFeed": 12,
+   "head": 279,
+   "exitDays": 105
+  },
+  {
+   "id": "L070",
+   "cattleClass": "5 O",
+   "inWeight": 380.869565217391,
+   "sex": "S",
+   "daysOnFeed": 13,
+   "head": 92,
+   "exitDays": 105
+  },
+  {
+   "id": "L071",
+   "cattleClass": "5 O",
+   "inWeight": 375.684931506849,
+   "sex": "S",
+   "daysOnFeed": 15,
+   "head": 365,
+   "exitDays": 105
+  },
+  {
+   "id": "L072",
+   "cattleClass": "5 O",
+   "inWeight": 415.954716981132,
+   "sex": "S",
+   "daysOnFeed": 20,
+   "head": 265,
+   "exitDays": 105
+  },
+  {
+   "id": "L073",
+   "cattleClass": "5 O",
+   "inWeight": 311.791208791209,
+   "sex": "S",
+   "daysOnFeed": 22,
+   "head": 363,
+   "exitDays": 105
+  },
+  {
+   "id": "L074",
+   "cattleClass": "5 O",
+   "inWeight": 428.018867924528,
+   "sex": "S",
+   "daysOnFeed": 22,
+   "head": 264,
+   "exitDays": 105
+  },
+  {
+   "id": "L075",
+   "cattleClass": "5 O",
+   "inWeight": 404.221917808219,
+   "sex": "S",
+   "daysOnFeed": 27,
+   "head": 365,
+   "exitDays": 105
+  },
+  {
+   "id": "L076",
+   "cattleClass": "5 O",
+   "inWeight": 424.263157894737,
+   "sex": "S",
+   "daysOnFeed": 27,
+   "head": 361,
+   "exitDays": 105
+  },
+  {
+   "id": "L077",
+   "cattleClass": "5 O",
+   "inWeight": 400.615094339623,
+   "sex": "S",
+   "daysOnFeed": 28,
+   "head": 262,
+   "exitDays": 105
+  },
+  {
+   "id": "L078",
+   "cattleClass": "5 O",
+   "inWeight": 404.909433962264,
+   "sex": "S",
+   "daysOnFeed": 28,
+   "head": 260,
+   "exitDays": 105
+  },
+  {
+   "id": "L079",
+   "cattleClass": "5 O",
+   "inWeight": 380.441509433962,
+   "sex": "S",
+   "daysOnFeed": 33,
+   "head": 263,
+   "exitDays": 105
+  },
+  {
+   "id": "L080",
+   "cattleClass": "5 O",
+   "inWeight": 391.541353383459,
+   "sex": "S",
+   "daysOnFeed": 34,
+   "head": 263,
+   "exitDays": 105
+  },
+  {
+   "id": "L081",
+   "cattleClass": "5 O",
+   "inWeight": 414.483018867925,
+   "sex": "S",
+   "daysOnFeed": 40,
+   "head": 263,
+   "exitDays": 105
+  },
+  {
+   "id": "L082",
+   "cattleClass": "5 O",
+   "inWeight": 392,
+   "sex": "S",
+   "daysOnFeed": 41,
+   "head": 262,
+   "exitDays": 105
+  },
+  {
+   "id": "L083",
+   "cattleClass": "5 O",
+   "inWeight": 393.452830188679,
+   "sex": "S",
+   "daysOnFeed": 41,
+   "head": 262,
+   "exitDays": 105
+  },
+  {
+   "id": "L084",
+   "cattleClass": "5 O",
+   "inWeight": 396.02846975089,
+   "sex": "S",
+   "daysOnFeed": 43,
+   "head": 275,
+   "exitDays": 105
+  },
+  {
+   "id": "L085",
+   "cattleClass": "5 O",
+   "inWeight": 408.154166666667,
+   "sex": "S",
+   "daysOnFeed": 48,
+   "head": 240,
+   "exitDays": 105
+  },
+  {
+   "id": "L086",
+   "cattleClass": "5 O",
+   "inWeight": 441.868421052632,
+   "sex": "S",
+   "daysOnFeed": 49,
+   "head": 72,
+   "exitDays": 105
+  },
+  {
+   "id": "L087",
+   "cattleClass": "5 O",
+   "inWeight": 411.058333333333,
+   "sex": "S",
+   "daysOnFeed": 56,
+   "head": 120,
+   "exitDays": 105
+  },
+  {
+   "id": "L088",
+   "cattleClass": "5 O",
+   "inWeight": 392.907692307692,
+   "sex": "S",
+   "daysOnFeed": 62,
+   "head": 259,
+   "exitDays": 105
+  },
+  {
+   "id": "L089",
+   "cattleClass": "5 O",
+   "inWeight": 420.158490566038,
+   "sex": "B",
+   "daysOnFeed": 64,
+   "head": 259,
+   "exitDays": 105
+  },
+  {
+   "id": "L090",
+   "cattleClass": "5 O",
+   "inWeight": 417.307692307692,
+   "sex": "S",
+   "daysOnFeed": 64,
+   "head": 103,
+   "exitDays": 105
+  },
+  {
+   "id": "L091",
+   "cattleClass": "5 O",
+   "inWeight": 411.997260273973,
+   "sex": "S",
+   "daysOnFeed": 65,
+   "head": 353,
+   "exitDays": 105
+  },
+  {
+   "id": "L092",
+   "cattleClass": "5 O",
+   "inWeight": 388.718045112782,
+   "sex": "S",
+   "daysOnFeed": 75,
+   "head": 264,
+   "exitDays": 105
+  },
+  {
+   "id": "L093",
+   "cattleClass": "5 O",
+   "inWeight": 370.867924528302,
+   "sex": "S",
+   "daysOnFeed": 75,
+   "head": 261,
+   "exitDays": 105
+  },
+  {
+   "id": "L094",
+   "cattleClass": "5 O",
+   "inWeight": 413.191256830601,
+   "sex": "S",
+   "daysOnFeed": 78,
+   "head": 356,
+   "exitDays": 105
+  },
+  {
+   "id": "L095",
+   "cattleClass": "5 O",
+   "inWeight": 414.120547945205,
+   "sex": "S",
+   "daysOnFeed": 84,
+   "head": 357,
+   "exitDays": 105
+  },
+  {
+   "id": "L096",
+   "cattleClass": "5 O",
+   "inWeight": 403.196226415094,
+   "sex": "S",
+   "daysOnFeed": 86,
+   "head": 238,
+   "exitDays": 105
+  },
+  {
+   "id": "L097",
+   "cattleClass": "5 O",
+   "inWeight": 425.516981132075,
+   "sex": "S",
+   "daysOnFeed": 89,
+   "head": 261,
+   "exitDays": 105
+  },
+  {
+   "id": "L098",
+   "cattleClass": "5 O",
+   "inWeight": 419.18904109589,
+   "sex": "S",
+   "daysOnFeed": 90,
+   "head": 360,
+   "exitDays": 105
+  },
+  {
+   "id": "L099",
+   "cattleClass": "5 O",
+   "inWeight": 415.07662835249,
+   "sex": "S",
+   "daysOnFeed": 90,
+   "head": 245,
+   "exitDays": 105
+  },
+  {
+   "id": "L100",
+   "cattleClass": "5 O",
+   "inWeight": 412.205479452055,
+   "sex": "S",
+   "daysOnFeed": 91,
+   "head": 355,
+   "exitDays": 105
+  },
+  {
+   "id": "L101",
+   "cattleClass": "5 O",
+   "inWeight": 437.454545454545,
+   "sex": "S",
+   "daysOnFeed": 92,
+   "head": 104,
+   "exitDays": 105
+  },
+  {
+   "id": "L102",
+   "cattleClass": "5 O",
+   "inWeight": 410.605263157895,
+   "sex": "S",
+   "daysOnFeed": 93,
+   "head": 250,
+   "exitDays": 105
+  },
+  {
+   "id": "L103",
+   "cattleClass": "5 O",
+   "inWeight": 418.894339622641,
+   "sex": "S",
+   "daysOnFeed": 96,
+   "head": 245,
+   "exitDays": 105
+  },
+  {
+   "id": "L104",
+   "cattleClass": "5 O",
+   "inWeight": 423.714285714286,
+   "sex": "S",
+   "daysOnFeed": 97,
+   "head": 349,
+   "exitDays": 105
+  },
+  {
+   "id": "L105",
+   "cattleClass": "5 O",
+   "inWeight": 425.287671232877,
+   "sex": "S",
+   "daysOnFeed": 98,
+   "head": 355,
+   "exitDays": 105
+  },
+  {
+   "id": "L106",
+   "cattleClass": "5 O",
+   "inWeight": 438.672932330827,
+   "sex": "S",
+   "daysOnFeed": 99,
+   "head": 251,
+   "exitDays": 105
+  },
+  {
+   "id": "L107",
+   "cattleClass": "5 O",
+   "inWeight": 419.67397260274,
+   "sex": "S",
+   "daysOnFeed": 103,
+   "head": 344,
+   "exitDays": 105
+  },
+  {
+   "id": "L108",
+   "cattleClass": "5 O",
+   "inWeight": 420.836956521739,
+   "sex": "S",
+   "daysOnFeed": 105,
+   "head": 190,
+   "exitDays": 105
+  },
+  {
+   "id": "L109",
+   "cattleClass": "5 O",
+   "inWeight": 430.68870523416,
+   "sex": "S",
+   "daysOnFeed": 105,
+   "head": 14,
+   "exitDays": 110
+  },
+  {
+   "id": "L110",
+   "cattleClass": "5 O",
+   "inWeight": 368.624277456647,
+   "sex": "S",
+   "daysOnFeed": 111,
+   "head": 1,
+   "exitDays": 115
+  },
+  {
+   "id": "L111",
+   "cattleClass": "5 O",
+   "inWeight": 428.895890410959,
+   "sex": "S",
+   "daysOnFeed": 113,
+   "head": 13,
+   "exitDays": 120
+  },
+  {
+   "id": "L112",
+   "cattleClass": "5 O",
+   "inWeight": 428.570895522388,
+   "sex": "S",
+   "daysOnFeed": 114,
+   "head": 13,
+   "exitDays": 120
+  },
+  {
+   "id": "L113",
+   "cattleClass": "5 O",
+   "inWeight": 420.620786516854,
+   "sex": "S",
+   "daysOnFeed": 117,
+   "head": 1,
+   "exitDays": 125
+  },
+  {
+   "id": "L114",
+   "cattleClass": "5 O",
+   "inWeight": 397.613698630137,
+   "sex": "S",
+   "daysOnFeed": 118,
+   "head": 20,
+   "exitDays": 125
+  },
+  {
+   "id": "L115",
+   "cattleClass": "6 O",
+   "inWeight": 399.291666666667,
+   "sex": "S",
+   "daysOnFeed": 6,
+   "head": 240,
+   "exitDays": 110
+  },
+  {
+   "id": "L116",
+   "cattleClass": "6 O",
+   "inWeight": 376.7375,
+   "sex": "S",
+   "daysOnFeed": 6,
+   "head": 240,
+   "exitDays": 110
+  },
+  {
+   "id": "L117",
+   "cattleClass": "6 O",
+   "inWeight": 352.984905660377,
+   "sex": "S",
+   "daysOnFeed": 8,
+   "head": 265,
+   "exitDays": 110
+  },
+  {
+   "id": "L118",
+   "cattleClass": "6 O",
+   "inWeight": 304.033613445378,
+   "sex": "S",
+   "daysOnFeed": 13,
+   "head": 237,
+   "exitDays": 110
+  },
+  {
+   "id": "L119",
+   "cattleClass": "6 O",
+   "inWeight": 375.860215053763,
+   "sex": "S",
+   "daysOnFeed": 13,
+   "head": 93,
+   "exitDays": 110
+  },
+  {
+   "id": "L120",
+   "cattleClass": "6 O",
+   "inWeight": 317.769230769231,
+   "sex": "S",
+   "daysOnFeed": 19,
+   "head": 363,
+   "exitDays": 110
+  },
+  {
+   "id": "L121",
+   "cattleClass": "6 O",
+   "inWeight": 358.656675749319,
+   "sex": "S",
+   "daysOnFeed": 20,
+   "head": 366,
+   "exitDays": 110
+  },
+  {
+   "id": "L122",
+   "cattleClass": "6 O",
+   "inWeight": 414.233962264151,
+   "sex": "S",
+   "daysOnFeed": 21,
+   "head": 265,
+   "exitDays": 110
+  },
+  {
+   "id": "L123",
+   "cattleClass": "6 O",
+   "inWeight": 384.516393442623,
+   "sex": "S",
+   "daysOnFeed": 24,
+   "head": 366,
+   "exitDays": 110
+  },
+  {
+   "id": "L124",
+   "cattleClass": "6 O",
+   "inWeight": 386.769811320755,
+   "sex": "S",
+   "daysOnFeed": 27,
+   "head": 264,
+   "exitDays": 110
+  },
+  {
+   "id": "L125",
+   "cattleClass": "6 O",
+   "inWeight": 295.352480417755,
+   "sex": "S",
+   "daysOnFeed": 29,
+   "head": 380,
+   "exitDays": 110
+  },
+  {
+   "id": "L126",
+   "cattleClass": "6 O",
+   "inWeight": 384.415094339623,
+   "sex": "S",
+   "daysOnFeed": 33,
+   "head": 265,
+   "exitDays": 110
+  },
+  {
+   "id": "L127",
+   "cattleClass": "6 O",
+   "inWeight": 397.909574468085,
+   "sex": "S",
+   "daysOnFeed": 41,
+   "head": 186,
+   "exitDays": 110
+  },
+  {
+   "id": "L128",
+   "cattleClass": "6 O",
+   "inWeight": 385.505338078292,
+   "sex": "S",
+   "daysOnFeed": 43,
+   "head": 276,
+   "exitDays": 110
+  },
+  {
+   "id": "L129",
+   "cattleClass": "6 O",
+   "inWeight": 417.535849056604,
+   "sex": "S",
+   "daysOnFeed": 49,
+   "head": 264,
+   "exitDays": 110
+  },
+  {
+   "id": "L130",
+   "cattleClass": "6 O",
+   "inWeight": 422.962365591398,
+   "sex": "S",
+   "daysOnFeed": 51,
+   "head": 368,
+   "exitDays": 110
+  },
+  {
+   "id": "L131",
+   "cattleClass": "6 O",
+   "inWeight": 385.136752136752,
+   "sex": "S",
+   "daysOnFeed": 55,
+   "head": 231,
+   "exitDays": 110
+  },
+  {
+   "id": "L132",
+   "cattleClass": "6 O",
+   "inWeight": 383.259574468085,
+   "sex": "S",
+   "daysOnFeed": 55,
+   "head": 234,
+   "exitDays": 110
+  },
+  {
+   "id": "L133",
+   "cattleClass": "6 O",
+   "inWeight": 426.282191780822,
+   "sex": "S",
+   "daysOnFeed": 56,
+   "head": 362,
+   "exitDays": 110
+  },
+  {
+   "id": "L134",
+   "cattleClass": "6 O",
+   "inWeight": 416.630188679245,
+   "sex": "S",
+   "daysOnFeed": 58,
+   "head": 260,
+   "exitDays": 110
+  },
+  {
+   "id": "L135",
+   "cattleClass": "6 O",
+   "inWeight": 403.087671232877,
+   "sex": "S",
+   "daysOnFeed": 59,
+   "head": 363,
+   "exitDays": 110
+  },
+  {
+   "id": "L136",
+   "cattleClass": "6 O",
+   "inWeight": 400.446575342466,
+   "sex": "S",
+   "daysOnFeed": 61,
+   "head": 360,
+   "exitDays": 110
+  },
+  {
+   "id": "L137",
+   "cattleClass": "6 O",
+   "inWeight": 427.498113207547,
+   "sex": "S",
+   "daysOnFeed": 69,
+   "head": 264,
+   "exitDays": 110
+  },
+  {
+   "id": "L138",
+   "cattleClass": "6 O",
+   "inWeight": 405.064150943396,
+   "sex": "S",
+   "daysOnFeed": 69,
+   "head": 264,
+   "exitDays": 110
+  },
+  {
+   "id": "L139",
+   "cattleClass": "6 O",
+   "inWeight": 410.150943396226,
+   "sex": "S",
+   "daysOnFeed": 69,
+   "head": 264,
+   "exitDays": 110
+  },
+  {
+   "id": "L140",
+   "cattleClass": "6 O",
+   "inWeight": 423.259398496241,
+   "sex": "S",
+   "daysOnFeed": 69,
+   "head": 263,
+   "exitDays": 110
+  },
+  {
+   "id": "L141",
+   "cattleClass": "6 O",
+   "inWeight": 437.123595505618,
+   "sex": "S",
+   "daysOnFeed": 72,
+   "head": 267,
+   "exitDays": 110
+  },
+  {
+   "id": "L142",
+   "cattleClass": "6 O",
+   "inWeight": 456.372549019608,
+   "sex": "S",
+   "daysOnFeed": 75,
+   "head": 101,
+   "exitDays": 110
+  },
+  {
+   "id": "L143",
+   "cattleClass": "6 O",
+   "inWeight": 363.909356725146,
+   "sex": "S",
+   "daysOnFeed": 76,
+   "head": 339,
+   "exitDays": 110
+  },
+  {
+   "id": "L144",
+   "cattleClass": "6 O",
+   "inWeight": 406.516981132075,
+   "sex": "S",
+   "daysOnFeed": 76,
+   "head": 259,
+   "exitDays": 110
+  },
+  {
+   "id": "L145",
+   "cattleClass": "6 O",
+   "inWeight": 401.350943396226,
+   "sex": "S",
+   "daysOnFeed": 76,
+   "head": 261,
+   "exitDays": 110
+  },
+  {
+   "id": "L146",
+   "cattleClass": "6 O",
+   "inWeight": 353.175,
+   "sex": "S",
+   "daysOnFeed": 77,
+   "head": 359,
+   "exitDays": 110
+  },
+  {
+   "id": "L147",
+   "cattleClass": "6 O",
+   "inWeight": 396.452054794521,
+   "sex": "S",
+   "daysOnFeed": 79,
+   "head": 359,
+   "exitDays": 110
+  },
+  {
+   "id": "L148",
+   "cattleClass": "6 O",
+   "inWeight": 392.011673151751,
+   "sex": "S",
+   "daysOnFeed": 82,
+   "head": 213,
+   "exitDays": 110
+  },
+  {
+   "id": "L149",
+   "cattleClass": "6 O",
+   "inWeight": 393.536964980545,
+   "sex": "S",
+   "daysOnFeed": 82,
+   "head": 222,
+   "exitDays": 110
+  },
+  {
+   "id": "L150",
+   "cattleClass": "6 O",
+   "inWeight": 430.095238095238,
+   "sex": "S",
+   "daysOnFeed": 83,
+   "head": 247,
+   "exitDays": 110
+  },
+  {
+   "id": "L151",
+   "cattleClass": "6 O",
+   "inWeight": 264.126315789474,
+   "sex": "S",
+   "daysOnFeed": 86,
+   "head": 220,
+   "exitDays": 110
+  },
+  {
+   "id": "L152",
+   "cattleClass": "6 O",
+   "inWeight": 408.863117870722,
+   "sex": "S",
+   "daysOnFeed": 90,
+   "head": 250,
+   "exitDays": 110
+  },
+  {
+   "id": "L153",
+   "cattleClass": "6 O",
+   "inWeight": 450.807547169811,
+   "sex": "S",
+   "daysOnFeed": 92,
+   "head": 259,
+   "exitDays": 110
+  },
+  {
+   "id": "L154",
+   "cattleClass": "6 O",
+   "inWeight": 420.21095890411,
+   "sex": "S",
+   "daysOnFeed": 96,
+   "head": 364,
+   "exitDays": 110
+  },
+  {
+   "id": "L155",
+   "cattleClass": "6 O",
+   "inWeight": 455.003745318352,
+   "sex": "S",
+   "daysOnFeed": 97,
+   "head": 251,
+   "exitDays": 110
+  },
+  {
+   "id": "L156",
+   "cattleClass": "6 O",
+   "inWeight": 407.696629213483,
+   "sex": "S",
+   "daysOnFeed": 97,
+   "head": 309,
+   "exitDays": 110
+  },
+  {
+   "id": "L157",
+   "cattleClass": "6 O",
+   "inWeight": 450.417293233083,
+   "sex": "S",
+   "daysOnFeed": 100,
+   "head": 261,
+   "exitDays": 110
+  },
+  {
+   "id": "L158",
+   "cattleClass": "6 O",
+   "inWeight": 445.17358490566,
+   "sex": "S",
+   "daysOnFeed": 104,
+   "head": 165,
+   "exitDays": 110
+  },
+  {
+   "id": "L159",
+   "cattleClass": "6 O",
+   "inWeight": 459.250936329588,
+   "sex": "S",
+   "daysOnFeed": 110,
+   "head": 50,
+   "exitDays": 115
+  },
+  {
+   "id": "L160",
+   "cattleClass": "7 O",
+   "inWeight": 291.193548387097,
+   "sex": "H",
+   "daysOnFeed": 40,
+   "head": 62,
+   "exitDays": 159
+  },
+  {
+   "id": "L161",
+   "cattleClass": "7 O",
+   "inWeight": 298.717391304348,
+   "sex": "S",
+   "daysOnFeed": 40,
+   "head": 46,
+   "exitDays": 159
+  },
+  {
+   "id": "L162",
+   "cattleClass": "7 O",
+   "inWeight": 292.083333333333,
+   "sex": "S",
+   "daysOnFeed": 40,
+   "head": 12,
+   "exitDays": 159
+  },
+  {
+   "id": "L163",
+   "cattleClass": "7 O",
+   "inWeight": 307.612244897959,
+   "sex": "H",
+   "daysOnFeed": 70,
+   "head": 49,
+   "exitDays": 189
+  },
+  {
+   "id": "L164",
+   "cattleClass": "7 O",
+   "inWeight": 327.978260869565,
+   "sex": "S",
+   "daysOnFeed": 70,
+   "head": 46,
+   "exitDays": 189
+  },
+  {
+   "id": "L165",
+   "cattleClass": "7 O",
+   "inWeight": 317.666666666667,
+   "sex": "S",
+   "daysOnFeed": 97,
+   "head": 30,
+   "exitDays": 216
+  },
+  {
+   "id": "L166",
+   "cattleClass": "7 O",
+   "inWeight": 320.833333333333,
+   "sex": "H",
+   "daysOnFeed": 97,
+   "head": 59,
+   "exitDays": 216
+  },
+  {
+   "id": "L167",
+   "cattleClass": "7 O",
+   "inWeight": 321.411111111111,
+   "sex": "S",
+   "daysOnFeed": 125,
+   "head": 90,
+   "exitDays": 244
+  },
+  {
+   "id": "L168",
+   "cattleClass": "7 O",
+   "inWeight": 321.766666666667,
+   "sex": "H",
+   "daysOnFeed": 125,
+   "head": 30,
+   "exitDays": 244
+  },
+  {
+   "id": "L169",
+   "cattleClass": "7 O",
+   "inWeight": 317.019801980198,
+   "sex": "H",
+   "daysOnFeed": 155,
+   "head": 98,
+   "exitDays": 274
+  },
+  {
+   "id": "L170",
+   "cattleClass": "7 O",
+   "inWeight": 327.078431372549,
+   "sex": "S",
+   "daysOnFeed": 155,
+   "head": 51,
+   "exitDays": 274
+  },
+  {
+   "id": "L171",
+   "cattleClass": "7 O",
+   "inWeight": 308.2,
+   "sex": "S",
+   "daysOnFeed": 202,
+   "head": 74,
+   "exitDays": 321
+  },
+  {
+   "id": "L172",
+   "cattleClass": "7 O",
+   "inWeight": 300.294117647059,
+   "sex": "H",
+   "daysOnFeed": 202,
+   "head": 17,
+   "exitDays": 321
+  },
+  {
+   "id": "L173",
+   "cattleClass": "7 O",
+   "inWeight": 338.821212121212,
+   "sex": "S",
+   "daysOnFeed": 259,
+   "head": 316,
+   "exitDays": 400
+  },
+  {
+   "id": "L174",
+   "cattleClass": "7 O",
+   "inWeight": 323.987341772152,
+   "sex": "H",
+   "daysOnFeed": 267,
+   "head": 78,
+   "exitDays": 400
+  },
+  {
+   "id": "L175",
+   "cattleClass": "7 O",
+   "inWeight": 332.977941176471,
+   "sex": "S",
+   "daysOnFeed": 267,
+   "head": 135,
+   "exitDays": 400
+  },
+  {
+   "id": "L176",
+   "cattleClass": "7 O",
+   "inWeight": 299.785714285714,
+   "sex": "H",
+   "daysOnFeed": 308,
+   "head": 14,
+   "exitDays": 400
+  },
+  {
+   "id": "L177",
+   "cattleClass": "7 O",
+   "inWeight": 333.25,
+   "sex": "S",
+   "daysOnFeed": 308,
+   "head": 3,
+   "exitDays": 400
+  },
+  {
+   "id": "L178",
+   "cattleClass": "7 O",
+   "inWeight": 325.464285714286,
+   "sex": "S",
+   "daysOnFeed": 308,
+   "head": 55,
+   "exitDays": 400
+  },
+  {
+   "id": "L179",
+   "cattleClass": "7 O",
+   "inWeight": 325.304347826087,
+   "sex": "H",
+   "daysOnFeed": 308,
+   "head": 45,
+   "exitDays": 400
+  },
+  {
+   "id": "L180",
+   "cattleClass": "7 O",
+   "inWeight": 311.111111111111,
+   "sex": "S",
+   "daysOnFeed": 365,
+   "head": 44,
+   "exitDays": 400
+  },
+  {
+   "id": "L181",
+   "cattleClass": "7 O",
+   "inWeight": 314.666666666667,
+   "sex": "H",
+   "daysOnFeed": 365,
+   "head": 73,
+   "exitDays": 400
+  },
+  {
+   "id": "L182",
+   "cattleClass": "7 O",
+   "inWeight": 303.142857142857,
+   "sex": "H",
+   "daysOnFeed": 400,
+   "head": 67,
+   "exitDays": 420
+  },
+  {
+   "id": "L183",
+   "cattleClass": "7 O",
+   "inWeight": 295.686274509804,
+   "sex": "S",
+   "daysOnFeed": 400,
+   "head": 50,
+   "exitDays": 420
+  },
+  {
+   "id": "L184",
+   "cattleClass": "8 T",
+   "inWeight": 320.690807799443,
+   "sex": "H",
+   "daysOnFeed": 51,
+   "head": 354,
+   "exitDays": 110
+  },
+  {
+   "id": "L185",
+   "cattleClass": "8 T",
+   "inWeight": 364.126353790614,
+   "sex": "H",
+   "daysOnFeed": 69,
+   "head": 270,
+   "exitDays": 110
+  }
+ ],
+ "commodities": [
+  {
+   "name": "Barley",
+   "shrink": 0.14,
+   "contracts": [
+    {
+     "ref": "Inventory",
+     "vendor": "",
+     "basePrice": 253.4,
+     "terms": "Inventory",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 1488,
+       "price": 253.9
+      }
+     ]
+    },
+    {
+     "ref": "C1000",
+     "vendor": "Supplier A",
+     "basePrice": 233,
+     "terms": "mj",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 79,
+       "price": 235.5
+      }
+     ]
+    },
+    {
+     "ref": "C1001",
+     "vendor": "Supplier B",
+     "basePrice": 238,
+     "terms": "jas",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 369,
+       "price": 238
+      },
+      {
+       "month": 1,
+       "tonnes": 1631,
+       "price": 240.5
+      }
+     ]
+    },
+    {
+     "ref": "C1002",
+     "vendor": "Supplier C",
+     "basePrice": 252,
+     "terms": "amjj",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 563,
+       "price": 259.5
+      }
+     ]
+    },
+    {
+     "ref": "C1003",
+     "vendor": "Supplier D",
+     "basePrice": 259,
+     "terms": "j",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 32,
+       "price": 259
+      }
+     ]
+    },
+    {
+     "ref": "C1004",
+     "vendor": "Supplier E",
+     "basePrice": 255,
+     "terms": "j",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 200,
+       "price": 255
+      }
+     ]
+    },
+    {
+     "ref": "C1005",
+     "vendor": "Supplier F",
+     "basePrice": 228,
+     "terms": "jas",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 655,
+       "price": 228
+      },
+      {
+       "month": 1,
+       "tonnes": 745,
+       "price": 230.5
+      },
+      {
+       "month": 2,
+       "tonnes": 600,
+       "price": 233
+      }
+     ]
+    },
+    {
+     "ref": "C1006",
+     "vendor": "Supplier F",
+     "basePrice": 231,
+     "terms": "july",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 1000,
+       "price": 231
+      }
+     ]
+    },
+    {
+     "ref": "C1007",
+     "vendor": "Supplier C",
+     "basePrice": 238,
+     "terms": "jas",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 89,
+       "price": 238
+      },
+      {
+       "month": 1,
+       "tonnes": 1311,
+       "price": 240.5
+      },
+      {
+       "month": 2,
+       "tonnes": 600,
+       "price": 243
+      }
+     ]
+    },
+    {
+     "ref": "C1008",
+     "vendor": "Supplier G",
+     "basePrice": 229,
+     "terms": "jas",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 700,
+       "price": 229
+      },
+      {
+       "month": 1,
+       "tonnes": 700,
+       "price": 231.5
+      },
+      {
+       "month": 2,
+       "tonnes": 600,
+       "price": 234
+      }
+     ]
+    },
+    {
+     "ref": "C1009",
+     "vendor": "Supplier C",
+     "basePrice": 229,
+     "terms": "JJAS",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 187,
+       "price": 231.5
+      },
+      {
+       "month": 1,
+       "tonnes": 1313,
+       "price": 234
+      },
+      {
+       "month": 2,
+       "tonnes": 500,
+       "price": 236.5
+      }
+     ]
+    },
+    {
+     "ref": "C1010",
+     "vendor": "Supplier H",
+     "basePrice": 240,
+     "terms": "jas",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 700,
+       "price": 240
+      },
+      {
+       "month": 1,
+       "tonnes": 700,
+       "price": 242.5
+      },
+      {
+       "month": 2,
+       "tonnes": 600,
+       "price": 245
+      }
+     ]
+    },
+    {
+     "ref": "C1011",
+     "vendor": "Supplier H",
+     "basePrice": 250,
+     "terms": "jj",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 6,
+       "tonnes": 2000,
+       "price": 250
+      }
+     ]
+    },
+    {
+     "ref": "C1012",
+     "vendor": "Supplier I",
+     "basePrice": 250,
+     "terms": "jj",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 6,
+       "tonnes": 1000,
+       "price": 250
+      }
+     ]
+    },
+    {
+     "ref": "C1013",
+     "vendor": "Supplier J",
+     "basePrice": 264,
+     "terms": "jj",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 23,
+       "price": 264
+      }
+     ]
+    },
+    {
+     "ref": "C1014",
+     "vendor": "Supplier K",
+     "basePrice": 258,
+     "terms": "",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 19,
+       "price": 258
+      }
+     ]
+    },
+    {
+     "ref": "Bgt To Fill If Position Short For Com Cattle",
+     "vendor": "",
+     "basePrice": null,
+     "terms": "",
+     "budget": true,
+     "deliveries": [
+      {
+       "month": 1,
+       "tonnes": 609,
+       "price": 235
+      },
+      {
+       "month": 2,
+       "tonnes": 3881,
+       "price": 232
+      },
+      {
+       "month": 3,
+       "tonnes": 7040,
+       "price": 232
+      },
+      {
+       "month": 6,
+       "tonnes": 5894,
+       "price": 235
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Wheat",
+   "shrink": 0.13,
+   "contracts": [
+    {
+     "ref": "Inventory",
+     "vendor": "",
+     "basePrice": 318.03,
+     "terms": "Inventory",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 1716,
+       "price": 318.03
+      }
+     ]
+    },
+    {
+     "ref": "C1015",
+     "vendor": "Supplier L",
+     "basePrice": 293,
+     "terms": "jj",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 58,
+       "price": 305.5
+      }
+     ]
+    },
+    {
+     "ref": "C1016",
+     "vendor": "Supplier J",
+     "basePrice": 295.5,
+     "terms": "jj",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 47,
+       "price": 310
+      }
+     ]
+    },
+    {
+     "ref": "C1017",
+     "vendor": "Supplier C",
+     "basePrice": 297,
+     "terms": "jj",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 1,
+       "tonnes": 781,
+       "price": 314.5
+      }
+     ]
+    },
+    {
+     "ref": "C1018",
+     "vendor": "Supplier B",
+     "basePrice": 296,
+     "terms": "jj",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 259,
+       "price": 314
+      }
+     ]
+    },
+    {
+     "ref": "C1019",
+     "vendor": "Supplier C",
+     "basePrice": 294.5,
+     "terms": "jj",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 186,
+       "price": 302
+      }
+     ]
+    },
+    {
+     "ref": "C1020",
+     "vendor": "Supplier A",
+     "basePrice": 306.8,
+     "terms": "jj",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 138,
+       "price": 306.8
+      },
+      {
+       "month": 1,
+       "tonnes": 238,
+       "price": 306.8
+      }
+     ]
+    },
+    {
+     "ref": "C1021",
+     "vendor": "Supplier M",
+     "basePrice": 264,
+     "terms": "",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 352,
+       "price": 264
+      },
+      {
+       "month": 1,
+       "tonnes": 1657,
+       "price": 266.5
+      },
+      {
+       "month": 2,
+       "tonnes": 2415,
+       "price": 269
+      },
+      {
+       "month": 3,
+       "tonnes": 1576,
+       "price": 269
+      }
+     ]
+    },
+    {
+     "ref": "C1022",
+     "vendor": "Supplier N",
+     "basePrice": 268,
+     "terms": "",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 265,
+       "price": 268
+      },
+      {
+       "month": 1,
+       "tonnes": 793,
+       "price": 270.5
+      },
+      {
+       "month": 2,
+       "tonnes": 942,
+       "price": 273
+      }
+     ]
+    },
+    {
+     "ref": "Budget To Fill If Position Short",
+     "vendor": "",
+     "basePrice": null,
+     "terms": "",
+     "budget": true,
+     "deliveries": [
+      {
+       "month": 3,
+       "tonnes": 1909,
+       "price": 255
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Added Water (Inventory Gain Component Only)",
+   "shrink": 0,
+   "contracts": [
+    {
+     "ref": "Budget To Fill If Position Short",
+     "vendor": "",
+     "basePrice": null,
+     "terms": "",
+     "budget": true,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 1247,
+       "price": 0
+      },
+      {
+       "month": 1,
+       "tonnes": 1432,
+       "price": 0
+      },
+      {
+       "month": 2,
+       "tonnes": 1386,
+       "price": 0
+      },
+      {
+       "month": 3,
+       "tonnes": 1439,
+       "price": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Wet Distillers",
+   "shrink": 0,
+   "contracts": []
+  },
+  {
+   "name": "Cotton Hulls",
+   "shrink": -0.015,
+   "contracts": [
+    {
+     "ref": "Inventory",
+     "vendor": "",
+     "basePrice": null,
+     "terms": "",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 278.083193598141,
+       "price": 295
+      },
+      {
+       "month": 1,
+       "tonnes": 318.245527239477,
+       "price": 295
+      },
+      {
+       "month": 2,
+       "tonnes": 308.694057630948,
+       "price": 295
+      },
+      {
+       "month": 3,
+       "tonnes": 320.377337694491,
+       "price": 295
+      },
+      {
+       "month": 4,
+       "tonnes": 330.187500961851,
+       "price": 295
+      },
+      {
+       "month": 5,
+       "tonnes": 373.69916018503,
+       "price": 295
+      },
+      {
+       "month": 6,
+       "tonnes": 406.31154102079,
+       "price": 295
+      },
+      {
+       "month": 7,
+       "tonnes": 366.9910693091,
+       "price": 295
+      },
+      {
+       "month": 8,
+       "tonnes": 406.31154102079,
+       "price": 295
+      },
+      {
+       "month": 9,
+       "tonnes": 393.204717116893,
+       "price": 295
+      },
+      {
+       "month": 10,
+       "tonnes": 406.31154102079,
+       "price": 295
+      },
+      {
+       "month": 11,
+       "tonnes": 393.204717116893,
+       "price": 295
+      }
+     ]
+    },
+    {
+     "ref": "C1023",
+     "vendor": "Supplier A",
+     "basePrice": 235,
+     "terms": "full year",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 264,
+       "price": 290
+      },
+      {
+       "month": 1,
+       "tonnes": 289,
+       "price": 290
+      }
+     ]
+    },
+    {
+     "ref": "Budget To Fill If Position Short",
+     "vendor": "",
+     "basePrice": null,
+     "terms": "",
+     "budget": true,
+     "deliveries": [
+      {
+       "month": 1,
+       "tonnes": 14,
+       "price": 290
+      },
+      {
+       "month": 2,
+       "tonnes": 293,
+       "price": 290
+      },
+      {
+       "month": 3,
+       "tonnes": 305,
+       "price": 290
+      },
+      {
+       "month": 4,
+       "tonnes": 317,
+       "price": 290
+      },
+      {
+       "month": 5,
+       "tonnes": 339,
+       "price": 290
+      },
+      {
+       "month": 6,
+       "tonnes": 376,
+       "price": 290
+      },
+      {
+       "month": 7,
+       "tonnes": 340,
+       "price": 290
+      },
+      {
+       "month": 8,
+       "tonnes": 376,
+       "price": 290
+      },
+      {
+       "month": 9,
+       "tonnes": 364,
+       "price": 290
+      },
+      {
+       "month": 10,
+       "tonnes": 376,
+       "price": 290
+      },
+      {
+       "month": 11,
+       "tonnes": 364,
+       "price": 290
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Liquid Finisher",
+   "shrink": -0.01,
+   "contracts": [
+    {
+     "ref": "Latest Price",
+     "vendor": "",
+     "basePrice": 272.97,
+     "terms": "Inventory",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 111,
+       "price": 272.97
+      }
+     ]
+    },
+    {
+     "ref": "C1024",
+     "vendor": "Supplier O",
+     "basePrice": 270.35,
+     "terms": "",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 651,
+       "price": 270.35
+      },
+      {
+       "month": 1,
+       "tonnes": 875,
+       "price": 270.35
+      },
+      {
+       "month": 2,
+       "tonnes": 846,
+       "price": 270.35
+      },
+      {
+       "month": 3,
+       "tonnes": 879,
+       "price": 270.35
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Liquid Starter",
+   "shrink": -0.01,
+   "contracts": [
+    {
+     "ref": "Latest Price",
+     "vendor": "",
+     "basePrice": 348.35,
+     "terms": "Inventory",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 21,
+       "price": 348.35
+      }
+     ]
+    },
+    {
+     "ref": "C1025",
+     "vendor": "Supplier O",
+     "basePrice": 343.35,
+     "terms": "",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 60,
+       "price": 343.35
+      },
+      {
+       "month": 1,
+       "tonnes": 94,
+       "price": 343.35
+      },
+      {
+       "month": 2,
+       "tonnes": 90,
+       "price": 343.35
+      },
+      {
+       "month": 3,
+       "tonnes": 94,
+       "price": 343.35
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Liquid Waygu",
+   "shrink": -0.01,
+   "contracts": [
+    {
+     "ref": "Inventory",
+     "vendor": "",
+     "basePrice": 300.35,
+     "terms": "",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 16,
+       "price": 300.35
+      }
+     ]
+    },
+    {
+     "ref": "C1026",
+     "vendor": "Supplier O",
+     "basePrice": 290.35,
+     "terms": "",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 11,
+       "price": 290.35
+      },
+      {
+       "month": 1,
+       "tonnes": 30,
+       "price": 290.35
+      },
+      {
+       "month": 2,
+       "tonnes": 29,
+       "price": 290.35
+      },
+      {
+       "month": 3,
+       "tonnes": 30,
+       "price": 290.35
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Cotton Meats",
+   "shrink": -0.02,
+   "contracts": [
+    {
+     "ref": "Budget To Fill If Position Short",
+     "vendor": "",
+     "basePrice": null,
+     "terms": "",
+     "budget": true,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 302,
+       "price": 485.431845729083
+      },
+      {
+       "month": 1,
+       "tonnes": 347,
+       "price": 476.948004241766
+      },
+      {
+       "month": 2,
+       "tonnes": 336,
+       "price": 467.588121377501
+      },
+      {
+       "month": 3,
+       "tonnes": 348,
+       "price": 467.469679677419
+      },
+      {
+       "month": 4,
+       "tonnes": 362,
+       "price": 467.469679677419
+      },
+      {
+       "month": 5,
+       "tonnes": 400,
+       "price": 467.469679677419
+      },
+      {
+       "month": 6,
+       "tonnes": 440,
+       "price": 467.469679677419
+      },
+      {
+       "month": 7,
+       "tonnes": 397,
+       "price": 467.469679677419
+      },
+      {
+       "month": 8,
+       "tonnes": 440,
+       "price": 467.469679677419
+      },
+      {
+       "month": 9,
+       "tonnes": 425,
+       "price": 467.469679677419
+      },
+      {
+       "month": 10,
+       "tonnes": 440,
+       "price": 467.469679677419
+      },
+      {
+       "month": 11,
+       "tonnes": 425,
+       "price": 467.469679677419
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Cotton Seed",
+   "shrink": -0.02,
+   "contracts": [
+    {
+     "ref": "Budget To Fill If Position Short",
+     "vendor": "",
+     "basePrice": null,
+     "terms": "",
+     "budget": true,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 1422,
+       "price": 425.994819863681
+      },
+      {
+       "month": 1,
+       "tonnes": 1633,
+       "price": 415.530534351145
+      },
+      {
+       "month": 2,
+       "tonnes": 1580,
+       "price": 404.341367221735
+      },
+      {
+       "month": 3,
+       "tonnes": 1641,
+       "price": 403.365555086534
+      },
+      {
+       "month": 4,
+       "tonnes": 1710,
+       "price": 405.511580658269
+      },
+      {
+       "month": 5,
+       "tonnes": 1894,
+       "price": 416.028436018957
+      },
+      {
+       "month": 6,
+       "tonnes": 2092,
+       "price": 428.553381962865
+      },
+      {
+       "month": 7,
+       "tonnes": 1890,
+       "price": 429.721365638767
+      },
+      {
+       "month": 8,
+       "tonnes": 2092,
+       "price": 424.710212201592
+      },
+      {
+       "month": 9,
+       "tonnes": 2025,
+       "price": 380
+      },
+      {
+       "month": 10,
+       "tonnes": 2092,
+       "price": 380
+      },
+      {
+       "month": 11,
+       "tonnes": 2025,
+       "price": 380
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Hay Lucerne",
+   "shrink": -0.04,
+   "contracts": [
+    {
+     "ref": "Inventory",
+     "vendor": "",
+     "basePrice": 370,
+     "terms": "Inventory",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 109,
+       "price": 370
+      }
+     ]
+    },
+    {
+     "ref": "C1027",
+     "vendor": "",
+     "basePrice": 370,
+     "terms": "",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 93,
+       "price": 370
+      },
+      {
+       "month": 1,
+       "tonnes": 232,
+       "price": 370
+      },
+      {
+       "month": 2,
+       "tonnes": 225,
+       "price": 370
+      },
+      {
+       "month": 3,
+       "tonnes": 233,
+       "price": 370
+      },
+      {
+       "month": 4,
+       "tonnes": 79,
+       "price": 370
+      }
+     ]
+    },
+    {
+     "ref": "Budget To Fill If Position Short",
+     "vendor": "",
+     "basePrice": null,
+     "terms": "",
+     "budget": true,
+     "deliveries": [
+      {
+       "month": 4,
+       "tonnes": 164,
+       "price": 370
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Hay Cereal & Straw",
+   "shrink": -0.04,
+   "contracts": [
+    {
+     "ref": "Inventory",
+     "vendor": "",
+     "basePrice": 176.76,
+     "terms": "Inventory",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 196,
+       "price": 176.76
+      },
+      {
+       "month": 1,
+       "tonnes": 225,
+       "price": 176.76
+      },
+      {
+       "month": 2,
+       "tonnes": 30,
+       "price": 176.76
+      }
+     ]
+    },
+    {
+     "ref": "C1028",
+     "vendor": "",
+     "basePrice": 185,
+     "terms": "",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 2,
+       "tonnes": 188,
+       "price": 185
+      },
+      {
+       "month": 3,
+       "tonnes": 226,
+       "price": 185
+      },
+      {
+       "month": 4,
+       "tonnes": 234,
+       "price": 185
+      },
+      {
+       "month": 5,
+       "tonnes": 169,
+       "price": 185
+      }
+     ]
+    },
+    {
+     "ref": "Budget To Fill If Position Short",
+     "vendor": "",
+     "basePrice": null,
+     "terms": "",
+     "budget": true,
+     "deliveries": [
+      {
+       "month": 5,
+       "tonnes": 87,
+       "price": 170
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Silage",
+   "shrink": 0,
+   "contracts": [
+    {
+     "ref": "Inventory",
+     "vendor": "Supplier P",
+     "basePrice": 114.05,
+     "terms": "Inventory",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 586,
+       "price": 114.05
+      },
+      {
+       "month": 1,
+       "tonnes": 672,
+       "price": 114.05
+      },
+      {
+       "month": 2,
+       "tonnes": 651,
+       "price": 114.05
+      },
+      {
+       "month": 3,
+       "tonnes": 675,
+       "price": 114.05
+      },
+      {
+       "month": 4,
+       "tonnes": 697,
+       "price": 114.05
+      },
+      {
+       "month": 5,
+       "tonnes": 765,
+       "price": 114.05
+      },
+      {
+       "month": 6,
+       "tonnes": 835,
+       "price": 114.05
+      },
+      {
+       "month": 7,
+       "tonnes": 754,
+       "price": 114.05
+      },
+      {
+       "month": 8,
+       "tonnes": 835,
+       "price": 114.05
+      },
+      {
+       "month": 9,
+       "tonnes": 808,
+       "price": 114.05
+      },
+      {
+       "month": 10,
+       "tonnes": 835,
+       "price": 114.05
+      },
+      {
+       "month": 11,
+       "tonnes": 808,
+       "price": 114.05
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Oil",
+   "shrink": -0.01,
+   "contracts": [
+    {
+     "ref": "Inventory",
+     "vendor": "",
+     "basePrice": 905,
+     "terms": "Inventory",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 45,
+       "price": 905
+      }
+     ]
+    },
+    {
+     "ref": "C1029",
+     "vendor": "",
+     "basePrice": 905,
+     "terms": "",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 242,
+       "price": 905
+      },
+      {
+       "month": 1,
+       "tonnes": 258,
+       "price": 905
+      }
+     ]
+    },
+    {
+     "ref": "C1030",
+     "vendor": "",
+     "basePrice": 905,
+     "terms": "",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 0,
+       "tonnes": 33,
+       "price": 905
+      }
+     ]
+    },
+    {
+     "ref": "C1031",
+     "vendor": "",
+     "basePrice": 880,
+     "terms": "",
+     "budget": false,
+     "deliveries": [
+      {
+       "month": 1,
+       "tonnes": 109,
+       "price": 880
+      },
+      {
+       "month": 2,
+       "tonnes": 355,
+       "price": 880
+      },
+      {
+       "month": 3,
+       "tonnes": 36,
+       "price": 880
+      }
+     ]
+    },
+    {
+     "ref": "Budget To Fill If Position Short",
+     "vendor": "",
+     "basePrice": null,
+     "terms": "",
+     "budget": true,
+     "deliveries": [
+      {
+       "month": 3,
+       "tonnes": 333,
+       "price": 880
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,46 @@
+/* Feedlot prototype — only what styles.css does not already cover. */
+
+.fl-banner {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  padding: 0 4px 10px;
+}
+.fl-banner strong { color: var(--text); }
+
+.fl-warn {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+}
+.fl-warn li { font-size: 13px; padding: 3px 0; }
+.fl-warn ul { margin: 0; padding-left: 18px; }
+
+.fl-neg { color: var(--danger); }
+.fl-pos { color: var(--accent-summary); }
+.fl-dim { color: var(--text-dim); font-weight: 400; }
+
+td input.fl-cell {
+  width: 76px;
+  font: inherit;
+  text-align: right;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+td input.fl-cell:focus { outline: 2px solid var(--accent-input); }
+
+.fl-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+  min-width: 70px;
+}
+.fl-bar > span { display: block; height: 100%; background: var(--accent-summary); }
+.fl-bar.short > span { background: var(--danger); }
+
+.fl-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+@media (min-width: 900px) {
+  .fl-wide .stat-grid { grid-template-columns: repeat(4, 1fr); }
+}

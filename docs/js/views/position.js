@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=97';
-import { position, positionTotals, farmProfitLoss } from '../derived.js?v=97';
-import { num, tons, money, pct } from '../fmt.js?v=97';
+import { db } from '../storage.js?v=98';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=98';
+import { num, tons, money, pct } from '../fmt.js?v=98';
 
 let unsub = null;
 
@@ -13,7 +13,7 @@ export function renderPosition(root) {
 function paint(root) {
   const { commodities, fields, sales, movements } = db.get();
   const overheads = db.getOverheads();
-  const rows = position(commodities, fields, sales, movements).filter((r) => r.area > 0 || r.soldTons > 0 || r.commodity.openingStock);
+  const rows = positionRows(commodities, fields, sales, movements);
   const totals = positionTotals(rows);
   const pl = farmProfitLoss(totals.grossMargin, overheads);
 

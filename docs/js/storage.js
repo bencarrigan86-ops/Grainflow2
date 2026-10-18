@@ -18,15 +18,15 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=97';
+import { hydrate } from './hydrate.js?v=98';
 import {
   saveState, loadState, markDeleted, markDirty, outboxCount,
   loadFarmStamp, setAsideState,
-} from './local.js?v=97';
-import { chooseBootState } from './boot.js?v=97';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=97';
-import { schedulePush, pushOnReconnect } from './sync.js?v=97';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=97';
+} from './local.js?v=98';
+import { chooseBootState } from './boot.js?v=98';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=98';
+import { schedulePush, pushOnReconnect } from './sync.js?v=98';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=98';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
