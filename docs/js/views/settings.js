@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=98';
-import { num, money, esc } from '../fmt.js?v=98';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=98';
-import { APP_VERSION } from '../version.js?v=98';
-import { exportRowsAsCSV } from '../csv.js?v=98';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=98';
-import { endpointLabel } from './movements.js?v=98';
+import { db } from '../storage.js?v=100';
+import { num, money, esc } from '../fmt.js?v=100';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=100';
+import { APP_VERSION } from '../version.js?v=100';
+import { exportRowsAsCSV } from '../csv.js?v=100';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=100';
+import { endpointLabel } from './movements.js?v=100';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=98';
+} from '../invites.js?v=100';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=98';
+} from '../auth.js?v=100';
 
 let unsub = null;
 
@@ -37,24 +37,6 @@ function paint(root) {
     </div>
     <div class="view">
       <div class="card">
-        <h2>Account</h2>
-        <div class="field hint" style="margin-bottom:8px">Who you are signed in as, your role on this farm, and the way out.</div>
-        <button class="btn secondary" id="go-account">Account &amp; sign out</button>
-      </div>
-
-      ${db.getRole() === 'owner' ? '<div class="card" id="people-card"></div>' : ''}
-
-      <div class="card">
-        <h2>Farm</h2>
-        <div class="field hint" style="margin-bottom:6px">The property. This is what the app
-          calls this place, what someone is told they are joining when you invite them, and
-          what shows on the Account screen. The trading entity that appears on invoices is
-          separate — that's Business details, below.</div>
-        ${field({ label: 'Farm / property name', id: 'bd-farm', value: business.farmName, placeholder: 'e.g. Sunnyridge' })}
-        <button class="btn" id="save-farm">Save farm name</button>
-      </div>
-
-      <div class="card">
         <h2>Season</h2>
         ${field({ label: 'Viewing', id: 'year-select', type: 'select', value: currentYear, options: years.map((y) => ({ value: y, label: y })) })}
         <div class="swipe-actions">
@@ -70,7 +52,8 @@ function paint(root) {
       </div>
 
       <div class="card">
-        <h2>Overheads</h2>
+        <details class="fold" style="border-top:none;margin-top:0">
+          <summary><div><h2>Overheads</h2><div class="sub">Whole-farm costs used for profit on the Position tab</div></div></summary>
         <div class="field hint" style="margin-bottom:6px">Whole-farm costs, subtracted from total gross margin in the Position tab.</div>
         ${field({ label: 'Finance ($)', id: 'oh-finance', type: 'number', step: '1', value: overheads.finance })}
         ${field({ label: 'Equipment repayments ($)', id: 'oh-equipment', type: 'number', step: '1', value: overheads.equipmentRepayments })}
@@ -83,10 +66,12 @@ function paint(root) {
         ${field({ label: 'R&amp;M ($)', id: 'oh-rm', type: 'number', step: '1', value: overheads.repairsMaintenance })}
         ${field({ label: 'Other ($)', id: 'oh-other', type: 'number', step: '1', value: overheads.other })}
         <button class="btn" id="save-overheads">Save overheads</button>
+        </details>
       </div>
 
       <div class="card">
-        <h2>Business details</h2>
+        <details class="fold" style="border-top:none;margin-top:0">
+          <summary><div><h2>Business details</h2><div class="sub">ABN, contact and bank details shown on invoices</div></div></summary>
         <div class="field hint" style="margin-bottom:6px">The entity that holds the ABN and the
           bank account. Used as the "Seller" on invoices you generate in Sales — not as the
           name of the farm, which is set above.</div>
@@ -97,8 +82,8 @@ function paint(root) {
         </div>
         ${field({ label: 'Contact name', id: 'bd-contact', value: business.contactName })}
         <div class="grid-2">
-          ${field({ label: 'Phone', id: 'bd-phone', value: business.phone })}
-          ${field({ label: 'Email', id: 'bd-email', value: business.email })}
+          ${field({ label: 'Phone', id: 'bd-phone', type: 'tel', value: business.phone })}
+          ${field({ label: 'Email', id: 'bd-email', type: 'email', value: business.email })}
         </div>
         ${field({ label: 'Address', id: 'bd-address', value: business.address })}
         ${field({ label: 'Payment terms (days)', id: 'bd-terms', type: 'number', step: '1', value: business.paymentTermsDays })}
@@ -108,15 +93,25 @@ function paint(root) {
           ${field({ label: 'Account name', id: 'bd-accname', value: business.accountName })}
         </div>
         <div class="grid-2">
-          ${field({ label: 'BSB', id: 'bd-bsb', value: business.bsb })}
-          ${field({ label: 'Account number', id: 'bd-accno', value: business.accountNumber })}
+          ${field({ label: 'BSB', id: 'bd-bsb', type: 'text', placeholder: '000-000', value: business.bsb })}
+          ${field({ label: 'Account number', id: 'bd-accno', placeholder: 'Digits only', value: business.accountNumber })}
         </div>
         <button class="btn" id="save-business">Save business details</button>
+        </details>
       </div>
 
       <div class="card">
+        <h2>Farm</h2>
+        <div class="field hint" style="margin-bottom:6px">What this place is called in the app and in invitations. The entity on invoices is set under Business details.</div>
+        ${field({ label: 'Farm / property name', id: 'bd-farm', value: business.farmName, placeholder: 'e.g. Sunnyridge' })}
+        <button class="btn" id="save-farm">Save farm name</button>
+      </div>
+
+      ${db.getRole() === 'owner' ? '<div class="card" id="people-card"></div>' : ''}
+
+      <div class="card">
         <h2>Data</h2>
-        <div class="row"><span class="label">Everything is stored on this device only.</span></div>
+        <div class="field hint" style="margin-bottom:8px">Your farm is kept on this device and synced to the server when you have signal. A backup is your own copy, in case.</div>
         <div class="swipe-actions">
           <button class="btn secondary small" id="export">Export backup</button>
           <button class="btn secondary small" id="import">Import backup</button>
@@ -147,6 +142,12 @@ function paint(root) {
         -->
         <a href="./state.html" class="btn secondary small"
            style="display:block;text-align:center;text-decoration:none;margin-top:6px">Storage diagnostics</a>
+      </div>
+
+      <div class="card">
+        <h2>Account</h2>
+        <div class="field hint" style="margin-bottom:8px">Who you are signed in as, your role on this farm, and the way out.</div>
+        <button class="btn secondary" id="go-account">Account &amp; sign out</button>
       </div>
     </div>
     <button class="fab" id="add-commodity">+</button>
@@ -247,7 +248,7 @@ function paint(root) {
     const text = await f.text();
     try {
       const { remapped, filled, stats } = db.importJSON(text);
-      alert(
+      notify(
         `Imported.\n\n` +
         `${stats.seasons} season(s), ${stats.paddocks} paddock(s), ` +
         `${stats.storages} storage(s), ${stats.movements} movement(s), ` +
@@ -265,7 +266,7 @@ function paint(root) {
       // The old message was "Could not read that file", which was true of a
       // corrupt file and misleading about every other failure. Say what is
       // actually wrong — the file is usually fine and one value is not.
-      alert(`Import refused.\n\n${e.message}`);
+      notify(`Import refused.\n\n${e.message}`);
     }
   });
   root.querySelector('#reset').addEventListener('click', () => {
@@ -382,7 +383,7 @@ function paintPeople(card) {
         try {
           await revokeInvitation(el.dataset.revokeInvite);
           refreshPeople();
-        } catch (e) { alert(`Could not withdraw that invitation.\n\n${e.message}`); }
+        } catch (e) { notify(`Could not withdraw that invitation.\n\n${e.message}`); }
       });
     });
   });
@@ -465,7 +466,7 @@ function openMemberSheet(m) {
       // Promoting somebody to owner hands them the bank details and the ability
       // to remove you. Worth one deliberate pause; nothing else here is.
       if (role === 'owner' && m.role !== 'owner'
-          && !window.confirm(`Make ${m.email} an owner? They will be able to see the bank details and contract pricing, and to remove anyone from this farm — including you.`)) {
+          && !await askConfirm(`Make ${m.email} an owner? They will be able to see the bank details and contract pricing, and to remove anyone from this farm — including you.`)) {
         return;
       }
       busy = true;
@@ -488,7 +489,7 @@ function openMemberSheet(m) {
           await removeMember(db.getFarmId(), m.userId);
           refreshPeople();
           closeSheet();
-        } catch (e) { alert(`Could not remove them.\n\n${e.message}`); }
+        } catch (e) { notify(`Could not remove them.\n\n${e.message}`); }
       });
     });
   });
@@ -629,7 +630,7 @@ function openInviteSheet() {
       // of the same dropdown as driver, so the only thing separating a family
       // partner from a mis-tap is being asked once.
       if (v.role === 'owner'
-          && !window.confirm(`Invite ${v.email} as an owner? They will be able to see the bank details and contract pricing, and to remove anyone from this farm — including you.`)) {
+          && !await askConfirm(`Invite ${v.email} as an owner? They will be able to see the bank details and contract pricing, and to remove anyone from this farm — including you.`)) {
         return;
       }
 
@@ -871,7 +872,7 @@ function openRenameYearSheet(currentYear) {
       const year = getVal(root, 'year')?.trim();
       if (!year) { root.querySelector('#year').focus(); return; }
       const ok = db.renameYear(currentYear, year);
-      if (!ok) { alert(`"${year}" is already in use.`); return; }
+      if (!ok) { notify(`"${year}" is already in use.`); return; }
       closeSheet();
     });
   });
@@ -893,7 +894,7 @@ function openNewYearSheet(currentYear) {
       const year = getVal(root, 'year')?.trim();
       if (!year) { root.querySelector('#year').focus(); return; }
       const ok = db.createYear(year);
-      if (!ok) { alert(`"${year}" already exists or is invalid.`); return; }
+      if (!ok) { notify(`"${year}" already exists or is invalid.`); return; }
       closeSheet();
     });
   });
@@ -949,8 +950,8 @@ function openCommoditySheet(existing) {
       <hr class="sep" />
       ${field({ label: 'Gross margin cost ($)', id: 'gmCost', type: 'number', step: '1', value: existing?.grossMarginCost ?? 0, hint: 'Total input cost for this commodity, for the Position tab' })}
       ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
-      <button class="btn" id="save">Save</button>
-      ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete commodity</button>` : ''}
+      ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete commodity</button>` : ''}
+      <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
     `;
     if (existing) buildCommoditySensitivity(root, existing.id);
     const balesWrap = root.querySelector('#bales-per-round-wrap');

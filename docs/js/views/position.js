@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=98';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=98';
-import { num, tons, money, pct } from '../fmt.js?v=98';
+import { db } from '../storage.js?v=100';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=100';
+import { num, tons, money, pct, esc } from '../fmt.js?v=100';
 
 let unsub = null;
 
@@ -44,7 +44,7 @@ function paint(root) {
         </div>
       </div>
 
-      ${rows.length === 0 ? `<div class="empty">No production, sales or opening stock yet.<br/>Add data in the Production and Sales tabs.</div>` : ''}
+      ${rows.length === 0 ? `<div class="empty">Nothing to report yet.<br/>Add a paddock in Production, or a contract in Sales, and your position appears here.</div>` : ''}
 
       ${rows.map((r) => commodityCard(r)).join('')}
 
@@ -55,56 +55,57 @@ function paint(root) {
 
 function farmSummaryCard(totals, overheads, pl) {
   const plClass = pl.profitLoss >= 0 ? 'pos' : 'neg';
+  const oh = (label, v) => `<div class="row"><span class="label">${label}</span><span class="value">${money(v, 0)}</span></div>`;
   return `
     <div class="card summary">
       <h2><span class="dot summary"></span>Whole farm</h2>
-      <div class="row"><span class="label"><strong>Total gross margin</strong></span><span class="value"><strong>${money(totals.grossMargin, 0)}</strong></span></div>
-      <hr class="sep" />
-      <div class="row"><span class="label">Finance</span><span class="value">${money(overheads.finance, 0)}</span></div>
-      <div class="row"><span class="label">Equipment repayments</span><span class="value">${money(overheads.equipmentRepayments, 0)}</span></div>
-      <div class="row"><span class="label">Depreciation</span><span class="value">${money(overheads.depreciation, 0)}</span></div>
-      <div class="row"><span class="label">Wages</span><span class="value">${money(overheads.wages, 0)}</span></div>
-      <div class="row"><span class="label">Drawings</span><span class="value">${money(overheads.drawings, 0)}</span></div>
-      <div class="row"><span class="label">Admin</span><span class="value">${money(overheads.admin, 0)}</span></div>
-      <div class="row"><span class="label">Energy</span><span class="value">${money(overheads.energy, 0)}</span></div>
-      <div class="row"><span class="label">Insurance</span><span class="value">${money(overheads.insurance, 0)}</span></div>
-      <div class="row"><span class="label">R&amp;M</span><span class="value">${money(overheads.repairsMaintenance, 0)}</span></div>
-      <div class="row"><span class="label">Other</span><span class="value">${money(overheads.other, 0)}</span></div>
-      <div class="row"><span class="label">Total overheads</span><span class="value">${money(pl.overheadsTotal, 0)}</span></div>
-      <hr class="sep" />
-      <div class="row"><span class="label"><strong>${pl.profitLoss >= 0 ? 'Profit' : 'Loss'}</strong></span><span class="value"><span class="badge ${plClass}" style="font-size:16px">${money(pl.profitLoss, 0)}</span></span></div>
+      <div class="trio">
+        <div class="kv"><div class="l">Gross margin</div><div class="v">${money(totals.grossMargin, 0)}</div></div>
+        <div class="kv"><div class="l">Overheads</div><div class="v">${money(pl.overheadsTotal, 0)}</div></div>
+        <div class="kv"><div class="l">${pl.profitLoss >= 0 ? 'Profit' : 'Loss'}</div><div class="v"><span class="badge ${plClass}" style="font-size:15px">${money(pl.profitLoss, 0)}</span></div></div>
+      </div>
+      <details class="fold">
+        <summary><div><h2>Overheads</h2><div class="sub">Finance, wages, drawings and the rest</div></div></summary>
+        ${oh('Finance', overheads.finance)}${oh('Equipment repayments', overheads.equipmentRepayments)}${oh('Depreciation', overheads.depreciation)}
+        ${oh('Wages', overheads.wages)}${oh('Drawings', overheads.drawings)}${oh('Admin', overheads.admin)}
+        ${oh('Energy', overheads.energy)}${oh('Insurance', overheads.insurance)}${oh('R&amp;M', overheads.repairsMaintenance)}${oh('Other', overheads.other)}
+        ${oh('<strong>Total overheads</strong>', pl.overheadsTotal)}
+      </details>
     </div>
   `;
 }
 
 function commodityCard(r) {
+  const sold = Math.min(1, Math.max(0, r.pctSold));
   const pctSoldBadge = r.pctSold >= 1
     ? `<span class="badge pos">Sold out</span>`
-    : `<span class="badge ${r.pctSold > 0 ? 'pos' : 'neg'}">${pct(r.pctSold)} sold</span>`;
+    : `<span class="badge ${r.pctSold > 0 ? 'pos' : 'muted'}">${pct(r.pctSold)} sold</span>`;
 
   return `
     <div class="card summary">
-      <h2><span class="dot summary"></span>${r.commodity.name} ${pctSoldBadge}</h2>
-      <div class="row"><span class="label">Area</span><span class="value">${num(r.area, 0)} ha</span></div>
-      <div class="row"><span class="label">Yield</span><span class="value">${num(r.yieldTHa, 2)} t/ha</span></div>
-      <div class="row"><span class="label">Production</span><span class="value">${tons(r.productionTons, 0)}</span></div>
-      <hr class="sep" />
-      <div class="row"><span class="label">Sold</span><span class="value">${tons(r.soldTons, 0)}</span></div>
-      <div class="row"><span class="label">Avg sold price</span><span class="value">${money(r.avgSoldPrice, 2)}/t</span></div>
-      <div class="row"><span class="label">Sold value</span><span class="value">${money(r.soldValue, 0)}</span></div>
-      <hr class="sep" />
-      ${r.opening || r.retainedSeed ? `
-      <div class="row"><span class="label">Opening stock</span><span class="value">${tons(r.opening, 0)}</span></div>
-      <div class="row"><span class="label">Retained seed</span><span class="value">${tons(r.retainedSeed, 0)}</span></div>
-      ` : ''}
-      <div class="row"><span class="label">Unsold</span><span class="value">${tons(r.unsoldTons, 0)}</span></div>
-      <div class="row"><span class="label">MTM price</span><span class="value">${money(r.mtmPrice, 2)}/t</span></div>
-      <div class="row"><span class="label">Unsold value</span><span class="value">${money(r.unsoldValue, 0)}</span></div>
-      <hr class="sep" />
-      <div class="row"><span class="label"><strong>Total position value</strong></span><span class="value"><strong>${money(r.totalValue, 0)}</strong></span></div>
-      <hr class="sep" />
-      <div class="row"><span class="label">Gross margin cost</span><span class="value">${money(r.grossMarginCost, 0)}</span></div>
-      <div class="row"><span class="label"><strong>Gross margin</strong></span><span class="value"><strong>${money(r.grossMargin, 0)}</strong> <span class="badge ${r.grossMargin >= 0 ? 'pos' : 'neg'}">${pct(r.grossMarginPct)}</span></span></div>
+      <h2><span class="dot summary"></span>${esc(r.commodity.name)} ${pctSoldBadge}</h2>
+      <div class="trio">
+        <div class="kv"><div class="l">Produced</div><div class="v">${tons(r.productionTons, 0)}</div></div>
+        <div class="kv"><div class="l">Sold</div><div class="v">${tons(r.soldTons, 0)}</div></div>
+        <div class="kv"><div class="l">Unsold</div><div class="v">${tons(r.unsoldTons, 0)}</div></div>
+      </div>
+      <div class="gauge" role="img" aria-label="${Math.round(sold * 100)} percent sold"><i style="width:${sold * 100}%"></i></div>
+      <div class="row" style="margin-top:8px"><span class="label">Total position value</span><span class="value">${money(r.totalValue, 0)}</span></div>
+      <div class="row"><span class="label">Gross margin</span><span class="value">${money(r.grossMargin, 0)} <span class="badge ${r.grossMargin >= 0 ? 'pos' : 'neg'}">${pct(r.grossMarginPct)}</span></span></div>
+      <details class="fold">
+        <summary><div><h2>Full breakdown</h2><div class="sub">Area, yield, prices and costs</div></div></summary>
+        <div class="row"><span class="label">Area</span><span class="value">${num(r.area, 0)} ha</span></div>
+        <div class="row"><span class="label">Yield</span><span class="value">${num(r.yieldTHa, 2)} t/ha</span></div>
+        <div class="row"><span class="label">Avg sold price</span><span class="value">${money(r.avgSoldPrice, 2)}/t</span></div>
+        <div class="row"><span class="label">Sold value</span><span class="value">${money(r.soldValue, 0)}</span></div>
+        ${r.opening || r.retainedSeed ? `
+        <div class="row"><span class="label">Opening stock</span><span class="value">${tons(r.opening, 0)}</span></div>
+        <div class="row"><span class="label">Retained seed</span><span class="value">${tons(r.retainedSeed, 0)}</span></div>
+        ` : ''}
+        <div class="row"><span class="label">MTM price</span><span class="value">${money(r.mtmPrice, 2)}/t</span></div>
+        <div class="row"><span class="label">Unsold value</span><span class="value">${money(r.unsoldValue, 0)}</span></div>
+        <div class="row"><span class="label">Gross margin cost</span><span class="value">${money(r.grossMarginCost, 0)}</span></div>
+      </details>
     </div>
   `;
 }

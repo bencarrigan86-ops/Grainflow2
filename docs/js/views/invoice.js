@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=98';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint } from '../derived.js?v=98';
-import { num, money, esc } from '../fmt.js?v=98';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=98';
+import { db } from '../storage.js?v=100';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint } from '../derived.js?v=100';
+import { num, money, esc } from '../fmt.js?v=100';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=100';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -149,7 +149,7 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
     root.querySelector('#save-invoice').addEventListener('click', () => {
       const lines = buildLines();
       if (lines.length === 0) {
-        alert('Select at least one load, or enter a manual tonnage / custom item.');
+        notify('Select at least one load, or enter a manual tonnage / custom item.');
         return;
       }
       const totalTons = lines.reduce((s, l) => s + (Number(l.tons) || 0), 0);

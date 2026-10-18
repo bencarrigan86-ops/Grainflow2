@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=98';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=98';
-import { num, tons, ha, esc } from '../fmt.js?v=98';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=98';
-import { renderRelatedMovements } from './movements.js?v=98';
+import { db } from '../storage.js?v=100';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=100';
+import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=100';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=100';
+import { renderRelatedMovements } from './movements.js?v=100';
 
 let unsub = null;
 
@@ -27,9 +27,22 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      ${rollup.length === 0 ? '' : `
+      <div class="stat-grid">
+        <div class="stat"><div class="n">${num(productionTotals.area, 0)} ha</div><div class="l">Total area</div></div>
+        <div class="stat"><div class="n">${num(productionTotals.tons, 0)} t</div><div class="l">Total production</div></div>
+      </div>`}
+
+      <div class="card input">
+        <h2><span class="dot input"></span>Fields</h2>
+        ${groups.length === 0 ? `<div class="empty">No fields yet.<br/><button class="btn" id="empty-add-field">Add your first field</button></div>` : groups.map((g) => `
+          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${tons(g.totalTons, 0)}</span></div>
+          ${g.fields.map((f) => fieldRow(f, movements)).join('')}
+        `).join('')}
+      </div>
+      ${rollup.length === 0 ? '' : `
       <div class="card report">
         <h2><span class="dot report"></span>By commodity</h2>
-        ${rollup.length === 0 ? `<div class="empty">No fields entered yet.</div>` : `
         <div class="table-scroll">
           <table>
             <thead><tr><th>Commodity</th><th>Area</th><th>Yield</th><th>Tons</th></tr></thead>
@@ -49,16 +62,8 @@ function paint(root) {
               <td>${num(productionTotals.tons, 0)}</td>
             </tr></tfoot>
           </table>
-        </div>`}
-      </div>
-
-      <div class="card input">
-        <h2><span class="dot input"></span>Fields</h2>
-        ${groups.length === 0 ? `<div class="empty">Tap + to add your first field.</div>` : groups.map((g) => `
-          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${tons(g.totalTons, 0)}</span></div>
-          ${g.fields.map((f) => fieldRow(f, movements)).join('')}
-        `).join('')}
-      </div>
+        </div>
+      </div>`}
     </div>
     <button class="fab" id="add-field">+</button>
   `;
@@ -67,6 +72,7 @@ function paint(root) {
     el.addEventListener('click', () => openFieldSheet(fields.find((f) => f.id === el.dataset.editField)));
   });
   root.querySelector('#add-field').addEventListener('click', () => openFieldSheet(null));
+  root.querySelector('#empty-add-field')?.addEventListener('click', () => openFieldSheet(null));
 }
 
 function fieldRow(f, movements) {
@@ -113,8 +119,8 @@ function openFieldSheet(existing) {
         <div class="hint" id="actual-hint">Actual sums the Movement tickets carted off this field${actualTons > 0 ? ` — currently ${num(actualTons, 0)} t` : ''}.</div>
       </div>
       <div class="row"><span class="label" id="tons-label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
-      <hr class="sep" />
-      <div class="group-label"><span>Fertiliser planning</span></div>
+      <details class="fold" ${existing ? 'open' : ''}>
+        <summary><div><h2>Fertiliser planning</h2><div class="sub">Target yield, urea required and applied, nitrogen</div></div></summary>
       <div class="field hint" style="margin:-4px 0 12px">Separate from the yield estimate above — used only for the urea and starter calculations below.</div>
       <div class="row"><span class="label">Commodity's default target yield</span><span class="value" id="commodity-target-preview">— t/ha</span></div>
       ${field({ label: 'Target yield override (t/ha)', id: 'targetYieldOverride', type: 'number', step: '0.1', value: existing?.targetYieldOverrideTHa || '', placeholder: 'Commodity default', hint: "Leave blank to use the commodity's default above — type a value here to override it for this field" })}
@@ -134,7 +140,7 @@ function openFieldSheet(existing) {
       <div id="urea-app-list"></div>
       <button class="btn secondary small" id="toggle-urea-app-form" style="margin-bottom:10px">+ Add application</button>
       <div id="urea-app-form" style="display:none;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
-        ${field({ label: 'Date', id: 'ua-date', type: 'date' })}
+        ${field({ label: 'Date', id: 'ua-date', type: 'date', value: todayLocal() })}
         <div class="grid-2">
           ${field({ label: 'Applied by', id: 'ua-by', placeholder: 'e.g. Ben' })}
           ${field({ label: 'Machine', id: 'ua-machine', placeholder: 'e.g. Boomspray' })}
@@ -145,7 +151,9 @@ function openFieldSheet(existing) {
         ${!existing ? `<div class="hint" style="margin-top:8px">Saved automatically once you save this new field below.</div>` : ''}
       </div>
       <div class="row"><span class="label">Urea left</span><span class="value" id="urea-preview">0.0 t</span></div>
-      <hr class="sep" />
+      </details>
+      <details class="fold" ${existing ? 'open' : ''}>
+        <summary><div><h2>Starter &amp; seed</h2><div class="sub">Starter fertiliser, seed variety and rate</div></div></summary>
       <div class="grid-2">
         ${field({ label: 'Starter required (kg/ha)', id: 'starterReq', type: 'number', step: '1', value: existing?.starterRequiredKgHa ?? 0 })}
         ${field({ label: 'Starter applied (kg/ha)', id: 'starterApp', type: 'number', step: '1', value: existing?.starterAppliedKgHa ?? 0 })}
@@ -157,11 +165,12 @@ function openFieldSheet(existing) {
         ${field({ label: 'Seed rate (kg/ha)', id: 'seedRate', type: 'number', step: '1', value: existing?.seedRateKgHa ?? 0 })}
       </div>
       <div class="row"><span class="label">Seed required</span><span class="value" id="seed-preview">0.0 t</span></div>
-      <hr class="sep" />
-      ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
+      </details>
+      <div style="height:12px"></div>
+      ${field({ label: 'Notes', id: 'notes', type: 'textarea', value: existing?.notes })}
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
-      <button class="btn" id="save" style="margin-top:12px">Save</button>
-      ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
+      ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
+      <div class="save-bar"><div class="total"><div class="l">Total tons</div><div class="v" id="tons-bar">—</div></div><button class="btn" id="save">Save</button></div>
     `;
     if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'field', existing.id);
 
@@ -241,6 +250,8 @@ function openFieldSheet(existing) {
       const area = getNum(root, 'area');
       const yieldTHa = area > 0 ? tonsVal / area : 0;
       preview.textContent = `${num(tonsVal, 1)} ${unit} · ${num(yieldTHa, 2)} ${unitPerHa}`;
+      const barEl = root.querySelector('#tons-bar');
+      if (barEl) barEl.textContent = `${num(tonsVal, 1)} ${unit}`;
       const applied = appliedKgHa();
       ureaAppliedTotalEl.textContent = `${num(applied, 0)} kg/ha`;
       const u = fieldUrea({ areaHa: getNum(root, 'area'), ureaRequiredKgHa: getNum(root, 'ureaReq'), ureaAppliedKgHa: applied });
@@ -384,7 +395,7 @@ function openFieldSheet(existing) {
         seedRateKgHa: getNum(root, 'seedRate'),
         notes: getVal(root, 'notes')?.trim(),
       });
-      closeSheet();
+      closeSheet(); toast('Saved');
     });
     const del = root.querySelector('#del');
     if (del) {

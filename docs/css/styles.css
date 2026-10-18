@@ -4,15 +4,18 @@
   --surface: #ffffff;
   --surface-2: #f7f8fa;
   --text: #14171a;
-  --text-dim: #6b7280;
+  --text-dim: #5b6470;
   --border: #e3e5e8;
   --accent-input: #eab308;   /* yellow — input tabs */
-  --accent-input-bg: #fef9e7;
+  --accent-input-bg: #fffdf6;
   --accent-report: #0070c0;  /* blue — report tabs */
-  --accent-report-bg: #e8f2fb;
+  --accent-report-bg: #f6f9fd;
   --accent-summary: #2e7d32; /* green — ultimate report */
-  --accent-summary-bg: #eaf5ea;
+  --accent-summary-bg: #f5faf5;
   --danger: #c0392b;
+  --warn: #a15c00;
+  --warn-bg: #fff1dc;
+  --track: #e3e5e8;
   --radius: 14px;
   --tabbar-h: 58px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -25,11 +28,14 @@
     --surface: #1a1d21;
     --surface-2: #202429;
     --text: #f0f1f3;
-    --text-dim: #9aa1a9;
+    --text-dim: #a3aab2;
+    --warn: #f0b35a;
+    --warn-bg: #33250e;
+    --track: #2b2f34;
     --border: #2b2f34;
-    --accent-input-bg: #2a2410;
-    --accent-report-bg: #0f2233;
-    --accent-summary-bg: #102611;
+    --accent-input-bg: #1d1b12;
+    --accent-report-bg: #131c26;
+    --accent-summary-bg: #131e14;
   }
 }
 
@@ -74,7 +80,7 @@ html, body {
 }
 
 .view {
-  padding: 4px 16px 24px;
+  padding: 4px 16px 96px;
 }
 
 .card {
@@ -259,7 +265,7 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
 .btn:active { opacity: .8; }
 .btn.secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
 .btn.danger { background: var(--danger); }
-.btn.small { width: auto; padding: 8px 14px; font-size: 13px; }
+.btn.small { width: auto; padding: 10px 16px; font-size: 13px; min-height: 40px; }
 
 .fab {
   position: fixed;
@@ -329,6 +335,7 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
   gap: 3px;
 }
 .segmented button {
+  min-height: 40px;
   flex: 1;
   border: none;
   background: transparent;
@@ -442,7 +449,7 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
 .sheet {
   background: var(--bg);
   width: 100%;
-  max-height: 88vh;
+  max-height: 92vh;
   overflow-y: auto;
   border-radius: 18px 18px 0 0;
   padding: 14px 16px calc(24px + var(--safe-bottom));
@@ -455,10 +462,15 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
   margin: 0 auto 12px;
 }
 .sheet-header {
+  position: sticky;
+  top: -14px;
+  z-index: 3;
+  background: var(--bg);
+  margin: -2px -16px 10px;
+  padding: 2px 16px 4px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
 }
 .sheet-header h2 { font-size: 17px; margin: 0; }
 .link-btn {
@@ -467,7 +479,8 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
   color: var(--accent-report);
   font-size: 15px;
   font-weight: 600;
-  padding: 4px;
+  padding: 10px 6px;
+  min-height: 44px;
 }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -509,3 +522,153 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
   .invoice-doc { position: absolute; top: 0; left: 0; width: 100%; margin: 0; border-radius: 0; border: none; }
   .tabbar, .year-pill, .settings-btn, .fab, #print-invoice, .doc-actions, .sheet-header, .sheet-handle { display: none !important; }
 }
+
+/* --- Long forms: grouped, foldable, with Save always in reach ------------- */
+.subhead {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 18px 0 8px;
+}
+.readout {
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+details.fold { border-top: 1px solid var(--border); margin-top: 14px; }
+details.fold > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+}
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::after {
+  content: '';
+  width: 8px; height: 8px;
+  border-right: 2px solid var(--text-dim);
+  border-bottom: 2px solid var(--text-dim);
+  transform: rotate(45deg);
+  margin-right: 4px;
+  flex: none;
+  transition: transform .15s;
+}
+details.fold[open] > summary::after { transform: rotate(-135deg); }
+details.fold > summary h2 { margin: 0; font-size: 15px; }
+details.fold > summary .sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.save-bar {
+  position: sticky;
+  bottom: calc(-24px - var(--safe-bottom));
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 14px -16px calc(-24px - var(--safe-bottom));
+  padding: 10px 16px calc(10px + var(--safe-bottom));
+  box-shadow: 0 -6px 12px -8px rgba(0,0,0,.18);
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.save-bar .total { flex: 1; min-width: 0; line-height: 1.2; }
+.save-bar .total .l { font-size: 11px; color: var(--text-dim); font-weight: 600; }
+.save-bar .total .v { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.save-bar .btn { width: auto; flex: none; padding: 12px 30px; }
+.copy-last { margin: -4px 0 12px; }
+
+/* --- Keyboard focus, and things that were missing ------------------------- */
+:focus-visible { outline: 2px solid var(--accent-report); outline-offset: 2px; }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline-offset: 0; border-color: var(--accent-report); }
+.field input, .field select, .field textarea { font-variant-numeric: tabular-nums; }
+
+/* A status that is information, not an alarm: open contracts are normal. */
+.badge.warn { background: var(--warn-bg); color: var(--warn); }
+.badge.muted { background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border); }
+
+/* Fill gauge: how full a silo is, how much of a contract is delivered. */
+.gauge { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; margin-top: 6px; }
+.gauge > i { display: block; height: 100%; border-radius: 3px; background: var(--accent-summary); }
+.gauge.warn > i { background: var(--warn); }
+.gauge.over > i { background: var(--danger); }
+
+/* An empty screen with a next step. */
+.empty .btn { margin-top: 14px; width: auto; padding: 10px 20px; }
+
+/* Day headings in a long list. */
+.day-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-dim); padding: 14px 4px 4px; border-bottom: 1px solid var(--border);
+}
+.day-label:first-child { padding-top: 4px; }
+
+/* Search / filter chips above a long list. */
+.filterbar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.filterbar input[type="search"] {
+  width: 100%; font-size: 16px; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: inherit;
+}
+.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600; min-height: 36px;
+}
+.chip.active { background: var(--accent-summary); border-color: var(--accent-summary); color: #fff; }
+
+/* Confirm / message dialogs that look like the app, not the browser. */
+.dialog-backdrop {
+  position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.dialog {
+  background: var(--surface); color: var(--text); border-radius: 16px; width: 100%; max-width: 340px;
+  padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,.3); border: 1px solid var(--border);
+}
+.dialog p { margin: 0 0 16px; font-size: 15px; line-height: 1.4; white-space: pre-line; }
+.dialog .dialog-actions { display: flex; gap: 8px; }
+.dialog .dialog-actions .btn { flex: 1; }
+
+/* Short confirmation that fades by itself. */
+.toast {
+  position: fixed; left: 50%; bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 84px);
+  transform: translateX(-50%); z-index: 70; background: var(--text); color: var(--bg);
+  padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0,0,0,.3); max-width: 90vw; text-align: center;
+}
+
+/* Connection state beside the season pill. */
+.net-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; background: #fff; opacity: .9; }
+.net-dot.off { background: #ffb74d; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* A destructive action that should be findable but not the loudest thing on the sheet. */
+.btn.ghost-danger { background: transparent; color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border)); }
+
+/* A list row that stacks: headline line, detail lines, then a progress bar. */
+.list-item.stack { display: block; }
+.list-item .li-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.list-item .li-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.list-item .badges { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+
+/* Three headline figures side by side — what a card is really about. */
+.trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 4px; }
+.kv .l { font-size: 11.5px; color: var(--text-dim); font-weight: 600; }
+.kv .v { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.card details.fold { margin-top: 10px; }
+.card details.fold > summary { padding: 8px 0; }
+.day-label { display: flex; justify-content: space-between; align-items: baseline; }
+.day-label span:last-child { text-transform: none; letter-spacing: 0; font-weight: 600; }
+.list-item .li-foot > .meta { flex: 1; min-width: 0; }
+.list-item .li-foot { flex-wrap: nowrap; }
+.save-bar.solo .btn { width: 100%; }

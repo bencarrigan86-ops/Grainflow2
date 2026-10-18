@@ -5,11 +5,12 @@
 // navigation per role, and that is when this gets a proper home in the
 // interface. Until then it is reachable at #/account.
 
+import { notify } from '../ui.js?v=100';
 import {
   getSession, getMembership, signOut, listMyInvitations, acceptInvitation,
-} from '../auth.js?v=98';
-import { roleLabel, expiryText } from '../invites.js?v=98';
-import { esc } from '../fmt.js?v=98';
+} from '../auth.js?v=100';
+import { roleLabel, expiryText } from '../invites.js?v=100';
+import { esc } from '../fmt.js?v=100';
 
 const ROLE_LABELS = {
   owner: 'Owner',
@@ -128,7 +129,7 @@ async function showPendingInvitations(root, membership) {
       } catch (e) {
         btn.disabled = false;
         btn.textContent = `Join ${inv.farmName}`;
-        alert(`Could not join.\n\n${e.message}`);
+        notify(`Could not join.\n\n${e.message}`);
       }
     });
   });

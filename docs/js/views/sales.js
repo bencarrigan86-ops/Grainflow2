@@ -1,13 +1,13 @@
-import { db } from '../storage.js?v=98';
+import { db } from '../storage.js?v=100';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=98';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=98';
-import { num, tons, money, esc } from '../fmt.js?v=98';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=98';
-import { renderRelatedMovements } from './movements.js?v=98';
-import { openInvoiceListSheet } from './invoice.js?v=98';
-import { openContractDocSheet } from './contract.js?v=98';
+} from '../documents.js?v=100';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=100';
+import { num, tons, money, esc, shortDate, todayLocal } from '../fmt.js?v=100';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=100';
+import { renderRelatedMovements } from './movements.js?v=100';
+import { openInvoiceListSheet } from './invoice.js?v=100';
+import { openContractDocSheet } from './contract.js?v=100';
 
 let unsub = null;
 
@@ -36,12 +36,28 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      ${rollup.length === 0 ? '' : `
+      <div class="stat-grid">
+        <div class="stat"><div class="n">${num(salesTotals.tons, 0)}</div><div class="l">Sold (contracted)</div></div>
+        <div class="stat"><div class="n">${num(salesTotals.tonsDue, 0)}</div><div class="l">Still to deliver</div></div>
+        <div class="stat"><div class="n">${money(salesTotals.totalValue, 0)}</div><div class="l">Contract value</div></div>
+        <div class="stat"><div class="n">${money(salesTotals.avgPrice, 0)}</div><div class="l">Average net price</div></div>
+      </div>`}
+
+      <div class="card input">
+        <h2><span class="dot input"></span>Contracts</h2>
+        ${groups.length === 0 ? `<div class="empty">No contracts yet.<br/><button class="btn" id="empty-add">Add your first sale</button></div>` : groups.map((g) => `
+          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
+          ${g.sales.map((s) => saleRow(s, movements, commodities)).join('')}
+        `).join('')}
+      </div>
+
+      ${rollup.length === 0 ? '' : `
       <div class="card report">
         <h2><span class="dot report"></span>By commodity</h2>
-        ${rollup.length === 0 ? `<div class="empty">No sales entered yet.</div>` : `
         <div class="table-scroll">
           <table>
-            <thead><tr><th>Commodity</th><th>Sold</th><th>Undelivered</th><th>Avg $/t</th><th>Total $</th></tr></thead>
+            <thead><tr><th>Commodity</th><th>Sold</th><th>To deliver</th><th>Avg $/t</th><th>Total $</th></tr></thead>
             <tbody>
               ${rollup.map((r) => `
                 <tr>
@@ -60,16 +76,8 @@ function paint(root) {
               <td>${num(salesTotals.totalValue, 0)}</td>
             </tr></tfoot>
           </table>
-        </div>`}
-      </div>
-
-      <div class="card input">
-        <h2><span class="dot input"></span>Contracts</h2>
-        ${groups.length === 0 ? `<div class="empty">Tap + to add your first sale.</div>` : groups.map((g) => `
-          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
-          ${g.sales.map((s) => saleRow(s, movements, commodities)).join('')}
-        `).join('')}
-      </div>
+        </div>
+      </div>`}
     </div>
     <button class="fab" id="add-sale">+</button>
   `;
@@ -78,6 +86,7 @@ function paint(root) {
     el.addEventListener('click', () => openSaleSheet(sales.find((s) => s.id === el.dataset.editSale)));
   });
   root.querySelector('#add-sale').addEventListener('click', () => openSaleSheet(null));
+  root.querySelector('#empty-add')?.addEventListener('click', () => openSaleSheet(null));
 }
 
 function groupSalesByCommodity(commodities, sales, movements) {
@@ -101,14 +110,22 @@ function fillBadge(econ, unit) {
     const overBy = econ.tonsDelivered - econ.maxTons;
     return `<span class="badge neg">Over by ${num(overBy, 1)} ${unit}</span>`;
   }
-  if (econ.isFull) return `<span class="badge pos">Contract full</span>`;
-  return `<span class="badge neg">${num(econ.tonsToFill, 1)} ${unit} to fill</span>`;
+  if (econ.isFull) return `<span class="badge pos">Full</span>`;
+  // Open is the normal state of a contract in progress, so amber, not red.
+  return `<span class="badge warn">${num(econ.tonsToFill, 0)} ${unit} to go</span>`;
+}
+
+/** Delivered against contract as a bar: the shape of a contract reads faster than its numbers. */
+function fillGauge(econ, contractTons) {
+  const total = Number(contractTons) || 0;
+  const pct = total > 0 ? Math.min(100, Math.max(0, (econ.tonsDelivered / total) * 100)) : 0;
+  return `<div class="gauge ${econ.isOverDelivered ? 'over' : ''}" role="img" aria-label="${Math.round(pct)} percent delivered"><i style="width:${pct}%"></i></div>`;
 }
 
 function deliveryWindow(s) {
-  if (s.deliveryStart && s.deliveryEnd) return `${s.deliveryStart} → ${s.deliveryEnd}`;
-  if (s.deliveryStart) return `from ${s.deliveryStart}`;
-  if (s.deliveryEnd) return `by ${s.deliveryEnd}`;
+  if (s.deliveryStart && s.deliveryEnd) return `${shortDate(s.deliveryStart)} → ${shortDate(s.deliveryEnd)}`;
+  if (s.deliveryStart) return `from ${shortDate(s.deliveryStart)}`;
+  if (s.deliveryEnd) return `by ${shortDate(s.deliveryEnd)}`;
   return '';
 }
 
@@ -121,16 +138,21 @@ function saleRow(s, movements, commodities) {
   const unit = isBales ? 'bales' : 't';
   const amount = isBales ? `${num(s.tons || 0, 1)} bales` : tons(s.tons || 0);
   return `
-    <div class="list-item" data-edit-sale="${s.id}">
-      <div>
-        <div class="main">${s.buyer ? esc(s.buyer) : 'No buyer'}${s.grade ? ` · ${esc(s.grade)}` : ''}${s.contractNo ? ` · #${esc(s.contractNo)}` : ''}${s.brokerNote ? ` · ${esc(s.brokerNote)}` : ''}</div>
-        <div class="meta">${amount} @ ${money(econ.priceExFarm, 2)}/${isBales ? 'bale' : 't'}${econ.movementDelivered > 0 ? ` · ${num(econ.movementDelivered, 1)} ${unit} trucked` : ''}</div>
-        <div class="meta">${[s.location, window].filter(Boolean).map(esc).join(' · ') || 'No delivery location/date set'}</div>
-      </div>
-      <div class="right">
+    <div class="list-item stack" data-edit-sale="${s.id}">
+      <div class="li-top">
+        <div class="main">${s.buyer ? esc(s.buyer) : 'No buyer'}</div>
         <div class="main">${money(econ.totalValue, 0)}</div>
-        <div class="meta">${fillBadge(econ, unit)}</div>
-        ${outstandingInvoices.length > 0 ? `<div class="meta"><span class="badge neg">${outstandingInvoices.length} inv. outstanding</span></div>` : invoices.length > 0 ? `<div class="meta"><span class="badge pos">Invoiced &amp; paid</span></div>` : ''}
+      </div>
+      <div class="meta">${[s.grade, s.contractNo ? `#${s.contractNo}` : '', s.brokerNote].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</div>
+      <div class="meta">${amount} @ ${money(econ.priceExFarm, 2)}/${isBales ? 'bale' : 't'} net</div>
+      <div class="meta">${[s.location, window].filter(Boolean).map(esc).join(' · ') || 'No delivery location/date set'}</div>
+      ${fillGauge(econ, s.tons)}
+      <div class="li-foot">
+        <span class="meta">${num(econ.tonsDelivered, 0)} of ${num(s.tons || 0, 0)} ${unit} delivered${econ.movementDelivered > 0 ? ` (${num(econ.movementDelivered, 0)} trucked)` : ''}</span>
+        <span class="badges">
+          ${fillBadge(econ, unit)}
+          ${outstandingInvoices.length > 0 ? `<span class="badge neg">${outstandingInvoices.length} unpaid</span>` : invoices.length > 0 ? `<span class="badge pos">Paid</span>` : ''}
+        </span>
       </div>
     </div>
   `;
@@ -147,31 +169,49 @@ function openSaleSheet(existing) {
   const { commodities, movements } = db.get();
   const commodityOptions = commodities.map((c) => ({ value: c.id, label: c.name }));
   const movementDelivered = existing ? movementTonsToSale(existing.id, movements) : 0;
+  const allSales = db.get().sales;
+  const distinct = (key) => [...new Set(allSales.map((x) => (x[key] || '').trim()).filter(Boolean))].sort((m, n) => m.localeCompare(n));
+  const buyerList = distinct('buyer');
+  const brokerList = distinct('broker');
+  const locationList = distinct('location');
+  // Folds start closed on a new contract and open on an edit that has something in them.
+  const openTerms = !!existing && ['cropYear', 'contractType', 'pricingPoint', 'deliveryTerms', 'buyerContact', 'tradeRules'].some((k) => existing[k]);
+  const openAdjust = !!existing && (!!existing.premiumDiscount || !!existing.ginning || Math.abs((existing.leviesPct ?? 0) * 100 - 1.02) > 1e-6);
+  const openDelivered = !!existing && (!!existing.tonsDelivered || !!existing.notes || !!existing.buyerAbn || !!existing.buyerAddress);
+  const openAdvanced = !!existing && (!!existing.carryRate || !!existing.carryFrom
+    || (existing.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS) !== DEFAULT_TOLERANCE_CAP_TONS);
 
   openSheet(existing ? 'Edit sale' : 'Add sale', (root) => {
     root.innerHTML = `
-      <h2 style="margin:0 0 4px">The deal</h2>
-      <div class="field hint" style="margin-bottom:10px">The essentials — fill these in and
-        Save. The rest below is optional detail.</div>
-      ${field({ label: 'Date', id: 'date', type: 'date', value: existing?.date })}
+      <div class="field hint" style="margin-bottom:0">Fill in the top section and Save — the folds
+        underneath are optional detail.</div>
+      <datalist id="dl-buyers">${buyerList.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
+      <datalist id="dl-brokers">${brokerList.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
+      <datalist id="dl-locations">${locationList.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
+
+      <div class="subhead">Deal</div>
+      <div class="grid-2">
+        ${field({ label: 'Date', id: 'date', type: 'date', value: existing?.date ?? todayLocal() })}
+        ${field({ label: 'Contract no.', id: 'contractNo', value: existing?.contractNo })}
+      </div>
+      ${field({ label: 'Buyer', id: 'buyer', value: existing?.buyer, placeholder: 'e.g. CBH, Cargill', list: 'dl-buyers' })}
+      <div class="copy-last" id="copy-last"></div>
+
+      <div class="subhead">Quantity &amp; price</div>
       <div class="grid-2">
         ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
         ${field({ label: 'Grade', id: 'grade', value: existing?.grade, placeholder: 'e.g. APW1, H2' })}
       </div>
-      <div class="grid-2">
-        ${field({ label: 'Buyer', id: 'buyer', value: existing?.buyer, placeholder: 'e.g. CBH, Cargill' })}
-        ${field({ label: 'Contract no.', id: 'contractNo', value: existing?.contractNo })}
-      </div>
       ${field({ label: 'Tons', id: 'tons', type: 'number', step: '0.01', value: existing?.tons })}
       <div class="grid-2">
         ${field({ label: 'Tolerance (%)', id: 'tolPct', type: 'number', step: '0.1', value: existing?.tolerancePct ?? DEFAULT_TOLERANCE_PCT })}
-        ${field({ label: 'Tolerance cap (t)', id: 'tolCap', type: 'number', step: '0.1', value: existing?.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS, hint: 'Lesser of the two applies' })}
+        <div class="field"><label>Tolerance range</label><div class="readout" id="tol-preview">—</div></div>
       </div>
-      <div class="row"><span class="label">Tolerance range</span><span class="value" id="tol-preview">—</span></div>
       ${field({ label: 'Price ($/t)', id: 'price', type: 'number', step: '0.01', value: existing?.price })}
       <div class="row"><span class="label">Contract value</span><span class="value" id="value-preview">—</span></div>
-      ${field({ label: 'Broker note', id: 'brokerNote', value: existing?.brokerNote })}
-      ${field({ label: 'Location', id: 'location', value: existing?.location, placeholder: 'Delivery site' })}
+
+      <div class="subhead">Delivery</div>
+      ${field({ label: 'Location', id: 'location', value: existing?.location, placeholder: 'Delivery site', list: 'dl-locations' })}
       <div class="grid-2">
         ${field({ label: 'Delivery start', id: 'deliveryStart', type: 'date', value: existing?.deliveryStart })}
         ${field({ label: 'Delivery finish', id: 'deliveryEnd', type: 'date', value: existing?.deliveryEnd })}
@@ -181,6 +221,8 @@ function openSaleSheet(existing) {
         { value: 'destination', label: 'Destination' },
         { value: 'origin', label: 'Origin' },
       ], hint: 'Whose weighbridge settles it' })}
+
+      <div class="subhead">Payment, broker &amp; freight</div>
       <div class="grid-2">
         ${field({ label: 'Payment terms (days)', id: 'paymentTermsDays', type: 'number', step: '1', value: existing?.paymentTermsDays ?? '' })}
         ${field({ label: 'Counted from', id: 'paymentTermsBasis', type: 'select', value: existing?.paymentTermsBasis ?? '', options: [
@@ -191,8 +233,9 @@ function openSaleSheet(existing) {
           { value: 'invoice date', label: 'Invoice date' },
         ], hint: '"30 days" and "30 days from end of week" are up to six days apart' })}
       </div>
+      ${field({ label: 'Broker note', id: 'brokerNote', type: 'textarea', value: existing?.brokerNote })}
       <div class="grid-2">
-        ${field({ label: 'Broker', id: 'broker', value: existing?.broker, placeholder: 'e.g. Knight Commodities' })}
+        ${field({ label: 'Broker', id: 'broker', value: existing?.broker, placeholder: 'e.g. Knight Commodities', list: 'dl-brokers' })}
         ${field({ label: 'Broker reference', id: 'brokerRef', value: existing?.brokerRef, placeholder: 'Their contract ref' })}
       </div>
       <div class="grid-2">
@@ -203,61 +246,78 @@ function openSaleSheet(existing) {
         ] })}
         ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
       </div>
-      <hr class="sep" />
-      <h2 style="margin:0 0 4px">Contract terms</h2>
-      <div class="field hint" style="margin-bottom:10px">What the buyer's contract confirmation
-        says. Fill in what you have — anything left blank is simply not shown.</div>
-      <div class="grid-2">
-        ${field({ label: 'Crop year', id: 'cropYear', value: existing?.cropYear, placeholder: 'e.g. 2025/2026', hint: 'As the contract writes it' })}
-        ${field({ label: 'Contract type', id: 'contractType', value: existing?.contractType, placeholder: 'e.g. Ex Farm' })}
-      </div>
-      ${field({ label: 'Pricing point', id: 'pricingPoint', value: existing?.pricingPoint, placeholder: 'e.g. Goondiwindi - 45km S/W', hint: 'Where the price is struck' })}
-      ${field({ label: 'Delivery terms', id: 'deliveryTerms', value: existing?.deliveryTerms, placeholder: "e.g. Buyer's call, 5 business days notice" })}
-      ${field({ label: 'Buyer contact / trader', id: 'buyerContact', value: existing?.buyerContact, placeholder: 'Who to ring about a load' })}
-      <div class="grid-2">
-        ${field({ label: 'Carry ($/t/month)', id: 'carryRate', type: 'number', step: '0.01', value: existing?.carryRate ?? 0, hint: 'Paid to leave grain on farm' })}
-        ${field({ label: 'Carry starts', id: 'carryFrom', type: 'date', value: existing?.carryFrom })}
-      </div>
-      ${field({ label: 'Trade rules', id: 'tradeRules', value: existing?.tradeRules, placeholder: 'e.g. GTA contract 3' })}
-      <hr class="sep" />
-      <h2 style="margin:0 0 4px">Price adjustments</h2>
-      <div class="field hint" style="margin-bottom:10px">Taken off (or added to) the price above to
-        get the net price ex-farm.</div>
-      <div class="grid-2">
-        ${field({ label: 'Premium/discount ($/t)', id: 'premium', type: 'number', step: '0.01', value: existing?.premiumDiscount ?? 0, allowNegative: true, hint: 'Negative for a discount' })}
-        ${field({ label: 'Levies (%)', id: 'levies', type: 'number', step: '0.01', value: existing ? existing.leviesPct * 100 : 1.02, hint: 'e.g. GRDC + state levy' })}
-      </div>
-      ${field({ label: 'Ginning cost ($)', id: 'ginning', type: 'number', step: '0.01', value: existing?.ginning ?? 0, hint: 'Net ginning deduction, e.g. cotton seed. A total, not a rate.' })}
-      <hr class="sep" />
-      <h2 style="margin:0 0 4px">Delivered &amp; other</h2>
-      ${field({ label: 'Tons delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a Movement' })}
-      ${movementDelivered > 0 ? `<div class="row"><span class="label">+ Delivered via movements</span><span class="value" id="movement-delivered-value">${num(movementDelivered, 1)} t</span></div>` : ''}
-      ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
-      <div class="grid-2">
-        ${field({ label: 'Buyer ABN (optional)', id: 'buyerAbn', value: existing?.buyerAbn, hint: 'For invoices' })}
-        ${field({ label: 'Buyer address (optional)', id: 'buyerAddress', value: existing?.buyerAddress })}
-      </div>
+
+      <details class="fold" ${openTerms ? 'open' : ''}>
+        <summary><div><h2>Contract terms</h2>
+          <div class="sub">Crop year, type, pricing point, delivery terms, contact, trade rules</div></div></summary>
+        <div class="field hint" style="margin-bottom:10px">What the buyer's contract confirmation
+          says. Fill in what you have — anything left blank is simply not shown.</div>
+        <div class="grid-2">
+          ${field({ label: 'Crop year', id: 'cropYear', value: existing?.cropYear, placeholder: 'e.g. 2025/2026', hint: 'As the contract writes it' })}
+          ${field({ label: 'Contract type', id: 'contractType', value: existing?.contractType, placeholder: 'e.g. Ex Farm' })}
+        </div>
+        ${field({ label: 'Pricing point', id: 'pricingPoint', value: existing?.pricingPoint, placeholder: 'e.g. Goondiwindi - 45km S/W', hint: 'Where the price is struck' })}
+        ${field({ label: 'Delivery terms', id: 'deliveryTerms', value: existing?.deliveryTerms, placeholder: "e.g. Buyer's call, 5 business days notice" })}
+        ${field({ label: 'Buyer contact / trader', id: 'buyerContact', value: existing?.buyerContact, placeholder: 'Who to ring about a load' })}
+        ${field({ label: 'Trade rules', id: 'tradeRules', value: existing?.tradeRules, placeholder: 'e.g. GTA contract 3' })}
+      </details>
+
+      <details class="fold" ${openAdjust ? 'open' : ''}>
+        <summary><div><h2>Price adjustments</h2>
+          <div class="sub">Premium/discount, levies, ginning</div></div></summary>
+        <div class="field hint" style="margin-bottom:10px">Taken off (or added to) the price above to
+          get the net price ex-farm.</div>
+        <div class="grid-2">
+          ${field({ label: 'Premium/discount ($/t)', id: 'premium', type: 'number', step: '0.01', value: existing?.premiumDiscount ?? 0, allowNegative: true, hint: 'Negative for a discount' })}
+          ${field({ label: 'Levies (%)', id: 'levies', type: 'number', step: '0.01', value: existing ? +(existing.leviesPct * 100).toFixed(4) : 1.02, hint: 'e.g. GRDC + state levy' })}
+        </div>
+        ${field({ label: 'Ginning cost ($)', id: 'ginning', type: 'number', step: '0.01', value: existing?.ginning ?? 0, hint: 'Net ginning deduction, e.g. cotton seed. A total, not a rate.' })}
+      </details>
+
+      <details class="fold" ${openDelivered ? 'open' : ''}>
+        <summary><div><h2>Delivered &amp; other</h2>
+          <div class="sub">Tons delivered, notes, buyer ABN and address</div></div></summary>
+        ${field({ label: 'Tons delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a Movement' })}
+        ${movementDelivered > 0 ? `<div class="row"><span class="label">+ Delivered via movements</span><span class="value" id="movement-delivered-value">${num(movementDelivered, 1)} t</span></div>` : ''}
+        ${field({ label: 'Notes', id: 'notes', type: 'textarea', value: existing?.notes })}
+        <div class="grid-2">
+          ${field({ label: 'Buyer ABN (optional)', id: 'buyerAbn', value: existing?.buyerAbn, hint: 'For invoices' })}
+          ${field({ label: 'Buyer address (optional)', id: 'buyerAddress', value: existing?.buyerAddress })}
+        </div>
+      </details>
+
+      <details class="fold" ${openAdvanced ? 'open' : ''}>
+        <summary><div><h2>Advanced</h2>
+          <div class="sub">Tolerance cap, carry</div></div></summary>
+        ${field({ label: 'Tolerance cap (t)', id: 'tolCap', type: 'number', step: '0.1', value: existing?.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS, hint: 'The lesser of the % and this cap applies' })}
+        <div class="grid-2">
+          ${field({ label: 'Carry ($/t/month)', id: 'carryRate', type: 'number', step: '0.01', value: existing?.carryRate ?? 0, hint: 'Paid to leave grain on farm' })}
+          ${field({ label: 'Carry starts', id: 'carryFrom', type: 'date', value: existing?.carryFrom })}
+        </div>
+      </details>
       ${existing ? `
-        <hr class="sep" />
-        <h2 style="margin:0 0 4px">Documents</h2>
-        <div class="field hint" style="margin-bottom:8px">Keep the buyer's contract and the
-          broker's note with the sale, so the paper the figures came from is one tap away
-          instead of in an inbox.</div>
-        <div id="doc-list"></div>
-        ${field({ label: 'What is it', id: 'doc-kind', type: 'select', value: 'contract',
-          options: DOCUMENT_KINDS.map((k) => ({ value: k.value, label: k.label })) })}
-        <input type="file" id="doc-file" accept="application/pdf,image/*" style="display:none" />
-        <button class="btn secondary small" id="doc-attach">Attach a file&hellip;</button>
-        <div id="doc-problem"></div>
+        <details class="fold" ${(existing.documents || []).length ? 'open' : ''}>
+          <summary><div><h2>Documents</h2>
+            <div class="sub">The buyer's contract and the broker's note, kept with the sale</div></div></summary>
+          <div id="doc-list"></div>
+          ${field({ label: 'What is it', id: 'doc-kind', type: 'select', value: 'contract',
+            options: DOCUMENT_KINDS.map((k) => ({ value: k.value, label: k.label })) })}
+          <input type="file" id="doc-file" accept="application/pdf,image/*" style="display:none" />
+          <button class="btn secondary small" id="doc-attach">Attach a file&hellip;</button>
+          <div id="doc-problem"></div>
+        </details>
       ` : `
-        <div class="field hint" style="margin-top:10px">Save the sale first, then you can
+        <div class="field hint" style="margin-top:14px">Save the sale first, then you can
           attach the buyer's contract and the broker's note to it.</div>
       `}
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
-      <button class="btn" id="save" style="margin-top:12px">Save</button>
-      ${existing ? `<button class="btn secondary" id="view-invoice" style="margin-top:8px">${invoiceButtonLabel(existing)}</button>` : ''}
+      ${existing ? `<button class="btn secondary" id="view-invoice" style="margin-top:12px">${invoiceButtonLabel(existing)}</button>` : ''}
       ${existing ? `<button class="btn secondary" id="view-contract" style="margin-top:8px">Confirmation of sale (PDF)&hellip;</button>` : ''}
-      ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete sale</button>` : ''}
+      ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:8px">Delete sale</button>` : ''}
+      <div class="save-bar">
+        <div class="total"><div class="l">Contract value</div><div class="v" id="total-preview">—</div></div>
+        <button class="btn" id="save">Save</button>
+      </div>
     `;
     if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'sale', existing.id);
     const invoiceBtn = root.querySelector('#view-invoice');
@@ -283,6 +343,7 @@ function openSaleSheet(existing) {
     // What the figures above come to, as you type — the same arithmetic the
     // sales list uses, run on the form's values rather than a saved record.
     const valuePreview = root.querySelector('#value-preview');
+    const totalPreview = root.querySelector('#total-preview');
     const recomputeValue = () => {
       const e = saleEconomics({
         tons: getNum(root, 'tons'),
@@ -293,9 +354,54 @@ function openSaleSheet(existing) {
         leviesPct: getNum(root, 'levies') / 100,
       });
       valuePreview.textContent = `${money(e.totalValue, 0)} · ${money(e.priceExFarm, 2)}/${currentUnit === 'bales' ? 'bale' : 't'} net`;
+      totalPreview.textContent = money(e.totalValue, 0);
     };
     ['tons', 'price', 'freight', 'premium', 'ginning', 'levies']
       .forEach((id) => root.querySelector(`#${id}`).addEventListener('input', recomputeValue));
+
+    // A new contract with a buyer you have sold to before: offer their last
+    // one's standing terms (site, payment, broker, delivery rules) so only the
+    // numbers that change are typed. Fills blanks only — never overwrites.
+    const copyEl = root.querySelector('#copy-last');
+    const lastForBuyer = (name) => {
+      const k = (name || '').trim().toLowerCase();
+      if (!k) return null;
+      return allSales
+        .filter((x) => (x.buyer || '').trim().toLowerCase() === k)
+        .sort((m, n) => String(n.date || '').localeCompare(String(m.date || '')))[0] || null;
+    };
+    const COPY_FIELDS = [
+      'location', 'paymentTermsDays', 'paymentTermsBasis', 'weightsToGovern', 'broker', 'brokeragePaidBy',
+      'freight', 'deliveryTerms', 'contractType', 'pricingPoint', 'buyerContact', 'tradeRules', 'buyerAbn', 'buyerAddress',
+    ];
+    const isBlank = (el) => el.value === '' || el.value === '0';
+    const offerCopy = () => {
+      if (existing || !copyEl) return;
+      const prev = lastForBuyer(getVal(root, 'buyer'));
+      if (!prev) { copyEl.innerHTML = ''; return; }
+      copyEl.innerHTML = '<button type="button" class="btn secondary small"></button>';
+      const btn = copyEl.querySelector('button');
+      btn.textContent = `Fill from your last ${prev.buyer} contract${prev.date ? ` (${prev.date})` : ''}`;
+      btn.addEventListener('click', () => {
+        let filled = 0;
+        COPY_FIELDS.forEach((key) => {
+          const el = root.querySelector('#' + key);
+          const v = prev[key];
+          if (!el || v === undefined || v === null || v === '' || v === 0) return;
+          if (isBlank(el)) { el.value = v; filled += 1; }
+        });
+        root.querySelectorAll('details.fold').forEach((d) => {
+          if ([...d.querySelectorAll('input,select,textarea')].some((i) => i.value !== '' && i.value !== '0' && i.id !== 'levies' && i.id !== 'tolCap')) d.open = true;
+        });
+        recomputeValue();
+        copyEl.innerHTML = filled
+          ? '<div class="hint">Filled ' + filled + ' blank field' + (filled === 1 ? '' : 's') + ' from that contract — check they still apply.</div>'
+          : '<div class="hint">Nothing to fill — those fields already have values.</div>';
+      });
+    };
+    root.querySelector('#buyer').addEventListener('input', offerCopy);
+    root.querySelector('#buyer').addEventListener('change', offerCopy);
+    offerCopy();
 
     const tonsLabelEl = root.querySelector('label[for="tons"]');
     const tonsDeliveredLabelEl = root.querySelector('label[for="tonsDelivered"]');
@@ -458,7 +564,7 @@ function openSaleSheet(existing) {
         tradeRules: getVal(root, 'tradeRules')?.trim(),
         documents,
       });
-      closeSheet();
+      closeSheet(); toast('Saved');
     });
     const del = root.querySelector('#del');
     if (del) {

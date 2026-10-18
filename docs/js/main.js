@@ -1,21 +1,21 @@
-import { db } from './storage.js?v=98';
-import { renderPosition } from './views/position.js?v=98';
-import { renderProduction } from './views/production.js?v=98';
-import { renderReports } from './views/reports.js?v=98';
-import { renderSales } from './views/sales.js?v=98';
-import { renderMovements } from './views/movements.js?v=98';
-import { renderStorage } from './views/storage.js?v=98';
-import { renderSettings } from './views/settings.js?v=98';
-import { renderLogin } from './views/login.js?v=98';
-import { renderAccount } from './views/account.js?v=98';
+import { db } from './storage.js?v=100';
+import { renderPosition } from './views/position.js?v=100';
+import { renderProduction } from './views/production.js?v=100';
+import { renderReports } from './views/reports.js?v=100';
+import { renderSales } from './views/sales.js?v=100';
+import { renderMovements } from './views/movements.js?v=100';
+import { renderStorage } from './views/storage.js?v=100';
+import { renderSettings } from './views/settings.js?v=100';
+import { renderLogin } from './views/login.js?v=100';
+import { renderAccount } from './views/account.js?v=100';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=98';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=98';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=98';
-import { esc } from './fmt.js?v=98';
-import { APP_VERSION } from './version.js?v=98';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=98';
+} from './auth.js?v=100';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=100';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=100';
+import { esc } from './fmt.js?v=100';
+import { APP_VERSION } from './version.js?v=100';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=100';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -121,9 +121,25 @@ function renderActiveView() {
 }
 
 const yearPill = document.getElementById('year-pill');
-function renderYearPill() {
-  yearPill.textContent = db.getCurrentYear();
+// The dot beside the season says whether this device is in step with the
+// server: white when everything has been sent, amber when offline or holding
+// changes that have not gone yet. A grower in a paddock with no signal should
+// be able to see that their loads are safe, and that they have not left yet.
+async function renderYearPill() {
+  const year = db.getCurrentYear();
+  const online = navigator.onLine;
+  let pending = 0;
+  try { pending = (await db.getSyncStatus()).pending; } catch { /* the pill still shows the season */ }
+  const waiting = !online || pending > 0;
+  yearPill.innerHTML = `<span class="net-dot ${waiting ? 'off' : ''}"></span>${esc(year)}`;
+  yearPill.title = !online
+    ? 'Offline. Changes are saved on this device and will send when you have signal.'
+    : pending > 0 ? `${pending} change${pending === 1 ? '' : 's'} waiting to send` : 'All changes sent';
 }
+window.addEventListener('online', renderYearPill);
+window.addEventListener('offline', renderYearPill);
+window.addEventListener('grainflow:push-ok', renderYearPill);
+window.addEventListener('grainflow:push-failed', renderYearPill);
 yearPill.addEventListener('click', () => {
   location.hash = '#/settings';
 });

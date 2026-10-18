@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=98';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=98';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=98';
-import { num, tons, esc } from '../fmt.js?v=98';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=98';
-import { renderRelatedMovements } from './movements.js?v=98';
+import { db } from '../storage.js?v=100';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=100';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=100';
+import { num, tons, esc } from '../fmt.js?v=100';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=100';
+import { renderRelatedMovements } from './movements.js?v=100';
 
 let unsub = null;
 let listMode = 'chronological';
@@ -339,17 +339,17 @@ function storageRow(s, commodities, movements) {
     ? bunkerTarpRequirement({ width: s.width, length: s.length, angleDeg: angleOfRepose, overhangM: s.tarpOverhangM ?? 1.5 })
     : null;
   return `
-    <div class="list-item" data-edit-storage="${s.id}">
-      <div>
-        <div class="main">${esc(s.name)} <span class="badge ${s.kind === 'silo' ? 'pos' : 'neg'}" style="background:var(--surface-2);color:var(--text-dim)">${kindLabel(s.kind)}</span></div>
-        <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(s.capacityTons, 0)} t cap` : ''}</div>
-        <div class="meta">Tracked stock: ${num(ledger, 1)} t</div>
-        ${tarp ? `<div class="meta">Tarp needed: ${num(tarp.tarpWidthNeeded, 1)} x ${num(tarp.tarpLengthNeeded, 1)} m</div>` : ''}
-      </div>
-      <div class="right">
+    <div class="list-item stack" data-edit-storage="${s.id}">
+      <div class="li-top">
+        <div class="main">${esc(s.name)} <span class="badge muted">${kindLabel(s.kind)}</span></div>
         <div class="main">${tons(r.tons)}</div>
-        <div class="meta">measured</div>
       </div>
+      <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(s.capacityTons, 0)} t` : ''}</div>
+      ${capPct !== null ? `<div class="gauge ${capPct >= 95 ? 'warn' : ''}" role="img" aria-label="${Math.round(capPct)} percent full"><i style="width:${capPct}%"></i></div>` : ''}
+      <div class="li-foot" style="margin-top:4px">
+        <span class="meta">Measured. Tracked stock ${num(ledger, 1)} t</span>
+      </div>
+      ${tarp ? `<div class="meta">Tarp needed: ${num(tarp.tarpWidthNeeded, 1)} x ${num(tarp.tarpLengthNeeded, 1)} m</div>` : ''}
     </div>
   `;
 }
@@ -412,8 +412,8 @@ function openStorageSheet(existing) {
         <div class="row"><span class="label">Tarp length needed</span><span class="value" id="s-tarp-length">—</span></div>
         ` : ''}
         ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
-        <button class="btn" id="save" style="margin-top:8px">Save</button>
-        ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete</button>` : ''}
+        ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete ${kindLabel(existing.kind).toLowerCase()}</button>` : ''}
+        <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
       `;
       if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id);
 
@@ -497,7 +497,7 @@ function openStorageSheet(existing) {
           payload.tarpOverhangM = getNum(root, 's-overhang');
         }
         db.upsertStorage(payload);
-        closeSheet();
+        closeSheet(); toast('Saved');
       });
       const del = root.querySelector('#del');
       if (del) {
@@ -528,8 +528,8 @@ function openStorageSheet(existing) {
         ${field({ label: 'Opening / current stock', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
         ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
-        <button class="btn" id="save" style="margin-top:8px">Save</button>
-        ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete</button>` : ''}
+        ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete ${kindLabel(existing.kind).toLowerCase()}</button>` : ''}
+        <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
       `;
       if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id);
 
@@ -563,7 +563,7 @@ function openStorageSheet(existing) {
           unitLabel: getVal(root, 's-unit')?.trim() || 't',
           openingStock: getNum(root, 's-opening'),
         });
-        closeSheet();
+        closeSheet(); toast('Saved');
       });
       const del = root.querySelector('#del');
       if (del) {

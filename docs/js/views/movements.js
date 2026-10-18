@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=98';
-import { movementsForEndpoint } from '../derived.js?v=98';
-import { num, tons, esc } from '../fmt.js?v=98';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=98';
-import { compressAndStampImage } from '../img.js?v=98';
-import { displayUrlFor } from '../photos.js?v=98';
+import { db } from '../storage.js?v=100';
+import { movementsForEndpoint } from '../derived.js?v=100';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=100';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=100';
+import { compressAndStampImage } from '../img.js?v=100';
+import { displayUrlFor } from '../photos.js?v=100';
 
 let unsub = null;
 
@@ -13,10 +13,27 @@ export function renderMovements(root) {
   unsub = db.subscribe(() => paint(root));
 }
 
+// What the list is narrowed to. Kept across repaints so a ticket saved or a
+// sync arriving does not wipe the search someone is part-way through.
+let listFilter = { q: '', commodityId: '' };
+
+function ticketSearchText(m, ctx) {
+  const ends = [...(m.froms || []).map((f) => endpointLabel(f.type, f.id, ctx)), ...(m.tos || []).map((t) => endpointLabel(t.type, t.id, ctx))];
+  const c = ctx.commodities.find((cc) => cc.id === m.commodityId);
+  return [m.ticketNo, m.date, m.truckRego, m.driver, m.notes, c?.name, ...ends].filter(Boolean).join(' ').toLowerCase();
+}
+
+function dayHeading(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+  if (!m) return 'No date';
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    .toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
 function paint(root) {
-  const { fields, storages, sales, commodities, movements } = db.get();
-  const sorted = [...movements].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const totalTons = movements.reduce((s, m) => s + (Number(m.tons) || 0), 0);
+  const { storages, commodities, movements } = db.get();
+  const inUse = commodities.filter((c) => movements.some((m) => m.commodityId === c.id));
+  if (listFilter.commodityId && !inUse.some((c) => c.id === listFilter.commodityId)) listFilter.commodityId = '';
 
   root.innerHTML = `
     <div class="topbar">
@@ -26,30 +43,84 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
-      <div class="stat-grid">
-        <div class="stat"><div class="n">${movements.length}</div><div class="l">Loads logged</div></div>
-        <div class="stat"><div class="n">${num(totalTons, 1)} t</div><div class="l">Total moved</div></div>
-      </div>
+      <div class="stat-grid" id="move-stats"></div>
 
-      ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="log-ginning" style="margin-bottom:4px">+ Log ginning</button>` : ''}
+      ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="log-ginning" style="margin-bottom:10px">+ Log ginning</button>` : ''}
+
+      ${movements.length > 0 ? `
+      <div class="filterbar">
+        <input type="search" id="mv-q" placeholder="Search tickets, trucks, drivers, buyers" value="${esc(listFilter.q)}" aria-label="Search tickets" />
+        ${inUse.length > 1 ? `<div class="chips">
+          <button type="button" class="chip ${listFilter.commodityId ? '' : 'active'}" data-chip="">All</button>
+          ${inUse.map((c) => `<button type="button" class="chip ${listFilter.commodityId === c.id ? 'active' : ''}" data-chip="${esc(c.id)}">${esc(c.name)}</button>`).join('')}
+        </div>` : ''}
+      </div>` : ''}
 
       <div class="card input">
         <h2><span class="dot input"></span>Tickets</h2>
-        ${sorted.length === 0 ? `<div class="empty">Tap + to log your first truck movement.</div>` : sorted.map((m) => movementRow(m, { fields, storages, sales, commodities })).join('')}
+        <div id="ticket-list"></div>
       </div>
     </div>
     ${movements.length > 0 ? `<button class="fab-secondary" id="repeat-movement">Repeat</button>` : ''}
     <button class="fab" id="add-movement">+</button>
   `;
 
-  root.querySelectorAll('[data-edit-movement]').forEach((el) => {
+  paintList(root);
+
+  root.querySelector('#add-movement').addEventListener('click', () => openMovementSheet(null));
+  root.querySelector('#log-ginning')?.addEventListener('click', () => openGinningSheet());
+  // The most recent ticket by date — not the last one typed in, which is
+  // whatever order an import or an edit happened to leave.
+  root.querySelector('#repeat-movement')?.addEventListener('click', () => {
+    const latest = [...movements].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (Number(b.ticketNo) || 0) - (Number(a.ticketNo) || 0))[0];
+    openMovementSheet(null, latest);
+  });
+  root.querySelector('#mv-q')?.addEventListener('input', (e) => { listFilter.q = e.target.value; paintList(root); });
+  root.querySelectorAll('[data-chip]').forEach((el) => {
+    el.addEventListener('click', () => { listFilter.commodityId = el.dataset.chip; paint(root); });
+  });
+}
+
+/** The ticket list and its totals, repainted alone so the search box keeps focus. */
+function paintList(root) {
+  const { fields, storages, sales, commodities, movements } = db.get();
+  const ctx = { fields, storages, sales, commodities, grouped: true };
+  const q = listFilter.q.trim().toLowerCase();
+  const shown = movements
+    .filter((m) => !listFilter.commodityId || m.commodityId === listFilter.commodityId)
+    .filter((m) => !q || ticketSearchText(m, ctx).includes(q))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (Number(b.ticketNo) || 0) - (Number(a.ticketNo) || 0));
+  const narrowed = !!(q || listFilter.commodityId);
+  const totalTons = shown.reduce((s, m) => s + (Number(m.tons) || 0), 0);
+
+  root.querySelector('#move-stats').innerHTML = `
+    <div class="stat"><div class="n">${shown.length}</div><div class="l">${narrowed ? 'Loads shown' : 'Loads logged'}</div></div>
+    <div class="stat"><div class="n">${num(totalTons, 1)} t</div><div class="l">${narrowed ? 'Moved (shown)' : 'Total moved'}</div></div>`;
+
+  const list = root.querySelector('#ticket-list');
+  if (movements.length === 0) {
+    list.innerHTML = `<div class="empty">No loads logged yet.<br/><button class="btn" id="empty-add-move">Log your first load</button></div>`;
+    list.querySelector('#empty-add-move').addEventListener('click', () => openMovementSheet(null));
+    return;
+  }
+  if (shown.length === 0) {
+    list.innerHTML = `<div class="empty">No tickets match${q ? ` &ldquo;${esc(listFilter.q.trim())}&rdquo;` : ''}.</div>`;
+    return;
+  }
+  let lastDate = null;
+  list.innerHTML = shown.map((m) => {
+    let head = '';
+    if ((m.date || '') !== lastDate) {
+      lastDate = m.date || '';
+      const day = shown.filter((x) => (x.date || '') === lastDate);
+      const dayTons = day.reduce((s, x) => s + (Number(x.tons) || 0), 0);
+      head = `<div class="day-label"><span>${esc(dayHeading(m.date))}</span><span>${day.length} load${day.length === 1 ? '' : 's'} · ${num(dayTons, 1)} t</span></div>`;
+    }
+    return head + movementRow(m, ctx);
+  }).join('');
+  list.querySelectorAll('[data-edit-movement]').forEach((el) => {
     el.addEventListener('click', () => openMovementSheet(movements.find((m) => m.id === el.dataset.editMovement)));
   });
-  root.querySelector('#add-movement').addEventListener('click', () => openMovementSheet(null));
-  const ginBtn = root.querySelector('#log-ginning');
-  if (ginBtn) ginBtn.addEventListener('click', () => openGinningSheet());
-  const repeatBtn = root.querySelector('#repeat-movement');
-  if (repeatBtn) repeatBtn.addEventListener('click', () => openMovementSheet(null, movements[movements.length - 1]));
 }
 
 /**
@@ -59,6 +130,10 @@ function paint(root) {
  * should not disappear. Contracts match strictly: a wheat contract cannot
  * take barley, and offering it invites exactly the delivery you cannot undo.
  */
+function distinctOf(list, key) {
+  return [...new Set(list.map((x) => String(x[key] || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+
 function matchesCommodity(entity, commodityId) {
   if (!commodityId) return true;
   if (!entity.commodityId) return true;
@@ -117,30 +192,42 @@ export function renderRelatedMovements(container, type, id) {
   });
 }
 
+/** The short name for one end of a trip: a contract is its buyer, not "Canola · Buyer · #1234". */
+function endLabel(type, id, ctx) {
+  if (type === 'sale') {
+    const s = ctx.sales.find((x) => x.id === id);
+    if (!s) return 'Unknown contract';
+    return s.buyer || (s.contractNo ? `#${s.contractNo}` : 'Contract');
+  }
+  return endpointLabel(type, id, ctx);
+}
+
 export function movementRow(m, ctx) {
   const froms = m.froms || [];
   const tos = m.tos || [];
-  const fromLabel = froms.map((f) => endpointLabel(f.type, f.id, ctx)).join(' + ') || 'Unknown';
-  const toLabel = tos.map((t) => endpointLabel(t.type, t.id, ctx)).join(' + ') || 'Unknown';
+  const fromLabel = froms.map((f) => endLabel(f.type, f.id, ctx)).join(' + ') || 'Unknown';
+  const toLabel = tos.map((t) => endLabel(t.type, t.id, ctx)).join(' + ') || 'Unknown';
   const isFinal = m.weightStatus === 'final';
+  const commodity = ctx.commodities.find((c) => c.id === m.commodityId)?.name;
   const fromBreakdown = froms.length > 1
     ? froms.map((f) => `From ${endpointLabel(f.type, f.id, ctx)}: ${num(f.tons, 2)} t`).join(', ')
     : null;
   const toBreakdown = tos.length > 1
     ? tos.map((t) => `To ${endpointLabel(t.type, t.id, ctx)}: ${num(t.tons, 2)} t`).join(', ')
     : null;
+  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', ctx.grouped ? '' : (shortDate(m.date) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
   return `
-    <div class="list-item" data-edit-movement="${m.id}">
-      <div>
-        <div class="main">${m.ticketNo ? `<span style="color:var(--text-dim);font-weight:500">#${m.ticketNo}</span> ` : ''}${esc(fromLabel)} &rarr; ${esc(toLabel)}</div>
-        <div class="meta">${esc(m.date || 'No date')}${m.truckRego ? ` · ${esc(m.truckRego)}` : ''}${m.driver ? ` · ${esc(m.driver)}` : ''}</div>
-        ${fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
-        ${toBreakdown ? `<div class="meta">${esc(toBreakdown)}</div>` : ''}
-      </div>
-      <div class="right">
+    <div class="list-item stack" data-edit-movement="${m.id}">
+      <div class="li-top">
+        <div class="main">${esc(fromLabel)} &rarr; ${esc(toLabel)}</div>
         <div class="main">${tons(m.tons || 0)}</div>
-        <div class="meta"><span class="badge ${isFinal ? 'pos' : 'neg'}">${isFinal ? 'Final' : 'Estimate'}</span>${(m.photoDataUrl || m.photoPath) ? ' 📷' : ''}</div>
       </div>
+      <div class="li-foot" style="margin-top:2px">
+        <span class="meta">${details}</span>
+        <span class="badges"><span class="badge ${isFinal ? 'pos' : 'warn'}">${isFinal ? 'Final' : 'Estimate'}</span>${(m.photoDataUrl || m.photoPath) ? '<span aria-label="Has photo">📷</span>' : ''}</span>
+      </div>
+      ${fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
+      ${toBreakdown ? `<div class="meta">${esc(toBreakdown)}</div>` : ''}
     </div>
   `;
 }
@@ -336,7 +423,7 @@ function openGinningSheet() {
         weightStatus: 'final',
         notes: getVal(root, 'g-notes')?.trim() || 'Ginning',
       });
-      closeSheet();
+      closeSheet(); toast('Saved');
     });
   });
 }
@@ -351,7 +438,7 @@ function openGinningSheet() {
  * repeat of it.
  */
 export function openMovementSheet(existing, template) {
-  const { fields, storages, sales, commodities } = db.get();
+  const { fields, storages, sales, commodities, movements } = db.get();
   const src = existing || template;
   const existingFroms = src?.froms?.length ? src.froms : [{ type: '', id: '', tons: '' }];
   const existingSiloTos = (src?.tos || []).filter((t) => t.type === 'silo');
@@ -385,12 +472,14 @@ export function openMovementSheet(existing, template) {
 
   openSheet(existing ? `Edit movement #${existing.ticketNo ?? ''}` : 'Add movement', (root) => {
     root.innerHTML = `
-      ${field({ label: 'Date', id: 'date', type: 'date', value: src?.date })}
+      <datalist id="dl-regos">${distinctOf(movements, 'truckRego').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
+      <datalist id="dl-drivers">${distinctOf(movements, 'driver').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
+      ${field({ label: 'Date', id: 'date', type: 'date', value: existing ? existing.date : todayLocal() })}
       <div class="field">
         <label>Commodity</label>
         <select id="m-commodity">
           <option value="">All commodities</option>
-          ${commodities.map((c) => `<option value="${c.id}" ${c.id === ctx.commodityId ? 'selected' : ''}>${c.name}</option>`).join('')}
+          ${commodities.map((c) => `<option value="${c.id}" ${c.id === ctx.commodityId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
         </select>
         <div class="hint">Narrows the paddocks, silos and contracts below to this grain.</div>
       </div>
@@ -407,8 +496,8 @@ export function openMovementSheet(existing, template) {
       </div>
       <div id="to-body" style="margin-top:8px"></div>
       <div class="grid-2">
-        ${field({ label: 'Truck rego', id: 'truckRego', value: src?.truckRego })}
-        ${field({ label: 'Driver', id: 'driver', value: src?.driver })}
+        ${field({ label: 'Truck rego', id: 'truckRego', value: src?.truckRego, list: 'dl-regos' })}
+        ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
       </div>
       <hr class="sep" />
       <div class="field"><label>Weight</label></div>
@@ -428,11 +517,11 @@ export function openMovementSheet(existing, template) {
       <div class="field">
         <label>Photo (e.g. truck rego)</label>
         <input id="m-photo-file" type="file" accept="image/*" capture="environment" />
-        <div class="hint">Saved on this device only. A date/time stamp is added automatically.</div>
+        <div class="hint">Kept with this load and uploaded once you have signal. A date/time stamp is added automatically.</div>
         <div id="m-photo-preview" style="margin-top:8px"></div>
       </div>
-      <button class="btn" id="save" style="margin-top:12px">Save</button>
-      ${existing ? `<button class="btn danger" id="del" style="margin-top:8px">Delete movement</button>` : ''}
+      ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete movement</button>` : ''}
+      <div class="save-bar"><div class="total"><div class="l">Net load</div><div class="v" id="load-preview">—</div></div><button class="btn" id="save">Save</button></div>
     `;
 
     const fromRowsEl = root.querySelector('#from-rows');
@@ -507,15 +596,20 @@ export function openMovementSheet(existing, template) {
     const grossEl = root.querySelector('#gross');
     const tareEl = root.querySelector('#tare');
     const tonsEl = root.querySelector('#tons');
+    const loadPreviewEl = root.querySelector('#load-preview');
+    const showLoad = () => { loadPreviewEl.textContent = tons(getNum(root, 'tons')); };
     function recomputeNet() {
       const gross = parseFloat(grossEl.value);
       const tare = parseFloat(tareEl.value);
       if (!Number.isNaN(gross) && !Number.isNaN(tare)) {
         tonsEl.value = (gross - tare).toFixed(2);
       }
+      showLoad();
     }
     grossEl.addEventListener('input', recomputeNet);
     tareEl.addEventListener('input', recomputeNet);
+    tonsEl.addEventListener('input', showLoad);
+    showLoad();
 
     let weightStatus = src?.weightStatus || 'estimate';
     root.querySelector('#m-status').addEventListener('click', (e) => {
@@ -548,7 +642,7 @@ export function openMovementSheet(existing, template) {
         photoDataUrl = await compressAndStampImage(file);
         renderPhotoPreview();
       } catch (err) {
-        alert('Could not process that photo.');
+        notify('Could not process that photo.');
       }
     });
 
@@ -586,7 +680,7 @@ export function openMovementSheet(existing, template) {
         photoDataUrl,
         photoPath,
       });
-      closeSheet();
+      closeSheet(); toast('Saved');
     });
     const del = root.querySelector('#del');
     if (del) {

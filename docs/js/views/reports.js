@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=98';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=98';
-import { num, tons, esc } from '../fmt.js?v=98';
-import { field, getVal, getNum } from '../ui.js?v=98';
+import { db } from '../storage.js?v=100';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=100';
+import { num, tons, esc } from '../fmt.js?v=100';
+import { field, getVal, getNum } from '../ui.js?v=100';
 
 let unsub = null;
 let view = 'fert';
@@ -52,11 +52,6 @@ function paintFert(root) {
   const body = root.querySelector('#reports-body');
 
   body.innerHTML = `
-    <div class="card">
-      <h2>Nitrogen calculator</h2>
-      <div id="n-calc-form"></div>
-      <div id="n-calc-result"></div>
-    </div>
     <div class="card report">
       <h2><span class="dot report"></span>Urea</h2>
       ${groups.length === 0 ? `<div class="empty">Add fields with urea rates in the Production tab.</div>` : groups.map((g) => ureaTable(g, commodities.find((c) => c.id === g.id))).join('')}
@@ -64,6 +59,13 @@ function paintFert(root) {
     <div class="card report">
       <h2><span class="dot report"></span>Starter fertiliser</h2>
       ${groups.length === 0 ? `<div class="empty">Add fields with starter rates in the Production tab.</div>` : groups.map((g) => starterTable(g)).join('')}
+    </div>
+    <div class="card">
+      <details class="fold" style="border-top:none;margin-top:0">
+        <summary><div><h2>Nitrogen calculator</h2><div class="sub">Urea needed to reach a target yield</div></div></summary>
+        <div id="n-calc-form"></div>
+        <div id="n-calc-result"></div>
+      </details>
     </div>
   `;
   buildNitrogenCalc(body, commodities);

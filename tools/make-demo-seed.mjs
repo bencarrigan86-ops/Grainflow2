@@ -155,8 +155,8 @@ const sales = [
     grade: 'APW1', tons: 600, price: 368, date: '2026-08-22', location: 'Delivered Newbridge',
     deliveryStart: '2027-01-05', deliveryEnd: '2027-02-28', freight: 21.5, leviesPct: 0.011 },
 ].map((s) => ({
-  premiumDiscount: 0, ginning: 0, paymentTermsDays: 30, tolerancePct: 0.05,
-  toleranceCapTons: 0, brokerNote: '', buyerAbn: '', buyerAddress: '', notes: '',
+  premiumDiscount: 0, ginning: 0, paymentTermsDays: 30, tolerancePct: 5,
+  toleranceCapTons: 20, brokerNote: '', buyerAbn: '', buyerAddress: '', notes: '',
   tonsDelivered: 0, deliveryPeriod: '', ...s,
 }));
 
