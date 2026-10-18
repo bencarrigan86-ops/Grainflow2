@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=95';
-import { num, money, esc } from '../fmt.js?v=95';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=95';
-import { APP_VERSION } from '../version.js?v=95';
-import { exportRowsAsCSV } from '../csv.js?v=95';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=95';
-import { endpointLabel } from './movements.js?v=95';
+import { db } from '../storage.js?v=96';
+import { num, money, esc } from '../fmt.js?v=96';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=96';
+import { APP_VERSION } from '../version.js?v=96';
+import { exportRowsAsCSV } from '../csv.js?v=96';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=96';
+import { endpointLabel } from './movements.js?v=96';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=95';
+} from '../invites.js?v=96';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=95';
+} from '../auth.js?v=96';
 
 let unsub = null;
 

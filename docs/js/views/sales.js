@@ -1,13 +1,13 @@
-import { db } from '../storage.js?v=95';
+import { db } from '../storage.js?v=96';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=95';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=95';
-import { num, tons, money, esc } from '../fmt.js?v=95';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=95';
-import { renderRelatedMovements } from './movements.js?v=95';
-import { openInvoiceListSheet } from './invoice.js?v=95';
-import { openContractDocSheet } from './contract.js?v=95';
+} from '../documents.js?v=96';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=96';
+import { num, tons, money, esc } from '../fmt.js?v=96';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete } from '../ui.js?v=96';
+import { renderRelatedMovements } from './movements.js?v=96';
+import { openInvoiceListSheet } from './invoice.js?v=96';
+import { openContractDocSheet } from './contract.js?v=96';
 
 let unsub = null;
 
@@ -150,6 +150,9 @@ function openSaleSheet(existing) {
 
   openSheet(existing ? 'Edit sale' : 'Add sale', (root) => {
     root.innerHTML = `
+      <h2 style="margin:0 0 4px">The deal</h2>
+      <div class="field hint" style="margin-bottom:10px">The essentials — fill these in and
+        Save. The rest below is optional detail.</div>
       ${field({ label: 'Date', id: 'date', type: 'date', value: existing?.date })}
       <div class="grid-2">
         ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
@@ -159,10 +162,34 @@ function openSaleSheet(existing) {
         ${field({ label: 'Buyer', id: 'buyer', value: existing?.buyer, placeholder: 'e.g. CBH, Cargill' })}
         ${field({ label: 'Contract no.', id: 'contractNo', value: existing?.contractNo })}
       </div>
+      ${field({ label: 'Tons', id: 'tons', type: 'number', step: '0.01', value: existing?.tons })}
+      <div class="grid-2">
+        ${field({ label: 'Tolerance (%)', id: 'tolPct', type: 'number', step: '0.1', value: existing?.tolerancePct ?? DEFAULT_TOLERANCE_PCT })}
+        ${field({ label: 'Tolerance cap (t)', id: 'tolCap', type: 'number', step: '0.1', value: existing?.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS, hint: 'Lesser of the two applies' })}
+      </div>
+      <div class="row"><span class="label">Tolerance range</span><span class="value" id="tol-preview">—</span></div>
+      ${field({ label: 'Price ($/t)', id: 'price', type: 'number', step: '0.01', value: existing?.price })}
+      <div class="row"><span class="label">Contract value</span><span class="value" id="value-preview">—</span></div>
+      ${field({ label: 'Broker note', id: 'brokerNote', value: existing?.brokerNote })}
       ${field({ label: 'Location', id: 'location', value: existing?.location, placeholder: 'Delivery site' })}
       <div class="grid-2">
         ${field({ label: 'Delivery start', id: 'deliveryStart', type: 'date', value: existing?.deliveryStart })}
         ${field({ label: 'Delivery finish', id: 'deliveryEnd', type: 'date', value: existing?.deliveryEnd })}
+      </div>
+      ${field({ label: 'Weights to govern', id: 'weightsToGovern', type: 'select', value: existing?.weightsToGovern ?? '', options: [
+        { value: '', label: '—' },
+        { value: 'destination', label: 'Destination' },
+        { value: 'origin', label: 'Origin' },
+      ], hint: 'Whose weighbridge settles it' })}
+      <div class="grid-2">
+        ${field({ label: 'Payment terms (days)', id: 'paymentTermsDays', type: 'number', step: '1', value: existing?.paymentTermsDays ?? '' })}
+        ${field({ label: 'Counted from', id: 'paymentTermsBasis', type: 'select', value: existing?.paymentTermsBasis ?? '', options: [
+          { value: '', label: '—' },
+          { value: 'end of week of delivery', label: 'End of week of delivery' },
+          { value: 'end of week of transfer', label: 'End of week of transfer' },
+          { value: 'date of delivery', label: 'Date of delivery' },
+          { value: 'invoice date', label: 'Invoice date' },
+        ], hint: '"30 days" and "30 days from end of week" are up to six days apart' })}
       </div>
       <hr class="sep" />
       <h2 style="margin:0 0 4px">Contract terms</h2>
@@ -172,14 +199,7 @@ function openSaleSheet(existing) {
         ${field({ label: 'Crop year', id: 'cropYear', value: existing?.cropYear, placeholder: 'e.g. 2025/2026', hint: 'As the contract writes it' })}
         ${field({ label: 'Contract type', id: 'contractType', value: existing?.contractType, placeholder: 'e.g. Ex Farm' })}
       </div>
-      <div class="grid-2">
-        ${field({ label: 'Pricing point', id: 'pricingPoint', value: existing?.pricingPoint, placeholder: 'e.g. Goondiwindi - 45km S/W', hint: 'Where the price is struck' })}
-        ${field({ label: 'Weights to govern', id: 'weightsToGovern', type: 'select', value: existing?.weightsToGovern ?? '', options: [
-          { value: '', label: '—' },
-          { value: 'destination', label: 'Destination' },
-          { value: 'origin', label: 'Origin' },
-        ], hint: 'Whose weighbridge settles it' })}
-      </div>
+      ${field({ label: 'Pricing point', id: 'pricingPoint', value: existing?.pricingPoint, placeholder: 'e.g. Goondiwindi - 45km S/W', hint: 'Where the price is struck' })}
       ${field({ label: 'Delivery terms', id: 'deliveryTerms', value: existing?.deliveryTerms, placeholder: "e.g. Buyer's call, 5 business days notice" })}
       ${field({ label: 'Buyer contact / trader', id: 'buyerContact', value: existing?.buyerContact, placeholder: 'Who to ring about a load' })}
       <div class="grid-2">
@@ -192,40 +212,26 @@ function openSaleSheet(existing) {
         { value: 'buyer', label: 'Buyer' },
       ] })}
       <div class="grid-2">
-        ${field({ label: 'Payment terms (days)', id: 'paymentTermsDays', type: 'number', step: '1', value: existing?.paymentTermsDays ?? '' })}
-        ${field({ label: 'Counted from', id: 'paymentTermsBasis', type: 'select', value: existing?.paymentTermsBasis ?? '', options: [
-          { value: '', label: '—' },
-          { value: 'end of week of delivery', label: 'End of week of delivery' },
-          { value: 'end of week of transfer', label: 'End of week of transfer' },
-          { value: 'date of delivery', label: 'Date of delivery' },
-          { value: 'invoice date', label: 'Invoice date' },
-        ], hint: '"30 days" and "30 days from end of week" are up to six days apart' })}
-      </div>
-      <div class="grid-2">
         ${field({ label: 'Carry ($/t/month)', id: 'carryRate', type: 'number', step: '0.01', value: existing?.carryRate ?? 0, hint: 'Paid to leave grain on farm' })}
         ${field({ label: 'Carry starts', id: 'carryFrom', type: 'date', value: existing?.carryFrom })}
       </div>
       ${field({ label: 'Trade rules', id: 'tradeRules', value: existing?.tradeRules, placeholder: 'e.g. GTA contract 3' })}
+      <hr class="sep" />
+      <h2 style="margin:0 0 4px">Price adjustments</h2>
+      <div class="field hint" style="margin-bottom:10px">Taken off (or added to) the price above to
+        get the net price ex-farm.</div>
       <div class="grid-2">
-        ${field({ label: 'Tons', id: 'tons', type: 'number', step: '0.01', value: existing?.tons })}
-        ${field({ label: 'Tons delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a Movement' })}
-      </div>
-      ${movementDelivered > 0 ? `<div class="row"><span class="label">+ Delivered via movements</span><span class="value" id="movement-delivered-value">${num(movementDelivered, 1)} t</span></div>` : ''}
-      <div class="grid-2">
-        ${field({ label: 'Price ($/t)', id: 'price', type: 'number', step: '0.01', value: existing?.price })}
         ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
-      </div>
-      <div class="grid-2">
         ${field({ label: 'Premium/discount ($/t)', id: 'premium', type: 'number', step: '0.01', value: existing?.premiumDiscount ?? 0, allowNegative: true, hint: 'Negative for a discount' })}
-        ${field({ label: 'Levies (%)', id: 'levies', type: 'number', step: '0.01', value: existing ? existing.leviesPct * 100 : 1.02, hint: 'e.g. GRDC + state levy' })}
       </div>
       <div class="grid-2">
-        ${field({ label: 'Tolerance (%)', id: 'tolPct', type: 'number', step: '0.1', value: existing?.tolerancePct ?? DEFAULT_TOLERANCE_PCT })}
-        ${field({ label: 'Tolerance cap (t)', id: 'tolCap', type: 'number', step: '0.1', value: existing?.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS, hint: 'Lesser of the two applies' })}
+        ${field({ label: 'Levies (%)', id: 'levies', type: 'number', step: '0.01', value: existing ? existing.leviesPct * 100 : 1.02, hint: 'e.g. GRDC + state levy' })}
+        ${field({ label: 'Ginning cost ($)', id: 'ginning', type: 'number', step: '0.01', value: existing?.ginning ?? 0, hint: 'Net ginning deduction, e.g. cotton seed. A total, not a rate.' })}
       </div>
-      <div class="row"><span class="label">Tolerance range</span><span class="value" id="tol-preview">—</span></div>
-      ${field({ label: 'Ginning cost ($)', id: 'ginning', type: 'number', step: '0.01', value: existing?.ginning ?? 0, hint: 'Net ginning deduction — e.g. for a cotton seed sale. A total dollar amount, not a rate.' })}
-      ${field({ label: 'Broker note', id: 'brokerNote', value: existing?.brokerNote })}
+      <hr class="sep" />
+      <h2 style="margin:0 0 4px">Delivered &amp; other</h2>
+      ${field({ label: 'Tons delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a Movement' })}
+      ${movementDelivered > 0 ? `<div class="row"><span class="label">+ Delivered via movements</span><span class="value" id="movement-delivered-value">${num(movementDelivered, 1)} t</span></div>` : ''}
       ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
       <div class="grid-2">
         ${field({ label: 'Buyer ABN (optional)', id: 'buyerAbn', value: existing?.buyerAbn, hint: 'For invoices' })}
@@ -274,6 +280,23 @@ function openSaleSheet(existing) {
     };
     ['tons', 'tolPct', 'tolCap'].forEach((id) => root.querySelector(`#${id}`).addEventListener('input', recomputeTolerance));
 
+    // What the figures above come to, as you type — the same arithmetic the
+    // sales list uses, run on the form's values rather than a saved record.
+    const valuePreview = root.querySelector('#value-preview');
+    const recomputeValue = () => {
+      const e = saleEconomics({
+        tons: getNum(root, 'tons'),
+        price: getNum(root, 'price'),
+        freight: getNum(root, 'freight'),
+        premiumDiscount: getNum(root, 'premium'),
+        ginning: getNum(root, 'ginning'),
+        leviesPct: getNum(root, 'levies') / 100,
+      });
+      valuePreview.textContent = `${money(e.totalValue, 0)} · ${money(e.priceExFarm, 2)}/${currentUnit === 'bales' ? 'bale' : 't'} net`;
+    };
+    ['tons', 'price', 'freight', 'premium', 'ginning', 'levies']
+      .forEach((id) => root.querySelector(`#${id}`).addEventListener('input', recomputeValue));
+
     const tonsLabelEl = root.querySelector('label[for="tons"]');
     const tonsDeliveredLabelEl = root.querySelector('label[for="tonsDelivered"]');
     const priceLabelEl = root.querySelector('label[for="price"]');
@@ -292,6 +315,7 @@ function openSaleSheet(existing) {
       tolCapLabelEl.textContent = isBales ? 'Tolerance cap (bales)' : 'Tolerance cap (t)';
       if (movementDeliveredValueEl) movementDeliveredValueEl.textContent = `${num(movementDelivered, 1)} ${currentUnit}`;
       recomputeTolerance();
+      recomputeValue();
     };
     root.querySelector('#commodity').addEventListener('change', syncUnitLabels);
     syncUnitLabels();
