@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=105';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=105';
-import { num, tons, esc } from '../fmt.js?v=105';
-import { field, getVal, getNum } from '../ui.js?v=105';
-import { canSeeYield } from '../nav.js?v=105';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=105';
+import { db } from '../storage.js?v=109';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=109';
+import { num, tons, esc } from '../fmt.js?v=109';
+import { field, getVal, getNum } from '../ui.js?v=109';
+import { canSeeYield } from '../nav.js?v=109';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=109';
 
 let unsub = null;
 let view = 'fert';

@@ -1,60 +1,42 @@
 // Yield sensitivity: "what if the crop comes in 10% light?"
 //
 // Lives on the Reports > Yield tab, and only for roles that can open Position.
-// It is mostly dollars — position value and profit — and the roles that cannot
+// Half of it is dollars — position value and profit — and the roles that cannot
 // see Position are the ones the app keeps money from.
 
-import { db } from '../storage.js?v=105';
-import { positionRows, positionAtYield, positionTotals, farmProfitLoss, fieldTons, paddockAtYield } from '../derived.js?v=105';
-import { num, tons, money, esc } from '../fmt.js?v=105';
+import { db } from '../storage.js?v=109';
+import { positionRows, positionAtYield, positionTotals, farmProfitLoss, paddockAtYield } from '../derived.js?v=109';
+import { num, money, esc } from '../fmt.js?v=109';
 
-// Kept across repaints so a sync arriving does not snap the slider back to 0.
-let sensPct = -10;
-const SENS_STEPS = [-20, -10, 0, 10, 20];
+// Starts folded away: it is a what-if, not the first thing the Yield tab is for.
+// Kept across repaints so a sync arriving does not change what you left open.
+let sensOpen = false;
+const openCommodities = new Set();
+
+// The columns, in the order they are read: shortfalls left, as entered in the
+// middle, upsides right.
+const STEPS = [-15, -10, -5, 0, 5, 10, 15];
 
 const signed = (n, f) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${f(Math.abs(n))}`;
+const stepLabel = (pct) => (pct === 0 ? 'As entered' : `${signed(pct, (n) => n)}%`);
 
 export function sensitivityCard() {
   return `
     <div class="card report" id="sens-card">
-      <h2><span class="dot report"></span>Yield sensitivity</h2>
-      <div class="field hint" style="margin-bottom:10px">Slide to see the position if every paddock's yield comes in above or below what is entered. Contracts stay as signed, so the change lands on the unsold grain. Nothing is saved.</div>
-      <div class="field" style="margin-bottom:4px">
-        <label for="sens-range">Yield change: <strong id="sens-label"></strong></label>
-        <input type="range" id="sens-range" min="-40" max="40" step="5" value="${sensPct}" style="width:100%" />
-      </div>
-      <div id="sens-detail"></div>
-      <div class="subhead" style="margin-top:14px">Whole farm at a glance</div>
-      <div class="table-scroll"><table id="sens-steps"></table></div>
-    </div>`;
-}
+      <h2><span class="dot report"></span>Yield sensitivity
+        <button type="button" class="btn secondary small" id="sens-toggle" aria-expanded="${sensOpen}" aria-controls="sens-body" style="margin-left:auto">${sensOpen ? 'Collapse' : 'Expand'}</button></h2>
+      <div id="sens-body" ${sensOpen ? '' : 'hidden'}>
+        <div class="subhead" style="margin-top:0">Total tons by yield change</div>
+        <div class="table-scroll" style="margin:0;padding:0"><table id="sens-tons"></table></div>
+        <div class="field hint" style="margin-top:6px">Tap a commodity to see its paddocks. Every paddock is
+          moved by the same percentage. Nothing here is saved.</div>
 
-/**
- * One commodity's paddocks at the chosen yield change. Contracts belong to the
- * commodity, not the paddock, so a paddock's figure here is what its crop is
- * worth at the MTM price — useful for seeing which paddocks carry the risk,
- * not a share of the contract position.
- */
-function paddockFold(commodity, fields, movements, pct) {
-  const rows = fields
-    .filter((f) => f.commodityId === commodity.id)
-    .map((f) => paddockAtYield(f, movements, commodity.mtmPrice, pct))
-    .filter((r) => r.baseTons > 0 || r.areaHa > 0);
-  if (rows.length === 0) return '';
-  const totalDelta = rows.reduce((a, r) => a + (r.tons - r.baseTons), 0);
-  return `
-    <details class="fold" style="margin-top:0">
-      <summary><div><h2 style="font-size:13px">By paddock</h2>
-        <div class="sub">${rows.length} paddock${rows.length === 1 ? '' : 's'}${pct === 0 ? '' : ` · ${signed(Math.round(totalDelta), (n) => num(n, 0))} t`}</div></div></summary>
-      <div class="table-scroll"><table>
-        <thead><tr><th>Paddock</th><th>t/ha</th><th>Tons</th><th>Crop $</th></tr></thead>
-        <tbody>${rows.map((r) => `<tr>
-          <td>${esc(r.name)}</td>
-          <td>${num(r.yieldTHa, 2)}</td>
-          <td>${num(r.tons, 0)}</td>
-          <td>${money(r.value, 0)}</td></tr>`).join('')}</tbody>
-      </table></div>
-    </details>`;
+        <div class="subhead" style="margin-top:16px">What it does to the farm</div>
+        <div class="table-scroll" style="margin:0;padding:0"><table id="sens-steps"></table></div>
+        <div class="field hint" style="margin-top:6px">Contracts stay as signed, so a change in yield lands on
+          the unsold grain, valued at MTM. "Oversold" is grain contracted that the crop would not cover.</div>
+      </div>
+    </div>`;
 }
 
 function paintSensitivity(root) {
@@ -63,46 +45,90 @@ function paintSensitivity(root) {
   const { commodities, fields, sales, movements } = db.get();
   const overheads = db.getOverheads();
   const base = positionRows(commodities, fields, sales, movements);
-  const baseTotals = positionTotals(base);
-  const basePl = farmProfitLoss(baseTotals.grossMargin, overheads);
 
-  const at = (p) => {
-    const rows = positionAtYield(base, p);
+  const cols = STEPS.map((pct) => {
+    const rows = positionAtYield(base, pct);
     const t = positionTotals(rows);
-    return { rows, t, pl: farmProfitLoss(t.grossMargin, overheads) };
-  };
+    return { pct, rows, t, pl: farmProfitLoss(t.grossMargin, overheads) };
+  });
+  const cell = (c, text) => `<td${c.pct === 0 ? ' style="font-weight:700"' : ''}>${text}</td>`;
 
-  card.querySelector('#sens-label').textContent = sensPct === 0 ? 'as entered' : `${signed(sensPct, (n) => n)}%`;
+  // ---- tons: commodities down the side, a paddock fold under each ----------
+  const tonRows = base.map((r, i) => {
+    const paddocks = fields
+      .filter((f) => f.commodityId === r.commodity.id)
+      .map((f) => ({ f, byStep: STEPS.map((pct) => paddockAtYield(f, movements, r.commodity.mtmPrice, pct)) }))
+      .filter((p) => p.byStep[0].baseTons > 0 || p.byStep[0].areaHa > 0);
+    const open = openCommodities.has(r.commodity.id);
+    const head = `<tr class="sens-commodity"><td>${paddocks.length
+      ? `<button type="button" class="link-btn" data-commodity="${esc(r.commodity.id)}" aria-expanded="${open}" style="padding:0;min-height:0;color:inherit;font:inherit;text-align:left">${open ? '▾' : '▸'} ${esc(r.commodity.name)}</button>`
+      : esc(r.commodity.name)}</td>${cols.map((c) => cell(c, num(c.rows[i].productionTons, 0))).join('')}</tr>`;
+    const kids = paddocks.map(({ f, byStep }) => `<tr class="sens-paddock" data-of="${esc(r.commodity.id)}" ${open ? '' : 'hidden'} style="color:var(--text-dim)">
+      <td style="padding-left:18px">${esc(f.name)}</td>${STEPS.map((pct, k) => `<td${pct === 0 ? ' style="font-weight:700"' : ''}>${num(byStep[k].tons, 0)}</td>`).join('')}</tr>`).join('');
+    return head + kids;
+  }).join('');
+  const totalRow = `<tr><td>Total</td>${cols.map((c) => cell(c, num(c.t.productionTons, 0))).join('')}</tr>`;
+  card.querySelector('#sens-tons').innerHTML = `<thead><tr><th>Tons</th>${STEPS.map((p) => `<th>${stepLabel(p)}</th>`).join('')}</tr></thead><tbody>${tonRows}</tbody><tfoot>${totalRow}</tfoot>`;
 
-  const cur = at(sensPct);
-  const delta = (now, was, f) => {
+  // ---- money: one row per yield change ------------------------------------
+  const asEntered = cols.find((c) => c.pct === 0);
+  const delta = (now, was) => {
     const d = now - was;
-    return Math.abs(d) < 0.5 ? '' : `<div class="meta" style="color:${d < 0 ? 'var(--danger)' : 'var(--accent-summary)'}">${signed(d, f)}</div>`;
+    return Math.abs(d) < 0.5 ? '' : `<div class="meta" style="color:${d < 0 ? 'var(--danger)' : 'var(--accent-summary)'}">${signed(d, (n) => money(n, 0))}</div>`;
   };
-  card.querySelector('#sens-detail').innerHTML = cur.rows.map((r, i) => `
-    <div class="row" style="align-items:flex-start">
-      <span class="label"><strong>${esc(r.commodity.name)}</strong>
-        <div class="meta">${tons(r.productionTons, 0)} produced · ${r.unsoldTons < 0 ? `<span style="color:var(--danger)">${tons(-r.unsoldTons, 0)} oversold</span>` : `${tons(r.unsoldTons, 0)} unsold`}</div></span>
-      <span class="value">${money(r.totalValue, 0)}${delta(r.totalValue, base[i].totalValue, (n) => money(n, 0))}</span>
-    </div>
-    ${paddockFold(r.commodity, fields, movements, sensPct)}`).join('') + `
-    <div class="row"><span class="label"><strong>Position value</strong></span>
-      <span class="value">${money(cur.t.totalValue, 0)}${delta(cur.t.totalValue, baseTotals.totalValue, (n) => money(n, 0))}</span></div>
-    <div class="row"><span class="label"><strong>${cur.pl.profitLoss >= 0 ? 'Profit' : 'Loss'}</strong></span>
-      <span class="value"><span class="badge ${cur.pl.profitLoss >= 0 ? 'pos' : 'neg'}" style="font-size:15px">${money(cur.pl.profitLoss, 0)}</span>${delta(cur.pl.profitLoss, basePl.profitLoss, (n) => money(n, 0))}</span></div>`;
-
   card.querySelector('#sens-steps').innerHTML = `
-    <thead><tr><th>Yield</th><th>Produced</th><th>Position</th><th>Profit</th></tr></thead>
-    <tbody>${SENS_STEPS.map((p) => {
-    const s = at(p);
-    return `<tr${p === 0 ? ' style="font-weight:700"' : ''}><td>${p === 0 ? 'As entered' : `${signed(p, (n) => n)}%`}</td><td>${num(s.t.productionTons, 0)} t</td><td>${money(s.t.totalValue, 0)}</td><td style="color:${s.pl.profitLoss < 0 ? 'var(--danger)' : 'inherit'}">${money(s.pl.profitLoss, 0)}</td></tr>`;
+    <thead><tr><th>Yield</th><th>Position</th><th>Profit</th><th>Oversold</th></tr></thead>
+    <tbody>${cols.map((c) => {
+    const oversold = c.rows.reduce((a, r) => a + Math.max(0, -r.unsoldTons), 0);
+    return `<tr${c.pct === 0 ? ' style="font-weight:700"' : ''}>
+      <td>${stepLabel(c.pct)}</td>
+      <td>${money(c.t.totalValue, 0)}${c.pct === 0 ? '' : delta(c.t.totalValue, asEntered.t.totalValue)}</td>
+      <td style="color:${c.pl.profitLoss < 0 ? 'var(--danger)' : 'inherit'}">${money(c.pl.profitLoss, 0)}</td>
+      <td style="color:${oversold > 0 ? 'var(--danger)' : 'var(--text-dim)'}">${oversold > 0 ? `${num(oversold, 0)} t` : '–'}</td></tr>`;
   }).join('')}</tbody>`;
 }
 
-/** Wire the slider after the card's HTML is in the page. Safe to call on every repaint. */
+/**
+ * Seven columns do not fit a phone, and the one that matters is the middle one.
+ * Scroll the table so "as entered" is what is on screen, with the shortfalls
+ * just off to the left and the upsides to the right.
+ */
+function centreAsEntered(card) {
+  const box = card.querySelector('#sens-tons')?.parentElement;
+  const th = card.querySelector('#sens-tons thead th:nth-child(5)');   // label column, then 3 below, then this
+  if (!box || !th || !box.clientWidth) return;
+  // The commodity column stays put while the rest scrolls beneath it, so centre
+  // within what is left of the width, not the whole box.
+  const label = card.querySelector('#sens-tons thead th:first-child').offsetWidth;
+  box.scrollLeft = th.offsetLeft - label - (box.clientWidth - label - th.offsetWidth) / 2;
+}
+
+/** Fill the card and wire it up once its HTML is in the page. Safe on every repaint. */
 export function bindSensitivity(root) {
-  const range = root.querySelector('#sens-range');
-  if (!range) return;
+  const card = root.querySelector('#sens-card');
+  if (!card) return;
   paintSensitivity(root);
-  range.addEventListener('input', () => { sensPct = Number(range.value); paintSensitivity(root); });
+  centreAsEntered(card);
+
+  card.querySelector('#sens-tons').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-commodity]');
+    if (!btn) return;
+    const id = btn.dataset.commodity;
+    const open = !openCommodities.has(id);
+    if (open) openCommodities.add(id); else openCommodities.delete(id);
+    btn.setAttribute('aria-expanded', String(open));
+    btn.textContent = `${open ? '▾' : '▸'} ${btn.textContent.slice(2)}`;
+    card.querySelectorAll(`.sens-paddock[data-of="${CSS.escape(id)}"]`).forEach((tr) => { tr.hidden = !open; });
+    centreAsEntered(card);
+  });
+
+  const toggle = card.querySelector('#sens-toggle');
+  const body = card.querySelector('#sens-body');
+  toggle.addEventListener('click', () => {
+    sensOpen = !sensOpen;
+    body.hidden = !sensOpen;
+    toggle.textContent = sensOpen ? 'Collapse' : 'Expand';
+    toggle.setAttribute('aria-expanded', String(sensOpen));
+    if (sensOpen) centreAsEntered(card);
+  });
 }
