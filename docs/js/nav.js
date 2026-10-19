@@ -114,3 +114,21 @@ export function gearTargetFor(role) {
 export function canOpen(role, routeId) {
   return routesForRole(role).includes(routeId);
 }
+
+/**
+ * May this role see yields — what a paddock produced, per hectare and in total?
+ *
+ * Yield is the number a worker has no need of: they apply fertiliser and sow
+ * seed, and neither depends on knowing what the crop made. It follows the same
+ * line as Position, which is where yields turn into money, so there is one rule
+ * to remember rather than two that drift apart.
+ *
+ * Be clear about what this is. It decides what the interface offers. The
+ * database does not yet withhold yields from a worker — they sit in
+ * field_agronomy beside urea and seed, which a worker legitimately reads — and
+ * the loads a worker logs carry tonnes. Moving yield to a table of its own is
+ * what would make this a control rather than a courtesy.
+ */
+export function canSeeYield(role) {
+  return canOpen(role, 'position');
+}

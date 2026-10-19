@@ -1,8 +1,9 @@
-import { db } from '../storage.js?v=101';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=101';
-import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=101';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=101';
-import { renderRelatedMovements } from './movements.js?v=101';
+import { db } from '../storage.js?v=105';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=105';
+import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=105';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=105';
+import { renderRelatedMovements } from './movements.js?v=105';
+import { canSeeYield } from '../nav.js?v=105';
 
 let unsub = null;
 
@@ -13,6 +14,7 @@ export function renderProduction(root) {
 }
 
 function paint(root) {
+  const showYield = canSeeYield(db.getRole());
   const { commodities, fields, movements } = db.get();
   const rollup = productionByCommodity(commodities, fields, movements).filter((r) => r.fieldCount > 0);
   const groups = groupFieldsByCommodity(commodities, fields, movements);
@@ -32,21 +34,19 @@ function paint(root) {
         <h2><span class="dot report"></span>By commodity</h2>
         <div class="table-scroll">
           <table>
-            <thead><tr><th>Commodity</th><th>Area</th><th>Yield</th><th>Tons</th></tr></thead>
+            <thead><tr><th>Commodity</th><th>Area</th>${showYield ? '<th>Yield</th><th>Tons</th>' : ''}</tr></thead>
             <tbody>
               ${rollup.map((r) => `
                 <tr>
                   <td>${esc(r.commodity.name)}</td>
                   <td>${num(r.area, 0)}</td>
-                  <td>${num(r.yieldTHa, 2)}</td>
-                  <td>${num(r.tons, 0)}</td>
+                  ${showYield ? `<td>${num(r.yieldTHa, 2)}</td><td>${num(r.tons, 0)}</td>` : ''}
                 </tr>`).join('')}
             </tbody>
             <tfoot><tr>
               <td>Total</td>
               <td>${num(productionTotals.area, 0)}</td>
-              <td>${num(productionTotals.yieldTHa, 2)}</td>
-              <td>${num(productionTotals.tons, 0)}</td>
+              ${showYield ? `<td>${num(productionTotals.yieldTHa, 2)}</td><td>${num(productionTotals.tons, 0)}</td>` : ''}
             </tr></tfoot>
           </table>
         </div>
@@ -55,8 +55,8 @@ function paint(root) {
       <div class="card input">
         <h2><span class="dot input"></span>Fields</h2>
         ${groups.length === 0 ? `<div class="empty">No fields yet.<br/><button class="btn" id="empty-add-field">Add your first field</button></div>` : groups.map((g) => `
-          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${tons(g.totalTons, 0)}</span></div>
-          ${g.fields.map((f) => fieldRow(f, movements)).join('')}
+          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${showYield ? tons(g.totalTons, 0) : ''}</span></div>
+          ${g.fields.map((f) => fieldRow(f, movements, showYield)).join('')}
         `).join('')}
       </div>
     </div>
@@ -70,7 +70,7 @@ function paint(root) {
   root.querySelector('#empty-add-field')?.addEventListener('click', () => openFieldSheet(null));
 }
 
-function fieldRow(f, movements) {
+function fieldRow(f, movements, showYield = true) {
   const isActual = f.yieldMode === 'actual';
   const t = fieldTons(f, movements);
   const yieldTHa = f.areaHa > 0 ? t / f.areaHa : 0;
@@ -80,18 +80,19 @@ function fieldRow(f, movements) {
     <div class="list-item" data-edit-field="${f.id}">
       <div>
         <div class="main">${esc(f.name)}</div>
-        <div class="meta">${ha(f.areaHa, 0)} · <span class="badge ${isActual ? 'pos' : 'neg'}">${isActual ? 'Actual' : 'Estimate'}</span></div>
-        ${!isActual && actualTons > 0 ? `<div class="meta">Actual (movements): ${num(actualTons, 0)} t · ${num(actualYieldTHa, 2)} t/ha</div>` : ''}
+        <div class="meta">${ha(f.areaHa, 0)}${showYield ? ` · <span class="badge ${isActual ? 'pos' : 'neg'}">${isActual ? 'Actual' : 'Estimate'}</span>` : ''}</div>
+        ${showYield && !isActual && actualTons > 0 ? `<div class="meta">Actual (movements): ${num(actualTons, 0)} t · ${num(actualYieldTHa, 2)} t/ha</div>` : ''}
       </div>
-      <div class="right">
+      ${showYield ? `<div class="right">
         <div class="main">${tons(t, 0)}</div>
         <div class="meta">${num(yieldTHa, 2)} t/ha</div>
-      </div>
+      </div>` : ''}
     </div>
   `;
 }
 
 function openFieldSheet(existing) {
+  const showYield = canSeeYield(db.getRole());
   const { commodities, movements } = db.get();
   const commodityOptions = commodities.map((c) => ({ value: c.id, label: c.name }));
   const actualTons = existing ? movementTonsFromField(existing.id, movements) : 0;
@@ -102,6 +103,7 @@ function openFieldSheet(existing) {
       ${field({ label: 'Field name', id: 'name', value: existing?.name, placeholder: 'e.g. SR1-3' })}
       ${field({ label: 'Area (ha)', id: 'area', type: 'number', step: '0.01', value: existing?.areaHa })}
       ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
+      <div class="yield-only" ${showYield ? '' : 'hidden'}>
       ${field({ label: 'Yield estimate (t/ha)', id: 'yield', type: 'number', step: '0.01', value: existing ? existing.yieldTHa : (initialCommodity?.defaultYieldTHa || ''), hint: 'For production &amp; sales. Pre-filled from the commodity default below — type in this box to override it for this field.' })}
       <div class="row"><span class="label">Commodity's default yield estimate</span><span class="value" id="commodity-yield-preview">— t/ha</span></div>
       ${existing ? `<button class="btn secondary small" id="use-default-yield" style="margin-bottom:8px">Use commodity default</button>` : ''}
@@ -114,6 +116,7 @@ function openFieldSheet(existing) {
         <div class="hint" id="actual-hint">Actual sums the Movement tickets carted off this field${actualTons > 0 ? ` — currently ${num(actualTons, 0)} t` : ''}.</div>
       </div>
       <div class="row"><span class="label" id="tons-label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
+      </div>
       <details class="fold" ${existing ? 'open' : ''}>
         <summary><div><h2>Fertiliser planning</h2><div class="sub">Target yield, urea required and applied, nitrogen</div></div></summary>
       <div class="field hint" style="margin:-4px 0 12px">Separate from the yield estimate above — used only for the urea and starter calculations below.</div>
@@ -165,7 +168,7 @@ function openFieldSheet(existing) {
       ${field({ label: 'Notes', id: 'notes', type: 'textarea', value: existing?.notes })}
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
-      <div class="save-bar"><div class="total"><div class="l">Total tons</div><div class="v" id="tons-bar">—</div></div><button class="btn" id="save">Save</button></div>
+      <div class="save-bar"><div class="total" ${showYield ? '' : 'hidden'}><div class="l">Total tons</div><div class="v" id="tons-bar">—</div></div><button class="btn" id="save">Save</button></div>
     `;
     if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'field', existing.id);
 

@@ -1,7 +1,9 @@
-import { db } from '../storage.js?v=101';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=101';
-import { num, tons, esc } from '../fmt.js?v=101';
-import { field, getVal, getNum } from '../ui.js?v=101';
+import { db } from '../storage.js?v=105';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=105';
+import { num, tons, esc } from '../fmt.js?v=105';
+import { field, getVal, getNum } from '../ui.js?v=105';
+import { canSeeYield } from '../nav.js?v=105';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=105';
 
 let unsub = null;
 let view = 'fert';
@@ -13,6 +15,8 @@ export function renderReports(root) {
 }
 
 function paint(root) {
+  const showYield = canSeeYield(db.getRole());
+  if (view === 'yield' && !showYield) view = 'fert';
   root.innerHTML = `
     <div class="topbar">
       <div>
@@ -24,7 +28,7 @@ function paint(root) {
       <div class="segmented" id="reports-view">
         <button data-view="fert" class="${view === 'fert' ? 'active' : ''}">Fert</button>
         <button data-view="seed" class="${view === 'seed' ? 'active' : ''}">Seed</button>
-        <button data-view="yield" class="${view === 'yield' ? 'active' : ''}">Yield</button>
+        ${showYield ? `<button data-view="yield" class="${view === 'yield' ? 'active' : ''}">Yield</button>` : ''}
       </div>
       <div id="reports-body" style="margin-top:12px"></div>
     </div>
@@ -298,6 +302,7 @@ function paintYield(root) {
   const grandYieldTHa = grandArea > 0 ? grandTons / grandArea : 0;
 
   body.innerHTML = `
+    ${groups.length > 0 ? sensitivityCard() : ''}
     <div class="card report">
       <h2><span class="dot report"></span>Yield by commodity, by field</h2>
       ${groups.length === 0 ? `<div class="empty">Add fields in the Production tab.</div>` : groups.map((g) => yieldTable(g, movements)).join('')}
@@ -307,6 +312,7 @@ function paintYield(root) {
       ` : ''}
     </div>
   `;
+  bindSensitivity(body);
 }
 
 function yieldTable(g, movements) {

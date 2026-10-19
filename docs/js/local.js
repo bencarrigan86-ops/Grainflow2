@@ -82,7 +82,10 @@ export async function clearState() {
  */
 export async function setAsideState(state, farmId) {
   const d = await db();
-  await d.put('state', { state, farmId, at: Date.now() }, 'set-aside');
+  // Never on top of an earlier one: the whole point is that nothing set aside
+  // is lost, and a second set-aside would otherwise quietly replace the first.
+  const key = (await d.get('state', 'set-aside')) ? `set-aside-${Date.now()}` : 'set-aside';
+  await d.put('state', { state, farmId, at: Date.now() }, key);
 }
 
 export async function loadAsideState() {
@@ -93,16 +96,27 @@ export async function loadAsideState() {
 // --- the outbox ------------------------------------------------------------
 
 /**
- * Mark the farm as having unsent changes. Deliberately one flag rather than a
- * per-field changelog: at single-operator scale a full upsert of a farm is a
- * dozen requests, and a changelog is the beginning of a sync engine we have
- * good reasons not to build until Phase 3.
+ * Record what this device has changed and the server has not yet seen.
+ *
+ * One entry per thing touched — { kind: 'field', id } — and not one flag for
+ * the farm. The whole-farm flag was the bug: it told the push to send
+ * everything, so a device that was behind sent its stale copy of rows it had
+ * never edited, over the top of newer ones. See dirty.js for the kinds.
+ *
+ * Touching the same thing twice queues it once.
  */
-export async function markDirty() {
+export async function markDirty(touches = []) {
+  if (!touches.length) return;
   const d = await db();
-  const existing = await d.getAll('outbox');
-  if (existing.some((o) => o.type === 'dirty')) return;
-  await d.add('outbox', { type: 'dirty', at: Date.now() });
+  const have = new Set((await d.getAll('outbox'))
+    .filter((o) => o.type === 'dirty' && o.kind)
+    .map((o) => `${o.kind}:${o.id ?? ''}`));
+  for (const t of touches) {
+    const key = `${t.kind}:${t.id ?? ''}`;
+    if (have.has(key)) continue;
+    have.add(key);
+    await d.add('outbox', { type: 'dirty', kind: t.kind, id: t.id ?? null, at: Date.now() });
+  }
 }
 
 /**
@@ -125,13 +139,28 @@ export async function outboxCount() {
   return d.count('outbox');
 }
 
-/** Clear only what we actually sent — anything queued mid-flight survives. */
-export async function clearOutboxUpTo(maxSeq) {
+/**
+ * Clear exactly the entries that were sent, by sequence number.
+ *
+ * Not "everything up to the newest one I saw": entries this push could not act
+ * on — the pre-tracking markers, which are resolved at startup, not here —
+ * have to survive it, and so does anything queued while the request was in
+ * flight.
+ */
+export async function clearOutboxItems(seqs) {
+  const d = await db();
+  const tx = d.transaction('outbox', 'readwrite');
+  for (const seq of seqs) await tx.store.delete(seq);
+  await tx.done;
+}
+
+/** Remove the pre-tracking markers once startup has dealt with them. */
+export async function clearLegacyDirty() {
   const d = await db();
   const tx = d.transaction('outbox', 'readwrite');
   let cursor = await tx.store.openCursor();
   while (cursor) {
-    if (cursor.value.seq <= maxSeq) await cursor.delete();
+    if (cursor.value.type === 'dirty' && !cursor.value.kind) await cursor.delete();
     cursor = await cursor.continue();
   }
   await tx.done;

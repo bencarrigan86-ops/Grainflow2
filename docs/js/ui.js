@@ -7,6 +7,11 @@ export function closeSheet() {
   }
 }
 
+/** Is a form sheet open? Used to avoid swapping data out from under somebody typing. */
+export function isSheetOpen() {
+  return !!backdrop;
+}
+
 /** HTML-escape for text dropped into a template string. */
 export function escHtml(v) {
   return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

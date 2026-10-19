@@ -109,3 +109,33 @@ export function chooseBootState({
       : 'nothing saved on this device yet',
   };
 }
+
+/**
+ * What to do with changes recorded before they were tracked row by row.
+ *
+ * Those entries say "something on this device is unsent" and nothing about
+ * what, so they cannot be sent — and sending the whole farm in their place is
+ * the behaviour that let a device holding an old copy overwrite a newer one.
+ * They are settled once, here, by what startup decided:
+ *
+ *   'set-aside-and-adopt'  the server's copy is being used. The device's own is
+ *                          kept to one side, not discarded, and the markers go.
+ *   'send-all'             the server has none of this farm; the device copy is
+ *                          all there is, so it is sent whole.
+ *   'clear'                the device copy was for some other farm or none, and
+ *                          the markers mean nothing here.
+ *   'keep'                 not decidable yet (offline, or this device also has
+ *                          properly tracked changes to send first). Left alone
+ *                          and looked at again next start.
+ *   'none'                 nothing to settle.
+ *
+ * @param {{legacy: number, decision: {use: string}, serverReachable: boolean, hasServer: boolean}} o
+ */
+export function resolveLegacy({ legacy, decision, serverReachable, hasServer }) {
+  if (!legacy) return 'none';
+  if (decision.use === 'server') return 'set-aside-and-adopt';
+  if (decision.use === 'fresh') return 'clear';
+  // use === 'local'
+  if (serverReachable && !hasServer) return 'send-all';
+  return 'keep';
+}

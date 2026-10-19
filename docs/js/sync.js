@@ -1,20 +1,25 @@
 // Pushing local changes to Supabase.
 //
-// Not a sync engine, and the distinction matters. There is no conflict
-// resolution, no merge, no partial replication — this is one-way durability for
-// a single operator: get what is on this device safely onto the server, and
-// keep working when there is no signal. Two people editing the same farm
-// offline is Phase 3 and PowerSync's problem, not this file's.
+// Not a sync engine, and the distinction matters. There is no merge and no
+// partial replication — this is durability for a small team: get what this
+// device changed safely onto the server, and keep working when there is no
+// signal.
 //
-// The push is a full upsert of the farm rather than a diff. At one operator's
-// scale that is a dozen requests of a few hundred rows, debounced — and it is
-// far harder to get subtly wrong than a changelog, which is the beginning of
-// exactly the machinery we are deferring.
+// What a push sends is only what this device changed. It used to send the whole
+// farm, and that was the bug that mattered most here: a phone holding last
+// week's copy wrote it over the computer's newer one every time it sent, and a
+// phone that got stuck part way did so on every attempt. A device that is
+// behind must not be able to drag the server back to where it is, so rows
+// nobody on this device touched are never sent. See dirty.js.
+//
+// Still not handled: two devices editing the very same row. The later push
+// wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=101';
-import { stateToRows } from './mapping.js?v=101';
-import { markDirty, markDeleted, outboxItems, clearOutboxUpTo } from './local.js?v=101';
-import { flushPendingPhotos } from './photos.js?v=101';
+import { supabase } from './supabase.js?v=105';
+import { stateToRows } from './mapping.js?v=105';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=105';
+import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=105';
+import { flushPendingPhotos } from './photos.js?v=105';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -85,8 +90,8 @@ let timer = null;
 
 /** Queue a push. Debounced, because saving on every keystroke should not mean
  *  a request on every keystroke. */
-export function schedulePush(getState, farmId, role, { delay = 1500 } = {}) {
-  markDirty();
+export function schedulePush(getState, farmId, role, { delay = 1500, touches = [] } = {}) {
+  markDirty(touches);
   clearTimeout(timer);
   timer = setTimeout(() => { push(getState(), farmId, role); }, delay);
 }
@@ -102,10 +107,13 @@ export function noteDelete(table, id) {
 export async function push(state, farmId, role = 'owner') {
   if (inFlight) return inFlight;
   inFlight = (async () => {
-    const items = await outboxItems();
+    // Pre-tracking markers cannot be turned into rows and are not sent; they
+    // are resolved once, at startup. Everything else is what this device owes.
+    const items = (await outboxItems()).filter((i) => !isLegacyDirty(i));
     if (items.length === 0) return { skipped: true };
 
-    const maxSeq = Math.max(...items.map((i) => i.seq));
+    const sentSeqs = items.map((i) => i.seq);
+    const dirty = items.filter((i) => i.type === 'dirty');
     const deletes = items.filter((i) => i.type === 'delete');
     // Photos first. A movement_photos row pointing at an object that does not
     // exist yet shows every viewer a broken image, so the file goes up before
@@ -117,7 +125,7 @@ export async function push(state, farmId, role = 'owner') {
       catch (e) { console.warn('Photo flush deferred', e); }
     }
 
-    const rows = stateToRows(state, farmId);
+    const rows = selectDirtyRows(stateToRows(state, farmId), state, dirty);
     const tables = WRITABLE[role] || [];
     const result = { tables: {}, deleted: 0, errors: [], role, skippedTables: [] };
 
@@ -173,7 +181,7 @@ export async function push(state, farmId, role = 'owner') {
       result.deleted += 1;
     }
 
-    await clearOutboxUpTo(maxSeq);
+    await clearOutboxItems(sentSeqs);
     result.ok = true;
     return result;
   })();

@@ -415,6 +415,63 @@ export function positionRows(commodities, fields, sales, movements = []) {
     .filter((r) => r.area > 0 || r.productionTons > 0 || r.soldTons > 0 || r.opening > 0 || r.retainedSeed > 0);
 }
 
+/**
+ * What the position would be if every paddock's crop came in `adjustPct` percent
+ * above (or below) what the books now say — -10 for a 10% shortfall.
+ *
+ * Contracts are fixed: they are signed tonnages, so a yield that moves changes
+ * only what is left unsold (and what that is worth at MTM). A shortfall large
+ * enough to leave less than is sold shows up as negative unsold tons — grain
+ * the farm has promised and would have to buy or roll — rather than being
+ * clipped to zero, because that is exactly the thing worth seeing.
+ *
+ * Same arithmetic as position(), on rows position() already produced, so at
+ * 0% every figure matches the Position tab to the cent.
+ */
+export function positionAtYield(rows, adjustPct = 0) {
+  const k = 1 + (Number(adjustPct) || 0) / 100;
+  return rows.map((r) => {
+    const productionTons = r.productionTons * k;
+    const unsoldTons = r.opening + productionTons - r.soldTons - r.retainedSeed;
+    const unsoldValue = unsoldTons * r.mtmPrice;
+    const totalValue = r.soldValue + unsoldValue;
+    const grossMargin = totalValue - r.grossMarginCost;
+    return {
+      ...r,
+      productionTons,
+      yieldTHa: r.yieldTHa * k,
+      unsoldTons,
+      unsoldValue,
+      totalValue,
+      grossMargin,
+      grossMarginPct: totalValue > 0 ? grossMargin / totalValue : 0,
+      pctSold: (productionTons - r.retainedSeed) > 0 ? r.soldTons / (productionTons - r.retainedSeed) : 0,
+    };
+  });
+}
+
+/**
+ * One paddock if its crop came in `adjustPct` percent above or below the books.
+ * Tons scale (a finished harvest is flexed as readily as an estimate — the
+ * question is "what if it had been light"), area does not, so yield per hectare
+ * moves with it. Value is at the commodity's MTM price.
+ */
+export function paddockAtYield(f, movements, mtmPrice, adjustPct = 0) {
+  const k = 1 + (Number(adjustPct) || 0) / 100;
+  const areaHa = Number(f.areaHa) || 0;
+  const baseTons = fieldTons(f, movements);
+  const tons = baseTons * k;
+  return {
+    id: f.id,
+    name: f.name,
+    areaHa,
+    baseTons,
+    tons,
+    yieldTHa: areaHa > 0 ? tons / areaHa : 0,
+    value: tons * (Number(mtmPrice) || 0),
+  };
+}
+
 export function positionTotals(rows) {
   return rows.reduce((acc, r) => ({
     area: acc.area + r.area,

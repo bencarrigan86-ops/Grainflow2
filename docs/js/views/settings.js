@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=101';
-import { num, money, esc } from '../fmt.js?v=101';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=101';
-import { APP_VERSION } from '../version.js?v=101';
-import { exportRowsAsCSV } from '../csv.js?v=101';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=101';
-import { endpointLabel } from './movements.js?v=101';
+import { db } from '../storage.js?v=105';
+import { num, money, esc } from '../fmt.js?v=105';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=105';
+import { APP_VERSION } from '../version.js?v=105';
+import { exportRowsAsCSV } from '../csv.js?v=105';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=105';
+import { endpointLabel } from './movements.js?v=105';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=101';
+} from '../invites.js?v=105';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=101';
+} from '../auth.js?v=105';
 
 let unsub = null;
 
@@ -683,6 +683,17 @@ async function paintSyncCard(root) {
     return;
   }
 
+  // Who this device is acting as. A refusal almost always comes down to this —
+  // the wrong account, a farm that is not the one on the other device, or a
+  // role the server will not let write — and none of it is visible from the
+  // error text alone.
+  const session = await getSession().catch(() => null);
+  if (!card.isConnected) return;
+  const who = esc(session?.user?.email || 'unknown');
+  const farmName = esc(db.getBusinessDetails().farmName || 'unnamed farm');
+  const farmShort = esc(String(db.getFarmId() || '').slice(0, 8));
+  const roleName = esc(roleLabel(db.getRole()));
+
   const e = status.lastError;
   card.className = 'card input';
   card.innerHTML = `
@@ -691,6 +702,9 @@ async function paintSyncCard(root) {
       <span class="label">Changes waiting</span>
       <span class="value">${status.pending}</span>
     </div>
+    <div class="row"><span class="label">Signed in as</span><span class="value">${who}</span></div>
+    <div class="row"><span class="label">Farm</span><span class="value">${farmName} <span class="meta">(${farmShort}…)</span></span></div>
+    <div class="row"><span class="label">Role</span><span class="value">${roleName}</span></div>
     <div class="field hint" style="margin-top:6px">While anything is waiting, this device keeps
       its own copy and does not take updates made on other devices &mdash; that is deliberate, so
       work cannot be overwritten before it has been saved. It sorts itself out once these

@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import {
   ROLES, TABS_BY_ROLE, OFF_BAR_BY_ROLE, TAB_NEEDS,
   tabsForRole, routesForRole, landingTabFor, canOpen, gearTargetFor,
+  canSeeYield,
 } from '../docs/js/nav.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -200,6 +201,14 @@ check('every tab id has a view wired to it in main.js', () => {
   for (const id of ids) {
     assert.ok(main.includes(`id: '${id}'`), `main.js has no route for "${id}"`);
   }
+});
+
+check('yield is for the roles that see Position, not for workers or drivers', () => {
+  for (const r of ['owner', 'manager', 'bookkeeper']) assert.equal(canSeeYield(r), true, r);
+  for (const r of ['farm_worker', 'driver']) assert.equal(canSeeYield(r), false, r);
+  assert.equal(canSeeYield('nonsense'), false, 'an unknown role gets the narrowest view');
+  // One rule, not two that can drift: yield follows Position.
+  for (const r of ROLES) assert.equal(canSeeYield(r), canOpen(r, 'position'), r);
 });
 
 console.log('');

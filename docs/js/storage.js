@@ -18,15 +18,16 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=101';
+import { hydrate } from './hydrate.js?v=105';
 import {
-  saveState, loadState, markDeleted, markDirty, outboxCount,
+  saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState,
-} from './local.js?v=101';
-import { chooseBootState } from './boot.js?v=101';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=101';
-import { schedulePush, pushOnReconnect } from './sync.js?v=101';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=101';
+} from './local.js?v=105';
+import { chooseBootState, resolveLegacy } from './boot.js?v=105';
+import { isLegacyDirty } from './dirty.js?v=105';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=105';
+import { schedulePush, pushOnReconnect } from './sync.js?v=105';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=105';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -106,6 +107,25 @@ let ready = false;
 
 const listeners = new Set();
 
+// What the save in progress has changed. Filled by the mutators just before they
+// call persist(), which hands it to the push and empties it. This is what lets a
+// push send only what this device edited — see dirty.js for why that matters.
+let touched = [];
+
+// Bumped by every save, synchronously. refreshFromServer() compares it before and
+// after its network call: if it moved, somebody edited while it was away, and
+// what it fetched is already out of date.
+let localEdits = 0;
+let refreshing = false;
+function touch(kind, id) { touched.push(id === undefined ? { kind } : { kind, id }); }
+
+/** What this device owes the server, not counting pre-tracking markers (which
+ *  cannot be sent, and are settled once at startup). */
+async function owedCount() {
+  const items = await outboxItems().catch(() => []);
+  return items.filter((i) => !isLegacyDirty(i)).length;
+}
+
 function current() {
   return data.years[data.currentYear];
 }
@@ -119,6 +139,9 @@ function current() {
  * the memory write and the disk write they lose one edit, not the season.
  */
 function persist() {
+  localEdits += 1;
+  const touches = touched;
+  touched = [];
   // The local write is unconditional, and that is the fix for the worst bug
   // this app has had. It used to sit behind `if (ready)` — ready meaning
   // db.init() had finished, which needs the server — so before the app had
@@ -136,8 +159,8 @@ function persist() {
   // The push is a different question, and it does need to know where the data
   // goes. With no farm yet, the work is still recorded as owed so it leaves on
   // the first push after signing in, rather than being forgotten.
-  if (farmId) schedulePush(() => data, farmId, role);
-  else markDirty().catch((e) => console.error('Could not queue for the server', e));
+  if (farmId) schedulePush(() => data, farmId, role, { touches });
+  else markDirty(touches).catch((e) => console.error('Could not queue for the server', e));
   // A view that throws while re-rendering must not take the write down with
   // it. The save has already happened by this point; letting the exception out
   // makes the caller believe it failed and, worse, report a rendering fault as
@@ -200,7 +223,9 @@ export const db = {
     // three lines of implicit policy that quietly preferred the server.
     const localState = await loadState().catch(() => null);
     const localFarm = await loadFarmStamp().catch(() => null);
-    const pending = await outboxCount().catch(() => 0);
+    const allItems = await outboxItems().catch(() => []);
+    const legacyCount = allItems.filter(isLegacyDirty).length;
+    const pending = allItems.length - legacyCount;
 
     // Reachable and reachable-but-empty are different answers, and boot.js
     // needs both: an account with no seasons is a real "this farm is new",
@@ -222,6 +247,24 @@ export const db = {
       farmId, localState, localFarm, pending, serverState, serverReachable,
     });
     console.info(`Grainflow start: using the ${decision.use} copy — ${decision.reason}.`);
+
+    // Changes recorded before they were tracked row by row say only that
+    // "something" is unsent, and nothing about what. They are settled here,
+    // once, rather than sent as a whole-farm push — which is what let a device
+    // holding an old copy overwrite a newer one.
+    const hasServerCopy = !!serverState && Object.keys(serverState.years || {}).length > 0;
+    const legacyPlan = resolveLegacy({ legacy: legacyCount, decision, serverReachable, hasServer: hasServerCopy });
+    if (legacyPlan === 'set-aside-and-adopt') {
+      // The server's copy is taken, and the device's own is kept beside it
+      // rather than discarded: those edits never reached anyone.
+      await setAsideState(localState, localFarm).catch(
+        (e) => console.error('Could not set aside the old unsent changes', e));
+      window.dispatchEvent(new CustomEvent('grainflow:legacy-set-aside', { detail: { count: legacyCount } }));
+    }
+    if (legacyPlan === 'set-aside-and-adopt' || legacyPlan === 'send-all' || legacyPlan === 'clear') {
+      await clearLegacyDirty().catch((e) => console.error('Could not clear the old markers', e));
+    }
+    if (legacyPlan === 'send-all') touch('all');
 
     if (decision.orphan) {
       // Unsent changes for a different farm. Preserved rather than overwritten,
@@ -257,13 +300,23 @@ export const db = {
       // an empty screen on day one.
       data = defaultData();
       data.businessDetails = { ...defaultBusinessDetails() };
+      // A new farm's starting records (its season, the default commodities)
+      // exist only here until sent, and everything created later refers to them.
+      touch('all');
     }
+    // This device holds the farm and the server has none of it yet: nothing was
+    // ever sent, so nothing is "changed" — send it all.
+    if (decision.use === 'local' && serverReachable && !hasServerCopy) touch('all');
 
     ready = true;
     pushOnReconnect(() => data, farmId, role);
 
     // Anything this device owes goes now rather than waiting for the next edit.
-    if (decision.pushLocal) schedulePush(() => data, farmId, role, { delay: 0 });
+    const startTouches = touched;
+    touched = [];
+    if (decision.pushLocal || startTouches.length) {
+      schedulePush(() => data, farmId, role, { delay: 0, touches: startTouches });
+    }
 
     listeners.forEach((fn) => {
       try { fn(data); } catch (e) { console.error('A view failed to render at startup', e); }
@@ -282,8 +335,61 @@ export const db = {
    * left for somebody to deduce.
    */
   async getSyncStatus() {
-    const pending = await outboxCount().catch(() => 0);
+    const pending = await owedCount();
     return { pending, lastError: lastPushError };
+  },
+
+  /**
+   * Pick up what other devices have done, without waiting for a restart.
+   *
+   * The server's copy is taken only when this device owes nothing — the same
+   * rule as startup, because it is the same question: unsent work outranks the
+   * server, always. Beyond that it declines if anything was edited while it was
+   * fetching, since by then what it holds is already out of date, and it never
+   * replaces the copy on screen while the person is part way through one.
+   *
+   * Safe to call as often as is convenient; most calls do nothing.
+   *
+   * @returns {Promise<{refreshed: boolean, why?: string}>}
+   */
+  async refreshFromServer() {
+    if (!ready || !farmId) return { refreshed: false, why: 'not started' };
+    if (!navigator.onLine) return { refreshed: false, why: 'offline' };
+    if (refreshing) return { refreshed: false, why: 'already refreshing' };
+    refreshing = true;
+    try {
+      if (await owedCount() > 0) return { refreshed: false, why: 'this device has unsent changes' };
+      const editsAtStart = localEdits;
+
+      let serverState;
+      try { ({ state: serverState } = await hydrate(farmId)); }
+      catch { return { refreshed: false, why: 'could not reach the server' }; }
+      if (!serverState || Object.keys(serverState.years || {}).length === 0) {
+        return { refreshed: false, why: 'the server has nothing for this farm' };
+      }
+      if (localEdits !== editsAtStart) return { refreshed: false, why: 'edited while fetching' };
+
+      // Old whole-farm markers: keep the device's copy to one side, then drop them.
+      const legacyCount = (await outboxItems().catch(() => [])).filter(isLegacyDirty).length;
+      if (legacyCount) {
+        await setAsideState(data, farmId).catch((e) => console.error('Could not set aside the old unsent changes', e));
+        await clearLegacyDirty().catch((e) => console.error('Could not clear the old markers', e));
+        window.dispatchEvent(new CustomEvent('grainflow:legacy-set-aside', { detail: { count: legacyCount } }));
+      }
+
+      // Nothing awaited between this check and the swap, so nothing can slip in.
+      if (localEdits !== editsAtStart) return { refreshed: false, why: 'edited while fetching' };
+      const next = deriveCounters(serverState);
+      if (data.currentYear && next.years[data.currentYear]) next.currentYear = data.currentYear;
+      data = next;
+      saveState(data, farmId).catch((e) => console.error('Local save failed', e));
+      listeners.forEach((fn) => {
+        try { fn(data); } catch (e) { console.error('A view failed to re-render after a refresh', e); }
+      });
+      return { refreshed: true };
+    } finally {
+      refreshing = false;
+    }
   },
 
   /** Try now, rather than waiting for the next edit. */
@@ -312,6 +418,7 @@ export const db = {
   setCurrentYear(year) {
     if (!data.years[year]) return false;
     data.currentYear = year;
+    Object.keys(data.years).forEach((l) => touch('season', l));   // which one is current
     persist();
     return true;
   },
@@ -323,6 +430,7 @@ export const db = {
     data.years[label] = data.years[oldYear];
     delete data.years[oldYear];
     if (data.currentYear === oldYear) data.currentYear = label;
+    touch('season', label);
     persist();
     return true;
   },
@@ -367,6 +475,7 @@ export const db = {
       overheads: defaultOverheads(), invoices: [],
     };
     data.currentYear = label;
+    touch('year', label);
     persist();
     return true;
   },
@@ -388,6 +497,7 @@ export const db = {
 
     delete data.years[year];
     if (data.currentYear === year) data.currentYear = Object.keys(data.years).sort().slice(-1)[0];
+    touch('season', data.currentYear);
     persist();
     return true;
   },
@@ -398,10 +508,13 @@ export const db = {
     if (commodity.id) {
       const idx = c.commodities.findIndex((x) => x.id === commodity.id);
       if (idx >= 0) c.commodities[idx] = { ...c.commodities[idx], ...commodity };
+      touch('commodity', commodity.id);
     } else {
+      const id = uid();
       c.commodities.push({
-        mtmPrice: 0, openingStock: 0, retainedSeed: 0, grossMarginCost: 0, ...commodity, id: uid(),
+        mtmPrice: 0, openingStock: 0, retainedSeed: 0, grossMarginCost: 0, ...commodity, id,
       });
+      touch('commodity', id);
     }
     persist();
   },
@@ -417,8 +530,11 @@ export const db = {
     if (field.id) {
       const idx = c.fields.findIndex((f) => f.id === field.id);
       if (idx >= 0) c.fields[idx] = { ...c.fields[idx], ...field };
+      touch('field', field.id);
     } else {
-      c.fields.push({ ...field, id: uid() });
+      const id = uid();
+      c.fields.push({ ...field, id });
+      touch('field', id);
     }
     persist();
   },
@@ -436,8 +552,11 @@ export const db = {
     if (sale.id) {
       const idx = c.sales.findIndex((s) => s.id === sale.id);
       if (idx >= 0) c.sales[idx] = { ...c.sales[idx], ...sale };
+      touch('sale', sale.id);
     } else {
-      c.sales.push({ ...sale, id: uid() });
+      const id = uid();
+      c.sales.push({ ...sale, id });
+      touch('sale', id);
     }
     persist();
   },
@@ -455,8 +574,11 @@ export const db = {
     if (storage.id) {
       const idx = c.storages.findIndex((s) => s.id === storage.id);
       if (idx >= 0) c.storages[idx] = { ...c.storages[idx], ...storage };
+      touch('storage', storage.id);
     } else {
-      c.storages.push({ ...storage, id: uid(), createdAt: Date.now() });
+      const id = uid();
+      c.storages.push({ ...storage, id, createdAt: Date.now() });
+      touch('storage', id);
     }
     persist();
   },
@@ -472,9 +594,12 @@ export const db = {
     if (movement.id) {
       const idx = c.movements.findIndex((m) => m.id === movement.id);
       if (idx >= 0) c.movements[idx] = { ...c.movements[idx], ...movement };
+      touch('movement', movement.id);
     } else {
-      c.movements.push({ ...movement, id: uid(), ticketNo: data.nextMovementNo });
+      const id = uid();
+      c.movements.push({ ...movement, id, ticketNo: data.nextMovementNo });
       data.nextMovementNo += 1;
+      touch('movement', id);
     }
     persist();
   },
@@ -498,6 +623,7 @@ export const db = {
     };
     data.nextInvoiceNo += 1;
     current().invoices.push(inv);
+    touch('invoice', inv.id);
     persist();
     return inv;
   },
@@ -509,6 +635,7 @@ export const db = {
       ...c.invoices[idx], status,
       paidDate: status === 'paid' ? new Date().toISOString().slice(0, 10) : null,
     };
+    touch('invoice', id);
     persist();
   },
   updateInvoice(id, patch) {
@@ -516,6 +643,7 @@ export const db = {
     const idx = c.invoices.findIndex((inv) => inv.id === id);
     if (idx < 0) return;
     c.invoices[idx] = { ...c.invoices[idx], ...patch };
+    touch('invoice', id);
     persist();
   },
   deleteInvoice(id) {
@@ -528,6 +656,7 @@ export const db = {
   getOverheads() { return current().overheads; },
   updateOverheads(patch) {
     current().overheads = { ...current().overheads, ...patch };
+    touch('overheads', data.currentYear);
     persist();
   },
 
@@ -535,6 +664,7 @@ export const db = {
   getBusinessDetails() { return data.businessDetails; },
   updateBusinessDetails(patch) {
     data.businessDetails = { ...data.businessDetails, ...patch };
+    touch('business');
     persist();
   },
 
@@ -569,12 +699,14 @@ export const db = {
     const retired = reconcileImport(data, state, tombstone);
 
     data = deriveCounters(state);
+    touch('all');
     persist();
     return { remapped, filled, retired, stats: after.stats };
   },
 
   resetAll() {
     data = defaultData();
+    touch('all');
     persist();
   },
 };

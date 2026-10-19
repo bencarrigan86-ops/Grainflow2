@@ -1,21 +1,22 @@
-import { db } from './storage.js?v=101';
-import { renderPosition } from './views/position.js?v=101';
-import { renderProduction } from './views/production.js?v=101';
-import { renderReports } from './views/reports.js?v=101';
-import { renderSales } from './views/sales.js?v=101';
-import { renderMovements } from './views/movements.js?v=101';
-import { renderStorage } from './views/storage.js?v=101';
-import { renderSettings } from './views/settings.js?v=101';
-import { renderLogin } from './views/login.js?v=101';
-import { renderAccount } from './views/account.js?v=101';
+import { db } from './storage.js?v=105';
+import { renderPosition } from './views/position.js?v=105';
+import { renderProduction } from './views/production.js?v=105';
+import { renderReports } from './views/reports.js?v=105';
+import { renderSales } from './views/sales.js?v=105';
+import { renderMovements } from './views/movements.js?v=105';
+import { renderStorage } from './views/storage.js?v=105';
+import { renderSettings } from './views/settings.js?v=105';
+import { renderLogin } from './views/login.js?v=105';
+import { renderAccount } from './views/account.js?v=105';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=101';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=101';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=101';
-import { esc } from './fmt.js?v=101';
-import { APP_VERSION } from './version.js?v=101';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=101';
+} from './auth.js?v=105';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=105';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=105';
+import { esc } from './fmt.js?v=105';
+import { isSheetOpen } from './ui.js?v=105';
+import { APP_VERSION } from './version.js?v=105';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=105';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -136,6 +137,24 @@ async function renderYearPill() {
     ? 'Offline. Changes are saved on this device and will send when you have signal.'
     : pending > 0 ? `${pending} change${pending === 1 ? '' : 's'} waiting to send` : 'All changes sent';
 }
+// Pick up what other devices have done. A phone that stays open in the
+// background never restarts, so it only ever saw changes made elsewhere when it
+// was killed and reopened. Coming back to the app, or regaining signal, is the
+// moment to look — and db.refreshFromServer() declines unless this device owes
+// nothing and nobody has been editing, so it is safe to ask freely.
+let lastRefreshAt = 0;
+async function refreshIfQuiet({ force = false } = {}) {
+  if (!db.isReady() || document.hidden || isSheetOpen()) return;
+  if (!force && Date.now() - lastRefreshAt < 15000) return;
+  lastRefreshAt = Date.now();
+  try { await db.refreshFromServer(); } catch (e) { console.warn('Refresh skipped', e); }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshIfQuiet(); });
+window.addEventListener('online', () => refreshIfQuiet({ force: true }));
+// Once shortly after start: a device that opened with old unsent markers or a
+// queue to send settles them first, then looks.
+setTimeout(() => refreshIfQuiet({ force: true }), 5000);
+
 window.addEventListener('online', renderYearPill);
 window.addEventListener('offline', renderYearPill);
 window.addEventListener('grainflow:push-ok', renderYearPill);
