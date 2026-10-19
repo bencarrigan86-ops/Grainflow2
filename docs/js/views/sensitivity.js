@@ -4,9 +4,9 @@
 // Half of it is dollars — position value and profit — and the roles that cannot
 // see Position are the ones the app keeps money from.
 
-import { db } from '../storage.js?v=111';
-import { positionRows, positionAtYield, positionTotals, farmProfitLoss, paddockAtYield } from '../derived.js?v=111';
-import { num, money, esc } from '../fmt.js?v=111';
+import { db } from '../storage.js?v=112';
+import { positionRows, positionAtYield, positionTotals, farmProfitLoss, paddockAtYield } from '../derived.js?v=112';
+import { num, money, esc } from '../fmt.js?v=112';
 
 // Starts folded away: it is a what-if, not the first thing the Yield tab is for.
 // Kept across repaints so a sync arriving does not change what you left open.
@@ -20,7 +20,7 @@ let sensMode = 'tons';
 // device so it is as you left it.
 const PRESET_STEPS = [2.5, 5, 10];
 const MIN_STEP = 0.5;
-const MAX_STEP = 33;   // three steps down is -99%: past that the crop is negative
+const MAX_STEP = 100;  // a crop can fail outright, so large steps are real; the downside just stops at -100%
 const STEP_KEY = 'grainflow.sensStep';
 
 function loadStep() {
@@ -37,8 +37,14 @@ function saveStep() {
 }
 let { step: sensStep, custom: sensCustom } = loadStep();
 
-/** -3 steps … +3 steps, rounded so 3 × 0.1 does not become 0.30000000000000004. */
-const stepsFor = (step) => [-3, -2, -1, 0, 1, 2, 3].map((k) => +(k * step).toFixed(4));
+/**
+ * -3 steps … +3 steps, rounded so 3 × 0.1 does not become 0.30000000000000004.
+ *
+ * A big step can run the shortfall columns past a total loss. There is no such
+ * thing as a crop of less than nothing, so they stop at -100% (no crop at all)
+ * and the upside columns carry on.
+ */
+const stepsFor = (step) => [-3, -2, -1, 0, 1, 2, 3].map((k) => Math.max(-100, +(k * step).toFixed(4)));
 
 const signed = (n, f) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${f(Math.abs(n))}`;
 const stepLabel = (pct) => (pct === 0 ? 'As entered' : `${signed(pct, (n) => +n.toFixed(2))}%`);
