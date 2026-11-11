@@ -35,8 +35,24 @@
 // --- CSV ---------------------------------------------------------------------
 
 /** RFC-4180: quoted cells, doubled quotes, CRLF or LF, a BOM at the front. */
-export function parseCsv(text) {
-  const src = String(text ?? '').replace(/^﻿/, '');
+/**
+ * Which character separates the columns: a comma, a semicolon (what a spreadsheet
+ * in many locales saves) or a tab. Judged on the first line outside quotes.
+ */
+export function detectDelimiter(text) {
+  const first = String(text ?? '').replace(/^\ufeff/, '').split(/\r?\n/, 1)[0] || '';
+  let quoted = false;
+  const count = { ',': 0, ';': 0, '\t': 0 };
+  for (const c of first) {
+    if (c === '"') quoted = !quoted;
+    else if (!quoted && c in count) count[c] += 1;
+  }
+  const best = Object.entries(count).sort((a, b) => b[1] - a[1])[0];
+  return best[1] > 0 ? best[0] : ',';
+}
+
+export function parseCsv(text, delimiter = ',') {
+  const src = String(text ?? '').replace(/^\ufeff/, '');
   const rows = [];
   let row = [];
   let cell = '';
@@ -48,7 +64,7 @@ export function parseCsv(text) {
         if (src[i + 1] === '"') { cell += '"'; i += 1; } else quoted = false;
       } else cell += c;
     } else if (c === '"') quoted = true;
-    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === delimiter) { row.push(cell); cell = ''; }
     else if (c === '\n') { row.push(cell.replace(/\r$/, '')); rows.push(row); row = []; cell = ''; }
     else cell += c;
   }
@@ -170,7 +186,24 @@ const COLUMN = {
   deliveryGrade: 'Delivery Grade',
   deliveryTons: 'Delivery Net Weight',
 };
-const REQUIRED = ['ref', 'date', 'field', 'silo', 'commodity'];
+const REQUIRED = ['date', 'field', 'silo', 'commodity'];   // the weight is checked per load, and by the column-matching step
+
+/**
+ * How a file is read: which header holds which thing, in what order its dates
+ * are written, what unit its weights are in, and which statuses mean a load
+ * happened. The weighbridge export this was first built for is the default; any
+ * other file brings its own, set in the column-matching step (loadmap.js).
+ *
+ * `columns` maps what the importer needs to the file's own heading. Quality
+ * results can be their own columns (moisturePct, proteinPct, testWeightKgHl,
+ * screeningsPct, fallingNumber) or, as in the platform's export, name/value pairs.
+ */
+export const PLATFORM_SETUP = {
+  columns: { ...COLUMN },
+  dateOrder: 'dmy',
+  unit: 't',
+  completed: ['Completed', 'Delivered'],
+};
 
 // The platform's quality results come as six name/value pairs ("Pickup SP1 name"
 // / "Pickup SP1 value" … SP6). Which result sits in which pair depends on the
@@ -195,17 +228,43 @@ const SP_SLOTS = [1, 2, 3, 4, 5, 6];
  * ("2026-10-28"). Anything else is returned as null, never guessed at — a date
  * read the wrong way round (5/1 as May) would file a load in the wrong month.
  */
-export function isoFromDmy(s) {
+export function isoFromDmy(s) { return parseDate(s, 'dmy'); }
+
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+/**
+ * A date in the order the file writes it — 'dmy' (28/10/2026), 'mdy' (10/28/2026) or
+ * 'ymd' (2026/10/28). An ISO date (2026-10-28) is read the same whatever the order,
+ * and so is a date with the month in words ("28 Oct 2026", "Oct 28, 2026"). A day
+ * and month that are both 12 or under are ambiguous, which is why the order is the
+ * person's to say and never guessed. Anything unreadable is null.
+ */
+export function parseDate(s, order = 'dmy') {
   const text = String(s ?? '').trim();
-  const iso = /^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/.exec(text);
   let y; let month; let day;
-  if (iso) { [, y, month, day] = iso.map(Number); } else {
-    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(text);
-    if (!m) return null;
-    day = Number(m[1]); month = Number(m[2]);
-    y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ].*)?$/.exec(text);
+  if (iso) {
+    [, y, month, day] = iso.map(Number);
+  } else {
+    const words = /^(?:(\d{1,2})[ \-./]([A-Za-z]{3,9})[ \-./,]+(\d{2}|\d{4})|([A-Za-z]{3,9})[ \-./]+(\d{1,2}),?[ \-./]+(\d{2}|\d{4}))$/.exec(text);
+    if (words) {
+      const name = (words[2] || words[4]).slice(0, 3).toLowerCase();
+      month = MONTHS.indexOf(name) + 1;
+      day = Number(words[1] || words[5]);
+      const yy = words[3] || words[6];
+      y = yy.length === 2 ? 2000 + Number(yy) : Number(yy);
+    } else {
+      const m = /^(\d{1,4})[/.\-](\d{1,2})[/.\-](\d{1,4})$/.exec(text);
+      if (!m) return null;
+      const [a, b, c] = [m[1], m[2], m[3]];
+      const year = (v) => (v.length === 2 ? 2000 + Number(v) : Number(v));
+      if (order === 'ymd') { y = year(a); month = Number(b); day = Number(c); }
+      else if (order === 'mdy') { month = Number(a); day = Number(b); y = year(c); }
+      else { day = Number(a); month = Number(b); y = year(c); }
+      if (order !== 'ymd' && a.length === 4) return null;
+    }
   }
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  if (!(month >= 1 && month <= 12) || !(day >= 1 && day <= 31) || !(y >= 1900)) return null;
   return `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
@@ -223,16 +282,28 @@ const toNumber = (v) => {
  *
  * @returns {{loads: object[], missingColumns: string[], rows: number}}
  */
-export function readFreightExport(text) {
-  const table = parseCsv(text);
-  if (table.length === 0) return { loads: [], missingColumns: REQUIRED.map((k) => COLUMN[k]), rows: 0 };
+export function readFreightExport(text, setup = PLATFORM_SETUP) {
+  const columns = setup.columns || {};
+  const label = (k) => columns[k] || k;
+  const table = parseCsv(text, detectDelimiter(text));
+  if (table.length === 0) return { loads: [], missingColumns: REQUIRED.map(label), rows: 0 };
   const head = table[0].map((h) => h.trim());
-  const at = Object.fromEntries(Object.entries(COLUMN).map(([k, h]) => [k, head.indexOf(h)]));
-  const missingColumns = REQUIRED.filter((k) => at[k] < 0).map((k) => COLUMN[k]);
+  const lower = head.map((h) => h.toLowerCase());
+  const indexOf = (name) => (name ? lower.indexOf(String(name).trim().toLowerCase()) : -1);
+  const at = Object.fromEntries(Object.keys(columns).map((k) => [k, indexOf(columns[k])]));
+  const missingColumns = REQUIRED.filter((k) => !(at[k] >= 0)).map(label);
   if (missingColumns.length) return { loads: [], missingColumns, rows: table.length - 1 };
 
+  const order = setup.dateOrder || 'dmy';
+  const factor = setup.unit === 'kg' ? 0.001 : 1;
+  const weight = (v) => { const n = toNumber(v); return n === null ? null : Math.round(n * factor * 1000) / 1000; };
+  const hasStatus = at.status >= 0;
+  const finishedValues = new Set((setup.completed || COMPLETED).map((v) => String(v).trim().toLowerCase()));
+  const checks = at.pickupTons >= 0;
+
   const cell = (r, k) => (at[k] >= 0 ? String(r[at[k]] ?? '').trim() : '');
-  const spAt = SP_SLOTS.map((n) => [head.indexOf(`Pickup SP${n} name`), head.indexOf(`Pickup SP${n} value`)]);
+  const spAt = SP_SLOTS.map((n) => [lower.indexOf(`pickup sp${n} name`), lower.indexOf(`pickup sp${n} value`)]);
+  const DIRECT = ['moisturePct', 'proteinPct', 'testWeightKgHl', 'screeningsPct', 'fallingNumber'];
   const qualityOf = (r) => {
     const q = {};
     for (const [nameAt, valueAt] of spAt) {
@@ -241,16 +312,22 @@ export function readFreightExport(text) {
       const v = toNumber(r[valueAt]);
       if (key && v !== null) q[key] = v;
     }
+    for (const key of DIRECT) {
+      if (at[key] >= 0) { const v = toNumber(r[at[key]]); if (v !== null) q[key] = v; }
+    }
     return q;
   };
+
   const loads = table.slice(1).map((r, i) => {
-    const pickupTons = toNumber(cell(r, 'pickupTons'));
-    const deliveryTons = toNumber(cell(r, 'deliveryTons'));
-    const date = isoFromDmy(cell(r, 'date'));
+    const pickupTons = weight(cell(r, 'pickupTons'));
+    const deliveryTons = weight(cell(r, 'deliveryTons'));
+    const date = parseDate(cell(r, 'date'), order);
+    const status = cell(r, 'status');
     const load = {
       line: i + 2,                       // as the person would count it in a spreadsheet
       ref: cell(r, 'ref'),
-      status: cell(r, 'status'),
+      status,
+      finished: hasStatus ? finishedValues.has(status.toLowerCase()) : true,
       commodity: cell(r, 'commodity'),
       date,
       time: cell(r, 'time'),
@@ -265,23 +342,48 @@ export function readFreightExport(text) {
       quality: qualityOf(r),
       problems: [],
     };
-    if (!load.ref) load.problems.push('no movement number');
-    if (!date) load.problems.push('no usable pickup date');
-    if (!load.field) load.problems.push('no pickup storage (paddock)');
-    if (!load.silo) load.problems.push('no delivery storage (silo)');
+    if (!date) load.problems.push('no usable date');
+    if (!load.field) load.problems.push('no paddock (where it came from)');
+    if (!load.silo) load.problems.push('no silo or storage (where it went)');
     if (!load.commodity) load.problems.push('no commodity');
     if (!(deliveryTons > 0)) load.problems.push('no delivered weight');
-    load.check = weightCheck(load);
+    load.check = checks ? weightCheck(load) : 'ok';
     return load;
   });
+
+  // A file with no load number: each load is given one worked out from what it
+  // says, so importing the same file again recognises the loads it already has.
+  // The same date, truck, weight, paddock and silo twice in a file are two loads,
+  // told apart by the order they come in.
+  const occurrence = new Map();
+  for (const load of loads) {
+    if (load.ref) continue;
+    const key = [load.date, load.time, load.rego, load.deliveryTons, load.field, load.silo].join('|');
+    const n = (occurrence.get(key) || 0) + 1;
+    occurrence.set(key, n);
+    load.ref = 'X' + fingerprint(n > 1 ? `${key}#${n}` : key);
+    load.synthetic = true;
+  }
   return { loads, missingColumns: [], rows: loads.length };
+}
+
+/** A short, steady fingerprint of some text (two 32-bit hashes, in hex). */
+export function fingerprint(text) {
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 + c, 0x85ebca6b) >>> 0;
+  }
+  return h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0').slice(0, 4);
 }
 
 // --- turning loads into movements -------------------------------------------
 
 /** The platform's movement number, as written into a movement's notes. */
 export const REF_PREFIX = 'Import';
-export const refNote = (load) => [`${REF_PREFIX} ${load.ref}`, load.grade].filter(Boolean).join(' · ');
+export const refNote = (load) => [load.synthetic ? '' : `${REF_PREFIX} ${load.ref}`, load.grade].filter(Boolean).join(' · ');
 export function refFromNotes(notes) {
   const m = new RegExp(`${REF_PREFIX} (M[0-9A-Z]+)`).exec(String(notes ?? ''));
   return m ? m[1] : null;
@@ -398,14 +500,14 @@ export function buildMovements(loads, maps, { existing = [], include = new Set()
 
   for (const load of ordered) {
     if (load.problems.length) { skipped.push({ load, why: load.problems.join('; ') }); continue; }
-    if (!COMPLETED.includes(load.status)) { skipped.push({ load, why: `status is "${load.status || 'blank'}", not completed` }); continue; }
+    if (load.finished === false || (load.finished === undefined && !COMPLETED.includes(load.status))) { skipped.push({ load, why: `status is "${load.status || 'blank'}", not completed` }); continue; }
     if (have.has(load.ref) || seen.has(load.ref)) { duplicates += 1; continue; }
     const fieldId = targetOf(maps.fields?.[load.field], load.date);
     const siloId = targetOf(maps.silos?.[load.silo], load.date);
     if (!fieldId) { skipped.push({ load, why: `paddock "${load.field}" was set to be skipped` }); continue; }
     if (!siloId) { skipped.push({ load, why: `storage "${load.silo}" was set to be skipped` }); continue; }
 
-    const check = weightCheck(load);
+    const check = load.check ?? weightCheck(load);
     if (check !== 'ok' && !include.has(load.ref)) {
       held.push({
         load,

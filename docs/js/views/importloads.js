@@ -8,14 +8,17 @@
 // The reading and the rules live in loadimport.js, where they are tested. This
 // file is the screen: it holds the person's choices and hands them over.
 
-import { db } from '../storage.js?v=142';
-import { openSheet, closeSheet, notify, askConfirm, toast } from '../ui.js?v=142';
-import { esc, num, shortDate } from '../fmt.js?v=142';
-import { commodityFills } from '../commodityfill.js?v=142';
-import { reconcileLoads } from '../loadcheck.js?v=142';
+import { db } from '../storage.js?v=145';
+import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=145';
+import { esc, num, shortDate } from '../fmt.js?v=145';
+import { commodityFills } from '../commodityfill.js?v=145';
+import { reconcileLoads } from '../loadcheck.js?v=145';
+import {
+  FIELD_SPECS, REQUIRED_KEYS, chooseSetup, recallSetups, rememberSetup, setupProblems, peekFile, distinctOf, likelyFinished,
+} from '../loadmap.js?v=145';
 import {
   readFreightExport, planNames, distinctNames, matchCommodity, matchSiloByNumber, suggestCutoff, buildMovements, COMPLETED,
-} from '../loadimport.js?v=142';
+} from '../loadimport.js?v=145';
 
 const MEMORY_KEY = 'grainflow.loadImportChoices';
 const NEW = '__new';
@@ -61,11 +64,172 @@ export function openLoadImportSheet() {
   });
 }
 
+// Remembered column choices live on this device, like the paddock and silo choices.
+const store = {
+  getItem: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+  setItem: (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode: it just asks again */ } },
+};
+
+/**
+ * A file arrives. If its columns are ones already known — the weighbridge platform's
+ * own export, or a layout matched before — it simply opens. Only a file with columns
+ * nobody has matched, or one that has stopped fitting what was matched, asks the
+ * person which column is which.
+ */
 function begin(body, text) {
-  const { loads, missingColumns } = readFreightExport(text);
+  const { headers, rows } = peekFile(text);
+  if (headers.length === 0 || rows.length === 0) { body.innerHTML = '<div class="empty">That file has no loads in it.</div>'; return; }
+  const choice = chooseSetup(headers, recallSetups(store));
+  const accept = (setup, source) => review(body, text, setup, source, headers, rows);
+  if (choice.confirm) {
+    showMapping(body, text, headers, rows, choice, (setup) => {
+      rememberSetup(store, headers, setup);
+      accept(setup, 'matched');
+    });
+  } else {
+    accept(choice.setup, choice.source);
+  }
+}
+
+const READ_WITH = {
+  platform: 'Read as a weighbridge platform export.',
+  saved: 'Read with the columns you matched before.',
+  last: 'Read with the columns you matched before.',
+  matched: 'Read with the columns you just matched.',
+};
+
+/** "Which column is which" — the one screen a new kind of file needs. */
+function showMapping(body, text, headers, rows, choice, done) {
+  const sample = (header) => {
+    const at = headers.findIndex((h) => h.trim().toLowerCase() === String(header ?? '').trim().toLowerCase());
+    if (at < 0) return '';
+    const hit = rows.find((r) => String(r[at] ?? '').trim() !== '');
+    return hit ? String(hit[at]).trim() : '';
+  };
+  const headerOptions = [{ value: '', label: '— not in this file —' }, ...headers.map((h) => ({ value: h, label: h }))];
+  const start = choice.setup;
+  const row = (spec) => field({
+    label: `${spec.label}${spec.required ? ' *' : ''}`, id: `lm-${spec.key}`, type: 'select',
+    value: start.columns?.[spec.key] ?? '', options: headerOptions,
+  });
+  const required = FIELD_SPECS.filter((f) => f.required);
+  const optional = FIELD_SPECS.filter((f) => !f.required);
+  const isIt = !choice.problems?.length;
+
+  body.innerHTML = `
+    <div class="card">
+      <h2>Match this file's columns</h2>
+      <div class="field hint" style="margin-bottom:8px">${isIt
+        ? 'These are columns the app has not seen before. Say which column is which, once; the same layout opens straight away next time.'
+        : 'This file no longer fits the columns you matched before, so check them. What still fits is filled in.'}</div>
+      ${choice.problems?.length ? `<div class="field hint" style="color:var(--danger);margin-bottom:8px">${choice.problems.map(esc).join('<br>')}</div>` : ''}
+      <div id="lm-required">${required.map(row).join('')}</div>
+      <div class="grid-2">
+        ${field({ label: 'Dates are written', id: 'lm-order', type: 'select', value: start.dateOrder || 'dmy', options: [
+          { value: 'dmy', label: 'Day / Month / Year' }, { value: 'mdy', label: 'Month / Day / Year' }, { value: 'ymd', label: 'Year / Month / Day' }] })}
+        ${field({ label: 'Weights are in', id: 'lm-unit', type: 'select', value: start.unit || 't', options: [
+          { value: 't', label: 'Tonnes' }, { value: 'kg', label: 'Kilograms' }] })}
+      </div>
+      <details class="fold" ${optional.some((f) => start.columns?.[f.key]) ? 'open' : ''}>
+        <summary><div><h2>More columns (optional)</h2><div class="sub">Truck, grade, quality results, load number, status</div></div></summary>
+        <div id="lm-optional">${optional.map(row).join('')}</div>
+      </details>
+      <div id="lm-status-slot"></div>
+      <div class="subhead" style="margin-top:10px">What this reads as</div>
+      <div id="lm-preview"></div>
+      <button class="btn" id="lm-go" style="margin-top:10px">Use these columns</button>
+    </div>`;
+
+  // a sample value under each column, so the person can see they picked the right one
+  const showSamples = () => {
+    for (const spec of FIELD_SPECS) {
+      const select = body.querySelector(`#lm-${spec.key}`);
+      if (!select) continue;
+      const holder = select.closest('.field');
+      let hint = holder.querySelector('.lm-sample');
+      if (!hint) { hint = document.createElement('div'); hint.className = 'field hint lm-sample'; holder.appendChild(hint); }
+      const v = sample(select.value);
+      hint.textContent = select.value ? (v ? `e.g. ${v}` : 'that column is empty in the first rows') : '';
+    }
+  };
+
+  // Which statuses mean a load happened: the file's own words, with the likely ones ticked.
+  const doneValues = new Set((start.completed || []).map((v) => String(v).toLowerCase()));
+  const paintStatuses = () => {
+    const slot = body.querySelector('#lm-status-slot');
+    const column = body.querySelector('#lm-status')?.value;
+    if (!slot) return;
+    if (!column) { slot.innerHTML = ''; return; }
+    const values = distinctOf(rows, headers, column);
+    const had = slot.querySelectorAll('input[data-done]');
+    const ticked = new Set([...slot.querySelectorAll('input[data-done]:checked')].map((i) => i.dataset.done.toLowerCase()));
+    slot.innerHTML = `<div class="subhead" style="margin-top:8px">Which statuses mean the load happened?</div>
+      ${values.map((v) => {
+        const key = v.value.toLowerCase();
+        const on = had.length ? ticked.has(key) : (doneValues.size ? doneValues.has(key) : likelyFinished(v.value));
+        return `<label style="display:flex;gap:8px;align-items:center;padding:4px 0"><input type="checkbox" data-done="${esc(v.value)}" ${on ? 'checked' : ''} style="width:auto"> ${esc(v.value)} <span class="meta">(${v.n})</span></label>`;
+      }).join('')}`;
+  };
+
+  const gather = () => {
+    const columns = {};
+    for (const spec of FIELD_SPECS) {
+      const v = body.querySelector(`#lm-${spec.key}`)?.value;
+      if (v) columns[spec.key] = v;
+    }
+    const ticked = [...body.querySelectorAll('input[data-done]:checked')].map((i) => i.dataset.done);
+    return {
+      columns,
+      dateOrder: body.querySelector('#lm-order').value,
+      unit: body.querySelector('#lm-unit').value,
+      completed: columns.status ? ticked : [],
+    };
+  };
+
+  const preview = () => {
+    const setup = gather();
+    const problems = setupProblems(setup, headers);
+    const out = body.querySelector('#lm-preview');
+    const go = body.querySelector('#lm-go');
+    const unmet = REQUIRED_KEYS.filter((k) => !setup.columns[k]);
+    if (unmet.length) {
+      out.innerHTML = `<div class="field hint" style="color:var(--danger)">Still to match: ${unmet.map((k) => esc(FIELD_SPECS.find((f) => f.key === k).label)).join(', ')}.</div>`;
+      go.disabled = true;
+      return;
+    }
+    const { loads, missingColumns } = readFreightExport(text, setup);
+    if (missingColumns.length) {
+      out.innerHTML = `<div class="field hint" style="color:var(--danger)">Missing: ${missingColumns.map(esc).join(', ')}.</div>`;
+      go.disabled = true;
+      return;
+    }
+    const clean = loads.filter((l) => !l.problems.length);
+    const line = (l) => `${esc(l.date ? shortDate(l.date) : 'no date')} · ${esc(l.field || '?')} → ${esc(l.silo || '?')} · ${esc(l.commodity || '?')} · ${l.deliveryTons != null ? num(l.deliveryTons, 2) + ' t' : 'no weight'}`;
+    out.innerHTML = `
+      <div class="row"><span class="label">Rows read cleanly</span><span class="value">${clean.length} of ${loads.length}</span></div>
+      ${clean.slice(0, 3).map((l) => `<div class="field hint">${line(l)}</div>`).join('') || '<div class="field hint" style="color:var(--danger)">No row could be read with these choices. Check the date order and the columns.</div>'}
+      ${loads.length - clean.length ? `<div class="field hint">${loads.length - clean.length} row(s) can't be used with these choices, and will be listed on the next screen.</div>` : ''}`;
+    go.disabled = problems.length > 0 || clean.length === 0;
+  };
+
+  const refresh = () => { showSamples(); paintStatuses(); preview(); };
+  body.querySelector('.card').addEventListener('change', refresh);
+  body.querySelector('#lm-go').addEventListener('click', () => done(gather()));
+  refresh();
+}
+
+/** The file with a layout chosen: show what it holds and carry on to the paddock/silo steps. */
+function review(body, text, setup, source, headers, rows) {
+  const { loads, missingColumns } = readFreightExport(text, setup);
+  const rematch = () => showMapping(body, text, headers, rows, { setup, problems: [] }, (next) => {
+    rememberSetup(store, headers, next);
+    review(body, text, next, 'matched', headers, rows);
+  });
   if (missingColumns.length) {
-    body.innerHTML = `<div class="card"><h2>That is not the truck loads export</h2>
-      <div class="field hint" style="color:var(--danger)">Missing columns: ${missingColumns.map(esc).join(', ')}.</div></div>`;
+    body.innerHTML = `<div class="card"><h2>Some columns are missing</h2>
+      <div class="field hint" style="color:var(--danger)">Missing: ${missingColumns.map(esc).join(', ')}.</div>
+      <button class="btn secondary small" id="li-rematch" style="margin-top:8px">Match the columns</button></div>`;
+    body.querySelector('#li-rematch').addEventListener('click', rematch);
     return;
   }
   if (loads.length === 0) { body.innerHTML = '<div class="empty">That file has no loads in it.</div>'; return; }
@@ -115,7 +279,7 @@ function begin(body, text) {
   }
 
   // Loads that completed but whose weights do not agree, or cannot be checked.
-  const heldCandidates = loads.filter((l) => !l.problems.length && COMPLETED.includes(l.status) && l.check !== 'ok');
+  const heldCandidates = loads.filter((l) => !l.problems.length && l.finished !== false && l.check !== 'ok');
 
   const resolved = () => {
     const maps = { fields: {}, silos: {}, commodities: {} };
@@ -183,6 +347,8 @@ function begin(body, text) {
     </label>`;
 
   body.innerHTML = `
+    <div class="field hint" style="margin-bottom:8px">${READ_WITH[source] || ''}
+      <button type="button" class="link-btn" id="li-columns" style="min-height:0;padding:0 4px">Change columns</button></div>
     <div class="card" id="li-summary"></div>
     ${heldCandidates.length ? `
     <div class="card">
@@ -205,6 +371,7 @@ function begin(body, text) {
     <div class="card"><h2>First few loads</h2><div id="li-preview"></div></div>
     <button class="btn" id="li-go" style="margin-top:8px">Import</button>`;
 
+  body.querySelector('#li-columns').addEventListener('click', rematch);
   const summary = body.querySelector('#li-summary');
   const preview = body.querySelector('#li-preview');
   const go = body.querySelector('#li-go');

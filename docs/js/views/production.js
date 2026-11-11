@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=142';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=142';
-import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=142';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=142';
-import { describeMerge } from '../merge.js?v=142';
-import { renderRelatedMovements } from './movements.js?v=142';
-import { canSeeYield } from '../nav.js?v=142';
+import { db } from '../storage.js?v=145';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=145';
+import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=145';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=145';
+import { describeMerge } from '../merge.js?v=145';
+import { renderRelatedMovements } from './movements.js?v=145';
+import { canSeeYield } from '../nav.js?v=145';
 
 let unsub = null;
 
@@ -69,7 +69,11 @@ function paint(root) {
     el.addEventListener('click', () => {
       const target = root.querySelector('#' + CSS.escape(el.dataset.jump));
       if (!target) return;
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Land with the heading just below the title bar, which stays fixed at the top —
+      // scrolling the heading to the very top would leave it hidden underneath.
+      const bar = root.querySelector('.topbar');
+      const room = (bar ? bar.getBoundingClientRect().height : 0) + 10;
+      window.scrollTo({ top: Math.max(0, window.scrollY + target.getBoundingClientRect().top - room), behavior: 'smooth' });
       target.classList.remove('flash');
       void target.offsetWidth;            // restart the highlight if it is tapped twice
       target.classList.add('flash');

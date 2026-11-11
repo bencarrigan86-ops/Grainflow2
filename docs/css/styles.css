@@ -7,9 +7,9 @@
   --text-dim: #5b6470;
   --border: #e3e5e8;
   --accent-input: #eab308;   /* yellow — input tabs */
-  --accent-input-bg: #fffdf6;
+  --accent-input-bg: var(--surface);
   --accent-report: #0070c0;  /* blue — report tabs */
-  --accent-report-bg: #f6f9fd;
+  --accent-report-bg: var(--surface);
   --accent-summary: #2e7d32; /* green — ultimate report */
   --accent-summary-bg: #f5faf5;
   --danger: #c0392b;
@@ -27,8 +27,11 @@
   --safe-top: env(safe-area-inset-top, 0px);
 }
 
+/* Dark: either the device asks for it and the person has not chosen light, or the
+   person has chosen dark in Settings. The same tokens, said twice, because one
+   selector cannot be both a media query and an attribute. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0e1013;
     --surface: #1a1d21;
     --surface-2: #202429;
@@ -38,11 +41,27 @@
     --warn-bg: #33250e;
     --track: #2b2f34;
     --border: #2b2f34;
-    --accent-input-bg: #1d1b12;
-    --accent-report-bg: #131c26;
+    --accent-input-bg: var(--surface);
+    --accent-report-bg: var(--surface);
     --accent-summary-bg: #131e14;
   }
 }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+    --bg: #0e1013;
+    --surface: #1a1d21;
+    --surface-2: #202429;
+    --text: #f0f1f3;
+    --text-dim: #a3aab2;
+    --warn: #f0b35a;
+    --warn-bg: #33250e;
+    --track: #2b2f34;
+    --border: #2b2f34;
+    --accent-input-bg: var(--surface);
+    --accent-report-bg: var(--surface);
+    --accent-summary-bg: #131e14;
+}
+:root[data-theme="light"] { color-scheme: light; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -96,8 +115,8 @@ html, body {
   border: 1px solid var(--border);
 }
 
-.card.input { background: var(--accent-input-bg); border-color: color-mix(in srgb, var(--accent-input) 35%, var(--border)); }
-.card.report { background: var(--accent-report-bg); border-color: color-mix(in srgb, var(--accent-report) 30%, var(--border)); }
+.card.input { background: var(--accent-input-bg); }
+.card.report { background: var(--accent-report-bg); }
 .card.summary { background: var(--accent-summary-bg); border-color: color-mix(in srgb, var(--accent-summary) 30%, var(--border)); }
 
 .card h2 {
@@ -110,8 +129,8 @@ html, body {
 }
 
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
-.dot.input { background: var(--accent-input); }
-.dot.report { background: var(--accent-report); }
+.dot.input { background: var(--accent-summary); }
+.dot.report { background: var(--accent-summary); }
 .dot.summary { background: var(--accent-summary); }
 
 .row {
@@ -465,9 +484,11 @@ tr.jump-row { cursor: pointer; }
 .badge.pos { background: #dcf5df; color: #1e7d2c; }
 .badge.neg { background: #fbe1de; color: #c0392b; }
 @media (prefers-color-scheme: dark) {
-  .badge.pos { background: #113a17; color: #6adb7a; }
-  .badge.neg { background: #3a1512; color: #ef8a7f; }
+  :root:not([data-theme="light"]) .badge.pos { background: #113a17; color: #6adb7a; }
+  :root:not([data-theme="light"]) .badge.neg { background: #3a1512; color: #ef8a7f; }
 }
+:root[data-theme="dark"] .badge.pos { background: #113a17; color: #6adb7a; }
+:root[data-theme="dark"] .badge.neg { background: #3a1512; color: #ef8a7f; }
 
 .empty {
   text-align: center;
@@ -807,3 +828,7 @@ details.fold > summary .sub { font-size: 12px; color: var(--text-dim); margin-to
   padding: 11px 8px;
   box-shadow: inset 0 2px 0 var(--tbl);
 }
+
+/* Amber is kept for one job: something that needs attention (unsent changes, a warning). */
+.card.warn { background: var(--warn-bg); border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); }
+.dot.warn { background: var(--warn); }

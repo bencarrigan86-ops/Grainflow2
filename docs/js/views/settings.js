@@ -1,18 +1,19 @@
-import { db } from '../storage.js?v=142';
-import { num, money, esc } from '../fmt.js?v=142';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=142';
-import { openLoadImportSheet } from './importloads.js?v=142';
-import { APP_VERSION } from '../version.js?v=142';
-import { exportRowsAsCSV } from '../csv.js?v=142';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc, closingStock } from '../derived.js?v=142';
-import { endpointLabel } from './movements.js?v=142';
+import { db } from '../storage.js?v=145';
+import { getTheme, setTheme } from '../theme.js?v=145';
+import { num, money, esc } from '../fmt.js?v=145';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=145';
+import { openLoadImportSheet } from './importloads.js?v=145';
+import { APP_VERSION } from '../version.js?v=145';
+import { exportRowsAsCSV } from '../csv.js?v=145';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc, closingStock } from '../derived.js?v=145';
+import { endpointLabel } from './movements.js?v=145';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=142';
+} from '../invites.js?v=145';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=142';
+} from '../auth.js?v=145';
 
 let unsub = null;
 
@@ -37,6 +38,14 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      <div class="card">
+        <h2>Appearance</h2>
+        <div class="segmented" id="theme-seg">
+          ${[['auto', 'Match my phone'], ['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => `<button type="button" data-theme-choice="${v}" class="${getTheme() === v ? 'active' : ''}">${l}</button>`).join('')}
+        </div>
+        <div class="field hint" style="margin-top:6px">Kept on this device only. "Match my phone" follows its light or dark setting.</div>
+      </div>
+
       <div class="card">
         <h2>Season</h2>
         ${field({ label: 'Viewing', id: 'year-select', type: 'select', value: currentYear, options: years.map((y) => ({ value: y, label: y })) })}
@@ -221,6 +230,10 @@ function paint(root) {
       accountNumber: getVal(root, 'bd-accno')?.trim(),
     });
   });
+  root.querySelectorAll('#theme-seg button').forEach((b) => b.addEventListener('click', () => {
+    setTheme(b.dataset.themeChoice);
+    root.querySelectorAll('#theme-seg button').forEach((x) => x.classList.toggle('active', x === b));
+  }));
   root.querySelector('#rename-year').addEventListener('click', () => openRenameYearSheet(currentYear));
   root.querySelector('#new-year').addEventListener('click', () => openNewYearSheet(currentYear));
   const deleteYearBtn = root.querySelector('#delete-year');
@@ -698,9 +711,9 @@ async function paintSyncCard(root) {
   const roleName = esc(roleLabel(db.getRole()));
 
   const e = status.lastError;
-  card.className = 'card input';
+  card.className = 'card warn';
   card.innerHTML = `
-    <h2><span class="dot input"></span>Not yet on the server</h2>
+    <h2><span class="dot warn"></span>Not yet on the server</h2>
     <div class="row">
       <span class="label">Changes waiting</span>
       <span class="value">${status.pending}</span>
