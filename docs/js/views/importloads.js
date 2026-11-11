@@ -8,13 +8,14 @@
 // The reading and the rules live in loadimport.js, where they are tested. This
 // file is the screen: it holds the person's choices and hands them over.
 
-import { db } from '../storage.js?v=129';
-import { openSheet, closeSheet, notify, askConfirm, toast } from '../ui.js?v=129';
-import { esc, num, shortDate } from '../fmt.js?v=129';
-import { commodityFills } from '../commodityfill.js?v=129';
+import { db } from '../storage.js?v=131';
+import { openSheet, closeSheet, notify, askConfirm, toast } from '../ui.js?v=131';
+import { esc, num, shortDate } from '../fmt.js?v=131';
+import { commodityFills } from '../commodityfill.js?v=131';
+import { reconcileLoads } from '../loadcheck.js?v=131';
 import {
   readFreightExport, planNames, distinctNames, matchCommodity, matchSiloByNumber, suggestCutoff, buildMovements, COMPLETED,
-} from '../loadimport.js?v=129';
+} from '../loadimport.js?v=131';
 
 const MEMORY_KEY = 'grainflow.loadImportChoices';
 const NEW = '__new';
@@ -194,12 +195,46 @@ function begin(body, text) {
     ${mapCard('field', 'Paddocks', 'The "Pickup Storage" column. Matched where the name is the same apart from case, spaces and leading zeros (A07 is A7).')}
     ${mapCard('silo', 'Silos and storages', 'The "Delivery Storage" column. New bunkers and sheds are added with no dimensions, and count tonnes from the loads.')}
     ${mapCard('commodity', 'Commodities', 'The "Commodity" column.')}
+    <div class="card" id="li-compare-card">
+      <h2>Compare with what is in the app</h2>
+      <div class="field hint" style="margin-bottom:6px">Matches each load in this file to the load in the app by its movement number,
+        and shows, paddock by paddock, what the file says against what the app holds. Changes nothing.</div>
+      <button class="btn secondary small" id="li-compare" type="button">Compare</button>
+      <div id="li-compare-out"></div>
+    </div>
     <div class="card"><h2>First few loads</h2><div id="li-preview"></div></div>
     <button class="btn" id="li-go" style="margin-top:8px">Import</button>`;
 
   const summary = body.querySelector('#li-summary');
   const preview = body.querySelector('#li-preview');
   const go = body.querySelector('#li-go');
+
+  body.querySelector('#li-compare').addEventListener('click', () => {
+    const { fields: appFields, storages: appStorages, movements } = db.get();
+    const r = reconcileLoads(loads, movements, resolved());
+    const fname = (id) => appFields.find((f) => f.id === id)?.name ?? '(unknown paddock)';
+    const sname = (id) => appStorages.find((x) => x.id === id)?.name ?? '(unknown silo)';
+    const t = (v) => num(v, 1);
+    const list = (items, line, more = 8) => items.length
+      ? items.slice(0, more).map((x) => `<div class="field hint">${line(x)}</div>`).join('')
+        + (items.length > more ? `<div class="field hint">…and ${items.length - more} more.</div>` : '')
+      : '';
+    const issue = (label, items, line) => `<div class="row"><span class="label">${label}</span><span class="value" style="${items.length ? 'color:var(--danger)' : ''}">${items.length}</span></div>${list(items, line)}`;
+    const fileTotal = r.byField.reduce((a, f) => a + f.fileTons, 0);
+    const appTotal = r.byField.reduce((a, f) => a + f.appTons, 0);
+    const rows = r.byField.filter((f) => Math.abs(f.appTons - f.fileTons) > 0.05 || f.otherTons > 0.05);
+    body.querySelector('#li-compare-out').innerHTML = `
+      <div class="row" style="margin-top:8px"><span class="label">Loads in the file</span><span class="value">${loads.length}</span></div>
+      <div class="row"><span class="label">Found in the app</span><span class="value">${r.matched}</span></div>
+      ${issue('Not in the app', r.missing, (x) => `${esc(x.ref)} · ${esc(shortDate(x.date))} · ${esc(x.field)} · ${t(x.deliveryTons)} t`)}
+      ${issue('In the app more than once', r.copies, (x) => `${esc(x.load.ref)} · ${x.count} copies`)}
+      ${issue('In a different paddock from the file', r.wrongField, (x) => `${esc(x.load.ref)} · file says ${esc(x.load.field)} (${esc(fname(x.expected))}), app has ${x.actual.length ? x.actual.map((a) => `${esc(fname(a.id))} ${t(a.tons)} t`).join(' + ') : 'no paddock'}`)}
+      ${issue('In a different silo from the file', r.wrongSilo, (x) => `${esc(x.load.ref)} · file says ${esc(x.load.silo)} (${esc(sname(x.expected))}), app has ${x.actual.length ? x.actual.map((a) => `${esc(sname(a.id))} ${t(a.tons)} t`).join(' + ') : 'no silo'}`)}
+      ${issue('Weight differs from the file', r.tonsDiffer, (x) => `${esc(x.load.ref)} · file ${t(x.load.deliveryTons)} t, app load ${t(x.loadTons)} t, paddock leg ${t(x.legTons)} t`)}
+      <div class="subhead" style="margin-top:8px">Paddocks that differ &mdash; file against app</div>
+      <div class="field hint">The file totals ${t(fileTotal)} t; the app holds ${t(appTotal)} t from paddocks. &ldquo;Other&rdquo; is tonnes in the app that are not loads from this file.</div>
+      ${rows.length ? rows.map((f) => `<div class="row"><span class="label">${esc(fname(f.id))}<div class="meta">file ${t(f.fileTons)} · app ${t(f.appTons)}${f.otherTons > 0.05 ? ` · other ${t(f.otherTons)}` : ''}</div></span><span class="value">${f.appTons - f.fileTons > 0 ? '+' : ''}${t(f.appTons - f.fileTons)} t</span></div>`).join('') : '<div class="field hint">Every paddock agrees with the file.</div>'}`;
+  });
 
   const refresh = () => {
     const r = buildMovements(loads, resolved(), { existing: db.get().movements, include });
