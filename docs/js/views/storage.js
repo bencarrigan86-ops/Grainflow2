@@ -1,9 +1,10 @@
-import { db } from '../storage.js?v=115';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=115';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=115';
-import { num, tons, esc } from '../fmt.js?v=115';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=115';
-import { renderRelatedMovements } from './movements.js?v=115';
+import { db } from '../storage.js?v=116';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=116';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=116';
+import { hasStorageQuality } from '../mapping.js?v=116';
+import { num, tons, esc } from '../fmt.js?v=116';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=116';
+import { renderRelatedMovements } from './movements.js?v=116';
 
 let unsub = null;
 let listMode = 'chronological';
@@ -305,6 +306,63 @@ function computeStorageTons(s, commodities) {
   });
 }
 
+/**
+ * What is in the storage: crop year, grade and the measurements behind it.
+ * Folded away until there is something in it, so a silo that has never been
+ * classed does not carry seven empty boxes.
+ *
+ * "Test weight" here is the measured weight of the grain, in kg/hL. It is not the
+ * density override further down the sheet (t/m³), which is a setting that turns a
+ * measured volume into tonnes; 78 kg/hL is 0.78 t/m³ but the two are kept apart.
+ */
+function qualityFold(existing, grades) {
+  const has = hasStorageQuality(existing || {});
+  return `
+    <details class="fold" ${has ? 'open' : ''}>
+      <summary><div><h2>Grain quality</h2>
+        <div class="sub">Crop year, grade, moisture, protein, screenings, test weight, falling number</div></div></summary>
+      <datalist id="dl-grades">${grades.map((g) => `<option value="${esc(g)}">`).join('')}</datalist>
+      <div class="grid-2">
+        ${field({ label: 'Crop year', id: 'q-year', value: existing?.cropYear, placeholder: 'e.g. 2026/27' })}
+        ${field({ label: 'Grade', id: 'q-grade', value: existing?.grade, placeholder: 'e.g. APH1', list: 'dl-grades' })}
+      </div>
+      <div class="grid-2">
+        ${field({ label: 'Moisture (%)', id: 'q-moisture', type: 'number', step: '0.1', value: existing?.moisturePct ?? '' })}
+        ${field({ label: 'Protein (%)', id: 'q-protein', type: 'number', step: '0.1', value: existing?.proteinPct ?? '' })}
+      </div>
+      <div class="grid-2">
+        ${field({ label: 'Screenings (%)', id: 'q-screenings', type: 'number', step: '0.1', value: existing?.screeningsPct ?? '' })}
+        ${field({ label: 'Test weight (kg/hL)', id: 'q-tw', type: 'number', step: '0.1', value: existing?.testWeightKgHl ?? '', hint: 'As measured. Not the volume density below.' })}
+      </div>
+      ${field({ label: 'Falling number (seconds)', id: 'q-fn', type: 'number', step: '1', value: existing?.fallingNumber ?? '' })}
+    </details>`;
+}
+
+/** The quality fields from the form; a blank box is null, not zero. */
+function readQuality(root) {
+  const n = (id) => (getVal(root, id) === '' || getVal(root, id) == null ? null : getNum(root, id));
+  return {
+    cropYear: getVal(root, 'q-year')?.trim() || '',
+    grade: getVal(root, 'q-grade')?.trim() || '',
+    moisturePct: n('q-moisture'),
+    proteinPct: n('q-protein'),
+    screeningsPct: n('q-screenings'),
+    testWeightKgHl: n('q-tw'),
+    fallingNumber: n('q-fn'),
+  };
+}
+
+/** "2026/27 · APH1 · 11.2% moisture · 11.5% protein · 78 kg/hL" — what is recorded, nothing else. */
+function qualityLine(s) {
+  const pct = (v, label) => (v !== null && v !== undefined && v !== '' ? `${num(v, 1)}% ${label}` : '');
+  return [
+    s.cropYear, s.grade,
+    pct(s.moisturePct, 'moisture'), pct(s.proteinPct, 'protein'), pct(s.screeningsPct, 'screenings'),
+    s.testWeightKgHl != null && s.testWeightKgHl !== '' ? `${num(s.testWeightKgHl, 1)} kg/hL` : '',
+    s.fallingNumber != null && s.fallingNumber !== '' ? `FN ${num(s.fallingNumber, 0)}` : '',
+  ].filter(Boolean).map(esc).join(' · ');
+}
+
 function kindLabel(kind) {
   if (kind === 'bunker') return 'Bunker';
   if (kind === 'tally') return 'Tally';
@@ -323,6 +381,7 @@ function storageRow(s, commodities, movements) {
         <div>
           <div class="main">${esc(s.name)} <span class="badge" style="background:var(--surface-2);color:var(--text-dim)">Tally</span></div>
           <div class="meta">${esc(c ? c.name : 'No commodity set')}</div>
+          ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
         </div>
         <div class="right">
           <div class="main">${num(ledger, 1)} ${esc(unitLabel)}</div>
@@ -345,6 +404,7 @@ function storageRow(s, commodities, movements) {
         <div class="main">${tons(r.tons)}</div>
       </div>
       <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(s.capacityTons, 0)} t` : ''}</div>
+      ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
       ${capPct !== null ? `<div class="gauge ${capPct >= 95 ? 'warn' : ''}" role="img" aria-label="${Math.round(capPct)} percent full"><i style="width:${capPct}%"></i></div>` : ''}
       <div class="li-foot" style="margin-top:4px">
         <span class="meta">Measured. Tracked stock ${num(ledger, 1)} t</span>
@@ -355,7 +415,9 @@ function storageRow(s, commodities, movements) {
 }
 
 function openStorageSheet(existing) {
-  const { commodities, movements } = db.get();
+  const { commodities, movements, storages } = db.get();
+  // Grades already used on other storages, offered as suggestions so APH1 is typed once.
+  const gradesInUse = [...new Set(storages.map((x) => x.grade).filter(Boolean))].sort();
   const fixedMovementNet = existing ? movementNetForStorage(existing.id, movements) : 0;
   let kind = existing?.kind || 'silo';
 
@@ -375,6 +437,7 @@ function openStorageSheet(existing) {
         ${field({ label: 'Commodity currently stored', id: 's-commodity', type: 'select', value: existing?.commodityId, options: commodityOptions(commodities) })}
         ${field({ label: 'Opening / current stock (t)', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
+        ${qualityFold(existing, gradesInUse)}
         <hr class="sep" />
         ${kind === 'silo' ? `
           <div class="grid-2">
@@ -485,6 +548,7 @@ function openStorageSheet(existing) {
           capacityTons: getNum(root, 's-capacity') || null,
           angleOfRepose: angleOverride ? parseFloat(angleOverride) : null,
           testWeight: twOverride ? parseFloat(twOverride) : null,
+          ...readQuality(root),
         };
         if (kind === 'silo') {
           payload.radius = getNum(root, 's-radius');
@@ -527,6 +591,7 @@ function openStorageSheet(existing) {
         ${field({ label: 'Unit', id: 's-unit', value: existing?.unitLabel, placeholder: 'e.g. round bales, bales, t', hint: "Whatever this storage counts — shown next to the tracked stock figure" })}
         ${field({ label: 'Opening / current stock', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
+        ${qualityFold(existing, gradesInUse)}
         ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
         ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete ${kindLabel(existing.kind).toLowerCase()}</button>` : ''}
         <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
@@ -556,6 +621,7 @@ function openStorageSheet(existing) {
         const name = getVal(root, 's-name')?.trim();
         if (!name) { root.querySelector('#s-name').focus(); return; }
         db.upsertStorage({
+          ...readQuality(root),
           id: existing?.id,
           kind,
           name,

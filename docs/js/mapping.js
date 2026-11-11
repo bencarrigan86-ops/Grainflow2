@@ -34,6 +34,53 @@ const n = (v) => (v === '' || v === null || v === undefined ? 0 : Number(v) || 0
 const s = (v) => (v === null || v === undefined ? '' : String(v));
 const orNull = (v) => (v === '' || v === undefined ? null : v);
 
+// What is in a storage, as opposed to how much: crop year, grade and the
+// measurements behind it. [app key, column, kind].
+const QUALITY_FIELDS = [
+  ['cropYear', 'crop_year', 'text'],
+  ['grade', 'grade', 'text'],
+  ['moisturePct', 'moisture_pct', 'num'],
+  ['proteinPct', 'protein_pct', 'num'],
+  ['screeningsPct', 'screenings_pct', 'num'],
+  ['testWeightKgHl', 'test_weight_kg_hl', 'num'],
+  ['fallingNumber', 'falling_number', 'num'],
+];
+
+/** Has anything about the grain's quality been recorded on this storage? */
+export function hasStorageQuality(st) {
+  return QUALITY_FIELDS.some(([key]) => st[key] !== undefined && st[key] !== null && st[key] !== '');
+}
+
+/**
+ * The quality columns for a storage row — or none at all.
+ *
+ * Left out entirely while a storage has no quality recorded, rather than sent as
+ * nulls. The columns arrived in a migration, and a database that has not had it
+ * yet rejects any row that names them; sending them on every storage would stop
+ * every silo from saving until it was run, over a feature nobody had used. A
+ * storage that has ever had quality recorded (__hasQuality) keeps sending them,
+ * so clearing a value reaches the server as a null rather than being forgotten.
+ */
+function qualityColumns(st) {
+  if (!hasStorageQuality(st) && !st.__hasQuality) return {};
+  return Object.fromEntries(QUALITY_FIELDS.map(([key, col, kind]) => [
+    col,
+    kind === 'num' ? (st[key] === '' || st[key] == null ? null : Number(st[key])) : orNull(st[key] ?? ''),
+  ]));
+}
+
+function qualityFromRow(row) {
+  // A storage with nothing recorded comes back with no quality keys at all, the
+  // way it went out — not seven empty ones — so a round trip changes nothing.
+  if (!QUALITY_FIELDS.some(([, col]) => row[col] !== null && row[col] !== undefined)) return {};
+  const out = {};
+  for (const [key, col, kind] of QUALITY_FIELDS) {
+    out[key] = kind === 'num' ? (row[col] == null ? null : Number(row[col])) : (row[col] ?? '');
+  }
+  out.__hasQuality = true;
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // app shape  ->  rows
 // ---------------------------------------------------------------------------
@@ -133,6 +180,7 @@ export function stateToRows(state, farmId) {
         fill_state: st.fillState || 'peak',
         opening_stock: n(st.openingStock),
         unit_label: st.unitLabel || 't',
+        ...qualityColumns(st),
       });
     }
 
@@ -367,6 +415,7 @@ export function rowsToState(rows) {
         fillState: st.fill_state,
         openingStock: n(st.opening_stock),
         unitLabel: st.unit_label ?? 't',
+        ...qualityFromRow(st),
       })),
 
       sales: inSeason(rows.sales, season.id).map((sale) => {

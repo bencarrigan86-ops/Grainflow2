@@ -18,17 +18,18 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=115';
+import { hydrate } from './hydrate.js?v=116';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState,
-} from './local.js?v=115';
-import { chooseBootState, resolveLegacy } from './boot.js?v=115';
-import { isLegacyDirty } from './dirty.js?v=115';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=115';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=115';
-import { schedulePush, pushOnReconnect } from './sync.js?v=115';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=115';
+} from './local.js?v=116';
+import { chooseBootState, resolveLegacy } from './boot.js?v=116';
+import { isLegacyDirty } from './dirty.js?v=116';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=116';
+import { hasStorageQuality } from './mapping.js?v=116';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=116';
+import { schedulePush, pushOnReconnect } from './sync.js?v=116';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=116';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -606,11 +607,17 @@ export const db = {
     const c = current();
     if (storage.id) {
       const idx = c.storages.findIndex((s) => s.id === storage.id);
-      if (idx >= 0) c.storages[idx] = { ...c.storages[idx], ...storage };
+      if (idx >= 0) {
+        const merged = { ...c.storages[idx], ...storage };
+        if (hasStorageQuality(merged)) merged.__hasQuality = true;   // see mapping.js: keeps clearing a value reaching the server
+        c.storages[idx] = merged;
+      }
       touch('storage', storage.id);
     } else {
       const id = uid();
-      c.storages.push({ ...storage, id, createdAt: Date.now() });
+      const made = { ...storage, id, createdAt: Date.now() };
+      if (hasStorageQuality(made)) made.__hasQuality = true;
+      c.storages.push(made);
       touch('storage', id);
       persist();
       return id;

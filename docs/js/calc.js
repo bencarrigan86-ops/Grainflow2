@@ -23,6 +23,16 @@ export function siloResult({ radius, height, coneAngle = 0, angleOfRepose, testW
   const coneVol = (1 / 3) * Math.PI * r * r * coneH;
   const peakVol = (1 / 3) * Math.PI * r * r * peakH;
 
+  // No grain height means an empty silo. The hopper and the peak are only full
+  // when there is grain standing in the barrel above them; counting them
+  // regardless made every empty silo report a few tens of tonnes (22 t for a
+  // 5.9 m silo, over 80 t for the big ones) and inflated the measured total on
+  // the Storage tab. Heights are dipped from the top of the cone, so a silo that
+  // has grain only in its hopper reads as zero here — dip it as a small height.
+  if (h <= 0) {
+    return { coneHeight: coneH, peakHeight: peakH, barrelVol: 0, coneVol: 0, peakVol: 0, totalVol: 0, tons: 0 };
+  }
+
   let totalVol;
   if (fillState === 'peak') totalVol = barrelVol + coneVol + peakVol;
   else if (fillState === 'decline') totalVol = barrelVol + coneVol - peakVol;
@@ -47,7 +57,12 @@ export function bunkerResult({ width, length, angleDeg, testWeight }) {
   const l = Number(length) || 0;
   const a = (Number(angleDeg) || 0) * D2R;
   const height = (w / 2) * Math.tan(a);
-  const volume = 0.25 * Math.tan(a) * w * w * ((l - w) + (Math.PI / 6) * w);
+  // An empty bunker holds nothing. The formula below is for a pile at least as
+  // long as it is wide (a straight middle between two half-cone ends); a bunker
+  // with width entered and no filled length yet came out negative, as did a short
+  // heap. Neither is a negative amount of grain, so the result stops at zero.
+  if (w <= 0 || l <= 0) return { height, volume: 0, tons: 0 };
+  const volume = Math.max(0, 0.25 * Math.tan(a) * w * w * ((l - w) + (Math.PI / 6) * w));
   const tons = volume * (Number(testWeight) || 0);
   return { height, volume, tons };
 }
