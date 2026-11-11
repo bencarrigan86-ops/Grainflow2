@@ -8,12 +8,13 @@
 // The reading and the rules live in loadimport.js, where they are tested. This
 // file is the screen: it holds the person's choices and hands them over.
 
-import { db } from '../storage.js?v=125';
-import { openSheet, closeSheet, notify, askConfirm, toast } from '../ui.js?v=125';
-import { esc, num, shortDate } from '../fmt.js?v=125';
+import { db } from '../storage.js?v=126';
+import { openSheet, closeSheet, notify, askConfirm, toast } from '../ui.js?v=126';
+import { esc, num, shortDate } from '../fmt.js?v=126';
+import { commodityFills } from '../commodityfill.js?v=126';
 import {
   readFreightExport, planNames, distinctNames, matchCommodity, matchSiloByNumber, suggestCutoff, buildMovements, COMPLETED,
-} from '../loadimport.js?v=125';
+} from '../loadimport.js?v=126';
 
 const MEMORY_KEY = 'grainflow.loadImportChoices';
 const NEW = '__new';
@@ -292,8 +293,12 @@ function begin(body, text) {
     const result = buildMovements(loads, final, { existing: db.get().movements, include });
     const added = db.addMovements(result.movements);
     remember(choices);
+    // A silo with no commodity that has just been filled with wheat is a wheat silo.
+    const now = db.get();
+    const { fills } = commodityFills(now.storages, now.movements, now.fields);
+    for (const f of fills) db.upsertStorage({ id: f.storage.id, commodityId: f.commodityId });
     closeSheet();
-    toast(`Imported ${added} loads`);
+    toast(`Imported ${added} loads${fills.length ? ` · ${fills.length} silo${fills.length === 1 ? '' : 's'} given a commodity` : ''}`);
     if (result.held.length || result.skipped.length) {
       notify(`${added} loads imported.\n\n${result.held.length} held back and ${result.skipped.length} that could not be imported were not added. `
         + 'Run the import again and tick the held loads to bring them in; loads already in the app are recognised and not added twice.');

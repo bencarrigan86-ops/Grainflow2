@@ -1,13 +1,14 @@
-import { db } from '../storage.js?v=125';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=125';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=125';
-import { hasStorageQuality } from '../mapping.js?v=125';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=125';
-import { num, tons, esc, shortDate } from '../fmt.js?v=125';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=125';
-import { renderRelatedMovements } from './movements.js?v=125';
-import { openSiloSetupSheet } from './silosetup.js?v=125';
-import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=125';
+import { db } from '../storage.js?v=126';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=126';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=126';
+import { hasStorageQuality } from '../mapping.js?v=126';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=126';
+import { num, tons, esc, shortDate } from '../fmt.js?v=126';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=126';
+import { renderRelatedMovements } from './movements.js?v=126';
+import { openSiloSetupSheet } from './silosetup.js?v=126';
+import { commodityFills } from '../commodityfill.js?v=126';
+import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=126';
 
 let unsub = null;
 let listMode = 'chronological';
@@ -84,6 +85,7 @@ function paint(root) {
       <h2>Saved silos &amp; bunkers</h2>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="silo-setup">Season set-up&hellip;</button>` : ''}
+        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="fill-commodity">Fill in commodities from loads</button>` : ''}
         <button type="button" class="chip ${showMeasured ? 'active' : ''}" id="toggle-measured" aria-pressed="${showMeasured}">Measured: ${showMeasured ? 'shown' : 'hidden'}</button>
       </div>
       <div class="segmented" id="list-mode">
@@ -133,6 +135,28 @@ function paint(root) {
   });
   root.querySelector('#add-storage').addEventListener('click', () => openStorageSheet(null));
   root.querySelector('#silo-setup')?.addEventListener('click', () => openSiloSetupSheet());
+  root.querySelector('#fill-commodity')?.addEventListener('click', async () => {
+    const { storages, movements, fields, commodities } = db.get();
+    const { fills, mixed } = commodityFills(storages, movements, fields);
+    const nameOf = (id) => commodities.find((c) => c.id === id)?.name ?? 'Unknown';
+    if (fills.length === 0) {
+      notify(mixed.length
+        ? `${mixed.length} silo${mixed.length === 1 ? '' : 's'} with no commodity took more than one commodity, so I have not guessed: ${mixed.map((m) => m.storage.name).join(', ')}. Set those by hand.`
+        : 'Every silo that has had loads delivered into it already has a commodity.');
+      return;
+    }
+    const list = fills.map((f) => `${f.storage.name} → ${nameOf(f.commodityId)}`).join('
+');
+    const ok = await askConfirm(`Give these ${fills.length} silos the commodity of the loads delivered into them?
+
+${list}${mixed.length ? `
+
+Left alone (more than one commodity): ${mixed.map((m) => m.storage.name).join(', ')}` : ''}`, { confirmLabel: 'Fill in' });
+    if (!ok) return;
+    for (const f of fills) db.upsertStorage({ id: f.storage.id, commodityId: f.commodityId });
+    toast(`${fills.length} silo${fills.length === 1 ? '' : 's'} updated`);
+    paint(root);
+  });
   root.querySelector('#toggle-measured')?.addEventListener('click', () => { setShowMeasured(!showMeasured); paint(root); });
 }
 

@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=125';
-import { movementsForEndpoint } from '../derived.js?v=125';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=125';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=125';
-import { compressAndStampImage } from '../img.js?v=125';
-import { displayUrlFor } from '../photos.js?v=125';
-import { specText } from '../outload.js?v=125';
+import { db } from '../storage.js?v=126';
+import { movementsForEndpoint } from '../derived.js?v=126';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=126';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=126';
+import { compressAndStampImage } from '../img.js?v=126';
+import { displayUrlFor } from '../photos.js?v=126';
+import { specText } from '../outload.js?v=126';
 
 let unsub = null;
 

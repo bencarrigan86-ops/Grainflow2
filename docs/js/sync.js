@@ -15,11 +15,11 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=125';
-import { stateToRows } from './mapping.js?v=125';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=125';
-import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=125';
-import { flushPendingPhotos } from './photos.js?v=125';
+import { supabase } from './supabase.js?v=126';
+import { stateToRows } from './mapping.js?v=126';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=126';
+import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=126';
+import { flushPendingPhotos } from './photos.js?v=126';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -162,6 +162,8 @@ export async function push(state, farmId, role = 'owner') {
             hint: error.hint,
             code: error.code,
             sample: part[0],
+            // One refused row stops the whole push, so say which one it is.
+            refused: await findRefusedRows(table, part, onConflict),
           });
           return result;
         }
@@ -200,6 +202,32 @@ export async function push(state, farmId, role = 'owner') {
   } finally {
     inFlight = null;
   }
+}
+
+/**
+ * Which rows of a refused batch does the server actually refuse? Sent one at a
+ * time (they are upserts, so repeating a good one changes nothing), and for each
+ * refusal, whether the row is visible to this account at all. A row the server
+ * refuses but this account cannot see is one that already exists there, hidden —
+ * deleted on another device, or belonging to another farm — which is the usual
+ * cause of "new row violates row-level security" for someone who is the owner.
+ */
+async function findRefusedRows(table, part, onConflict) {
+  const refused = [];
+  try {
+    for (const row of part.slice(0, 400)) {
+      const { error } = await supabase.from(table).upsert([row], { onConflict });
+      if (!error) continue;
+      let hidden = null;
+      try {
+        const { data } = await supabase.from(table).select('id').eq('id', row.id).limit(1);
+        hidden = !(data && data.length);
+      } catch { /* leave unknown */ }
+      refused.push({ id: row.id, name: row.name ?? row.ticket_no ?? '', hidden, message: error.message });
+      if (refused.length >= 10) break;
+    }
+  } catch (e) { console.warn('Could not narrow down the refused row', e); }
+  return refused;
 }
 
 /** Push whenever the device comes back online, and once on load. */

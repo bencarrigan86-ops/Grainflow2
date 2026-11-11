@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=125';
-import { num, money, esc } from '../fmt.js?v=125';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=125';
-import { openLoadImportSheet } from './importloads.js?v=125';
-import { APP_VERSION } from '../version.js?v=125';
-import { exportRowsAsCSV } from '../csv.js?v=125';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=125';
-import { endpointLabel } from './movements.js?v=125';
+import { db } from '../storage.js?v=126';
+import { num, money, esc } from '../fmt.js?v=126';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=126';
+import { openLoadImportSheet } from './importloads.js?v=126';
+import { APP_VERSION } from '../version.js?v=126';
+import { exportRowsAsCSV } from '../csv.js?v=126';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=126';
+import { endpointLabel } from './movements.js?v=126';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=125';
+} from '../invites.js?v=126';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=125';
+} from '../auth.js?v=126';
 
 let unsub = null;
 
@@ -718,7 +718,10 @@ async function paintSyncCard(root) {
       <div class="field hint" style="color:var(--danger);margin-top:4px">
         ${esc(e.message || 'The server refused the change.')}${e.code ? ` (${esc(e.code)})` : ''}
       </div>
-      ${e.hint ? `<div class="field hint">${esc(e.hint)}</div>` : ''}` : ''}
+      ${e.hint ? `<div class="field hint">${esc(e.hint)}</div>` : ''}
+      ${e.refused?.length ? `
+        <div class="subhead" style="margin-top:8px">The server is refusing</div>
+        ${e.refused.map((r) => `<div class="field hint"><strong>${esc(String(r.name || 'unnamed'))}</strong> <span class="meta">${esc(r.id)}</span>${r.hidden === true ? ' &mdash; already on the server but hidden from this account (deleted there, or in another farm)' : ''}</div>`).join('')}` : ''}` : ''}
     <button class="btn secondary small" id="sync-retry" style="margin-top:8px">Try sending now</button>
   `;
 
