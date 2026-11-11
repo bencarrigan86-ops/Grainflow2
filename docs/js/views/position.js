@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=135';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=135';
-import { num, tons, money, pct, esc } from '../fmt.js?v=135';
+import { db } from '../storage.js?v=136';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=136';
+import { num, tons, money, pct, esc } from '../fmt.js?v=136';
 
 let unsub = null;
 
@@ -110,6 +110,7 @@ function commodityCard(r) {
         <div class="row"><span class="label">Sold value</span><span class="value">${money(r.soldValue, 0)}</span></div>
         ${r.opening || r.retainedSeed ? `
         <div class="row"><span class="label">Opening stock</span><span class="value">${tons(r.opening, 0)}</span></div>
+        ${r.openingValue && r.opening > 0 ? `<div class="row"><span class="label">Opening stock value ($/t)</span><span class="value">${money(r.openingValue / r.opening, 2)}/t</span></div>` : ''}
         <div class="row"><span class="label">Retained seed</span><span class="value">${tons(r.retainedSeed, 0)}</span></div>
         ` : ''}
         <div class="row"><span class="label">MTM price</span><span class="value">${money(r.mtmPrice, 2)}/t</span></div>

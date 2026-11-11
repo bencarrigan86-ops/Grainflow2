@@ -12,7 +12,7 @@
 // Pure functions: text and records in, proposals out. The screen that applies
 // them is views/silosetup.js.
 
-import { matchSiloByNumber } from './loadimport.js?v=135';
+import { matchSiloByNumber } from './loadimport.js?v=136';
 
 /**
  * Read "Commodity: silo, silo, silo" lines.
