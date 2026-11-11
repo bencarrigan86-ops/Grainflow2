@@ -18,19 +18,19 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=136';
+import { hydrate } from './hydrate.js?v=137';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
-  loadFarmStamp, setAsideState,
-} from './local.js?v=136';
-import { chooseBootState, resolveLegacy } from './boot.js?v=136';
-import { isLegacyDirty } from './dirty.js?v=136';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=136';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality } from './mapping.js?v=136';
-import { settleLegs, dedupeLegs } from './legs.js?v=136';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=136';
-import { schedulePush, pushOnReconnect } from './sync.js?v=136';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=136';
+  loadFarmStamp, setAsideState, clearOutbox, clearState,
+} from './local.js?v=137';
+import { chooseBootState, resolveLegacy } from './boot.js?v=137';
+import { isLegacyDirty } from './dirty.js?v=137';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=137';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality } from './mapping.js?v=137';
+import { settleLegs, dedupeLegs } from './legs.js?v=137';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=137';
+import { schedulePush, pushOnReconnect } from './sync.js?v=137';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=137';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -356,6 +356,27 @@ export const db = {
   },
 
   isReady() { return ready; },
+
+  /**
+   * Give up this device's own copy and the changes it has not sent, and start again
+   * from the server's. For a device that has fallen behind and cannot catch up —
+   * its queue contradicts what another device has since put right — when the
+   * person has decided the other device is the one to believe.
+   *
+   * Nothing is thrown away: the copy and the list of unsent changes are set aside
+   * under their own key first, the same way a farm's changes are when a different
+   * farm is opened. The caller reloads the page; startup then finds nothing local
+   * and nothing owed, and takes the server's copy.
+   */
+  async useServerCopy() {
+    if (!farmId) throw new Error('not signed in to a farm');
+    const owed = await outboxItems().catch(() => []);
+    await setAsideState({ ...data, __discardedOutbox: owed }, farmId);
+    await clearOutbox();
+    await clearState();
+    lastPushError = null;
+    return { discarded: owed.filter((i) => !isLegacyDirty(i)).length };
+  },
 
   /**
    * What this device still owes the server, and why it is stuck.

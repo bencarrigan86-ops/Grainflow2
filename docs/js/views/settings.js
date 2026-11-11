@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=136';
-import { num, money, esc } from '../fmt.js?v=136';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=136';
-import { openLoadImportSheet } from './importloads.js?v=136';
-import { APP_VERSION } from '../version.js?v=136';
-import { exportRowsAsCSV } from '../csv.js?v=136';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc, closingStock } from '../derived.js?v=136';
-import { endpointLabel } from './movements.js?v=136';
+import { db } from '../storage.js?v=137';
+import { num, money, esc } from '../fmt.js?v=137';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=137';
+import { openLoadImportSheet } from './importloads.js?v=137';
+import { APP_VERSION } from '../version.js?v=137';
+import { exportRowsAsCSV } from '../csv.js?v=137';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc, closingStock } from '../derived.js?v=137';
+import { endpointLabel } from './movements.js?v=137';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=136';
+} from '../invites.js?v=137';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=136';
+} from '../auth.js?v=137';
 
 let unsub = null;
 
@@ -729,8 +729,27 @@ async function paintSyncCard(root) {
       ${e.refused?.length ? `
         <div class="subhead" style="margin-top:8px">The server is refusing</div>
         ${e.refused.map((r) => `<div class="field hint"><strong>${esc(String(r.name || 'unnamed'))}</strong> <span class="meta">${esc(r.id)}</span>${r.hidden === true ? ' &mdash; already on the server but hidden from this account (deleted there, or in another farm)' : ''}</div>`).join('')}` : ''}` : ''}
-    <button class="btn secondary small" id="sync-retry" style="margin-top:8px">Try sending now</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn secondary small" id="sync-retry">Try sending now</button>
+      ${status.pending > 0 ? `<button class="btn ghost-danger small" id="sync-reset">Use the server's copy&hellip;</button>` : ''}
+    </div>
   `;
+
+  card.querySelector('#sync-reset')?.addEventListener('click', async () => {
+    const ok = await askConfirm(
+      `Throw away this device's ${status.pending} unsent change(s) and take the copy on the server?\n\n` +
+      'Use this on a device that has fallen behind, when another device holds the right version. ' +
+      'What is thrown away is kept aside on this device, not deleted, but it will not be sent. ' +
+      'Anything you entered only on this device that you want to keep would need entering again.',
+      { confirmLabel: 'Use the server\'s copy', danger: true });
+    if (!ok) return;
+    try {
+      await db.useServerCopy();
+      location.reload();
+    } catch (e) {
+      notify('Could not reset this device: ' + (e?.message || e));
+    }
+  });
 
   card.querySelector('#sync-retry').addEventListener('click', async (ev) => {
     ev.target.disabled = true;

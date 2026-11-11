@@ -1,14 +1,14 @@
-import { db } from '../storage.js?v=136';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=136';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=136';
-import { hasStorageQuality } from '../mapping.js?v=136';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=136';
-import { num, tons, esc, shortDate } from '../fmt.js?v=136';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=136';
-import { renderRelatedMovements } from './movements.js?v=136';
-import { openSiloSetupSheet } from './silosetup.js?v=136';
-import { commodityFills } from '../commodityfill.js?v=136';
-import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=136';
+import { db } from '../storage.js?v=137';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=137';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=137';
+import { hasStorageQuality } from '../mapping.js?v=137';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=137';
+import { num, tons, esc, shortDate } from '../fmt.js?v=137';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=137';
+import { renderRelatedMovements } from './movements.js?v=137';
+import { openSiloSetupSheet } from './silosetup.js?v=137';
+import { commodityFills } from '../commodityfill.js?v=137';
+import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=137';
 
 let unsub = null;
 let listMode = 'chronological';

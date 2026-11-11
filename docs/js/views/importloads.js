@@ -8,14 +8,14 @@
 // The reading and the rules live in loadimport.js, where they are tested. This
 // file is the screen: it holds the person's choices and hands them over.
 
-import { db } from '../storage.js?v=136';
-import { openSheet, closeSheet, notify, askConfirm, toast } from '../ui.js?v=136';
-import { esc, num, shortDate } from '../fmt.js?v=136';
-import { commodityFills } from '../commodityfill.js?v=136';
-import { reconcileLoads } from '../loadcheck.js?v=136';
+import { db } from '../storage.js?v=137';
+import { openSheet, closeSheet, notify, askConfirm, toast } from '../ui.js?v=137';
+import { esc, num, shortDate } from '../fmt.js?v=137';
+import { commodityFills } from '../commodityfill.js?v=137';
+import { reconcileLoads } from '../loadcheck.js?v=137';
 import {
   readFreightExport, planNames, distinctNames, matchCommodity, matchSiloByNumber, suggestCutoff, buildMovements, COMPLETED,
-} from '../loadimport.js?v=136';
+} from '../loadimport.js?v=137';
 
 const MEMORY_KEY = 'grainflow.loadImportChoices';
 const NEW = '__new';

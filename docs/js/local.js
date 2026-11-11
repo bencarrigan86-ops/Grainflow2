@@ -154,6 +154,12 @@ export async function clearOutboxItems(seqs) {
   await tx.done;
 }
 
+/** Empty the outbox: every change this device owes. Only for "take the server's copy". */
+export async function clearOutbox() {
+  const d = await db();
+  await d.clear('outbox');
+}
+
 /** Remove the pre-tracking markers once startup has dealt with them. */
 export async function clearLegacyDirty() {
   const d = await db();
