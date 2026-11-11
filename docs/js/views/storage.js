@@ -1,16 +1,35 @@
-import { db } from '../storage.js?v=117';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=117';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=117';
-import { hasStorageQuality } from '../mapping.js?v=117';
-import { num, tons, esc } from '../fmt.js?v=117';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=117';
-import { renderRelatedMovements } from './movements.js?v=117';
-import { openSiloSetupSheet } from './silosetup.js?v=117';
+import { db } from '../storage.js?v=120';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=120';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=120';
+import { hasStorageQuality } from '../mapping.js?v=120';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=120';
+import { num, tons, esc } from '../fmt.js?v=120';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=120';
+import { renderRelatedMovements } from './movements.js?v=120';
+import { openSiloSetupSheet } from './silosetup.js?v=120';
 
 let unsub = null;
 let listMode = 'chronological';
 let view = 'saved';
 let quickKind = 'silo';
+// The search box and the chosen commodity tab, kept across repaints so a sync
+// arriving does not clear what you were looking for.
+let searchText = '';
+let commodityTab = '';
+// How the list is ordered, remembered on the device like the measured switch.
+const SORT_KEY = 'grainflow.storageSort';
+let sortMode = (() => { try { const v = localStorage.getItem(SORT_KEY); return SORTS.some((x) => x.id === v) ? v : 'newest'; } catch { return 'newest'; } })();
+
+// Measured is an estimate from a dip and the silo's dimensions; tracked is the
+// stock figure plus the loads in and out. Plenty of people only trust the
+// second, so the first can be hidden — in the summary and in the list. Kept on
+// the device so it is as it was left.
+const MEASURED_KEY = 'grainflow.storageShowMeasured';
+let showMeasured = (() => { try { return localStorage.getItem(MEASURED_KEY) !== '0'; } catch { return true; } })();
+const setShowMeasured = (on) => {
+  showMeasured = on;
+  try { localStorage.setItem(MEASURED_KEY, on ? '1' : '0'); } catch { /* private mode: it just resets */ }
+};
 
 export function renderStorage(root) {
   if (unsub) unsub();
@@ -50,66 +69,128 @@ function paint(root) {
     return;
   }
 
+  const body = root.querySelector('#storage-body');
+  if (storages.length === 0) {
+    body.innerHTML = `<div class="card"><h2>Saved silos &amp; bunkers</h2>
+      <div class="empty">Tap + to save a silo or bunker so you only enter today's level next time.</div></div>`;
+    root.querySelector('#add-storage').addEventListener('click', () => openStorageSheet(null));
+    return;
+  }
+
+  body.innerHTML = `
+    <div class="filterbar" style="margin-bottom:10px">
+      <input type="search" id="storage-search" placeholder="Search silos: a number, name, grade or commodity" value="${esc(searchText)}" aria-label="Search silos" />
+    </div>
+    <div id="storage-summary"></div>
+    <div class="card">
+      <h2>Saved silos &amp; bunkers</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="silo-setup">Season set-up&hellip;</button>` : ''}
+        <button type="button" class="chip ${showMeasured ? 'active' : ''}" id="toggle-measured" aria-pressed="${showMeasured}">Measured: ${showMeasured ? 'shown' : 'hidden'}</button>
+      </div>
+      <div class="segmented" id="list-mode">
+        <button data-mode="chronological" class="${listMode === 'chronological' ? 'active' : ''}">Chronological</button>
+        <button data-mode="commodity" class="${listMode === 'commodity' ? 'active' : ''}">By commodity</button>
+      </div>
+      <div class="field" style="margin:10px 0 0">
+        <label for="storage-sort">Sort by</label>
+        <select id="storage-sort">${SORTS.map((x) => `<option value="${x.id}" ${sortMode === x.id ? 'selected' : ''}>${x.label}</option>`).join('')}</select>
+      </div>
+      <div id="storage-chips" style="margin-top:10px"></div>
+      <div id="storage-list" style="margin-top:10px"></div>
+    </div>
+  `;
+  paintStorageParts(root);
+
+  // Typing repaints only what depends on the search, so the box keeps its cursor.
+  root.querySelector('#storage-search').addEventListener('input', (e) => {
+    searchText = e.target.value;
+    paintStorageParts(root);
+  });
+
+  body.querySelector('#storage-sort').addEventListener('change', (e) => {
+    sortMode = e.target.value;
+    try { localStorage.setItem(SORT_KEY, sortMode); } catch { /* private mode: it just resets */ }
+    paintStorageParts(root);
+  });
+  body.querySelector('#list-mode').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-mode]');
+    if (!btn) return;
+    listMode = btn.dataset.mode;
+    paint(root);
+  });
+  body.querySelector('#storage-chips').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-tab]');
+    if (!chip) return;
+    commodityTab = chip.dataset.tab;
+    paintStorageParts(root);
+  });
+  body.querySelector('#storage-list').addEventListener('click', (e) => {
+    const row = e.target.closest('[data-edit-storage]');
+    if (row) openStorageSheet(db.get().storages.find((s) => s.id === row.dataset.editStorage));
+  });
+  root.querySelector('#add-storage').addEventListener('click', () => openStorageSheet(null));
+  root.querySelector('#silo-setup')?.addEventListener('click', () => openSiloSetupSheet());
+  root.querySelector('#toggle-measured')?.addEventListener('click', () => { setShowMeasured(!showMeasured); paint(root); });
+}
+
+/**
+ * The parts of the Saved view that depend on the search and the commodity tab:
+ * the summary (hidden while searching, so results are the first thing under the
+ * box), the tabs, and the list.
+ */
+function paintStorageParts(root) {
+  const { commodities, storages, movements } = db.get();
+  const searching = searchText.trim() !== '';
+  const found = searchStorages(storages, commodities, searchText);
+
+  // ---- summary ----
   const commodityRollup = storageTonsByCommodity(commodities, storages, movements);
   const storageTotals = commodityRollup.reduce((acc, r) => ({
     measuredTons: acc.measuredTons + r.measuredTons,
     trackedTons: acc.trackedTons + r.trackedTons,
   }), { measuredTons: 0, trackedTons: 0 });
-
-  const body = root.querySelector('#storage-body');
-  body.innerHTML = `
-    ${storages.length > 0 ? `
+  root.querySelector('#storage-summary').innerHTML = searching ? '' : `
     <div class="card report">
       <h2><span class="dot report"></span>By commodity</h2>
       <div class="table-scroll">
         <table>
-          <thead><tr><th>Commodity</th><th>Measured</th><th>Tracked</th></tr></thead>
+          <thead><tr><th>Commodity</th>${showMeasured ? '<th>Measured</th>' : ''}<th>Tracked</th></tr></thead>
           <tbody>
             ${commodityRollup.map((r) => `
               <tr>
                 <td>${esc(r.name)}</td>
-                <td>${num(r.measuredTons, 1)}</td>
+                ${showMeasured ? `<td>${num(r.measuredTons, 1)}</td>` : ''}
                 <td>${num(r.trackedTons, 1)}</td>
               </tr>`).join('')}
           </tbody>
           <tfoot><tr>
             <td>Total</td>
-            <td>${num(storageTotals.measuredTons, 1)}</td>
+            ${showMeasured ? `<td>${num(storageTotals.measuredTons, 1)}</td>` : ''}
             <td>${num(storageTotals.trackedTons, 1)}</td>
           </tr></tfoot>
         </table>
       </div>
-    </div>` : ''}
+    </div>`;
 
-    <div class="card">
-      <h2>Saved silos &amp; bunkers</h2>
-      ${storages.length > 0 && ['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="silo-setup" style="margin-bottom:10px">Season set-up&hellip;</button>` : ''}
-      ${storages.length > 0 ? `
-      <div class="segmented" id="list-mode">
-        <button data-mode="chronological" class="${listMode === 'chronological' ? 'active' : ''}">Chronological</button>
-        <button data-mode="commodity" class="${listMode === 'commodity' ? 'active' : ''}">By commodity</button>
-      </div>
-      <div style="margin-top:10px">` : ''}
-      ${storages.length === 0 ? `<div class="empty">Tap + to save a silo or bunker so you only enter today's level next time.</div>` : renderStorageList(storages, commodities, movements)}
-      ${storages.length > 0 ? `</div>` : ''}
-    </div>
-  `;
+  // ---- commodity tabs: only in the By commodity view ----
+  const chipsEl = root.querySelector('#storage-chips');
+  let shown = found;
+  if (listMode === 'commodity') {
+    const tabs = commodityTabs(found, commodities);
+    // A tab that has nothing left in it (after a search, or once its last silo moved) is not a place to be stuck.
+    if (commodityTab && !tabs.some((t) => t.id === commodityTab)) commodityTab = '';
+    chipsEl.innerHTML = `<div class="chips" role="tablist">
+      <button type="button" class="chip ${commodityTab ? '' : 'active'}" data-tab="" role="tab">All ${found.length}</button>
+      ${tabs.map((t) => `<button type="button" class="chip ${commodityTab === t.id ? 'active' : ''}" data-tab="${esc(t.id)}" role="tab">${esc(t.name)} ${t.count}</button>`).join('')}
+    </div>`;
+    shown = filterByTab(found, commodities, commodityTab);
+  } else chipsEl.innerHTML = '';
 
-  const listModeEl = body.querySelector('#list-mode');
-  if (listModeEl) {
-    listModeEl.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-mode]');
-      if (!btn) return;
-      listMode = btn.dataset.mode;
-      paint(root);
-    });
-  }
-
-  body.querySelectorAll('[data-edit-storage]').forEach((el) => {
-    el.addEventListener('click', () => openStorageSheet(storages.find((s) => s.id === el.dataset.editStorage)));
-  });
-  root.querySelector('#add-storage').addEventListener('click', () => openStorageSheet(null));
-  root.querySelector('#silo-setup')?.addEventListener('click', () => openSiloSetupSheet());
+  // ---- the list ----
+  root.querySelector('#storage-list').innerHTML = shown.length
+    ? renderStorageList(shown, commodities, movements)
+    : `<div class="empty">No silos match &ldquo;${esc(searchText.trim())}&rdquo;.</div>`;
 }
 
 function paintCalculator(root) {
@@ -269,25 +350,46 @@ function storageTonsByCommodity(commodities, storages, movements) {
     .filter((r) => r.count > 0);
 }
 
+/** The two columns down the right edge, labelled once above the list. */
+function columnHead() {
+  return `<div class="storage-head" aria-hidden="true"><span></span>${showMeasured ? '<span class="sr-col">Measured</span>' : ''}<span class="sr-col">Tracked</span></div>`;
+}
+
 function renderStorageList(storages, commodities, movements) {
   if (listMode === 'commodity') {
     const groups = commodities
       .map((c) => ({
         name: c.name,
-        rows: storages.filter((s) => s.commodityId === c.id).sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+        rows: sortStorages(storages.filter((s) => s.commodityId === c.id), sortMode),
       }))
       .filter((g) => g.rows.length > 0);
     const noCommodity = storages.filter((s) => !commodities.some((c) => c.id === s.commodityId));
-    if (noCommodity.length > 0) groups.push({ name: 'No commodity', rows: noCommodity });
+    if (noCommodity.length > 0) groups.push({ name: 'No commodity', rows: sortStorages(noCommodity, sortMode) });
 
-    return groups.map((g) => `
+    // One commodity chosen: just its silos, no group heading to repeat what the tab says.
+    if (commodityTab) return columnHead() + groups.flatMap((g) => g.rows).map((s) => storageRow(s, commodities, movements)).join('');
+
+    return columnHead() + groups.map((g) => `
       <div class="group-label"><span>${esc(g.name)}</span></div>
       ${g.rows.map((s) => storageRow(s, commodities, movements)).join('')}
     `).join('');
   }
 
-  const sorted = [...storages].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-  return sorted.map((s) => storageRow(s, commodities, movements)).join('');
+  const sorted = sortStorages(storages, sortMode);
+  // Sorted by grade or crop year, the list is broken up under what it is sorted
+  // by, so "APH1" is a heading with its silos beneath rather than a word to hunt
+  // for in each row.
+  if (sortGroupLabel(sorted[0] ?? {}, sortMode)) {
+    let last = null;
+    return columnHead() + sorted.map((s) => {
+      const label = sortGroupLabel(s, sortMode);
+      const heading = label !== last
+        ? `<div class="group-label"><span>${esc(label)}</span><span class="n">${sorted.filter((x) => sortGroupLabel(x, sortMode) === label).length}</span></div>` : '';
+      last = label;
+      return heading + storageRow(s, commodities, movements);
+    }).join('');
+  }
+  return columnHead() + sorted.map((s) => storageRow(s, commodities, movements)).join('');
 }
 
 function commodityOptions(commodities, includeNone = true) {
@@ -378,43 +480,46 @@ function storageRow(s, commodities, movements) {
   const isTally = s.kind === 'tally';
   const unitLabel = isTally ? (s.unitLabel || 't') : 't';
 
+  // Two figures down the right edge, the same two as the summary above: what the
+  // dip says is there, and what the books say is there. A tally storage has no
+  // geometry, so it has no measured figure.
+  const columns = (measured, trackedNote) => `
+    ${showMeasured ? `<div class="sr-col"><div class="main">${measured}</div></div>` : ''}
+    <div class="sr-col"><div class="main">${num(ledger, 1)}</div>${trackedNote ? `<div class="meta">${esc(trackedNote)}</div>` : ''}</div>`;
+
   if (isTally) {
     return `
-      <div class="list-item" data-edit-storage="${s.id}">
+      <div class="list-item storage-row" data-edit-storage="${s.id}">
         <div>
-          <div class="main">${esc(s.name)} <span class="badge" style="background:var(--surface-2);color:var(--text-dim)">Tally</span></div>
+          <div class="main">${esc(s.name)} <span class="badge muted">Tally</span></div>
           <div class="meta">${esc(c ? c.name : 'No commodity set')}</div>
           ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
         </div>
-        <div class="right">
-          <div class="main">${num(ledger, 1)} ${esc(unitLabel)}</div>
-          <div class="meta">tracked</div>
-        </div>
-      </div>
-    `;
+        ${columns('–', unitLabel === 't' ? '' : unitLabel)}
+      </div>`;
   }
 
   const r = computeStorageTons(s, commodities);
-  const capPct = s.capacityTons ? Math.min(100, (r.tons / s.capacityTons) * 100) : null;
+  // The bar and the percentage follow the tracked stock — the opening figure plus
+  // the loads in and out — so entering an opening stock fills it. It used to
+  // follow the measured estimate, which is zero until someone dips the silo.
+  // Over capacity is shown as over, not clipped to a bar that looks merely full.
+  const capPct = s.capacityTons ? Math.max(0, (ledger / s.capacityTons) * 100) : null;
   const angleOfRepose = s.angleOfRepose ?? c?.angleOfRepose ?? 0;
   const tarp = s.kind === 'bunker'
     ? bunkerTarpRequirement({ width: s.width, length: s.length, angleDeg: angleOfRepose, overhangM: s.tarpOverhangM ?? 1.5 })
     : null;
   return `
-    <div class="list-item stack" data-edit-storage="${s.id}">
-      <div class="li-top">
+    <div class="list-item storage-row" data-edit-storage="${s.id}">
+      <div>
         <div class="main">${esc(s.name)} <span class="badge muted">${kindLabel(s.kind)}</span></div>
-        <div class="main">${tons(r.tons)}</div>
+        <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(s.capacityTons, 0)} t` : ''}</div>
+        ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
+        ${capPct !== null ? `<div class="gauge ${capPct > 100 ? 'over' : capPct >= 95 ? 'warn' : ''}" role="img" aria-label="${Math.round(capPct)} percent full"><i style="width:${Math.min(100, capPct)}%"></i></div>` : ''}
+        ${tarp ? `<div class="meta">Tarp needed: ${num(tarp.tarpWidthNeeded, 1)} x ${num(tarp.tarpLengthNeeded, 1)} m</div>` : ''}
       </div>
-      <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(s.capacityTons, 0)} t` : ''}</div>
-      ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
-      ${capPct !== null ? `<div class="gauge ${capPct >= 95 ? 'warn' : ''}" role="img" aria-label="${Math.round(capPct)} percent full"><i style="width:${capPct}%"></i></div>` : ''}
-      <div class="li-foot" style="margin-top:4px">
-        <span class="meta">Measured. Tracked stock ${num(ledger, 1)} t</span>
-      </div>
-      ${tarp ? `<div class="meta">Tarp needed: ${num(tarp.tarpWidthNeeded, 1)} x ${num(tarp.tarpLengthNeeded, 1)} m</div>` : ''}
-    </div>
-  `;
+      ${columns(num(r.tons, 1))}
+    </div>`;
 }
 
 function openStorageSheet(existing) {

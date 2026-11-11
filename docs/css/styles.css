@@ -676,3 +676,10 @@ details.fold > summary .sub { font-size: 12px; color: var(--text-dim); margin-to
 .kv.sm .v { font-size: 14px; }
 .kv.sm .l { font-size: 11px; }
 .save-bar .total[hidden] ~ .btn { width: 100%; }
+
+/* Storage list: a name on the left, then Measured and Tracked down the right edge,
+   the same two columns as the summary table above it. */
+.list-item.storage-row { display: grid; grid-template-columns: 1fr auto auto; column-gap: 12px; align-items: start; }
+.storage-row .sr-col, .storage-head .sr-col { min-width: 62px; text-align: right; font-variant-numeric: tabular-nums; }
+.storage-head { display: grid; grid-template-columns: 1fr auto auto; column-gap: 12px; padding: 0 4px 6px; border-bottom: 1.5px solid var(--border); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-dim); }
+.storage-row .gauge { max-width: 100%; }

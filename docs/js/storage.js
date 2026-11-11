@@ -18,18 +18,18 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=117';
+import { hydrate } from './hydrate.js?v=120';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState,
-} from './local.js?v=117';
-import { chooseBootState, resolveLegacy } from './boot.js?v=117';
-import { isLegacyDirty } from './dirty.js?v=117';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=117';
-import { hasStorageQuality } from './mapping.js?v=117';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=117';
-import { schedulePush, pushOnReconnect } from './sync.js?v=117';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=117';
+} from './local.js?v=120';
+import { chooseBootState, resolveLegacy } from './boot.js?v=120';
+import { isLegacyDirty } from './dirty.js?v=120';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=120';
+import { hasStorageQuality } from './mapping.js?v=120';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=120';
+import { schedulePush, pushOnReconnect } from './sync.js?v=120';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=120';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
