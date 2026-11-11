@@ -1,9 +1,10 @@
-import { db } from '../storage.js?v=120';
-import { movementsForEndpoint } from '../derived.js?v=120';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=120';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=120';
-import { compressAndStampImage } from '../img.js?v=120';
-import { displayUrlFor } from '../photos.js?v=120';
+import { db } from '../storage.js?v=125';
+import { movementsForEndpoint } from '../derived.js?v=125';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=125';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=125';
+import { compressAndStampImage } from '../img.js?v=125';
+import { displayUrlFor } from '../photos.js?v=125';
+import { specText } from '../outload.js?v=125';
 
 let unsub = null;
 
@@ -20,7 +21,7 @@ let listFilter = { q: '', commodityId: '' };
 function ticketSearchText(m, ctx) {
   const ends = [...(m.froms || []).map((f) => endpointLabel(f.type, f.id, ctx)), ...(m.tos || []).map((t) => endpointLabel(t.type, t.id, ctx))];
   const c = ctx.commodities.find((cc) => cc.id === m.commodityId);
-  return [m.ticketNo, m.date, m.truckRego, m.driver, m.notes, c?.name, ...ends].filter(Boolean).join(' ').toLowerCase();
+  return [m.ticketNo, m.sourceRef, m.date, m.truckRego, m.driver, m.notes, c?.name, ...ends].filter(Boolean).join(' ').toLowerCase();
 }
 
 function dayHeading(iso) {
@@ -49,7 +50,7 @@ function paint(root) {
 
       ${movements.length > 0 ? `
       <div class="filterbar">
-        <input type="search" id="mv-q" placeholder="Search tickets, trucks, drivers, buyers" value="${esc(listFilter.q)}" aria-label="Search tickets" />
+        <input type="search" id="mv-q" placeholder="Search tickets, movement no., trucks, drivers, buyers" value="${esc(listFilter.q)}" aria-label="Search tickets" />
         ${inUse.length > 1 ? `<div class="chips">
           <button type="button" class="chip ${listFilter.commodityId ? '' : 'active'}" data-chip="">All</button>
           ${inUse.map((c) => `<button type="button" class="chip ${listFilter.commodityId === c.id ? 'active' : ''}" data-chip="${esc(c.id)}">${esc(c.name)}</button>`).join('')}
@@ -215,7 +216,7 @@ export function movementRow(m, ctx) {
   const toBreakdown = tos.length > 1
     ? tos.map((t) => `To ${endpointLabel(t.type, t.id, ctx)}: ${num(t.tons, 2)} t`).join(', ')
     : null;
-  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', ctx.grouped ? '' : (shortDate(m.date) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
+  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
   return `
     <div class="list-item stack" data-edit-movement="${m.id}">
       <div class="li-top">
@@ -226,6 +227,7 @@ export function movementRow(m, ctx) {
         <span class="meta">${details}</span>
         <span class="badges"><span class="badge ${isFinal ? 'pos' : 'warn'}">${isFinal ? 'Final' : 'Estimate'}</span>${(m.photoDataUrl || m.photoPath) ? '<span aria-label="Has photo">📷</span>' : ''}</span>
       </div>
+      ${specText(m) ? `<div class="meta">${esc(specText(m))}</div>` : ''}
       ${fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
       ${toBreakdown ? `<div class="meta">${esc(toBreakdown)}</div>` : ''}
     </div>
@@ -513,6 +515,23 @@ export function openMovementSheet(existing, template) {
           <button data-status="final" class="${src?.weightStatus === 'final' ? 'active' : ''}">Final</button>
         </div>
       </div>
+      ${existing?.sourceRef ? `<div class="field hint" style="margin-bottom:8px">Movement number from the freight platform: <strong>${esc(existing.sourceRef)}</strong></div>` : ''}
+      <details class="fold" ${existing && (existing.grade || existing.proteinPct != null || existing.moisturePct != null) ? 'open' : ''}>
+        <summary><div><h2>Load quality</h2>
+          <div class="sub">Grade, moisture, protein, screenings, test weight, falling number</div></div></summary>
+        <div class="field hint" style="margin-bottom:8px">What was on this truck. It lets the storage it went into say what
+          each load out of it will carry.</div>
+        ${field({ label: 'Grade', id: 'lq-grade', value: existing?.grade, placeholder: 'e.g. APH1' })}
+        <div class="grid-2">
+          ${field({ label: 'Moisture (%)', id: 'lq-moisture', type: 'number', step: '0.1', value: existing?.moisturePct ?? '' })}
+          ${field({ label: 'Protein (%)', id: 'lq-protein', type: 'number', step: '0.1', value: existing?.proteinPct ?? '' })}
+        </div>
+        <div class="grid-2">
+          ${field({ label: 'Screenings (%)', id: 'lq-screenings', type: 'number', step: '0.1', value: existing?.screeningsPct ?? '' })}
+          ${field({ label: 'Test weight (kg/hL)', id: 'lq-tw', type: 'number', step: '0.1', value: existing?.testWeightKgHl ?? '' })}
+        </div>
+        ${field({ label: 'Falling number (seconds)', id: 'lq-fn', type: 'number', step: '1', value: existing?.fallingNumber ?? '' })}
+      </details>
       ${field({ label: 'Notes', id: 'notes', value: src?.notes })}
       <div class="field">
         <label>Photo (e.g. truck rego)</label>
@@ -677,6 +696,14 @@ export function openMovementSheet(existing, template) {
         tons: getNum(root, 'tons'),
         weightStatus,
         notes: getVal(root, 'notes')?.trim(),
+        ...(() => {
+          const n = (id) => (getVal(root, id) === '' || getVal(root, id) == null ? null : getNum(root, id));
+          return {
+            grade: getVal(root, 'lq-grade')?.trim() || '',
+            moisturePct: n('lq-moisture'), proteinPct: n('lq-protein'), screeningsPct: n('lq-screenings'),
+            testWeightKgHl: n('lq-tw'), fallingNumber: n('lq-fn'),
+          };
+        })(),
         photoDataUrl,
         photoPath,
       });

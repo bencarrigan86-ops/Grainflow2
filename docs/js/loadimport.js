@@ -172,6 +172,21 @@ const COLUMN = {
 };
 const REQUIRED = ['ref', 'date', 'field', 'silo', 'commodity'];
 
+// The platform's quality results come as six name/value pairs ("Pickup SP1 name"
+// / "Pickup SP1 value" … SP6). Which result sits in which pair depends on the
+// commodity — chickpeas put moisture in SP2, wheat in SP1, falling number moves
+// between SP5 and SP6 — so each is found by the code in its name, not by position.
+// (For wheat and barley that is moisture in R, protein T, test weight V,
+// screenings X, falling number AB.)
+const SP_CODES = {
+  MOGR: 'moisturePct',
+  PRGR: 'proteinPct',
+  TWT: 'testWeightKgHl',
+  SCRN: 'screeningsPct',
+  FALL: 'fallingNumber',
+};
+const SP_SLOTS = [1, 2, 3, 4, 5, 6];
+
 /**
  * "28/10/2026" -> "2026-10-28". Day first, as the export writes it.
  *
@@ -217,6 +232,17 @@ export function readFreightExport(text) {
   if (missingColumns.length) return { loads: [], missingColumns, rows: table.length - 1 };
 
   const cell = (r, k) => (at[k] >= 0 ? String(r[at[k]] ?? '').trim() : '');
+  const spAt = SP_SLOTS.map((n) => [head.indexOf(`Pickup SP${n} name`), head.indexOf(`Pickup SP${n} value`)]);
+  const qualityOf = (r) => {
+    const q = {};
+    for (const [nameAt, valueAt] of spAt) {
+      if (nameAt < 0 || valueAt < 0) continue;
+      const key = SP_CODES[String(r[nameAt] ?? '').trim().toUpperCase()];
+      const v = toNumber(r[valueAt]);
+      if (key && v !== null) q[key] = v;
+    }
+    return q;
+  };
   const loads = table.slice(1).map((r, i) => {
     const pickupTons = toNumber(cell(r, 'pickupTons'));
     const deliveryTons = toNumber(cell(r, 'deliveryTons'));
@@ -236,6 +262,7 @@ export function readFreightExport(text) {
       season: cell(r, 'season'),
       pickupTons,
       deliveryTons,
+      quality: qualityOf(r),
       problems: [],
     };
     if (!load.ref) load.problems.push('no movement number');
@@ -358,7 +385,7 @@ export function suggestCutoff(loads, key, name) {
  * }}
  */
 export function buildMovements(loads, maps, { existing = [], include = new Set() } = {}) {
-  const have = new Set(existing.map((m) => refFromNotes(m.notes)).filter(Boolean));
+  const have = new Set(existing.map((m) => m.sourceRef || refFromNotes(m.notes)).filter(Boolean));
   const skipped = [];
   const held = [];
   const movements = [];
@@ -400,6 +427,11 @@ export function buildMovements(loads, maps, { existing = [], include = new Set()
       tons: load.deliveryTons,
       weightStatus: 'final',
       notes: refNote(load),
+      sourceRef: load.ref,
+      // What the platform recorded on the truck, so the storage can say what is in it
+      // and the outload predictor has something to work from.
+      ...(load.grade ? { grade: load.grade } : {}),
+      ...(load.quality ?? {}),
     });
   }
   return { movements, held, skipped, duplicates };

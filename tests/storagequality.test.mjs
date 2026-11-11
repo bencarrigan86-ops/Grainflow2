@@ -18,7 +18,7 @@
 
 import assert from 'node:assert';
 import { readFileSync, readdirSync } from 'node:fs';
-import { stateToRows, rowsToState, hasStorageQuality } from '../docs/js/mapping.js';
+import { stateToRows, rowsToState, hasStorageQuality, hasLoadQuality } from '../docs/js/mapping.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -108,6 +108,78 @@ check('every column the app sends is added by a migration', () => {
 check('the quality columns live on storages, not on a table with tighter permissions', () => {
   const sql = readFileSync(new URL('../supabase/migrations/20261111120000_storage_quality.sql', import.meta.url), 'utf8');
   assert.ok(/alter table storages/.test(sql));
+});
+
+console.log('\n=== quality of a load ===');
+
+const LOAD_COLUMNS = ['grade', 'moisture_pct', 'protein_pct', 'screenings_pct', 'test_weight_kg_hl', 'falling_number'];
+const LOAD = { id: '44444444-4444-4444-8444-444444444444', date: '2026-11-05', ticketNo: 7, tons: 36, weightStatus: 'final',
+  froms: [{ type: 'field', id: 'f1', tons: 36 }], tos: [{ type: 'silo', id: SILO.id, tons: 36 }] };
+const LOAD_QUALITY = { grade: 'APH1', moisturePct: 11.4, proteinPct: 11.9, screeningsPct: 0.8, testWeightKgHl: 79.2, fallingNumber: 410 };
+const stateWithLoad = (movement) => ({ ...stateWith(SILO), years: { 2026: { ...stateWith(SILO).years['2026'], movements: [movement] } } });
+const loadRow = (m) => stateToRows(stateWithLoad(m), FARM).movements[0];
+const loadBack = (m) => rowsToState(stateToRows(stateWithLoad(m), FARM)).years['2026'].movements[0];
+
+check('a load\'s quality goes to its columns and comes back', () => {
+  const r = loadRow({ ...LOAD, ...LOAD_QUALITY });
+  assert.equal(r.grade, 'APH1');
+  assert.equal(r.moisture_pct, 11.4);
+  assert.equal(r.protein_pct, 11.9);
+  assert.equal(r.screenings_pct, 0.8);
+  assert.equal(r.test_weight_kg_hl, 79.2);
+  assert.equal(r.falling_number, 410);
+  const b = loadBack({ ...LOAD, ...LOAD_QUALITY });
+  for (const [k, v] of Object.entries(LOAD_QUALITY)) assert.equal(b[k], v, k);
+});
+check('a load with nothing recorded sends no quality columns, so loads still save before the migration', () => {
+  const r = loadRow(LOAD);
+  for (const c of LOAD_COLUMNS) assert.ok(!(c in r), `${c} should not be sent`);
+  const b = loadBack(LOAD);
+  for (const k of Object.keys(LOAD_QUALITY)) assert.ok(!(k in b), `${k} should not appear`);
+});
+check('a load has no crop year of its own', () => {
+  assert.ok(!('crop_year' in loadRow({ ...LOAD, ...LOAD_QUALITY, cropYear: '26/27' })));
+});
+check('a load whose quality was cleared still sends nulls, so the clearing reaches the server', () => {
+  const r = loadRow({ ...LOAD, grade: '', moisturePct: null, __hasQuality: true });
+  for (const c of LOAD_COLUMNS) assert.ok(c in r && r[c] === null, c);
+});
+check('the other system\'s movement number goes to source_ref and comes back; ordinary loads send none', () => {
+  assert.equal(loadRow({ ...LOAD, sourceRef: 'M123456' }).source_ref, 'M123456');
+  assert.equal(loadBack({ ...LOAD, sourceRef: 'M123456' }).sourceRef, 'M123456');
+  assert.ok(!('source_ref' in loadRow(LOAD)));
+  assert.ok(!('sourceRef' in loadBack(LOAD)));
+});
+check('hasLoadQuality sees a value, and a zero, and ignores blanks', () => {
+  assert.equal(hasLoadQuality({ proteinPct: 0 }), true);
+  assert.equal(hasLoadQuality({ grade: '', moisturePct: null }), false);
+});
+
+console.log('\n=== notes on a storage ===');
+
+check('a note goes to the notes column and comes back', () => {
+  const r = rowOf({ ...SILO, notes: 'Auger sticks on the east side' });
+  assert.equal(r.notes, 'Auger sticks on the east side');
+  assert.equal(backOf({ ...SILO, notes: 'Auger sticks on the east side' }).notes, 'Auger sticks on the east side');
+});
+check('a storage with no note sends no notes column, and comes back without one', () => {
+  assert.ok(!('notes' in rowOf(SILO)));
+  assert.ok(!('notes' in backOf(SILO)));
+  assert.ok(!('notes' in rowOf({ ...SILO, notes: '   ' })), 'spaces are not a note');
+});
+check('a note that is deleted still reaches the server, as null', () => {
+  const r = rowOf({ ...SILO, notes: '', __hasNotes: true });
+  assert.ok('notes' in r && r.notes === null);
+});
+
+console.log('\n=== the second migration matches ===');
+
+check('every load and note column the app sends is added by a migration', () => {
+  const dir = new URL('../supabase/migrations/', import.meta.url);
+  const sql = readdirSync(dir).filter((f) => f.endsWith('.sql')).map((f) => readFileSync(new URL(f, dir), 'utf8')).join('\n');
+  const movementsPart = sql.slice(sql.indexOf('alter table movements'));
+  for (const c of LOAD_COLUMNS) assert.ok(new RegExp(`add column if not exists ${c}\\b`).test(movementsPart), `no migration adds movements.${c}`);
+  assert.ok(/alter table storages\s+add column if not exists notes text/.test(sql), 'no migration adds storages.notes');
 });
 
 console.log('');

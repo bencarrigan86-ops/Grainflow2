@@ -60,6 +60,11 @@ check('every word has to match, so words narrow the list', () => {
   assert.deepEqual(names(searchStorages(STORAGES, COMMODITIES, 'wheat 25/26')), ['Kot 3']);
   assert.deepEqual(names(searchStorages(STORAGES, COMMODITIES, 'barley kot')), ['Kot 1']);
 });
+check('a note is searchable too', () => {
+  const withNotes = [mk('01 silo', 'w', { notes: 'Auger sticks on the east side' }), mk('02 silo', 'w', { notes: 'Keeping the base for seed' }), mk('03 silo', 'w')];
+  assert.deepEqual(names(searchStorages(withNotes, COMMODITIES, 'auger')), ['01 silo']);
+  assert.deepEqual(names(searchStorages(withNotes, COMMODITIES, 'seed')), ['02 silo']);
+});
 check('a search with no match returns nothing, not everything', () => {
   assert.deepEqual(searchStorages(STORAGES, COMMODITIES, 'zzz'), []);
   assert.deepEqual(searchStorages(STORAGES, COMMODITIES, '999'), []);
@@ -127,7 +132,36 @@ check('by name: in number order, so 2 comes before 13', () => {
 });
 check('newest added first is the order the list always had', () => {
   assert.deepEqual(names(sortStorages(GRADED, 'newest')), ['13 Silo', '04 Silo', '03 Silo', 'Kot 3', '01 silo', '20 Silo', '02 silo']);
-  assert.deepEqual(names(sortStorages(GRADED)), names(sortStorages(GRADED, 'newest')), 'and it is the default');
+});
+check('most grain first: the fullest silo at the top, by what the books say', () => {
+  const tonnes = { 'Kot 3': 60, '13 Silo': 120, '02 silo': 0, '03 Silo': 300, '01 silo': 45, '20 Silo': 300.5, '04 Silo': 0 };
+  const volumeOf = (s) => ({ tracked: tonnes[s.name] });
+  assert.deepEqual(names(sortStorages(GRADED, 'volume', volumeOf)), ['20 Silo', '03 Silo', '13 Silo', 'Kot 3', '01 silo', '02 silo', '04 Silo']);
+});
+check('silos holding the same amount run in number order, and empty ones come last', () => {
+  const volumeOf = (s) => ({ tracked: s.name === '13 Silo' ? 80 : 0 });
+  assert.deepEqual(names(sortStorages(GRADED, 'volume', volumeOf)), ['13 Silo', '01 silo', '02 silo', '03 Silo', '04 Silo', '20 Silo', 'Kot 3']);
+});
+check('the dip breaks a tie when the books agree', () => {
+  const volumeOf = (s) => ({ tracked: 50, measured: s.name === 'Kot 3' ? 70 : s.name === '13 Silo' ? 90 : 0 });
+  const top = names(sortStorages(GRADED, 'volume', volumeOf)).slice(0, 2);
+  assert.deepEqual(top, ['13 Silo', 'Kot 3']);
+});
+check('the books outrank the dip: a silo that is full on paper beats one that dips higher', () => {
+  const volumeOf = (s) => ({ tracked: s.name === '01 silo' ? 100 : 0, measured: s.name === '13 Silo' ? 500 : 0 });
+  assert.equal(sortStorages(GRADED, 'volume', volumeOf)[0].name, '01 silo');
+});
+check('a silo with no figure counts as empty and does not break the order', () => {
+  const volumeOf = (s) => (s.name === '13 Silo' ? { tracked: 5 } : s.name === 'Kot 3' ? undefined : { tracked: NaN, measured: 'x' });
+  const sorted = names(sortStorages(GRADED, 'volume', volumeOf));
+  assert.equal(sorted[0], '13 Silo');
+  assert.equal(sorted.length, GRADED.length);
+});
+check('most grain first is what the list opens on, and is the first choice offered', () => {
+  assert.equal(SORTS[0].id, 'volume');
+  assert.equal(SORTS[0].label, 'Most grain first');
+  // with no way to tell how much each holds, it falls back to name order rather than failing
+  assert.deepEqual(names(sortStorages(GRADED)), names(sortStorages(GRADED, 'name')));
 });
 check('sorting leaves the list it was given alone', () => {
   const before = names(GRADED);

@@ -34,8 +34,17 @@ const n = (v) => (v === '' || v === null || v === undefined ? 0 : Number(v) || 0
 const s = (v) => (v === null || v === undefined ? '' : String(v));
 const orNull = (v) => (v === '' || v === undefined ? null : v);
 
-// What is in a storage, as opposed to how much: crop year, grade and the
-// measurements behind it. [app key, column, kind].
+// Quality — what the grain is, as opposed to how much of it there is. [app key,
+// column, kind]. A storage carries all seven; a load carries the six that
+// describe grain (a load has no "crop year" of its own).
+//
+// Both are optional and both arrived in a migration, so both follow one rule:
+// the columns are left out of a row entirely while nothing is recorded, rather
+// than sent as nulls. A database that has not had the migration yet rejects any
+// row that names them, and sending them on every silo and every load would stop
+// them all saving over a feature nobody had used. Something that has ever had a
+// value recorded (__hasQuality) keeps sending the columns, so clearing a value
+// reaches the server as a null rather than being forgotten.
 const QUALITY_FIELDS = [
   ['cropYear', 'crop_year', 'text'],
   ['grade', 'grade', 'text'],
@@ -45,40 +54,51 @@ const QUALITY_FIELDS = [
   ['testWeightKgHl', 'test_weight_kg_hl', 'num'],
   ['fallingNumber', 'falling_number', 'num'],
 ];
+const LOAD_QUALITY_FIELDS = QUALITY_FIELDS.filter(([key]) => key !== 'cropYear');
+
+function qualityKit(fields) {
+  const has = (rec) => fields.some(([key]) => rec[key] !== undefined && rec[key] !== null && rec[key] !== '');
+  const columns = (rec) => {
+    if (!has(rec) && !rec.__hasQuality) return {};
+    return Object.fromEntries(fields.map(([key, col, kind]) => [
+      col,
+      kind === 'num' ? (rec[key] === '' || rec[key] == null ? null : Number(rec[key])) : orNull(rec[key] ?? ''),
+    ]));
+  };
+  const fromRow = (row) => {
+    // Nothing recorded comes back with no quality keys at all, the way it went
+    // out, so a round trip changes nothing.
+    if (!fields.some(([, col]) => row[col] !== null && row[col] !== undefined)) return {};
+    const out = {};
+    for (const [key, col, kind] of fields) out[key] = kind === 'num' ? (row[col] == null ? null : Number(row[col])) : (row[col] ?? '');
+    out.__hasQuality = true;
+    return out;
+  };
+  return { has, columns, fromRow };
+}
+
+const storageQuality = qualityKit(QUALITY_FIELDS);
+const loadQuality = qualityKit(LOAD_QUALITY_FIELDS);
 
 /** Has anything about the grain's quality been recorded on this storage? */
-export function hasStorageQuality(st) {
-  return QUALITY_FIELDS.some(([key]) => st[key] !== undefined && st[key] !== null && st[key] !== '');
-}
+export const hasStorageQuality = storageQuality.has;
+/** ...or on this load? */
+export const hasLoadQuality = loadQuality.has;
+
+const qualityColumns = storageQuality.columns;
+const qualityFromRow = storageQuality.fromRow;
 
 /**
- * The quality columns for a storage row — or none at all.
- *
- * Left out entirely while a storage has no quality recorded, rather than sent as
- * nulls. The columns arrived in a migration, and a database that has not had it
- * yet rejects any row that names them; sending them on every storage would stop
- * every silo from saving until it was run, over a feature nobody had used. A
- * storage that has ever had quality recorded (__hasQuality) keeps sending them,
- * so clearing a value reaches the server as a null rather than being forgotten.
+ * A free-text note on a storage. Same rule: no column while there is no note,
+ * and a note that has existed keeps its column so deleting it reaches the server.
  */
-function qualityColumns(st) {
-  if (!hasStorageQuality(st) && !st.__hasQuality) return {};
-  return Object.fromEntries(QUALITY_FIELDS.map(([key, col, kind]) => [
-    col,
-    kind === 'num' ? (st[key] === '' || st[key] == null ? null : Number(st[key])) : orNull(st[key] ?? ''),
-  ]));
+export const hasStorageNote = (st) => String(st.notes ?? '').trim() !== '';
+function noteColumns(st) {
+  if (!hasStorageNote(st) && !st.__hasNotes) return {};
+  return { notes: orNull(String(st.notes ?? '').trim()) };
 }
-
-function qualityFromRow(row) {
-  // A storage with nothing recorded comes back with no quality keys at all, the
-  // way it went out — not seven empty ones — so a round trip changes nothing.
-  if (!QUALITY_FIELDS.some(([, col]) => row[col] !== null && row[col] !== undefined)) return {};
-  const out = {};
-  for (const [key, col, kind] of QUALITY_FIELDS) {
-    out[key] = kind === 'num' ? (row[col] == null ? null : Number(row[col])) : (row[col] ?? '');
-  }
-  out.__hasQuality = true;
-  return out;
+function noteFromRow(row) {
+  return row.notes === null || row.notes === undefined ? {} : { notes: row.notes, __hasNotes: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -181,6 +201,7 @@ export function stateToRows(state, farmId) {
         opening_stock: n(st.openingStock),
         unit_label: st.unitLabel || 't',
         ...qualityColumns(st),
+        ...noteColumns(st),
       });
     }
 
@@ -270,6 +291,10 @@ export function stateToRows(state, farmId) {
         weight_status: m.weightStatus || 'estimate',
         notes: orNull(m.notes),
         corrects_id: orNull(m.correctsId),
+        // The other system's movement number. Left out entirely unless there is one,
+        // so a database without the migration still saves every ordinary load.
+        ...(m.sourceRef ? { source_ref: m.sourceRef } : {}),
+        ...loadQuality.columns(m),
       });
 
       const legs = [
@@ -416,6 +441,7 @@ export function rowsToState(rows) {
         openingStock: n(st.opening_stock),
         unitLabel: st.unit_label ?? 't',
         ...qualityFromRow(st),
+        ...noteFromRow(st),
       })),
 
       sales: inSeason(rows.sales, season.id).map((sale) => {
@@ -493,6 +519,8 @@ export function rowsToState(rows) {
           weightStatus: m.weight_status,
           notes: m.notes ?? '',
           correctsId: m.corrects_id,
+          ...(m.source_ref ? { sourceRef: m.source_ref } : {}),
+          ...loadQuality.fromRow(m),
           froms: legs.filter((l) => l.direction === 'from').map(toLeg),
           tos: legs.filter((l) => l.direction === 'to').map(toLeg),
         };

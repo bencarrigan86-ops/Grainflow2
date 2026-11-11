@@ -151,6 +151,38 @@ check('the grade is the pickup grade, or the delivered one if that is blank', ()
   assert.equal(g[1].grade, 'AUH1');
 });
 
+console.log('\n=== quality results on a load ===');
+
+const SP_HEAD = 'Movement No,Status,Commodity,Pickup Date,Pickup Storage,Delivery Storage,Pickup Grade,Delivery Net Weight,'
+  + 'Pickup SP1 name,Pickup SP1 value,Pickup SP2 name,Pickup SP2 value,Pickup SP3 name,Pickup SP3 value,'
+  + 'Pickup SP4 name,Pickup SP4 value,Pickup SP5 name,Pickup SP5 value,Pickup SP6 name,Pickup SP6 value';
+check('moisture, protein, test weight, screenings and falling number are read by the code in their name', () => {
+  const csv = [SP_HEAD,
+    'M1,Completed,Wheat,01/11/2026,A7,20 Silo,APH1,36,MOGR,8.6,PRGR,12.6,TWT,80,SCRN,4.5,UNM,,FALL,410',
+    // another commodity: moisture is in the second pair, the first holds something else, and falling number sits one slot earlier
+    'M2,Completed,Chickpeas,01/11/2026,A7,20 Silo,CHK1,36,VARP,,MOGR,9.1,DEFG,,PCOL,,FALL,380,RET,',
+    'M3,Completed,Wheat,01/11/2026,A7,20 Silo,APH1,36,MOGR,,PRGR,,TWT,,SCRN,,UNM,,FALL,',
+  ].join('\n');
+  const { loads: l } = readFreightExport(csv);
+  assert.deepEqual(l[0].quality, { moisturePct: 8.6, proteinPct: 12.6, testWeightKgHl: 80, screeningsPct: 4.5, fallingNumber: 410 });
+  assert.deepEqual(l[1].quality, { moisturePct: 9.1, fallingNumber: 380 });
+  assert.deepEqual(l[2].quality, {}, 'blank values are nothing recorded, not zero');
+});
+check('a file with no result columns still reads, with no quality', () => {
+  assert.deepEqual(loads[0].quality, {});
+});
+check('the grade and results travel onto the movement', () => {
+  const csv = [SP_HEAD, 'M1,Completed,Wheat,01/11/2026,A7,20 Silo,APH1,36,MOGR,8.6,PRGR,12.6,TWT,80,SCRN,4.5,UNM,,FALL,'].join('\n');
+  const { loads: l } = readFreightExport(csv);
+  const m = buildMovements(l, { fields: { A7: 'f-a7' }, silos: { '20 Silo': 's-20' }, commodities: {} }, { include: new Set(['M1']) }).movements[0];
+  assert.equal(m.grade, 'APH1');
+  assert.equal(m.moisturePct, 8.6);
+  assert.equal(m.proteinPct, 12.6);
+  assert.equal(m.testWeightKgHl, 80);
+  assert.equal(m.screeningsPct, 4.5);
+  assert.ok(!('fallingNumber' in m));
+});
+
 console.log('\n=== building movements ===');
 
 const planned = {
@@ -205,6 +237,12 @@ check('the grade and the platform\'s movement number are kept in the notes, and 
   assert.equal(m.notes, 'Import M02 · APH1');
   assert.equal(refFromNotes(m.notes), 'M02');
   assert.equal(refFromNotes('hand-typed note'), null);
+});
+check('the movement number is kept as its own field, and a load saved with only that is still recognised', () => {
+  const made = buildMovements(loads, planned).movements;
+  assert.deepEqual(made.map((m) => m.sourceRef), ['M02', 'M04']);
+  const bare = made.map((m) => ({ ...m, notes: 'edited by hand' }));
+  assert.equal(buildMovements(loads, planned, { existing: bare }).movements.length, 0);
 });
 check('importing the same file twice adds nothing the second time', () => {
   const first = buildMovements(loads, planned);

@@ -18,18 +18,18 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=120';
+import { hydrate } from './hydrate.js?v=125';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState,
-} from './local.js?v=120';
-import { chooseBootState, resolveLegacy } from './boot.js?v=120';
-import { isLegacyDirty } from './dirty.js?v=120';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=120';
-import { hasStorageQuality } from './mapping.js?v=120';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=120';
-import { schedulePush, pushOnReconnect } from './sync.js?v=120';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=120';
+} from './local.js?v=125';
+import { chooseBootState, resolveLegacy } from './boot.js?v=125';
+import { isLegacyDirty } from './dirty.js?v=125';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=125';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality } from './mapping.js?v=125';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=125';
+import { schedulePush, pushOnReconnect } from './sync.js?v=125';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=125';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -610,6 +610,7 @@ export const db = {
       if (idx >= 0) {
         const merged = { ...c.storages[idx], ...storage };
         if (hasStorageQuality(merged)) merged.__hasQuality = true;   // see mapping.js: keeps clearing a value reaching the server
+        if (hasStorageNote(merged)) merged.__hasNotes = true;
         c.storages[idx] = merged;
       }
       touch('storage', storage.id);
@@ -617,6 +618,7 @@ export const db = {
       const id = uid();
       const made = { ...storage, id, createdAt: Date.now() };
       if (hasStorageQuality(made)) made.__hasQuality = true;
+      if (hasStorageNote(made)) made.__hasNotes = true;
       c.storages.push(made);
       touch('storage', id);
       persist();
@@ -636,11 +638,17 @@ export const db = {
     const c = current();
     if (movement.id) {
       const idx = c.movements.findIndex((m) => m.id === movement.id);
-      if (idx >= 0) c.movements[idx] = { ...c.movements[idx], ...movement };
+      if (idx >= 0) {
+        const merged = { ...c.movements[idx], ...movement };
+        if (hasLoadQuality(merged)) merged.__hasQuality = true;
+        c.movements[idx] = merged;
+      }
       touch('movement', movement.id);
     } else {
       const id = uid();
-      c.movements.push({ ...movement, id, ticketNo: data.nextMovementNo });
+      const made = { ...movement, id, ticketNo: data.nextMovementNo };
+      if (hasLoadQuality(made)) made.__hasQuality = true;
+      c.movements.push(made);
       data.nextMovementNo += 1;
       touch('movement', id);
     }
@@ -657,7 +665,9 @@ export const db = {
     const c = current();
     for (const m of list) {
       const id = uid();
-      c.movements.push({ ...m, id, ticketNo: data.nextMovementNo });
+      const made = { ...m, id, ticketNo: data.nextMovementNo };
+      if (hasLoadQuality(made)) made.__hasQuality = true;
+      c.movements.push(made);
       data.nextMovementNo += 1;
       touch('movement', id);
     }

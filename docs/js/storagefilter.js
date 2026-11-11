@@ -24,7 +24,7 @@ export const naturalByName = (a, b) =>
  * — so "wheat 25/26" finds the wheat silos carried over from last season.
  */
 function matchesText(storage, commodityName, query) {
-  const hay = [storage.name, commodityName, storage.grade, storage.cropYear].filter(Boolean).join(' ').toLowerCase();
+  const hay = [storage.name, commodityName, storage.grade, storage.cropYear, storage.notes].filter(Boolean).join(' ').toLowerCase();
   return query.toLowerCase().split(/\s+/).filter(Boolean).every((word) => hay.includes(word));
 }
 
@@ -70,6 +70,7 @@ export function filterByTab(storages, commodities, tabId) {
 // ---- sorting -----------------------------------------------------------------
 
 export const SORTS = [
+  { id: 'volume', label: 'Most grain first' },
   { id: 'newest', label: 'Newest added' },
   { id: 'name', label: 'Name' },
   { id: 'grade', label: 'Grade' },
@@ -88,9 +89,15 @@ const natural = (a, b) => text(a).localeCompare(text(b), undefined, { numeric: t
  * Crop year runs newest season first, because that is the grain you are more
  * likely to be looking for.
  *
+ * 'volume' puts the fullest silo first. It needs to be told how much each silo
+ * holds, because that comes from the movements and the dimensions, not from the
+ * record: `volumeOf(silo)` returns { tracked, measured } in tonnes. Tracked — the
+ * books — decides, measured breaks a tie, and then the name does. A silo with no
+ * figure at all counts as empty rather than breaking the order.
+ *
  * Returns a new array; the one passed in is not changed.
  */
-export function sortStorages(list, mode = 'newest') {
+export function sortStorages(list, mode = 'volume', volumeOf = () => ({})) {
   const byName = (a, b) => naturalByName(a, b);
   const blankLast = (field, dir) => (a, b) => {
     const x = text(a[field]); const y = text(b[field]);
@@ -100,6 +107,13 @@ export function sortStorages(list, mode = 'newest') {
     return dir * natural(x, y) || byName(a, b);
   };
   const copy = [...list];
+  if (mode === 'volume') {
+    const tons = (s) => { const v = volumeOf(s) || {}; return { tracked: Number(v.tracked) || 0, measured: Number(v.measured) || 0 }; };
+    return copy.sort((a, b) => {
+      const x = tons(a); const y = tons(b);
+      return (y.tracked - x.tracked) || (y.measured - x.measured) || byName(a, b);
+    });
+  }
   if (mode === 'name') return copy.sort(byName);
   if (mode === 'grade') return copy.sort(blankLast('grade', 1));
   if (mode === 'crop') return copy.sort(blankLast('cropYear', -1));

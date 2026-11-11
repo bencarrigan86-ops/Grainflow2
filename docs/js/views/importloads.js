@@ -8,12 +8,12 @@
 // The reading and the rules live in loadimport.js, where they are tested. This
 // file is the screen: it holds the person's choices and hands them over.
 
-import { db } from '../storage.js?v=120';
-import { openSheet, closeSheet, notify, askConfirm, toast } from '../ui.js?v=120';
-import { esc, num, shortDate } from '../fmt.js?v=120';
+import { db } from '../storage.js?v=125';
+import { openSheet, closeSheet, notify, askConfirm, toast } from '../ui.js?v=125';
+import { esc, num, shortDate } from '../fmt.js?v=125';
 import {
   readFreightExport, planNames, distinctNames, matchCommodity, matchSiloByNumber, suggestCutoff, buildMovements, COMPLETED,
-} from '../loadimport.js?v=120';
+} from '../loadimport.js?v=125';
 
 const MEMORY_KEY = 'grainflow.loadImportChoices';
 const NEW = '__new';
@@ -212,6 +212,7 @@ function begin(body, text) {
       <div class="row"><span class="label">Held for checking</span><span class="value">${r.held.length}</span></div>
       <div class="row"><span class="label">Already in the app</span><span class="value">${r.duplicates}</span></div>
       <div class="row"><span class="label">Cannot be imported</span><span class="value">${r.skipped.length}</span></div>
+      <div class="row"><span class="label">…of which with moisture, protein etc.</span><span class="value">${r.movements.filter((m) => m.moisturePct != null || m.proteinPct != null || m.testWeightKgHl != null || m.screeningsPct != null || m.fallingNumber != null).length}</span></div>
       <div class="row"><span class="label"><strong>Will be added</strong></span><span class="value"><strong>${r.movements.length} loads · ${num(tons, 1)} t</strong></span></div>
       <div class="field hint" style="margin-top:6px">Into the season shown at the top of the app: <strong>${esc(db.getCurrentYear())}</strong>.</div>
       ${r.skipped.length ? `<details class="fold"><summary><div><h2>Why ${r.skipped.length} cannot be imported</h2></div></summary>

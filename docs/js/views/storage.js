@@ -1,12 +1,13 @@
-import { db } from '../storage.js?v=120';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=120';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=120';
-import { hasStorageQuality } from '../mapping.js?v=120';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=120';
-import { num, tons, esc } from '../fmt.js?v=120';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=120';
-import { renderRelatedMovements } from './movements.js?v=120';
-import { openSiloSetupSheet } from './silosetup.js?v=120';
+import { db } from '../storage.js?v=125';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=125';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=125';
+import { hasStorageQuality } from '../mapping.js?v=125';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=125';
+import { num, tons, esc, shortDate } from '../fmt.js?v=125';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=125';
+import { renderRelatedMovements } from './movements.js?v=125';
+import { openSiloSetupSheet } from './silosetup.js?v=125';
+import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=125';
 
 let unsub = null;
 let listMode = 'chronological';
@@ -18,7 +19,7 @@ let searchText = '';
 let commodityTab = '';
 // How the list is ordered, remembered on the device like the measured switch.
 const SORT_KEY = 'grainflow.storageSort';
-let sortMode = (() => { try { const v = localStorage.getItem(SORT_KEY); return SORTS.some((x) => x.id === v) ? v : 'newest'; } catch { return 'newest'; } })();
+let sortMode = (() => { try { const v = localStorage.getItem(SORT_KEY); return SORTS.some((x) => x.id === v) ? v : 'volume'; } catch { return 'volume'; } })();
 
 // Measured is an estimate from a dip and the silo's dimensions; tracked is the
 // stock figure plus the loads in and out. Plenty of people only trust the
@@ -78,9 +79,6 @@ function paint(root) {
   }
 
   body.innerHTML = `
-    <div class="filterbar" style="margin-bottom:10px">
-      <input type="search" id="storage-search" placeholder="Search silos: a number, name, grade or commodity" value="${esc(searchText)}" aria-label="Search silos" />
-    </div>
     <div id="storage-summary"></div>
     <div class="card">
       <h2>Saved silos &amp; bunkers</h2>
@@ -91,6 +89,10 @@ function paint(root) {
       <div class="segmented" id="list-mode">
         <button data-mode="chronological" class="${listMode === 'chronological' ? 'active' : ''}">Chronological</button>
         <button data-mode="commodity" class="${listMode === 'commodity' ? 'active' : ''}">By commodity</button>
+      </div>
+      <div class="field" style="margin:10px 0 0">
+        <label for="storage-search">Search</label>
+        <input type="search" id="storage-search" placeholder="A number, name, grade or commodity" value="${esc(searchText)}" />
       </div>
       <div class="field" style="margin:10px 0 0">
         <label for="storage-sort">Sort by</label>
@@ -136,12 +138,11 @@ function paint(root) {
 
 /**
  * The parts of the Saved view that depend on the search and the commodity tab:
- * the summary (hidden while searching, so results are the first thing under the
- * box), the tabs, and the list.
+ * the summary, the tabs, and the list. The search box is not among them — it is
+ * left alone so it keeps its cursor while the list underneath it changes.
  */
 function paintStorageParts(root) {
   const { commodities, storages, movements } = db.get();
-  const searching = searchText.trim() !== '';
   const found = searchStorages(storages, commodities, searchText);
 
   // ---- summary ----
@@ -150,7 +151,7 @@ function paintStorageParts(root) {
     measuredTons: acc.measuredTons + r.measuredTons,
     trackedTons: acc.trackedTons + r.trackedTons,
   }), { measuredTons: 0, trackedTons: 0 });
-  root.querySelector('#storage-summary').innerHTML = searching ? '' : `
+  root.querySelector('#storage-summary').innerHTML = `
     <div class="card report">
       <h2><span class="dot report"></span>By commodity</h2>
       <div class="table-scroll">
@@ -356,40 +357,49 @@ function columnHead() {
 }
 
 function renderStorageList(storages, commodities, movements) {
+  // How much each silo holds, for sorting: what the books say, then the dip.
+  const volumeOf = (s) => ({ tracked: storageLedgerStock(s, movements), measured: computeStorageTons(s, commodities).tons });
+  const sortBy = (list) => sortStorages(list, sortMode, volumeOf);
+  const row = (s) => storageRow(s, commodities, movements);
+
+  // Sorted by grade (or crop year) the rows are laid out in sections, one per
+  // grade: a bold heading with how many silos and how many tonnes are under it,
+  // then the silos. That holds wherever the list is — flat, under a commodity
+  // tab, or inside each commodity heading — so a grade is always something you
+  // can see the extent of at a glance, not a word to read in every row.
+  const sections = (rows, nested) => {
+    if (!sortGroupLabel(rows[0] ?? {}, sortMode)) return rows.map(row).join('');
+    const order = [];
+    const by = new Map();
+    for (const s of rows) {
+      const label = sortGroupLabel(s, sortMode);
+      if (!by.has(label)) { by.set(label, []); order.push(label); }
+      by.get(label).push(s);
+    }
+    return order.map((label) => {
+      const list = by.get(label);
+      const held = list.reduce((a, s) => a + storageLedgerStock(s, movements), 0);
+      return `<div class="group-label section${nested ? ' nested' : ''}"><span>${esc(label)}</span><span class="n">${list.length} silo${list.length === 1 ? '' : 's'} · ${num(held, 0)} t</span></div>${list.map(row).join('')}`;
+    }).join('');
+  };
+
   if (listMode === 'commodity') {
     const groups = commodities
-      .map((c) => ({
-        name: c.name,
-        rows: sortStorages(storages.filter((s) => s.commodityId === c.id), sortMode),
-      }))
+      .map((c) => ({ name: c.name, rows: sortBy(storages.filter((s) => s.commodityId === c.id)) }))
       .filter((g) => g.rows.length > 0);
     const noCommodity = storages.filter((s) => !commodities.some((c) => c.id === s.commodityId));
-    if (noCommodity.length > 0) groups.push({ name: 'No commodity', rows: sortStorages(noCommodity, sortMode) });
+    if (noCommodity.length > 0) groups.push({ name: 'No commodity', rows: sortBy(noCommodity) });
 
     // One commodity chosen: just its silos, no group heading to repeat what the tab says.
-    if (commodityTab) return columnHead() + groups.flatMap((g) => g.rows).map((s) => storageRow(s, commodities, movements)).join('');
+    if (commodityTab) return columnHead() + sections(groups.flatMap((g) => g.rows), false);
 
     return columnHead() + groups.map((g) => `
       <div class="group-label"><span>${esc(g.name)}</span></div>
-      ${g.rows.map((s) => storageRow(s, commodities, movements)).join('')}
+      ${sections(g.rows, true)}
     `).join('');
   }
 
-  const sorted = sortStorages(storages, sortMode);
-  // Sorted by grade or crop year, the list is broken up under what it is sorted
-  // by, so "APH1" is a heading with its silos beneath rather than a word to hunt
-  // for in each row.
-  if (sortGroupLabel(sorted[0] ?? {}, sortMode)) {
-    let last = null;
-    return columnHead() + sorted.map((s) => {
-      const label = sortGroupLabel(s, sortMode);
-      const heading = label !== last
-        ? `<div class="group-label"><span>${esc(label)}</span><span class="n">${sorted.filter((x) => sortGroupLabel(x, sortMode) === label).length}</span></div>` : '';
-      last = label;
-      return heading + storageRow(s, commodities, movements);
-    }).join('');
-  }
-  return columnHead() + sorted.map((s) => storageRow(s, commodities, movements)).join('');
+  return columnHead() + sections(sortBy(storages), false);
 }
 
 function commodityOptions(commodities, includeNone = true) {
@@ -494,6 +504,7 @@ function storageRow(s, commodities, movements) {
           <div class="main">${esc(s.name)} <span class="badge muted">Tally</span></div>
           <div class="meta">${esc(c ? c.name : 'No commodity set')}</div>
           ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
+          ${noteLine(s) ? `<div class="meta" style="font-style:italic">${noteLine(s)}</div>` : ''}
         </div>
         ${columns('–', unitLabel === 't' ? '' : unitLabel)}
       </div>`;
@@ -515,11 +526,94 @@ function storageRow(s, commodities, movements) {
         <div class="main">${esc(s.name)} <span class="badge muted">${kindLabel(s.kind)}</span></div>
         <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(s.capacityTons, 0)} t` : ''}</div>
         ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
+        ${noteLine(s) ? `<div class="meta" style="font-style:italic">${noteLine(s)}</div>` : ''}
         ${capPct !== null ? `<div class="gauge ${capPct > 100 ? 'over' : capPct >= 95 ? 'warn' : ''}" role="img" aria-label="${Math.round(capPct)} percent full"><i style="width:${Math.min(100, capPct)}%"></i></div>` : ''}
         ${tarp ? `<div class="meta">Tarp needed: ${num(tarp.tarpWidthNeeded, 1)} x ${num(tarp.tarpLengthNeeded, 1)} m</div>` : ''}
       </div>
       ${columns(num(r.tons, 1))}
     </div>`;
+}
+
+/** A silo's free-text note. */
+function notesField(existing) {
+  return field({ label: 'Notes', id: 's-notes', type: 'textarea', rows: 3, value: existing?.notes ?? '', placeholder: 'Anything worth remembering about this storage' });
+}
+
+/** The first line of a note, for the list. */
+function noteLine(s) {
+  const first = String(s.notes ?? '').trim().split(/\r?\n/)[0];
+  return first ? esc(first.length > 70 ? `${first.slice(0, 70)}…` : first) : '';
+}
+
+/**
+ * What is in this storage, top to bottom, and what the next trucks will take
+ * out — last in, first out. Needs the quality of each load to say anything
+ * about quality; without it the prediction is a list of which loads come first.
+ */
+function predictorFold(existing) {
+  return `
+    <details class="fold">
+      <summary><div><h2>What's in it &amp; outload predictor</h2>
+        <div class="sub">Loads in the order they will come out, and what each truck will carry</div></div></summary>
+      <div class="field hint" style="margin-bottom:8px">Last in, first out: the most recent load comes out first. Add
+        the grade, protein and moisture to each load on the Movement tab and this shows what every truck will take.</div>
+      <div class="subhead" style="margin-top:4px">In the storage now, top first</div>
+      <div id="op-stack"></div>
+      <div class="subhead">Plan an outload</div>
+      <div class="grid-2">
+        ${field({ label: 'Tonnes to take out', id: 'op-total', type: 'number', step: '1', value: '' })}
+        ${field({ label: 'Truck size (t)', id: 'op-truck', type: 'number', step: '1', value: 36 })}
+      </div>
+      <div id="op-result"></div>
+    </details>`;
+}
+
+function buildPredictor(root, existing) {
+  const stackEl = root.querySelector('#op-stack');
+  if (!stackEl) return;
+  const resultEl = root.querySelector('#op-result');
+  const { layers, shortfall } = layersForStorage(existing, db.get().movements);
+
+  const layerLabel = (l) => (l.source === 'opening'
+    ? 'Opening stock (carried over)'
+    : `Ticket #${l.ticketNo ?? '?'} · ${esc(shortDate(l.date) || 'no date')}${l.rego ? ` · ${esc(l.rego)}` : ''}`);
+  const top = [...layers].reverse();
+  stackEl.innerHTML = top.length
+    ? top.slice(0, 12).map((l) => `<div class="row" style="align-items:flex-start"><span class="label">${layerLabel(l)}
+        <div class="meta">${esc(specText(l.spec)) || 'no quality recorded'}</div></span><span class="value">${num(l.tons, 1)} t</span></div>`).join('')
+      + (top.length > 12 ? `<div class="field hint">…and ${top.length - 12} older layers underneath.</div>` : '')
+    : '<div class="field hint">Nothing in this storage on the books.</div>';
+  if (shortfall > 0.05) {
+    stackEl.innerHTML += `<div class="field hint" style="color:var(--danger)">${num(shortfall, 1)} t has been loaded out that no load or opening stock accounts for, so what is shown may be off.</div>`;
+  }
+
+  const truckCard = (p, i) => {
+    const mix = p.grades.map((g) => `${esc(g.grade || 'No grade')} ${Math.round(g.pct * 100)}%`).join(' · ');
+    const lines = SPECS.map((sp) => {
+      const v = p.specs[sp.key];
+      if (!v) return '';
+      const range = Math.abs(v.max - v.min) > 1e-9 ? ` (${num(v.min, sp.dp)}–${num(v.max, sp.dp)})` : '';
+      const partial = v.coverage < 0.995 ? ` <span class="meta">from ${Math.round(v.coverage * 100)}% of the load</span>` : '';
+      return `<div class="row"><span class="label">${sp.label}</span><span class="value">${num(v.avg, sp.dp)} ${sp.unit}${range}${partial}</span></div>`;
+    }).join('');
+    const from = p.segments.map((s) => (s.layer.source === 'opening' ? 'opening stock' : `#${s.layer.ticketNo ?? '?'}`)).join(', ');
+    return `<div class="card" style="margin:8px 0">
+      <h2 style="margin-bottom:4px">Truck ${i + 1} · ${num(p.total, 1)} t</h2>
+      <div class="meta">${mix || 'No grade recorded'}</div>
+      <div class="meta" style="margin-bottom:6px">From ${esc(from)}</div>
+      ${lines || '<div class="field hint">No quality recorded on these loads.</div>'}
+    </div>`;
+  };
+  const draw = () => {
+    const total = getNum(root, 'op-total');
+    const size = getNum(root, 'op-truck') || 36;
+    if (!(total > 0)) { resultEl.innerHTML = ''; return; }
+    const plan = predictPlan(layers, total, size);
+    resultEl.innerHTML = plan.trucks.map(truckCard).join('')
+      + (plan.short > 0.05 ? `<div class="field hint" style="color:var(--danger)">Only ${num(total - plan.short, 1)} t is in the storage; ${num(plan.short, 1)} t of that outload has nothing to come from.</div>` : '');
+  };
+  root.querySelector('#op-total').addEventListener('input', draw);
+  root.querySelector('#op-truck').addEventListener('input', draw);
 }
 
 function openStorageSheet(existing) {
@@ -546,6 +640,8 @@ function openStorageSheet(existing) {
         ${field({ label: 'Opening / current stock (t)', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
         ${qualityFold(existing, gradesInUse)}
+        ${notesField(existing)}
+        ${existing ? predictorFold(existing) : ''}
         <hr class="sep" />
         ${kind === 'silo' ? `
           <div class="grid-2">
@@ -587,6 +683,7 @@ function openStorageSheet(existing) {
         <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
       `;
       if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id);
+      if (existing) buildPredictor(root, existing);
 
       const kindSel = root.querySelector('#s-kind');
       if (kindSel) {
@@ -657,6 +754,7 @@ function openStorageSheet(existing) {
           angleOfRepose: angleOverride ? parseFloat(angleOverride) : null,
           testWeight: twOverride ? parseFloat(twOverride) : null,
           ...readQuality(root),
+          notes: getVal(root, 's-notes')?.trim() || '',
         };
         if (kind === 'silo') {
           payload.radius = getNum(root, 's-radius');
@@ -700,11 +798,14 @@ function openStorageSheet(existing) {
         ${field({ label: 'Opening / current stock', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
         ${qualityFold(existing, gradesInUse)}
+        ${notesField(existing)}
+        ${existing ? predictorFold(existing) : ''}
         ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
         ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete ${kindLabel(existing.kind).toLowerCase()}</button>` : ''}
         <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
       `;
       if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id);
+      if (existing) buildPredictor(root, existing);
 
       const kindSel = root.querySelector('#s-kind');
       if (kindSel) {
@@ -730,6 +831,7 @@ function openStorageSheet(existing) {
         if (!name) { root.querySelector('#s-name').focus(); return; }
         db.upsertStorage({
           ...readQuality(root),
+          notes: getVal(root, 's-notes')?.trim() || '',
           id: existing?.id,
           kind,
           name,
