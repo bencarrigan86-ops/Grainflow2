@@ -17,6 +17,11 @@
   --warn-bg: #fff1dc;
   --track: #e3e5e8;
   --radius: 14px;
+  /* Controls. Derived from the accent and the current surface, so each one is a
+     visible, tinted, outlined thing on a white card and on a dark one alike. */
+  --btn-edge: color-mix(in srgb, var(--accent-summary) 80%, var(--text));
+  --btn-tint: color-mix(in srgb, var(--accent-summary) 12%, var(--surface));
+  --btn-ink: color-mix(in srgb, var(--accent-summary) 72%, var(--text));
   --tabbar-h: 58px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
@@ -252,20 +257,32 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
 
 .btn {
   appearance: none;
-  border: none;
+  border: 1.5px solid transparent;
   background: var(--accent-summary);
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 15px;
+  letter-spacing: .01em;
   padding: 12px 16px;
+  min-height: 46px;
   border-radius: 12px;
   width: 100%;
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,.18), 0 3px 8px color-mix(in srgb, var(--accent-summary) 28%, transparent);
 }
-.btn:active { opacity: .8; }
-.btn.secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
-.btn.danger { background: var(--danger); }
-.btn.small { width: auto; padding: 10px 16px; font-size: 13px; min-height: 40px; }
+.btn:active { opacity: .85; transform: translateY(1px); box-shadow: none; }
+.btn:disabled { opacity: .45; box-shadow: none; cursor: default; }
+/* Secondary: tinted and outlined in the accent, so it reads as a button on a card
+   of any colour, not as another bit of the card. */
+.btn.secondary {
+  background: var(--btn-tint);
+  color: var(--btn-ink);
+  border: 1.5px solid var(--btn-edge);
+  box-shadow: 0 1px 2px rgba(0,0,0,.08);
+}
+.btn.secondary:active { background: color-mix(in srgb, var(--accent-summary) 22%, var(--surface)); }
+.btn.danger { background: var(--danger); box-shadow: 0 1px 2px rgba(0,0,0,.18), 0 3px 8px color-mix(in srgb, var(--danger) 28%, transparent); }
+.btn.small { width: auto; padding: 10px 16px; font-size: 13.5px; min-height: 42px; }
 
 .fab {
   position: fixed;
@@ -328,8 +345,8 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
 
 .segmented {
   display: flex;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--btn-tint);
+  border: 1.5px solid var(--btn-edge);
   border-radius: 10px;
   padding: 3px;
   gap: 3px;
@@ -341,14 +358,14 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
   background: transparent;
   padding: 8px 4px;
   border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-dim);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--btn-ink);
 }
 .segmented button.active {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 1px 3px rgba(0,0,0,.15);
+  background: var(--accent-summary);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.25);
 }
 
 .year-pill {
@@ -379,10 +396,10 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
+  border: 1.5px solid var(--btn-edge);
   border-radius: 50%;
-  background: transparent;
-  color: var(--text-dim);
+  background: var(--btn-tint);
+  color: var(--btn-ink);
   padding: 0;
 }
 .settings-btn.active { color: var(--accent-summary); }
@@ -478,7 +495,9 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
   border: none;
   color: var(--accent-report);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
   padding: 10px 6px;
   min-height: 44px;
 }
@@ -620,10 +639,10 @@ details.fold > summary .sub { font-size: 12px; color: var(--text-dim); margin-to
 .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
 .chips::-webkit-scrollbar { display: none; }
 .chip {
-  flex: none; border: 1px solid var(--border); background: var(--surface); color: var(--text);
-  border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600; min-height: 36px;
+  flex: none; border: 1.5px solid var(--btn-edge); background: var(--btn-tint); color: var(--btn-ink);
+  border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 700; min-height: 38px;
 }
-.chip.active { background: var(--accent-summary); border-color: var(--accent-summary); color: #fff; }
+.chip.active { background: var(--accent-summary); border-color: var(--accent-summary); color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.18); }
 
 /* Confirm / message dialogs that look like the app, not the browser. */
 .dialog-backdrop {
@@ -653,7 +672,12 @@ details.fold > summary .sub { font-size: 12px; color: var(--text-dim); margin-to
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 /* A destructive action that should be findable but not the loudest thing on the sheet. */
-.btn.ghost-danger { background: transparent; color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border)); }
+.btn.ghost-danger {
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  color: var(--danger);
+  border: 1.5px solid color-mix(in srgb, var(--danger) 65%, var(--border));
+  box-shadow: none;
+}
 
 /* A list row that stacks: headline line, detail lines, then a progress bar. */
 .list-item.stack { display: block; }
@@ -696,3 +720,9 @@ details.fold > summary .sub { font-size: 12px; color: var(--text-dim); margin-to
 }
 .group-label.section .n { font-size: 12.5px; font-weight: 600; }
 .group-label.section.nested { margin-left: 8px; font-size: 14.5px; }
+
+/* Keyboard focus on any control: a ring you cannot miss, on top of the page-wide one. */
+.btn:focus-visible, .chip:focus-visible, .segmented button:focus-visible, .link-btn:focus-visible, .settings-btn:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent-report) 70%, transparent);
+  outline-offset: 2px;
+}
