@@ -1,14 +1,14 @@
-import { db } from '../storage.js?v=126';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=126';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=126';
-import { hasStorageQuality } from '../mapping.js?v=126';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=126';
-import { num, tons, esc, shortDate } from '../fmt.js?v=126';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=126';
-import { renderRelatedMovements } from './movements.js?v=126';
-import { openSiloSetupSheet } from './silosetup.js?v=126';
-import { commodityFills } from '../commodityfill.js?v=126';
-import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=126';
+import { db } from '../storage.js?v=127';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=127';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=127';
+import { hasStorageQuality } from '../mapping.js?v=127';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=127';
+import { num, tons, esc, shortDate } from '../fmt.js?v=127';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=127';
+import { renderRelatedMovements } from './movements.js?v=127';
+import { openSiloSetupSheet } from './silosetup.js?v=127';
+import { commodityFills } from '../commodityfill.js?v=127';
+import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=127';
 
 let unsub = null;
 let listMode = 'chronological';
@@ -145,13 +145,10 @@ function paint(root) {
         : 'Every silo that has had loads delivered into it already has a commodity.');
       return;
     }
-    const list = fills.map((f) => `${f.storage.name} → ${nameOf(f.commodityId)}`).join('
-');
-    const ok = await askConfirm(`Give these ${fills.length} silos the commodity of the loads delivered into them?
-
-${list}${mixed.length ? `
-
-Left alone (more than one commodity): ${mixed.map((m) => m.storage.name).join(', ')}` : ''}`, { confirmLabel: 'Fill in' });
+    const NL = String.fromCharCode(10);
+    const list = fills.map((f) => `${f.storage.name} → ${nameOf(f.commodityId)}`).join(NL);
+    const left = mixed.length ? `${NL}${NL}Left alone (more than one commodity): ${mixed.map((m) => m.storage.name).join(', ')}` : '';
+    const ok = await askConfirm(`Give these ${fills.length} silos the commodity of the loads delivered into them?${NL}${NL}${list}${left}`, { confirmLabel: 'Fill in' });
     if (!ok) return;
     for (const f of fills) db.upsertStorage({ id: f.storage.id, commodityId: f.commodityId });
     toast(`${fills.length} silo${fills.length === 1 ? '' : 's'} updated`);
