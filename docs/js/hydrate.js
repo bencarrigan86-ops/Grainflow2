@@ -11,8 +11,8 @@
 // hydration has to produce a working state object with those parts simply
 // absent. Throwing there would mean the app only runs for owners.
 
-import { supabase } from './supabase.js?v=149';
-import { rowsToState } from './mapping.js?v=149';
+import { supabase } from './supabase.js?v=152';
+import { rowsToState } from './mapping.js?v=152';
 
 // Scoped by farm_id; the child tables hang off their parents.
 const FARM_SCOPED = [

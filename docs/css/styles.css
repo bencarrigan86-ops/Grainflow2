@@ -875,3 +875,6 @@ i.sw { margin-right: 6px; vertical-align: -1px; }
 .le-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .le-grid .le-grade { grid-column: 1 / -1; }
 .lay-row { grid-template-columns: 74px 1fr 68px auto; }
+
+/* A summary table that has to fit a phone: tighter cell spacing. */
+.card.report .table-scroll table.tight th, .card.report .table-scroll table.tight td { padding-left: 5px; padding-right: 5px; }
