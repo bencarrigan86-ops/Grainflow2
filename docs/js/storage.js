@@ -18,18 +18,19 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=128';
+import { hydrate } from './hydrate.js?v=129';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState,
-} from './local.js?v=128';
-import { chooseBootState, resolveLegacy } from './boot.js?v=128';
-import { isLegacyDirty } from './dirty.js?v=128';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=128';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality } from './mapping.js?v=128';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=128';
-import { schedulePush, pushOnReconnect } from './sync.js?v=128';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=128';
+} from './local.js?v=129';
+import { chooseBootState, resolveLegacy } from './boot.js?v=129';
+import { isLegacyDirty } from './dirty.js?v=129';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=129';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality } from './mapping.js?v=129';
+import { settleLegs, dedupeLegs } from './legs.js?v=129';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=129';
+import { schedulePush, pushOnReconnect } from './sync.js?v=129';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=129';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -84,12 +85,29 @@ function defaultData() {
  * missing; max()+1 cannot, and it is self-correcting if a number is ever
  * skipped. Proper block leasing across devices arrives at step 1.5.
  */
+/**
+ * A load whose legs were sent with a new id each time comes back with copies of
+ * them, and every silo it touched reads double. Take the copies out, retire them
+ * on the server, and make sure every leg that is left has an id it will keep.
+ */
+function repairLegs(m) {
+  const fixed = dedupeLegs(m);
+  if (fixed.changed) {
+    m.froms = fixed.froms;
+    m.tos = fixed.tos;
+    fixed.retired.forEach((id) => tombstone('movement_legs', id));
+  }
+  if ((m.froms || []).some((l) => !l.__legId)) m.froms = settleLegs([], m.froms, uid).legs;
+  if ((m.tos || []).some((l) => !l.__legId)) m.tos = settleLegs([], m.tos, uid).legs;
+}
+
 function deriveCounters(state) {
   let maxTicket = 0;
   let maxInvoice = 0;
   for (const year of Object.values(state.years || {})) {
     for (const m of year.movements || []) {
       if (Number(m.ticketNo) > maxTicket) maxTicket = Number(m.ticketNo);
+      repairLegs(m);
     }
     for (const inv of year.invoices || []) {
       if (Number(inv.invoiceNo) > maxInvoice) maxInvoice = Number(inv.invoiceNo);
@@ -639,8 +657,15 @@ export const db = {
     if (movement.id) {
       const idx = c.movements.findIndex((m) => m.id === movement.id);
       if (idx >= 0) {
-        const merged = { ...c.movements[idx], ...movement };
+        const before = c.movements[idx];
+        const merged = { ...before, ...movement };
         if (hasLoadQuality(merged)) merged.__hasQuality = true;
+        // Legs keep the id they had; a leg taken out is retired on the server.
+        for (const side of ['froms', 'tos']) {
+          const { legs, retired } = settleLegs(before[side], merged[side], uid);
+          merged[side] = legs;
+          retired.forEach((id) => tombstone('movement_legs', id));
+        }
         c.movements[idx] = merged;
       }
       touch('movement', movement.id);
@@ -648,6 +673,8 @@ export const db = {
       const id = uid();
       const made = { ...movement, id, ticketNo: data.nextMovementNo };
       if (hasLoadQuality(made)) made.__hasQuality = true;
+      made.froms = settleLegs([], made.froms, uid).legs;
+      made.tos = settleLegs([], made.tos, uid).legs;
       c.movements.push(made);
       data.nextMovementNo += 1;
       touch('movement', id);
@@ -667,6 +694,8 @@ export const db = {
       const id = uid();
       const made = { ...m, id, ticketNo: data.nextMovementNo };
       if (hasLoadQuality(made)) made.__hasQuality = true;
+      made.froms = settleLegs([], made.froms, uid).legs;
+      made.tos = settleLegs([], made.tos, uid).legs;
       c.movements.push(made);
       data.nextMovementNo += 1;
       touch('movement', id);

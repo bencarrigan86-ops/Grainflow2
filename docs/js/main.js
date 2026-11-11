@@ -1,22 +1,22 @@
-import { db } from './storage.js?v=128';
-import { renderPosition } from './views/position.js?v=128';
-import { renderProduction } from './views/production.js?v=128';
-import { renderReports } from './views/reports.js?v=128';
-import { renderSales } from './views/sales.js?v=128';
-import { renderMovements } from './views/movements.js?v=128';
-import { renderStorage } from './views/storage.js?v=128';
-import { renderSettings } from './views/settings.js?v=128';
-import { renderLogin } from './views/login.js?v=128';
-import { renderAccount } from './views/account.js?v=128';
+import { db } from './storage.js?v=129';
+import { renderPosition } from './views/position.js?v=129';
+import { renderProduction } from './views/production.js?v=129';
+import { renderReports } from './views/reports.js?v=129';
+import { renderSales } from './views/sales.js?v=129';
+import { renderMovements } from './views/movements.js?v=129';
+import { renderStorage } from './views/storage.js?v=129';
+import { renderSettings } from './views/settings.js?v=129';
+import { renderLogin } from './views/login.js?v=129';
+import { renderAccount } from './views/account.js?v=129';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=128';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=128';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=128';
-import { esc } from './fmt.js?v=128';
-import { isSheetOpen } from './ui.js?v=128';
-import { APP_VERSION } from './version.js?v=128';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=128';
+} from './auth.js?v=129';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=129';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=129';
+import { esc } from './fmt.js?v=129';
+import { isSheetOpen } from './ui.js?v=129';
+import { APP_VERSION } from './version.js?v=129';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=129';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
