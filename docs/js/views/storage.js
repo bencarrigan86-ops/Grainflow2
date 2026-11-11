@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=148';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=148';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=148';
-import { hasStorageQuality } from '../mapping.js?v=148';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=148';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=148';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=148';
-import { renderRelatedMovements } from './movements.js?v=148';
-import { openSiloSetupSheet } from './silosetup.js?v=148';
-import { commodityFills } from '../commodityfill.js?v=148';
-import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=148';
+import { db } from '../storage.js?v=149';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=149';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=149';
+import { hasStorageQuality } from '../mapping.js?v=149';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=149';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=149';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=149';
+import { renderRelatedMovements } from './movements.js?v=149';
+import { openSiloSetupSheet } from './silosetup.js?v=149';
+import { commodityFills } from '../commodityfill.js?v=149';
+import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=149';
 import {
   gradeMix, dominantGrade, hasGrades, mixText, siloSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=148';
+} from '../silolayers.js?v=149';
 
 let unsub = null;
 let listMode = 'commodity';

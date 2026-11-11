@@ -1,10 +1,11 @@
-import { db } from '../storage.js?v=148';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=148';
-import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=148';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=148';
-import { describeMerge } from '../merge.js?v=148';
-import { renderRelatedMovements } from './movements.js?v=148';
-import { canSeeYield } from '../nav.js?v=148';
+import { db } from '../storage.js?v=149';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=149';
+import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=149';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=149';
+import { describeMerge } from '../merge.js?v=149';
+import { renderRelatedMovements } from './movements.js?v=149';
+import { canSeeYield } from '../nav.js?v=149';
+import { wireJumps } from '../jump.js?v=149';
 
 let unsub = null;
 
@@ -65,20 +66,7 @@ function paint(root) {
   `;
 
   // The commodity rows in the table at the top jump to that commodity's fields below.
-  root.querySelectorAll('[data-jump]').forEach((el) => {
-    el.addEventListener('click', () => {
-      const target = root.querySelector('#' + CSS.escape(el.dataset.jump));
-      if (!target) return;
-      // Land with the heading just below the title bar, which stays fixed at the top —
-      // scrolling the heading to the very top would leave it hidden underneath.
-      const bar = root.querySelector('.topbar');
-      const room = (bar ? bar.getBoundingClientRect().height : 0) + 10;
-      window.scrollTo({ top: Math.max(0, window.scrollY + target.getBoundingClientRect().top - room), behavior: 'smooth' });
-      target.classList.remove('flash');
-      void target.offsetWidth;            // restart the highlight if it is tapped twice
-      target.classList.add('flash');
-    });
-  });
+  wireJumps(root);
 
   root.querySelectorAll('[data-edit-field]').forEach((el) => {
     el.addEventListener('click', () => openFieldSheet(fields.find((f) => f.id === el.dataset.editField)));

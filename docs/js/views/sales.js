@@ -1,13 +1,14 @@
-import { db } from '../storage.js?v=148';
+import { db } from '../storage.js?v=149';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=148';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=148';
-import { num, tons, money, esc, shortDate, todayLocal } from '../fmt.js?v=148';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=148';
-import { renderRelatedMovements } from './movements.js?v=148';
-import { openInvoiceListSheet } from './invoice.js?v=148';
-import { openContractDocSheet } from './contract.js?v=148';
+} from '../documents.js?v=149';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=149';
+import { num, tons, money, esc, shortDate, todayLocal } from '../fmt.js?v=149';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=149';
+import { renderRelatedMovements } from './movements.js?v=149';
+import { openInvoiceListSheet } from './invoice.js?v=149';
+import { openContractDocSheet } from './contract.js?v=149';
+import { wireJumps } from '../jump.js?v=149';
 
 let unsub = null;
 
@@ -44,8 +45,8 @@ function paint(root) {
             <thead><tr><th>Commodity</th><th>Sold t</th><th>Due t</th><th>Avg $/t</th><th>Total $</th></tr></thead>
             <tbody>
               ${rollup.map((r) => `
-                <tr>
-                  <td>${esc(r.commodity.name)}</td>
+                <tr class="jump-row" data-jump="grp-${esc(r.commodity.id)}">
+                  <td><button type="button" class="jump-link">${esc(r.commodity.name)}</button></td>
                   <td>${num(r.tons, 0)}</td>
                   <td>${num(Math.max(0, r.tonsDue), 0)}</td>
                   <td>${num(r.avgPrice, 0)}</td>
@@ -66,13 +67,16 @@ function paint(root) {
       <div class="card input">
         <h2><span class="dot input"></span>Contracts</h2>
         ${groups.length === 0 ? `<div class="empty">No contracts yet.<br/><button class="btn" id="empty-add">Add your first sale</button></div>` : groups.map((g) => `
-          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
+          <div class="group-label" id="grp-${esc(g.id ?? 'none')}"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
           ${g.sales.map((s) => saleRow(s, movements, commodities)).join('')}
         `).join('')}
       </div>
     </div>
     <button class="fab" id="add-sale">+</button>
   `;
+
+  // The commodity rows in the table at the top jump to that commodity's contracts below.
+  wireJumps(root);
 
   root.querySelectorAll('[data-edit-sale]').forEach((el) => {
     el.addEventListener('click', () => openSaleSheet(sales.find((s) => s.id === el.dataset.editSale)));
