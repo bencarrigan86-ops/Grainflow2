@@ -91,5 +91,100 @@ check('paddocks add up to the commodity: the field view and the position view ag
   assert.ok(Math.abs(sum - rows[0].productionTons) < 1e-9, `paddocks ${sum} vs commodity ${rows[0].productionTons}`);
 });
 
+console.log('\n=== opening stock carried in from last season ===');
+
+import { closingStock, positionTotals } from '../docs/js/derived.js';
+
+const carry = { ...wheat, openingStock: 500, openingValue: 200000 };   // 500 t that last season closed at $400
+const noFields = [];
+
+check('with no opening value, nothing changes', () => {
+  const r = positionRows([{ ...wheat, openingStock: 500 }], noFields, [], [])[0];
+  assert.equal(r.unsoldTons, 500);
+  assert.equal(r.totalValue, 200000);
+  assert.equal(r.openingValue, 0);
+});
+check('the carry-in comes off total value, so income counted last season is not counted again', () => {
+  const r = positionRows([carry], noFields, [], [])[0];
+  assert.equal(r.unsoldTons, 500, 'the tonnes are still there to sell');
+  assert.equal(r.unsoldValue, 200000);
+  assert.equal(r.openingValue, 200000);
+  assert.equal(r.totalValue, 0, 'unchanged since the close: no new value this season');
+});
+check('only the change since the close shows: a price rise is this season\'s gain', () => {
+  const r = positionRows([{ ...carry, mtmPrice: 440 }], noFields, [], [])[0];
+  assert.equal(r.totalValue, 20000);      // 500 t x $40
+});
+check('a price fall shows as a loss', () => {
+  const r = positionRows([{ ...carry, mtmPrice: 380 }], noFields, [], [])[0];
+  assert.equal(r.totalValue, -10000);
+});
+check('carry-in grain sold this season is its sale price less what it was carried at', () => {
+  const sale = { id: 's1', commodityId: 'w', tons: 500, price: 450 };
+  const r = positionRows([carry], noFields, [sale], [])[0];
+  assert.equal(r.soldTons, 500);
+  assert.equal(r.unsoldTons, 0);
+  assert.equal(r.totalValue, 450 * 500 - 200000);   // $25,000 over what it was carried at
+});
+check('yield sensitivity keeps the carry-in off, and at 0% still matches the position', () => {
+  const rows = positionRows([carry], [{ id: 'f', commodityId: 'w', areaHa: 100, yieldTHa: 4, yieldMode: 'estimate' }], [], []);
+  const same = positionAtYield(rows, 0)[0];
+  assert.equal(same.totalValue, rows[0].totalValue);
+  assert.equal(positionAtYield(rows, -10)[0].totalValue, rows[0].totalValue - 40 * 400);
+});
+check('totals add the carry-in up across commodities', () => {
+  const rows = positionRows([carry, { ...barley, openingStock: 100, openingValue: 30000 }], noFields, [], []);
+  assert.equal(positionTotals(rows).openingValue, 230000);
+  assert.equal(positionTotals(rows).totalValue, 0);
+});
+check('a commodity with only an opening value still appears', () => {
+  assert.equal(positionRows([{ ...wheat, openingStock: 0, openingValue: 5000 }], noFields, [], []).length, 1);
+});
+
+console.log('\n=== last season\'s closing ===');
+
+const lastYear = {
+  commodities: [{ id: 'w', name: 'Wheat', mtmPrice: 420, openingStock: 0, retainedSeed: 0, grossMarginCost: 0 }],
+  fields: [{ id: 'f', commodityId: 'w', areaHa: 100, yieldTHa: 5, yieldMode: 'estimate' }],   // 500 t grown
+  sales: [{ id: 's', commodityId: 'w', tons: 200, price: 400 }],
+  movements: [],
+};
+check('closing stock is what was grown less what was sold, at that season\'s MTM', () => {
+  const c = closingStock(lastYear, 'wheat');
+  assert.equal(c.tons, 300);
+  assert.equal(c.mtm, 420);
+  assert.equal(c.value, 126000);
+});
+check('a commodity the season never had has no closing', () => {
+  assert.equal(closingStock(lastYear, 'Barley'), null);
+  assert.equal(closingStock(null, 'Wheat'), null);
+});
+
+console.log('\n=== saving and loading ===');
+
+import { stateToRows, rowsToState } from '../docs/js/mapping.js';
+
+const FARM = '11111111-1111-4111-8111-111111111111';
+const stateWith = (commodity) => ({
+  currentYear: '2026',
+  years: { 2026: { __seasonId: '22222222-2222-4222-8222-222222222222', commodities: [commodity], fields: [], storages: [], sales: [], movements: [], invoices: [], overheads: {} } },
+});
+const C = { id: '33333333-3333-4333-8333-333333333333', name: 'Wheat', mtmPrice: 400, openingStock: 500, retainedSeed: 0, grossMarginCost: 0 };
+const rowOf = (c) => stateToRows(stateWith(c), FARM).commodities[0];
+const backOf = (c) => rowsToState(stateToRows(stateWith(c), FARM)).years['2026'].commodities[0];
+
+check('an opening value goes to its column and comes back', () => {
+  assert.equal(rowOf({ ...C, openingValue: 200000 }).opening_stock_value, 200000);
+  assert.equal(backOf({ ...C, openingValue: 200000 }).openingValue, 200000);
+});
+check('with none, no column is sent, so commodities still save before the migration', () => {
+  assert.ok(!('opening_stock_value' in rowOf(C)));
+  assert.ok(!('openingValue' in backOf(C)));
+});
+check('a value that was cleared still sends a null/zero, so the clearing reaches the server', () => {
+  const r = rowOf({ ...C, openingValue: 0, __hasOpeningValue: true });
+  assert.ok('opening_stock_value' in r);
+});
+
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
 console.log('\nposition: ALL PASS');

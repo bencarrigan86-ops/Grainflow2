@@ -378,7 +378,10 @@ export function position(commodities, fields, sales, movements = []) {
     const unsoldTons = opening + p.tons - s.tons - retainedSeed;
     const mtmPrice = Number(c.mtmPrice) || 0;
     const unsoldValue = unsoldTons * mtmPrice;
-    const totalValue = s.totalValue + unsoldValue;
+    // What the opening stock was worth when last season closed. That income was
+    // counted then; counting it again now would overstate this season, so it comes off.
+    const openingValue = Number(c.openingValue) || 0;
+    const totalValue = s.totalValue + unsoldValue - openingValue;
     const pctSold = (p.tons - retainedSeed) > 0 ? s.tons / (p.tons - retainedSeed) : 0;
     const grossMarginCost = Number(c.grossMarginCost) || 0;
     const grossMargin = totalValue - grossMarginCost;
@@ -393,6 +396,7 @@ export function position(commodities, fields, sales, movements = []) {
       soldValue: s.totalValue,
       pctSold,
       opening,
+      openingValue,
       retainedSeed,
       unsoldTons,
       mtmPrice,
@@ -406,13 +410,31 @@ export function position(commodities, fields, sales, movements = []) {
 }
 
 /**
+ * What a commodity was left holding when a season closed: the unsold tonnes (not
+ * yet sold on a contract, so not counted as sold income) and what they were worth
+ * at that season's MTM price. This is what the next season opens with.
+ *
+ * @param {object} yearData  one season's data (commodities, fields, sales, movements)
+ * @param {string} commodityName
+ * @returns {{tons: number, mtm: number, value: number} | null}  null when the season has no such commodity
+ */
+export function closingStock(yearData, commodityName) {
+  if (!yearData) return null;
+  const key = String(commodityName ?? '').trim().toLowerCase();
+  const row = position(yearData.commodities || [], yearData.fields || [], yearData.sales || [], yearData.movements || [])
+    .find((r) => String(r.commodity.name ?? '').trim().toLowerCase() === key);
+  if (!row) return null;
+  return { tons: row.unsoldTons, mtm: row.mtmPrice, value: row.unsoldTons * row.mtmPrice };
+}
+
+/**
  * The commodities that have anything to report. A farm that has not sold or
  * stored anything yet still has a position: production alone is enough, and
  * so is an area with no yield entered yet.
  */
 export function positionRows(commodities, fields, sales, movements = []) {
   return position(commodities, fields, sales, movements)
-    .filter((r) => r.area > 0 || r.productionTons > 0 || r.soldTons > 0 || r.opening > 0 || r.retainedSeed > 0);
+    .filter((r) => r.area > 0 || r.productionTons > 0 || r.soldTons > 0 || r.opening > 0 || r.openingValue !== 0 || r.retainedSeed > 0);
 }
 
 /**
@@ -434,7 +456,7 @@ export function positionAtYield(rows, adjustPct = 0) {
     const productionTons = r.productionTons * k;
     const unsoldTons = r.opening + productionTons - r.soldTons - r.retainedSeed;
     const unsoldValue = unsoldTons * r.mtmPrice;
-    const totalValue = r.soldValue + unsoldValue;
+    const totalValue = r.soldValue + unsoldValue - (r.openingValue || 0);
     const grossMargin = totalValue - r.grossMarginCost;
     return {
       ...r,
@@ -480,10 +502,11 @@ export function positionTotals(rows) {
     soldValue: acc.soldValue + r.soldValue,
     unsoldTons: acc.unsoldTons + r.unsoldTons,
     unsoldValue: acc.unsoldValue + r.unsoldValue,
+    openingValue: acc.openingValue + (r.openingValue || 0),
     totalValue: acc.totalValue + r.totalValue,
     grossMarginCost: acc.grossMarginCost + r.grossMarginCost,
     grossMargin: acc.grossMargin + r.grossMargin,
-  }), { area: 0, productionTons: 0, soldTons: 0, soldValue: 0, unsoldTons: 0, unsoldValue: 0, totalValue: 0, grossMarginCost: 0, grossMargin: 0 });
+  }), { area: 0, productionTons: 0, soldTons: 0, soldValue: 0, unsoldTons: 0, unsoldValue: 0, openingValue: 0, totalValue: 0, grossMarginCost: 0, grossMargin: 0 });
 }
 
 /** Sum of the farm-wide overhead categories. */

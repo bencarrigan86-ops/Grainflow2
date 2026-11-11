@@ -18,19 +18,19 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=131';
+import { hydrate } from './hydrate.js?v=132';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState,
-} from './local.js?v=131';
-import { chooseBootState, resolveLegacy } from './boot.js?v=131';
-import { isLegacyDirty } from './dirty.js?v=131';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=131';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality } from './mapping.js?v=131';
-import { settleLegs, dedupeLegs } from './legs.js?v=131';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=131';
-import { schedulePush, pushOnReconnect } from './sync.js?v=131';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=131';
+} from './local.js?v=132';
+import { chooseBootState, resolveLegacy } from './boot.js?v=132';
+import { isLegacyDirty } from './dirty.js?v=132';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=132';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality } from './mapping.js?v=132';
+import { settleLegs, dedupeLegs } from './legs.js?v=132';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=132';
+import { schedulePush, pushOnReconnect } from './sync.js?v=132';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=132';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -434,6 +434,8 @@ export const db = {
 
   // --- seasons ---
   getYears() { return Object.keys(data.years).sort(); },
+  /** One season's data, for reading across seasons (last season's closing stock). */
+  getYearData(label) { return data.years[label] ?? null; },
   getCurrentYear() { return data.currentYear; },
   setCurrentYear(year) {
     if (!data.years[year]) return false;
@@ -527,13 +529,17 @@ export const db = {
     const c = current();
     if (commodity.id) {
       const idx = c.commodities.findIndex((x) => x.id === commodity.id);
-      if (idx >= 0) c.commodities[idx] = { ...c.commodities[idx], ...commodity };
+      if (idx >= 0) {
+        const merged = { ...c.commodities[idx], ...commodity };
+        if (Number(merged.openingValue)) merged.__hasOpeningValue = true;
+        c.commodities[idx] = merged;
+      }
       touch('commodity', commodity.id);
     } else {
       const id = uid();
-      c.commodities.push({
-        mtmPrice: 0, openingStock: 0, retainedSeed: 0, grossMarginCost: 0, ...commodity, id,
-      });
+      const made = { mtmPrice: 0, openingStock: 0, retainedSeed: 0, grossMarginCost: 0, ...commodity, id };
+      if (Number(made.openingValue)) made.__hasOpeningValue = true;
+      c.commodities.push(made);
       touch('commodity', id);
       persist();
       return id;

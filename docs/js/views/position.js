@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=131';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=131';
-import { num, tons, money, pct, esc } from '../fmt.js?v=131';
+import { db } from '../storage.js?v=132';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=132';
+import { num, tons, money, pct, esc } from '../fmt.js?v=132';
 
 let unsub = null;
 
@@ -97,6 +97,7 @@ function commodityCard(r) {
       </div>
       <div class="gauge" role="img" aria-label="${Math.round(sold * 100)} percent sold"><i style="width:${sold * 100}%"></i></div>
       <div class="row" style="margin-top:8px"><span class="label">Total position value</span><span class="value">${money(r.totalValue, 0)}</span></div>
+      ${r.openingValue ? `<div class="row"><span class="label">…after carry-in already counted last season</span><span class="value">&minus;${money(r.openingValue, 0)}</span></div>` : ''}
       <div class="row"><span class="label">Gross margin</span><span class="value">${money(r.grossMargin, 0)} <span class="badge ${r.grossMargin >= 0 ? 'pos' : 'neg'}">${pct(r.grossMarginPct)}</span></span></div>
       <details class="fold">
         <summary><div><h2>Full breakdown</h2><div class="sub">Values, stock and costs</div></div></summary>
@@ -108,6 +109,7 @@ function commodityCard(r) {
         ` : ''}
         <div class="row"><span class="label">MTM price</span><span class="value">${money(r.mtmPrice, 2)}/t</span></div>
         <div class="row"><span class="label">Unsold value</span><span class="value">${money(r.unsoldValue, 0)}</span></div>
+        ${r.openingValue ? `<div class="row"><span class="label">Opening stock value (counted last season)</span><span class="value">&minus;${money(r.openingValue, 0)}</span></div>` : ''}
         <div class="row"><span class="label">Gross margin cost</span><span class="value">${money(r.grossMarginCost, 0)}</span></div>
       </details>
     </div>

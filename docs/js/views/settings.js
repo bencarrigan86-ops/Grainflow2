@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=131';
-import { num, money, esc } from '../fmt.js?v=131';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=131';
-import { openLoadImportSheet } from './importloads.js?v=131';
-import { APP_VERSION } from '../version.js?v=131';
-import { exportRowsAsCSV } from '../csv.js?v=131';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=131';
-import { endpointLabel } from './movements.js?v=131';
+import { db } from '../storage.js?v=132';
+import { num, money, esc } from '../fmt.js?v=132';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=132';
+import { openLoadImportSheet } from './importloads.js?v=132';
+import { APP_VERSION } from '../version.js?v=132';
+import { exportRowsAsCSV } from '../csv.js?v=132';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc, closingStock } from '../derived.js?v=132';
+import { endpointLabel } from './movements.js?v=132';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=131';
+} from '../invites.js?v=132';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=131';
+} from '../auth.js?v=132';
 
 let unsub = null;
 
@@ -935,6 +935,34 @@ function commodityRow(c) {
   `;
 }
 
+/**
+ * "Use last season's closing": what last season was left holding of this
+ * commodity, and what it was worth at that season's MTM, ready to put in as this
+ * season's opening stock. A button, not automatic: the person reads the figures
+ * and edits them before saving, because unsold tonnes are the uncontracted ones
+ * and the silos may hold more (grain sold last season and not yet delivered).
+ */
+function offerLastSeasonsClosing(root) {
+  const slot = root.querySelector('#carry-from-last');
+  if (!slot) return;
+  const current = db.getCurrentYear();
+  const earlier = db.getYears().filter((y) => y < current);
+  const last = earlier[earlier.length - 1];
+  const name = getVal(root, 'name')?.trim();
+  if (!last || !name) return;
+  const closing = closingStock(db.getYearData(last), name);
+  if (!closing || !(closing.tons > 0)) return;
+  slot.innerHTML = `
+    <div class="field hint" style="margin-bottom:6px">${esc(last)} closed holding ${num(closing.tons, 1)} t of unsold ${esc(name)}
+      at ${money(closing.mtm, 2)}/t &mdash; ${money(closing.value, 0)}.</div>
+    <button type="button" class="btn secondary small" id="use-closing">Use ${esc(last)} closing</button>`;
+  slot.querySelector('#use-closing').addEventListener('click', () => {
+    root.querySelector('#opening').value = Math.round(closing.tons * 100) / 100;
+    root.querySelector('#openingValue').value = Math.round(closing.value);
+    toast('Filled in from ' + last + ' — check, then Save');
+  });
+}
+
 function openCommoditySheet(existing) {
   const { fields } = db.get();
   openSheet(existing ? 'Edit commodity' : 'Add commodity', (root) => {
@@ -953,6 +981,9 @@ function openCommoditySheet(existing) {
         ${field({ label: 'Opening stock (t)', id: 'opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0 })}
         ${field({ label: 'Retained seed (t)', id: 'seed', type: 'number', step: '0.01', value: existing?.retainedSeed ?? 0 })}
       </div>
+      ${field({ label: 'Opening stock value ($)', id: 'openingValue', type: 'number', step: '1', value: existing?.openingValue ?? 0,
+        hint: "What the opening stock was worth when last season closed. It is taken off this season's total value, so income already counted last season is not counted twice." })}
+      <div id="carry-from-last"></div>
       ${field({ label: 'Default yield estimate (t/ha)', id: 'defaultYield', type: 'number', step: '0.1', value: existing?.defaultYieldTHa ?? 0, hint: 'Pre-fills new fields\' production yield estimate, in Production — separate from the fert target yield below' })}
       <hr class="sep" />
       <div class="grid-2">
@@ -974,6 +1005,7 @@ function openCommoditySheet(existing) {
       <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
     `;
     if (existing) buildCommoditySensitivity(root, existing.id);
+    offerLastSeasonsClosing(root);
     const balesWrap = root.querySelector('#bales-per-round-wrap');
     const syncUnitFields = () => { balesWrap.style.display = getVal(root, 'unit') === 'bale' ? 'block' : 'none'; };
     root.querySelector('#unit').addEventListener('change', syncUnitFields);
@@ -990,6 +1022,7 @@ function openCommoditySheet(existing) {
         testWeight: getNum(root, 'tw'),
         mtmPrice: getNum(root, 'mtm'),
         openingStock: getNum(root, 'opening'),
+        openingValue: getNum(root, 'openingValue'),
         retainedSeed: getNum(root, 'seed'),
         defaultYieldTHa: getNum(root, 'defaultYield'),
         targetYieldTHa: getNum(root, 'targetYield'),

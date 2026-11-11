@@ -144,6 +144,9 @@ export function stateToRows(state, farmId) {
         angle_of_repose: n(c.angleOfRepose), test_weight: n(c.testWeight),
         n_per_tonne: n(c.nPerTonne), mtm_price: n(c.mtmPrice),
         opening_stock: n(c.openingStock), retained_seed: n(c.retainedSeed),
+        // Optional column (a migration added it): left out until a value has been recorded,
+        // kept once one has, so clearing it still reaches the server.
+        ...((Number(c.openingValue) || c.__hasOpeningValue) ? { opening_stock_value: n(c.openingValue) } : {}),
         gross_margin_cost: n(c.grossMarginCost),
         // Cotton is counted in bales, not tonnes; without unit and the ginning
         // ratio the whole lint/seed flow has nothing to work from.
@@ -399,6 +402,7 @@ export function rowsToState(rows) {
         angleOfRepose: n(c.angle_of_repose), testWeight: n(c.test_weight),
         nPerTonne: n(c.n_per_tonne), mtmPrice: n(c.mtm_price),
         openingStock: n(c.opening_stock), retainedSeed: n(c.retained_seed),
+        ...(c.opening_stock_value != null ? { openingValue: n(c.opening_stock_value), __hasOpeningValue: true } : {}),
         grossMarginCost: n(c.gross_margin_cost),
         unit: c.unit ?? 't',
         balesPerRoundBale: n(c.bales_per_round_bale),

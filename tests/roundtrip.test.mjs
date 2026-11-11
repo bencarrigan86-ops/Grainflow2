@@ -113,7 +113,7 @@ function markerFor(key, ids) {
   // not produce a false alarm — a value that comes back coerced is reported
   // separately from one that comes back missing — but it keeps the output
   // honest about which is which.
-  if (/(kgha|tha|ha|rate|tons|price|height|radius|angle|weight|no|days|stock|cost|overhang|width|length|capacity|ratio|pertonne|pct|repose|freight|discount|ginning|levies|seed|bales)$/i
+  if (/(kgha|tha|ha|rate|tons|price|height|radius|angle|weight|no|days|stock|cost|overhang|width|length|capacity|ratio|pertonne|pct|repose|freight|discount|ginning|levies|seed|bales|value)$/i
         .test(key)) {
     return 7.25;
   }
