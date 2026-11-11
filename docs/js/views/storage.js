@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=138';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=138';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=138';
-import { hasStorageQuality } from '../mapping.js?v=138';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=138';
-import { num, tons, esc, shortDate } from '../fmt.js?v=138';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=138';
-import { renderRelatedMovements } from './movements.js?v=138';
-import { openSiloSetupSheet } from './silosetup.js?v=138';
-import { commodityFills } from '../commodityfill.js?v=138';
-import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=138';
+import { db } from '../storage.js?v=142';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=142';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=142';
+import { hasStorageQuality } from '../mapping.js?v=142';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=142';
+import { num, tons, esc, shortDate } from '../fmt.js?v=142';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=142';
+import { renderRelatedMovements } from './movements.js?v=142';
+import { openSiloSetupSheet } from './silosetup.js?v=142';
+import { commodityFills } from '../commodityfill.js?v=142';
+import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=142';
 
 let unsub = null;
-let listMode = 'chronological';
+let listMode = 'commodity';
 let view = 'saved';
 let quickKind = 'silo';
 // The search box and the chosen commodity tab, kept across repaints so a sync
@@ -89,8 +89,8 @@ function paint(root) {
         <button type="button" class="chip ${showMeasured ? 'active' : ''}" id="toggle-measured" aria-pressed="${showMeasured}">Measured: ${showMeasured ? 'shown' : 'hidden'}</button>
       </div>
       <div class="segmented" id="list-mode">
-        <button data-mode="chronological" class="${listMode === 'chronological' ? 'active' : ''}">Chronological</button>
         <button data-mode="commodity" class="${listMode === 'commodity' ? 'active' : ''}">By commodity</button>
+        <button data-mode="chronological" class="${listMode === 'chronological' ? 'active' : ''}">Chronological</button>
       </div>
       <div class="field" style="margin:10px 0 0">
         <label for="storage-search">Search</label>

@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=138';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=138';
-import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=138';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=138';
-import { describeMerge } from '../merge.js?v=138';
-import { renderRelatedMovements } from './movements.js?v=138';
-import { canSeeYield } from '../nav.js?v=138';
+import { db } from '../storage.js?v=142';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=142';
+import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=142';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=142';
+import { describeMerge } from '../merge.js?v=142';
+import { renderRelatedMovements } from './movements.js?v=142';
+import { canSeeYield } from '../nav.js?v=142';
 
 let unsub = null;
 
@@ -38,8 +38,8 @@ function paint(root) {
             <thead><tr><th>Commodity</th><th>Area</th>${showYield ? '<th>Yield</th><th>Tons</th>' : ''}</tr></thead>
             <tbody>
               ${rollup.map((r) => `
-                <tr>
-                  <td>${esc(r.commodity.name)}</td>
+                <tr class="jump-row" data-jump="grp-${esc(r.commodity.id)}">
+                  <td><button type="button" class="jump-link">${esc(r.commodity.name)}</button></td>
                   <td>${num(r.area, 0)}</td>
                   ${showYield ? `<td>${num(r.yieldTHa, 2)}</td><td>${num(r.tons, 0)}</td>` : ''}
                 </tr>`).join('')}
@@ -56,13 +56,25 @@ function paint(root) {
       <div class="card input">
         <h2><span class="dot input"></span>Fields</h2>
         ${groups.length === 0 ? `<div class="empty">No fields yet.<br/><button class="btn" id="empty-add-field">Add your first field</button></div>` : groups.map((g) => `
-          <div class="group-label"><span>${esc(g.name)}</span><span class="n">${showYield ? tons(g.totalTons, 0) : ''}</span></div>
+          <div class="group-label" id="grp-${esc(g.id ?? 'none')}"><span>${esc(g.name)}</span><span class="n">${showYield ? tons(g.totalTons, 0) : ''}</span></div>
           ${g.fields.map((f) => fieldRow(f, movements, showYield)).join('')}
         `).join('')}
       </div>
     </div>
     <button class="fab" id="add-field">+</button>
   `;
+
+  // The commodity rows in the table at the top jump to that commodity's fields below.
+  root.querySelectorAll('[data-jump]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const target = root.querySelector('#' + CSS.escape(el.dataset.jump));
+      if (!target) return;
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      target.classList.remove('flash');
+      void target.offsetWidth;            // restart the highlight if it is tapped twice
+      target.classList.add('flash');
+    });
+  });
 
   root.querySelectorAll('[data-edit-field]').forEach((el) => {
     el.addEventListener('click', () => openFieldSheet(fields.find((f) => f.id === el.dataset.editField)));

@@ -228,19 +228,40 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
 .card.report .table-scroll tfoot td:first-child,
 .card.summary .table-scroll tfoot td:first-child { z-index: 3; }
 
+/* A section heading (a commodity, a grade): a solid band, so where one section ends
+   and the next begins can be found at a glance while scrolling a long list. */
 .group-label {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
+  gap: 12px;
   font-size: 17px;
   font-weight: 800;
-  color: var(--text);
-  padding: 18px 4px 8px;
-  border-bottom: 1.5px solid var(--border);
-  margin-bottom: 2px;
+  letter-spacing: .01em;
+  color: #fff;
+  background: var(--accent-summary);
+  border-radius: 10px;
+  padding: 11px 14px;
+  margin: 20px 0 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.18);
+  scroll-margin-top: 12px;
 }
-.group-label:first-child { padding-top: 4px; }
-.group-label .n { font-size: 13px; font-weight: 600; color: var(--text-dim); }
+.group-label:first-child { margin-top: 6px; }
+.group-label .n { font-size: 13px; font-weight: 700; color: rgba(255,255,255,.92); }
+@keyframes grp-flash {
+  from { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent-report) 55%, transparent); }
+  to   { box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+}
+.group-label.flash { animation: grp-flash 1.2s ease-out; }
+
+/* A name in a table that jumps to its section further down the page. */
+tr.jump-row { cursor: pointer; }
+.jump-link {
+  appearance: none; background: none; border: none; padding: 6px 0; margin: 0;
+  font: inherit; font-weight: 700; color: var(--accent-report); text-align: left; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.jump-link::after { content: " \2193"; display: inline-block; text-decoration: none; }
 
 .list-item {
   display: flex;
@@ -708,21 +729,81 @@ details.fold > summary .sub { font-size: 12px; color: var(--text-dim); margin-to
 .storage-head { display: grid; grid-template-columns: 1fr auto auto; column-gap: 12px; padding: 0 4px 6px; border-bottom: 1.5px solid var(--border); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-dim); }
 .storage-row .gauge { max-width: 100%; }
 
-/* A grade (or crop year) as a section: a bold band with its silos beneath it. */
+/* A grade (or crop year) as a section under a commodity: a lighter band with a thick
+   left edge, so it reads as a step down from the solid commodity heading above it. */
 .group-label.section {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  background: var(--btn-tint);
+  color: var(--text);
+  border: 1.5px solid var(--btn-edge);
+  border-left-width: 6px;
+  box-shadow: none;
   padding: 10px 12px;
   margin: 14px 0 4px;
   font-size: 16px;
   font-weight: 800;
 }
-.group-label.section .n { font-size: 12.5px; font-weight: 600; }
-.group-label.section.nested { margin-left: 8px; font-size: 14.5px; }
+.group-label.section .n { font-size: 12.5px; font-weight: 700; color: var(--btn-ink); }
+.group-label.section.nested { margin-left: 10px; font-size: 14.5px; }
 
 /* Keyboard focus on any control: a ring you cannot miss, on top of the page-wide one. */
 .btn:focus-visible, .chip:focus-visible, .segmented button:focus-visible, .link-btn:focus-visible, .settings-btn:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent-report) 70%, transparent);
   outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Tables at the top of a tab: a solid header band, banded rows, a bold first
+   column and a filled totals row, in the app's green, the colour of everything you press. Blue stays for links. The frozen header, first column and totals
+   row above still hold; every cell stays opaque so nothing shows through them.
+   The first-column selectors repeat the :first-child on purpose — the frozen
+   column rule earlier is more specific than a plain cell rule, and would
+   otherwise keep painting the corner and the totals cell in the card colour.
+   --------------------------------------------------------------------------- */
+.card.report  { --tbl: var(--accent-summary); --tbl-bg: var(--accent-report-bg); }
+.card.summary { --tbl: var(--accent-summary); --tbl-bg: var(--accent-summary-bg); }
+
+.card.report > h2, .card.summary > h2 {
+  font-size: 16.5px;
+  font-weight: 800;
+  color: color-mix(in srgb, var(--tbl) 80%, var(--text));
+}
+.card.report > h2 .dot, .card.summary > h2 .dot { width: 10px; height: 10px; background: var(--tbl); }
+
+.card.report .table-scroll table, .card.summary .table-scroll table {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.card.report .table-scroll thead th, .card.summary .table-scroll thead th,
+.card.report .table-scroll thead th:first-child, .card.summary .table-scroll thead th:first-child {
+  background: var(--tbl);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  padding: 10px 8px;
+  border-bottom: none;
+  border-right: none;
+  box-shadow: none;
+}
+
+.card.report .table-scroll tbody td, .card.summary .table-scroll tbody td {
+  padding: 10px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--tbl) 20%, var(--border));
+}
+.card.report .table-scroll tbody td:first-child, .card.summary .table-scroll tbody td:first-child {
+  font-weight: 700;
+  color: var(--text);
+}
+.card.report .table-scroll tbody tr:nth-child(even) td, .card.summary .table-scroll tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--tbl) 9%, var(--tbl-bg));
+}
+
+.card.report .table-scroll tfoot td, .card.summary .table-scroll tfoot td,
+.card.report .table-scroll tfoot td:first-child, .card.summary .table-scroll tfoot td:first-child {
+  background: color-mix(in srgb, var(--tbl) 24%, var(--tbl-bg));
+  font-size: 14.5px;
+  font-weight: 800;
+  padding: 11px 8px;
+  box-shadow: inset 0 2px 0 var(--tbl);
 }
