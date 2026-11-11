@@ -18,19 +18,19 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=132';
+import { hydrate } from './hydrate.js?v=135';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState,
-} from './local.js?v=132';
-import { chooseBootState, resolveLegacy } from './boot.js?v=132';
-import { isLegacyDirty } from './dirty.js?v=132';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=132';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality } from './mapping.js?v=132';
-import { settleLegs, dedupeLegs } from './legs.js?v=132';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=132';
-import { schedulePush, pushOnReconnect } from './sync.js?v=132';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=132';
+} from './local.js?v=135';
+import { chooseBootState, resolveLegacy } from './boot.js?v=135';
+import { isLegacyDirty } from './dirty.js?v=135';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=135';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality } from './mapping.js?v=135';
+import { settleLegs, dedupeLegs } from './legs.js?v=135';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=135';
+import { schedulePush, pushOnReconnect } from './sync.js?v=135';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=135';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -90,15 +90,17 @@ function defaultData() {
  * them, and every silo it touched reads double. Take the copies out, retire them
  * on the server, and make sure every leg that is left has an id it will keep.
  */
+let legRepairs = 0;   // how many loads were mended since last counted; startup saves the mended copy
 function repairLegs(m) {
   const fixed = dedupeLegs(m);
   if (fixed.changed) {
+    legRepairs += 1;
     m.froms = fixed.froms;
     m.tos = fixed.tos;
     fixed.retired.forEach((id) => tombstone('movement_legs', id));
   }
-  if ((m.froms || []).some((l) => !l.__legId)) m.froms = settleLegs([], m.froms, uid).legs;
-  if ((m.tos || []).some((l) => !l.__legId)) m.tos = settleLegs([], m.tos, uid).legs;
+  if ((m.froms || []).some((l) => !l.__legId)) { m.froms = settleLegs([], m.froms, uid).legs; legRepairs += 1; }
+  if ((m.tos || []).some((l) => !l.__legId)) { m.tos = settleLegs([], m.tos, uid).legs; legRepairs += 1; }
 }
 
 function deriveCounters(state) {
@@ -328,6 +330,15 @@ export const db = {
     // ever sent, so nothing is "changed" — send it all.
     if (decision.use === 'local' && serverReachable && !hasServerCopy) touch('all');
 
+    // The cleanup of doubled legs queued deletes for the copies it removed. Save the
+    // mended copy now: if the app closed before the next edit, the next start would
+    // find the same copies again and queue the same deletes a second time.
+    if (legRepairs > 0) {
+      console.info(`Mended ${legRepairs} load(s) with doubled or unnumbered legs.`);
+      legRepairs = 0;
+      await saveState(data, farmId).catch((e) => console.error('Local save failed', e));
+    }
+
     ready = true;
     pushOnReconnect(() => data, farmId, role);
 
@@ -355,8 +366,16 @@ export const db = {
    * left for somebody to deduce.
    */
   async getSyncStatus() {
-    const pending = await owedCount();
-    return { pending, lastError: lastPushError };
+    const items = (await outboxItems().catch(() => [])).filter((i) => !isLegacyDirty(i));
+    // What is owed, by kind: rows to upload per table, and deletes per table. A bare
+    // number cannot say whether the queue is 286 edits or 286 edits and 758 clean-ups.
+    const uploads = {};
+    const deletes = {};
+    for (const i of items) {
+      if (i.type === 'delete') deletes[i.table] = (deletes[i.table] || 0) + 1;
+      else uploads[i.kind] = (uploads[i.kind] || 0) + 1;
+    }
+    return { pending: items.length, uploads, deletes, lastError: lastPushError };
   },
 
   /**

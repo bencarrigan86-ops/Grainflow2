@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=132';
-import { num, money, esc } from '../fmt.js?v=132';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=132';
-import { openLoadImportSheet } from './importloads.js?v=132';
-import { APP_VERSION } from '../version.js?v=132';
-import { exportRowsAsCSV } from '../csv.js?v=132';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc, closingStock } from '../derived.js?v=132';
-import { endpointLabel } from './movements.js?v=132';
+import { db } from '../storage.js?v=135';
+import { num, money, esc } from '../fmt.js?v=135';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=135';
+import { openLoadImportSheet } from './importloads.js?v=135';
+import { APP_VERSION } from '../version.js?v=135';
+import { exportRowsAsCSV } from '../csv.js?v=135';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc, closingStock } from '../derived.js?v=135';
+import { endpointLabel } from './movements.js?v=135';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=132';
+} from '../invites.js?v=135';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=132';
+} from '../auth.js?v=135';
 
 let unsub = null;
 
@@ -705,6 +705,13 @@ async function paintSyncCard(root) {
       <span class="label">Changes waiting</span>
       <span class="value">${status.pending}</span>
     </div>
+    ${(() => {
+      const part = (o) => Object.entries(o || {}).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${n} ${esc(k.replace(/_/g, ' '))}`).join(', ');
+      const up = part(status.uploads);
+      const del = part(status.deletes);
+      return (up ? `<div class="row"><span class="label">To upload</span><span class="value">${up}</span></div>` : '')
+        + (del ? `<div class="row"><span class="label">To delete</span><span class="value">${del}</span></div>` : '');
+    })()}
     <div class="row"><span class="label">Signed in as</span><span class="value">${who}</span></div>
     <div class="row"><span class="label">Farm</span><span class="value">${farmName} <span class="meta">(${farmShort}…)</span></span></div>
     <div class="row"><span class="label">Role</span><span class="value">${roleName}</span></div>
@@ -982,7 +989,7 @@ function openCommoditySheet(existing) {
         ${field({ label: 'Retained seed (t)', id: 'seed', type: 'number', step: '0.01', value: existing?.retainedSeed ?? 0 })}
       </div>
       ${field({ label: 'Opening stock value ($)', id: 'openingValue', type: 'number', step: '1', value: existing?.openingValue ?? 0,
-        hint: "What the opening stock was worth when last season closed. It is taken off this season's total value, so income already counted last season is not counted twice." })}
+        hint: "What the opening stock was worth at last season's closing (opening MTM) price. It shows on the Position tab as 'Less carry-in from previous year' and comes off this season's total, so grain already counted last year is not counted twice." })}
       <div id="carry-from-last"></div>
       ${field({ label: 'Default yield estimate (t/ha)', id: 'defaultYield', type: 'number', step: '0.1', value: existing?.defaultYieldTHa ?? 0, hint: 'Pre-fills new fields\' production yield estimate, in Production — separate from the fert target yield below' })}
       <hr class="sep" />
