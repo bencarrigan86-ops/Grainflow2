@@ -15,11 +15,11 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=127';
-import { stateToRows } from './mapping.js?v=127';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=127';
-import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=127';
-import { flushPendingPhotos } from './photos.js?v=127';
+import { supabase } from './supabase.js?v=128';
+import { stateToRows } from './mapping.js?v=128';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=128';
+import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=128';
+import { flushPendingPhotos } from './photos.js?v=128';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -171,19 +171,41 @@ export async function push(state, farmId, role = 'owner') {
       result.tables[table] = list.length;
     }
 
+    // Deletes are sent one at a time and settled one at a time. A delete the server
+    // will not take must not hold back the uploads that already went, nor the
+    // deletes that did — only it stays queued, and is named, so what is waiting
+    // is exactly what is stuck.
+    //
+    // Stamping deleted_at with a plain update is refused by the SELECT policy
+    // (the new row is no longer one the reader may see), so when it is, the
+    // soft_delete_row function — which applies the same ownership rule as the
+    // definer — does it instead. See 20261111150000_soft_delete_function.sql.
+    const stuck = new Set();
     for (const d of deletes) {
-      const { error } = await supabase
+      let { error } = await supabase
         .from(d.table)
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', d.id);
       if (error) {
-        result.errors.push({ table: d.table, message: error.message });
-        return result;
+        ({ error } = await supabase.rpc('soft_delete_row', { p_table: d.table, p_id: d.id }));
+      }
+      if (error) {
+        stuck.add(d.seq);
+        result.errors.push({
+          table: d.table,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          refused: [{ id: d.id, name: 'a delete of a record', hidden: null, message: error.message }],
+        });
+        continue;
       }
       result.deleted += 1;
     }
 
-    await clearOutboxItems(sentSeqs);
+    await clearOutboxItems(sentSeqs.filter((q) => !stuck.has(q)));
+    if (stuck.size) return result;
     result.ok = true;
     return result;
   })();
