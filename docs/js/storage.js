@@ -18,19 +18,19 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=145';
+import { hydrate } from './hydrate.js?v=148';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=145';
-import { chooseBootState, resolveLegacy } from './boot.js?v=145';
-import { isLegacyDirty } from './dirty.js?v=145';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=145';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality } from './mapping.js?v=145';
-import { settleLegs, dedupeLegs } from './legs.js?v=145';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=145';
-import { schedulePush, pushOnReconnect } from './sync.js?v=145';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=145';
+} from './local.js?v=148';
+import { chooseBootState, resolveLegacy } from './boot.js?v=148';
+import { isLegacyDirty } from './dirty.js?v=148';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=148';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=148';
+import { settleLegs, dedupeLegs } from './legs.js?v=148';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=148';
+import { schedulePush, pushOnReconnect } from './sync.js?v=148';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=148';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -675,6 +675,7 @@ export const db = {
         const merged = { ...c.storages[idx], ...storage };
         if (hasStorageQuality(merged)) merged.__hasQuality = true;   // see mapping.js: keeps clearing a value reaching the server
         if (hasStorageNote(merged)) merged.__hasNotes = true;
+        if (hasGradeBands(merged)) merged.__hasBands = true;
         c.storages[idx] = merged;
       }
       touch('storage', storage.id);
@@ -683,6 +684,7 @@ export const db = {
       const made = { ...storage, id, createdAt: Date.now() };
       if (hasStorageQuality(made)) made.__hasQuality = true;
       if (hasStorageNote(made)) made.__hasNotes = true;
+      if (hasGradeBands(made)) made.__hasBands = true;
       c.storages.push(made);
       touch('storage', id);
       persist();

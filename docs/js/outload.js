@@ -83,7 +83,60 @@ export function layersForStorage(storage, movements) {
       layers.push({ tons: into, source: 'load', spec: specOf(m), date: m.date ?? '', ticketNo: m.ticketNo ?? null, id: m.id, rego: m.truckRego ?? '' });
     }
   }
-  return { layers: layers.filter((l) => l.tons > EPS), shortfall };
+  return {
+    layers: applyBands(layers.filter((l) => l.tons > EPS), storage.gradeBands, storage.gradeBandsDate),
+    shortfall,
+  };
+}
+
+/** Does a band say anything — a grade or any measurement — or is it only a stretch of grain not sampled? */
+export const bandHasSpec = (b) => !!String(b?.grade ?? '').trim()
+  || SPECS.some(({ key }) => b?.[key] !== undefined && b?.[key] !== null && b?.[key] !== '');
+
+/**
+ * Lay running samples over a stack of layers: by tonnes from the bottom of the silo,
+ * "this stretch is APH1, 11.5% protein; the next is AUH2, 10.2%". Samples are taken
+ * of the grain in the silo, not of each truck, so a band replaces what the loads say
+ * for the grain it covers — whichever loads or opening stock that grain came from. A
+ * layer that straddles two bands is split at the boundary.
+ *
+ * Bands describe the grain that was there when they were taken. With an `asOf` date
+ * they cover only grain that arrived by then, so loads tipped in afterwards keep
+ * their own grade instead of being painted with an older sample. Grain beyond the
+ * last band keeps its own grade too. Positions count from the bottom, so trucks
+ * taking grain off the top never move the bands below.
+ *
+ * @param {object[]} layers  bottom to top
+ * @param {object[]} bands   bottom first: { tons, grade?, proteinPct?, moisturePct?, … }
+ * @param {string} [asOf]    'YYYY-MM-DD'
+ */
+export function applyBands(layers, bands, asOf = '') {
+  const list = (Array.isArray(bands) ? bands : []).filter((b) => num(b.tons) > 0);
+  if (!list.length) return layers;
+  const eligible = (l) => !asOf || l.source === 'opening' || !l.date || String(l.date) <= String(asOf);
+  let cut = 0;
+  while (cut < layers.length && eligible(layers[cut])) cut += 1;
+  const below = layers.slice(0, cut);
+  const above = layers.slice(cut);
+
+  const out = [];
+  let bi = 0;
+  let left = num(list[0].tons);
+  for (const layer of below) {
+    let remaining = layer.tons;
+    while (remaining > EPS) {
+      if (bi >= list.length) { out.push({ ...layer, tons: remaining }); break; }
+      const take = Math.min(remaining, left);
+      const band = list[bi];
+      out.push(bandHasSpec(band)
+        ? { ...layer, tons: take, spec: specOf(band), banded: bi + 1 }
+        : { ...layer, tons: take });
+      remaining -= take;
+      left -= take;
+      if (left <= EPS) { bi += 1; left = bi < list.length ? num(list[bi].tons) : 0; }
+    }
+  }
+  return [...out, ...above];
 }
 
 /**

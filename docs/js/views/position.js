@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=145';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=145';
-import { num, tons, money, pct, esc } from '../fmt.js?v=145';
+import { db } from '../storage.js?v=148';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=148';
+import { num, tons, money, pct, esc } from '../fmt.js?v=148';
 
 let unsub = null;
 
@@ -32,7 +32,7 @@ function paint(root) {
         </div>
         <div class="stat">
           <div class="n">${money(totals.totalValue, 0)}</div>
-          <div class="l">${totals.openingValue ? "Current crop value" : "Total position value"}</div>
+          <div class="l">${totals.openingValue ? "Current Crop Value" : "Total position value"}</div>
         </div>
         <div class="stat">
           <div class="n">${money(totals.soldValue, 0)}</div>
@@ -97,9 +97,9 @@ function commodityCard(r) {
       </div>
       <div class="gauge" role="img" aria-label="${Math.round(sold * 100)} percent sold"><i style="width:${sold * 100}%"></i></div>
       ${r.openingValue ? `
-      <div class="row" style="margin-top:8px"><span class="label">Sold + unsold at MTM <span class="meta">(current crop and carry-in)</span></span><span class="value">${money(r.totalValue + r.openingValue, 0)}</span></div>
-      <div class="row"><span class="label">Less carry-in from previous year <span class="meta">(at opening MTM)</span></span><span class="value">&minus;${money(r.openingValue, 0)}</span></div>
-      <div class="row"><span class="label"><strong>Current crop value</strong></span><span class="value"><strong>${money(r.totalValue, 0)}</strong></span></div>
+      <div class="row" style="margin-top:8px"><span class="label">Total Value (Sold + MTM)</span><span class="value">${money(r.totalValue + r.openingValue, 0)}</span></div>
+      <div class="row"><span class="label">Less opening stock</span><span class="value">&minus;${money(r.openingValue, 0)}</span></div>
+      <div class="row"><span class="label"><strong>Current Crop Value</strong></span><span class="value"><strong>${money(r.totalValue, 0)}</strong></span></div>
       ` : `
       <div class="row" style="margin-top:8px"><span class="label">Total position value</span><span class="value">${money(r.totalValue, 0)}</span></div>
       `}
@@ -115,7 +115,7 @@ function commodityCard(r) {
         ` : ''}
         <div class="row"><span class="label">MTM price</span><span class="value">${money(r.mtmPrice, 2)}/t</span></div>
         <div class="row"><span class="label">Unsold value</span><span class="value">${money(r.unsoldValue, 0)}</span></div>
-        ${r.openingValue ? `<div class="row"><span class="label">Less carry-in from previous year (at opening MTM)</span><span class="value">&minus;${money(r.openingValue, 0)}</span></div>` : ''}
+        ${r.openingValue ? `<div class="row"><span class="label">Less opening stock</span><span class="value">&minus;${money(r.openingValue, 0)}</span></div>` : ''}
         <div class="row"><span class="label">Gross margin cost</span><span class="value">${money(r.grossMarginCost, 0)}</span></div>
       </details>
     </div>

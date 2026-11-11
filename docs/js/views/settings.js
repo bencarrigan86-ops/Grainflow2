@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=145';
-import { getTheme, setTheme } from '../theme.js?v=145';
-import { num, money, esc } from '../fmt.js?v=145';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=145';
-import { openLoadImportSheet } from './importloads.js?v=145';
-import { APP_VERSION } from '../version.js?v=145';
-import { exportRowsAsCSV } from '../csv.js?v=145';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc, closingStock } from '../derived.js?v=145';
-import { endpointLabel } from './movements.js?v=145';
+import { db } from '../storage.js?v=148';
+import { getTheme, setTheme } from '../theme.js?v=148';
+import { num, money, esc } from '../fmt.js?v=148';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=148';
+import { openLoadImportSheet } from './importloads.js?v=148';
+import { APP_VERSION } from '../version.js?v=148';
+import { exportRowsAsCSV } from '../csv.js?v=148';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc, closingStock } from '../derived.js?v=148';
+import { endpointLabel } from './movements.js?v=148';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=145';
+} from '../invites.js?v=148';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=145';
+} from '../auth.js?v=148';
 
 let unsub = null;
 
@@ -1021,7 +1021,7 @@ function openCommoditySheet(existing) {
         ${field({ label: 'Retained seed (t)', id: 'seed', type: 'number', step: '0.01', value: existing?.retainedSeed ?? 0 })}
       </div>
       ${field({ label: 'Opening stock value ($)', id: 'openingValue', type: 'number', step: '1', value: existing?.openingValue ?? 0,
-        hint: "What the opening stock was worth at last season's closing (opening MTM) price. It shows on the Position tab as 'Less carry-in from previous year' and comes off this season's total, so grain already counted last year is not counted twice." })}
+        hint: "What the opening stock was worth at last season's closing (opening MTM) price. It shows on the Position tab as 'Less opening stock' and comes off this season's total, so grain already counted last year is not counted twice." })}
       <div id="carry-from-last"></div>
       ${field({ label: 'Default yield estimate (t/ha)', id: 'defaultYield', type: 'number', step: '0.1', value: existing?.defaultYieldTHa ?? 0, hint: 'Pre-fills new fields\' production yield estimate, in Production — separate from the fert target yield below' })}
       <hr class="sep" />

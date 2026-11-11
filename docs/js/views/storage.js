@@ -1,14 +1,17 @@
-import { db } from '../storage.js?v=145';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=145';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=145';
-import { hasStorageQuality } from '../mapping.js?v=145';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=145';
-import { num, tons, esc, shortDate } from '../fmt.js?v=145';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=145';
-import { renderRelatedMovements } from './movements.js?v=145';
-import { openSiloSetupSheet } from './silosetup.js?v=145';
-import { commodityFills } from '../commodityfill.js?v=145';
-import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=145';
+import { db } from '../storage.js?v=148';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=148';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=148';
+import { hasStorageQuality } from '../mapping.js?v=148';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=148';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=148';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=148';
+import { renderRelatedMovements } from './movements.js?v=148';
+import { openSiloSetupSheet } from './silosetup.js?v=148';
+import { commodityFills } from '../commodityfill.js?v=148';
+import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=148';
+import {
+  gradeMix, dominantGrade, hasGrades, mixText, siloSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
+} from '../silolayers.js?v=148';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -162,8 +165,20 @@ function paint(root) {
  * the summary, the tabs, and the list. The search box is not among them — it is
  * left alone so it keeps its cursor while the list underneath it changes.
  */
+/**
+ * A silo as the list sees it: with the grades its layers hold. Its grade is the one
+ * most of it is, so sorting, grouping and searching by grade follow what is actually
+ * in the silo — not only what was typed on it — and a silo with nothing graded keeps
+ * the grade it was given. Computed once per paint and carried on the copy.
+ */
+function withLayers(s, movements) {
+  const { layers } = layersForStorage(s, movements);
+  return { ...s, grade: dominantGrade(layers) || s.grade, __layers: layers, __mix: gradeMix(layers) };
+}
+
 function paintStorageParts(root) {
-  const { commodities, storages, movements } = db.get();
+  const { commodities, storages: saved, movements } = db.get();
+  const storages = saved.map((x) => withLayers(x, movements));
   const found = searchStorages(storages, commodities, searchText);
 
   // ---- summary ----
@@ -537,6 +552,19 @@ function storageRow(s, commodities, movements) {
   // follow the measured estimate, which is zero until someone dips the silo.
   // Over capacity is shown as over, not clipped to a bar that looks merely full.
   const capPct = s.capacityTons ? Math.max(0, (ledger / s.capacityTons) * 100) : null;
+  const mix = s.__mix || [];
+  const layered = hasGrades(s.__layers || []);
+  // The bar is the silo filled to what the books say, split by grade where grades are known:
+  // bottom of the silo at the left. Without grades it is the plain fill it always was.
+  const bar = capPct === null ? '' : layered
+    ? `<div class="gauge layered ${capPct > 100 ? 'over' : ''}" role="img" aria-label="${esc(mixText(mix, 5))}"><div class="lay" style="width:${Math.min(100, capPct)}%">${(s.__layers || []).map((l) => {
+        const g = gradeMix([l])[0];
+        return `<i style="width:${(l.tons / ((s.__layers || []).reduce((a, x) => a + x.tons, 0) || 1)) * 100}%;background:${g.color}"></i>`;
+      }).join('')}</div></div>`
+    : `<div class="gauge ${capPct > 100 ? 'over' : capPct >= 95 ? 'warn' : ''}" role="img" aria-label="${Math.round(capPct)} percent full"><i style="width:${Math.min(100, capPct)}%"></i></div>`;
+  const mixLine = mix.length > 1 || (mix.length === 1 && layered && mix[0].grade !== (s.grade || ''))
+    ? `<div class="meta mix-line">${mix.slice(0, 4).map((g) => `<span class="mix-chip"><i style="background:${g.color}"></i>${esc(g.grade)}${mix.length > 1 ? ` ${Math.round(g.pct * 100)}%` : ''}</span>`).join('')}</div>`
+    : '';
   const angleOfRepose = s.angleOfRepose ?? c?.angleOfRepose ?? 0;
   const tarp = s.kind === 'bunker'
     ? bunkerTarpRequirement({ width: s.width, length: s.length, angleDeg: angleOfRepose, overhangM: s.tarpOverhangM ?? 1.5 })
@@ -548,7 +576,8 @@ function storageRow(s, commodities, movements) {
         <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(s.capacityTons, 0)} t` : ''}</div>
         ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
         ${noteLine(s) ? `<div class="meta" style="font-style:italic">${noteLine(s)}</div>` : ''}
-        ${capPct !== null ? `<div class="gauge ${capPct > 100 ? 'over' : capPct >= 95 ? 'warn' : ''}" role="img" aria-label="${Math.round(capPct)} percent full"><i style="width:${Math.min(100, capPct)}%"></i></div>` : ''}
+        ${mixLine}
+        ${bar}
         ${tarp ? `<div class="meta">Tarp needed: ${num(tarp.tarpWidthNeeded, 1)} x ${num(tarp.tarpLengthNeeded, 1)} m</div>` : ''}
       </div>
       ${columns(num(r.tons, 1))}
@@ -571,6 +600,267 @@ function noteLine(s) {
  * out — last in, first out. Needs the quality of each load to say anything
  * about quality; without it the prediction is a list of which loads come first.
  */
+/** One band of the samples editor: a stretch of the silo, by tonnes, with its grade and specs. */
+function bandRowHtml(r = {}) {
+  const v = (x) => (x === undefined || x === null ? '' : x);
+  return `<div class="lay-row" data-lay>
+    <input type="number" inputmode="decimal" step="0.1" class="lay-tons" placeholder="Tonnes" aria-label="Tonnes in this stretch" value="${v(r.tons)}" />
+    <input type="text" class="lay-grade" list="lay-grades" placeholder="Grade" aria-label="Grade of this stretch" value="${esc(r.grade ?? '')}" />
+    <input type="number" inputmode="decimal" step="0.1" class="lay-protein" placeholder="Prot %" aria-label="Protein" value="${v(r.proteinPct)}" />
+    <span class="lay-btns">
+      <button type="button" class="lay-up" aria-label="Move this stretch up">&uarr;</button>
+      <button type="button" class="lay-down" aria-label="Move this stretch down">&darr;</button>
+      <button type="button" class="lay-del" aria-label="Remove this stretch">&times;</button>
+    </span>
+    <span class="lay-tag meta"></span>
+    <div class="lay-more">
+      <input type="number" inputmode="decimal" step="0.1" class="lay-moisture" placeholder="Moisture %" aria-label="Moisture" value="${v(r.moisturePct)}" />
+      <input type="number" inputmode="decimal" step="0.1" class="lay-screenings" placeholder="Screenings %" aria-label="Screenings" value="${v(r.screeningsPct)}" />
+      <input type="number" inputmode="decimal" step="0.1" class="lay-tw" placeholder="Test wt kg/hL" aria-label="Test weight" value="${v(r.testWeightKgHl)}" />
+      <input type="number" inputmode="decimal" step="1" class="lay-fn" placeholder="Falling no." aria-label="Falling number" value="${v(r.fallingNumber)}" />
+    </div>
+  </div>`;
+}
+
+/**
+ * What is in a silo or bunker, layer by layer: a picture, the order it comes out in, the
+ * running samples (by tonnes from the bottom, with their grade and specs), and the outload
+ * planner. The loads that went in are layers of their own; a sample band replaces what the
+ * loads say for the grain it covers.
+ */
+function contentsFold(existing, grades) {
+  const rows = Array.isArray(existing?.gradeBands) ? existing.gradeBands : [];
+  return `
+    <details class="fold" id="contents-fold" ${rows.length ? 'open' : ''}>
+      <summary><div><h2>Grades in it &amp; outload predictor</h2>
+        <div class="sub">What is in it, layer by layer, and what each truck will take</div></div></summary>
+      <div id="lay-picture"></div>
+      <div id="lay-bulk" class="lay-bulk"></div>
+      <div class="subhead" style="margin-top:10px">In it now, top first</div>
+      <div id="op-stack"></div>
+      <div class="subhead">Grade and specs by tonnes <span class="meta">(from the bottom)</span></div>
+      <div class="field hint" style="margin-bottom:8px">Running samples? Say what each stretch of the silo is &mdash; the first 800 t is APH1 at 11.5% protein, the next
+        600 t is AUH2 &mdash; whichever loads it came from. This replaces what the individual loads say for that grain. Grain that arrives after the date
+        below, or beyond the last stretch, keeps its own grade. Trucks take from the top, so lower stretches stay as they are.</div>
+      <div class="field" style="margin-bottom:8px"><label for="lay-asof">Sampled on</label>
+        <input type="date" id="lay-asof" value="${esc(existing?.gradeBandsDate || todayLocal())}" /></div>
+      <div id="lay-rows">${rows.map(bandRowHtml).join('')}</div>
+      <datalist id="lay-grades">${grades.map((g) => `<option value="${esc(g)}"></option>`).join('')}</datalist>
+      <button type="button" class="btn secondary small" id="lay-add">+ Add the next stretch</button>
+      <div class="field hint" id="lay-total"></div>
+      <div class="subhead">Plan an outload</div>
+      <div class="grid-2">
+        ${field({ label: 'Tonnes to take out', id: 'op-total', type: 'number', step: '1', value: '' })}
+        ${field({ label: 'Truck size (t)', id: 'op-truck', type: 'number', step: '1', value: 36 })}
+      </div>
+      <div id="op-result"></div>
+    </details>`;
+}
+
+/** The bands as typed. */
+function readLayerRows(root) {
+  const val = (row, sel) => row.querySelector(sel)?.value ?? '';
+  return [...root.querySelectorAll('#lay-rows [data-lay]')].map((row) => ({
+    tons: val(row, '.lay-tons'),
+    grade: val(row, '.lay-grade'),
+    proteinPct: val(row, '.lay-protein'),
+    moisturePct: val(row, '.lay-moisture'),
+    screeningsPct: val(row, '.lay-screenings'),
+    testWeightKgHl: val(row, '.lay-tw'),
+    fallingNumber: val(row, '.lay-fn'),
+  }));
+}
+
+function buildContents(root, existing) {
+  const stackEl = root.querySelector('#op-stack');
+  if (!stackEl) return;
+  const resultEl = root.querySelector('#op-result');
+  const rowsEl = root.querySelector('#lay-rows');
+  let layers = [];
+  let ungradedIds = [];
+  let contents = 0;
+
+  // The storage as the form describes it right now, so the picture follows the typing.
+  const live = () => ({
+    ...(existing || {}),
+    id: existing?.id ?? '__new',
+    openingStock: Number(root.querySelector('#s-opening')?.value) || 0,
+    gradeBands: cleanBands(readLayerRows(root)),
+    gradeBandsDate: root.querySelector('#lay-asof')?.value || '',
+  });
+
+  const layerLabel = (l) => {
+    const base = l.source === 'opening'
+      ? 'Opening stock'
+      : `Ticket #${l.ticketNo ?? '?'} · ${esc(shortDate(l.date) || 'no date')}${l.rego ? ` · ${esc(l.rego)}` : ''}`;
+    return l.banded ? `${base} <span class="meta">· stretch ${l.banded}</span>` : base;
+  };
+
+  const redraw = () => {
+    const st = live();
+    // what is in it, without the samples: the grain itself
+    contents = layersForStorage({ ...st, gradeBands: [] }, db.get().movements).layers.reduce((a, l) => a + l.tons, 0);
+    const result = layersForStorage(st, db.get().movements);
+    layers = result.layers;
+    const mix = gradeMix(layers);
+    const capacity = Number(root.querySelector('#s-capacity')?.value) || existing?.capacityTons || 0;
+    const total = layers.reduce((a, l) => a + l.tons, 0);
+
+    root.querySelector('#lay-picture').innerHTML = `
+      <div class="silo-pic">
+        <div>${siloSvg(layers, capacity)}</div>
+        <div class="silo-legend">
+          <div class="main">${num(total, 1)} t${capacity ? ` <span class="meta">of ${num(capacity, 0)} t</span>` : ''}</div>
+          ${mix.length ? mix.map((g) => `<div class="legend-row"><i style="background:${g.color}"></i><span>${esc(g.grade)}</span><span class="meta">${num(g.tons, 1)} t · ${Math.round(g.pct * 100)}%</span></div>`).join('')
+            : '<div class="field hint">Nothing in it on the books.</div>'}
+        </div>
+      </div>`;
+
+    const top = [...layers].reverse();
+    stackEl.innerHTML = top.length
+      ? top.slice(0, 14).map((l) => `<div class="row" style="align-items:flex-start"><span class="label"><i class="sw" style="background:${gradeMix([l])[0].color}"></i>${layerLabel(l)}
+          <div class="meta">${esc(specText(l.spec)) || 'no grade or quality recorded'}</div></span><span class="value">${num(l.tons, 1)} t${l.source === 'load' && l.id && !l.banded ? `<div><button type="button" class="btn secondary small le-open" data-load="${esc(l.id)}" style="min-height:30px;padding:4px 12px;margin-top:4px">Grade</button></div>` : ''}</span></div>`).join('')
+        + (top.length > 14 ? `<div class="field hint">…and ${top.length - 14} older layers underneath.</div>` : '')
+      : '<div class="field hint">Nothing in this storage on the books.</div>';
+    if (result.shortfall > 0.05) {
+      stackEl.innerHTML += `<div class="field hint" style="color:var(--danger)">${num(result.shortfall, 1)} t has been loaded out that no load or opening stock accounts for, so what is shown may be off.</div>`;
+    }
+
+    // loads with no grade of their own and no sample over them
+    const bulk = root.querySelector('#lay-bulk');
+    const typed = bulk.querySelector('#lay-bulk-grade')?.value ?? '';
+    ungradedIds = layers.filter((l) => l.source === 'load' && l.id && !l.banded && !gradeKey(l.spec?.grade)).map((l) => l.id);
+    const ungradedTons = layers.filter((l) => ungradedIds.includes(l.id)).reduce((a, l) => a + l.tons, 0);
+    bulk.innerHTML = ungradedIds.length
+      ? `<div class="field hint" style="margin:8px 0 4px">${ungradedIds.length} load${ungradedIds.length === 1 ? ' has' : 's have'} no grade (${num(ungradedTons, 1)} t). Give them all one in a single step:</div>
+         <div style="display:flex;gap:6px"><input type="text" id="lay-bulk-grade" list="lay-grades" placeholder="Grade, e.g. APH1" value="${esc(typed)}" />
+         <button type="button" class="btn secondary small" id="lay-bulk-go" style="flex:none">Set all</button></div>`
+      : '';
+
+    // each stretch labelled with where it sits in the silo, from the bottom
+    const rows = [...rowsEl.querySelectorAll('[data-lay]')];
+    let from = 0;
+    rows.forEach((row, i) => {
+      const t = Number(row.querySelector('.lay-tons').value) || 0;
+      const to = from + (t > 0 ? t : 0);
+      const tag = row.querySelector('.lay-tag');
+      tag.textContent = t > 0 ? `${num(from, 0)}\u2013${num(to, 0)} t from the bottom${from >= contents - 1e-6 ? ' \u2014 more than is in the silo, ignored' : ''}` : '';
+      from = to;
+      row.querySelector('.lay-up').disabled = i === 0;
+      row.querySelector('.lay-down').disabled = i === rows.length - 1;
+    });
+    const covered = cleanBands(readLayerRows(root)).reduce((a, b) => a + b.tons, 0);
+    root.querySelector('#lay-total').textContent = covered > 0
+      ? `These stretches cover ${num(Math.min(covered, contents), 1)} t of the ${num(contents, 1)} t in the silo${contents - covered > 0.05 ? `; the top ${num(contents - covered, 1)} t keeps the grade of the loads it came from.` : '.'}`
+      : 'No samples described: each load and the opening stock keep their own grade.';
+    drawPlan();
+  };
+
+  const truckCard = (pl, i) => {
+    const mix = pl.grades.map((g) => `${esc(g.grade || 'No grade')} ${Math.round(g.pct * 100)}%`).join(' · ');
+    const lines = SPECS.map((sp) => {
+      const v = pl.specs[sp.key];
+      if (!v) return '';
+      const range = Math.abs(v.max - v.min) > 1e-9 ? ` (${num(v.min, sp.dp)}–${num(v.max, sp.dp)})` : '';
+      const partial = v.coverage < 0.995 ? ` <span class="meta">from ${Math.round(v.coverage * 100)}% of the load</span>` : '';
+      return `<div class="row"><span class="label">${sp.label}</span><span class="value">${num(v.avg, sp.dp)} ${sp.unit}${range}${partial}</span></div>`;
+    }).join('');
+    const from = [...new Set(pl.segments.map((sg) => (sg.layer.source === 'opening' ? 'opening stock' : `#${sg.layer.ticketNo ?? '?'}`)
+      + (sg.layer.banded ? ` (stretch ${sg.layer.banded})` : '')))].join(', ');
+    return `<div class="card" style="margin:8px 0">
+      <h2 style="margin-bottom:4px">Truck ${i + 1} · ${num(pl.total, 1)} t</h2>
+      <div class="meta">${mix || 'No grade recorded'}</div>
+      <div class="meta" style="margin-bottom:6px">From ${esc(from)}</div>
+      ${lines || '<div class="field hint">No quality recorded on these loads.</div>'}
+    </div>`;
+  };
+  const drawPlan = () => {
+    const total = Number(root.querySelector('#op-total').value) || 0;
+    const size = Number(root.querySelector('#op-truck').value) || 36;
+    if (!(total > 0)) { resultEl.innerHTML = ''; return; }
+    const plan = predictPlan(layers, total, size);
+    resultEl.innerHTML = plan.trucks.map(truckCard).join('')
+      + (plan.short > 0.05 ? `<div class="field hint" style="color:var(--danger)">Only ${num(total - plan.short, 1)} t is in the storage; ${num(plan.short, 1)} t of that outload has nothing to come from.</div>` : '');
+  };
+
+  // Grade one load in place, from the silo, without going to the Movement tab.
+  stackEl.addEventListener('click', (e) => {
+    const open = e.target.closest('.le-open');
+    const row = e.target.closest('.row');
+    if (open && row) {
+      const m = db.get().movements.find((x) => x.id === open.dataset.load);
+      if (!m) return;
+      const nv = (x) => (x === undefined || x === null ? '' : x);
+      row.querySelector('.label .meta').outerHTML = `<div class="le-edit" data-load="${esc(m.id)}" style="margin-top:4px">
+        <div class="le-grid">
+          <input type="text" class="le-grade" list="lay-grades" placeholder="Grade" value="${esc(m.grade ?? '')}" />
+          <input type="number" inputmode="decimal" step="0.1" class="le-protein" placeholder="Protein %" value="${nv(m.proteinPct)}" />
+          <input type="number" inputmode="decimal" step="0.1" class="le-moisture" placeholder="Moisture %" value="${nv(m.moisturePct)}" />
+          <input type="number" inputmode="decimal" step="0.1" class="le-screenings" placeholder="Screenings %" value="${nv(m.screeningsPct)}" />
+          <input type="number" inputmode="decimal" step="0.1" class="le-tw" placeholder="Test wt kg/hL" value="${nv(m.testWeightKgHl)}" />
+          <input type="number" inputmode="decimal" step="1" class="le-fn" placeholder="Falling no." value="${nv(m.fallingNumber)}" />
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button type="button" class="btn small le-save" style="flex:none;min-height:38px">Save</button>
+          <button type="button" class="btn secondary small le-cancel" style="flex:none;min-height:38px">Cancel</button></div></div>`;
+      open.remove();
+      row.querySelector('.le-grade').focus();
+      return;
+    }
+    if (e.target.closest('.le-cancel')) { redraw(); return; }
+    const save = e.target.closest('.le-save');
+    if (save) {
+      const edit = save.closest('.le-edit');
+      const num = (sel) => { const v = edit.querySelector(sel).value; return v === '' ? null : Number(v); };
+      db.upsertMovement({
+        id: edit.dataset.load,
+        grade: edit.querySelector('.le-grade').value.trim(),
+        proteinPct: num('.le-protein'), moisturePct: num('.le-moisture'), screeningsPct: num('.le-screenings'),
+        testWeightKgHl: num('.le-tw'), fallingNumber: num('.le-fn'),
+      });
+      toast('Load updated');
+      redraw();
+    }
+  });
+  root.querySelector('#lay-bulk').addEventListener('click', async (e) => {
+    if (!e.target.closest('#lay-bulk-go')) return;
+    const input = root.querySelector('#lay-bulk-grade');
+    const grade = input.value.trim();
+    if (!grade) { input.focus(); return; }
+    const ids = [...ungradedIds];
+    const ok = await askConfirm(`Set the grade of ${ids.length} load${ids.length === 1 ? '' : 's'} to ${grade}?\n\nThis changes the loads themselves (on the Movement tab), not just this silo.`, { confirmLabel: 'Set grade' });
+    if (!ok) return;
+    for (const id of ids) db.upsertMovement({ id, grade });
+    toast(`${ids.length} load${ids.length === 1 ? '' : 's'} set to ${grade}`);
+    redraw();
+  });
+
+  rowsEl.addEventListener('input', redraw);
+  rowsEl.addEventListener('click', (e) => {
+    const row = e.target.closest('[data-lay]');
+    if (!row) return;
+    if (e.target.closest('.lay-del')) row.remove();
+    else if (e.target.closest('.lay-up') && row.previousElementSibling) row.previousElementSibling.before(row);
+    else if (e.target.closest('.lay-down') && row.nextElementSibling) row.nextElementSibling.after(row);
+    else return;
+    redraw();
+  });
+  // The next stretch starts where the last ended; the tonnes left over are filled in to save typing.
+  root.querySelector('#lay-add').addEventListener('click', () => {
+    const covered = cleanBands(readLayerRows(root)).reduce((a, b) => a + b.tons, 0);
+    const left = Math.max(0, Math.round((contents - covered) * 10) / 10);
+    rowsEl.insertAdjacentHTML('beforeend', bandRowHtml({ tons: left > 0 ? left : '' }));
+    redraw();
+    rowsEl.lastElementChild.querySelector('.lay-grade').focus();
+  });
+  root.querySelector('#op-total').addEventListener('input', drawPlan);
+  root.querySelector('#op-truck').addEventListener('input', drawPlan);
+  root.querySelector('#lay-asof').addEventListener('change', redraw);
+  root.querySelector('#s-capacity')?.addEventListener('input', redraw);
+  root.querySelector('#s-opening')?.addEventListener('input', redraw);
+  redraw();
+}
+
 function predictorFold(existing) {
   return `
     <details class="fold">
@@ -662,7 +952,7 @@ function openStorageSheet(existing) {
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
         ${qualityFold(existing, gradesInUse)}
         ${notesField(existing)}
-        ${existing ? predictorFold(existing) : ''}
+        ${contentsFold(existing, gradesInUse)}
         <hr class="sep" />
         ${kind === 'silo' ? `
           <div class="grid-2">
@@ -704,7 +994,7 @@ function openStorageSheet(existing) {
         <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
       `;
       if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id);
-      if (existing) buildPredictor(root, existing);
+      buildContents(root, existing);
 
       const kindSel = root.querySelector('#s-kind');
       if (kindSel) {
@@ -774,6 +1064,8 @@ function openStorageSheet(existing) {
           capacityTons: getNum(root, 's-capacity') || null,
           angleOfRepose: angleOverride ? parseFloat(angleOverride) : null,
           testWeight: twOverride ? parseFloat(twOverride) : null,
+          gradeBands: cleanBands(readLayerRows(root)),
+          gradeBandsDate: root.querySelector('#lay-asof')?.value || todayLocal(),
           ...readQuality(root),
           notes: getVal(root, 's-notes')?.trim() || '',
         };

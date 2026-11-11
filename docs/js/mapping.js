@@ -93,6 +93,24 @@ const qualityFromRow = storageQuality.fromRow;
  * and a note that has existed keeps its column so deleting it reaches the server.
  */
 export const hasStorageNote = (st) => String(st.notes ?? '').trim() !== '';
+/**
+ * Running samples of a silo, by tonnes from the bottom: { asOf, bands: [{ tons, grade,
+ * proteinPct, … }] }, one json column. Same rule as the others — no column while nothing
+ * is described, and a description that has existed keeps its column so clearing it
+ * reaches the server.
+ */
+export const hasGradeBands = (st) => Array.isArray(st.gradeBands) && st.gradeBands.length > 0;
+function bandColumns(st) {
+  if (!hasGradeBands(st) && !st.__hasBands) return {};
+  return { grade_bands: hasGradeBands(st) ? { asOf: st.gradeBandsDate || null, bands: st.gradeBands } : null };
+}
+function bandsFromRow(row) {
+  const g = row.grade_bands;
+  return g && Array.isArray(g.bands) && g.bands.length
+    ? { gradeBands: g.bands, gradeBandsDate: g.asOf || '', __hasBands: true }
+    : {};
+}
+
 function noteColumns(st) {
   if (!hasStorageNote(st) && !st.__hasNotes) return {};
   return { notes: orNull(String(st.notes ?? '').trim()) };
@@ -205,6 +223,7 @@ export function stateToRows(state, farmId) {
         unit_label: st.unitLabel || 't',
         ...qualityColumns(st),
         ...noteColumns(st),
+        ...bandColumns(st),
       });
     }
 
@@ -446,6 +465,7 @@ export function rowsToState(rows) {
         unitLabel: st.unit_label ?? 't',
         ...qualityFromRow(st),
         ...noteFromRow(st),
+        ...bandsFromRow(st),
       })),
 
       sales: inSeason(rows.sales, season.id).map((sale) => {

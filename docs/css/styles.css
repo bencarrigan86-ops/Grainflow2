@@ -277,10 +277,10 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
 tr.jump-row { cursor: pointer; }
 .jump-link {
   appearance: none; background: none; border: none; padding: 6px 0; margin: 0;
-  font: inherit; font-weight: 700; color: var(--accent-report); text-align: left; cursor: pointer;
-  text-decoration: underline; text-underline-offset: 3px;
+  font: inherit; font-weight: 700; color: var(--text); text-align: left; cursor: pointer;
+  text-decoration: underline dotted var(--accent-summary); text-decoration-thickness: 2px; text-underline-offset: 4px;
 }
-.jump-link::after { content: " \2193"; display: inline-block; text-decoration: none; }
+.jump-link::after { content: " \2193"; display: inline-block; text-decoration: none; color: var(--accent-summary); font-weight: 800; }
 
 .list-item {
   display: flex;
@@ -832,3 +832,46 @@ details.fold > summary .sub { font-size: 12px; color: var(--text-dim); margin-to
 /* Amber is kept for one job: something that needs attention (unsent changes, a warning). */
 .card.warn { background: var(--warn-bg); border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); }
 .dot.warn { background: var(--warn); }
+
+/* ---------------------------------------------------------------------------
+   Grades in a silo: the picture, its legend, the layer rows, and the bar.
+   --------------------------------------------------------------------------- */
+.silo-pic { display: flex; gap: 16px; align-items: center; padding: 6px 0 4px; }
+.silo-pic svg { display: block; }
+.silo-legend { flex: 1; min-width: 0; }
+.silo-legend .main { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+.legend-row { display: flex; gap: 8px; align-items: center; padding: 3px 0; font-size: 14px; font-weight: 600; }
+.legend-row .meta { margin-left: auto; font-weight: 500; }
+.legend-row i, i.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
+i.sw { margin-right: 6px; vertical-align: -1px; }
+
+.mix-line { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 3px; }
+.mix-chip { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: var(--text); font-size: 12.5px; }
+.mix-chip i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+
+.gauge.layered { height: 9px; }
+.gauge.layered .lay { display: flex; height: 100%; }
+.gauge.layered .lay > i { display: block; height: 100%; flex: none; border-radius: 0; box-shadow: inset -1px 0 0 rgba(255,255,255,.6); }
+.gauge.layered.over { box-shadow: 0 0 0 1.5px var(--danger); }
+
+.lay-row { display: grid; grid-template-columns: 74px 1fr 68px auto; gap: 6px; align-items: center; margin-bottom: 4px; }
+.lay-row input, .lay-bulk input, .le-edit input {
+  width: 100%; min-width: 0; font-size: 16px; font-family: inherit; padding: 9px 8px;
+  border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text);
+}
+.lay-row input:read-only { opacity: .8; }
+.lay-btns { display: flex; gap: 4px; }
+.lay-btns button {
+  width: 34px; height: 38px; border-radius: 8px; padding: 0; font-size: 16px; font-weight: 800; cursor: pointer;
+  border: 1.5px solid var(--btn-edge); background: var(--btn-tint); color: var(--btn-ink);
+}
+.lay-btns button:disabled { opacity: .35; cursor: default; }
+.lay-btns .lay-del { border-color: color-mix(in srgb, var(--danger) 65%, var(--border)); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); color: var(--danger); }
+.lay-row .lay-tag { grid-column: 1 / -1; margin: -2px 0 6px 2px; min-height: 0; }
+.lay-row .lay-tag:empty { display: none; }
+
+/* Samples by tonnes: the other measurements sit under the grade, two to a line. */
+.lay-more { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 8px; }
+.le-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.le-grid .le-grade { grid-column: 1 / -1; }
+.lay-row { grid-template-columns: 74px 1fr 68px auto; }

@@ -155,6 +155,29 @@ check('hasLoadQuality sees a value, and a zero, and ignores blanks', () => {
   assert.equal(hasLoadQuality({ grade: '', moisturePct: null }), false);
 });
 
+console.log('\n=== running samples, by tonnes ===');
+
+check('bands and their date go to one column and come back, in order', () => {
+  const bands = [
+    { tons: 500, grade: 'APH1' },
+    { tons: 250, grade: 'AUH2', proteinPct: 11.5, moisturePct: 11, screeningsPct: 1.1, testWeightKgHl: 79, fallingNumber: 400 },
+  ];
+  const r = rowOf({ ...SILO, gradeBands: bands, gradeBandsDate: '2026-11-12' });
+  assert.deepEqual(r.grade_bands, { asOf: '2026-11-12', bands });
+  const back = backOf({ ...SILO, gradeBands: bands, gradeBandsDate: '2026-11-12' });
+  assert.deepEqual(back.gradeBands, bands);
+  assert.equal(back.gradeBandsDate, '2026-11-12');
+});
+check('a silo with none sends no column, so silos still save before the migration', () => {
+  assert.ok(!('grade_bands' in rowOf(SILO)));
+  assert.ok(!('gradeBands' in backOf(SILO)));
+  assert.ok(!('grade_bands' in rowOf({ ...SILO, gradeBands: [] })));
+});
+check('bands that were cleared still send a null, so the clearing reaches the server', () => {
+  const r = rowOf({ ...SILO, gradeBands: [], __hasBands: true });
+  assert.ok('grade_bands' in r && r.grade_bands === null);
+});
+
 console.log('\n=== notes on a storage ===');
 
 check('a note goes to the notes column and comes back', () => {
