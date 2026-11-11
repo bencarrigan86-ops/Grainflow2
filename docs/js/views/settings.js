@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=116';
-import { num, money, esc } from '../fmt.js?v=116';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=116';
-import { openLoadImportSheet } from './importloads.js?v=116';
-import { APP_VERSION } from '../version.js?v=116';
-import { exportRowsAsCSV } from '../csv.js?v=116';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=116';
-import { endpointLabel } from './movements.js?v=116';
+import { db } from '../storage.js?v=117';
+import { num, money, esc } from '../fmt.js?v=117';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=117';
+import { openLoadImportSheet } from './importloads.js?v=117';
+import { APP_VERSION } from '../version.js?v=117';
+import { exportRowsAsCSV } from '../csv.js?v=117';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=117';
+import { endpointLabel } from './movements.js?v=117';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=116';
+} from '../invites.js?v=117';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=116';
+} from '../auth.js?v=117';
 
 let unsub = null;
 

@@ -1,10 +1,11 @@
-import { db } from '../storage.js?v=116';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=116';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=116';
-import { hasStorageQuality } from '../mapping.js?v=116';
-import { num, tons, esc } from '../fmt.js?v=116';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=116';
-import { renderRelatedMovements } from './movements.js?v=116';
+import { db } from '../storage.js?v=117';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=117';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=117';
+import { hasStorageQuality } from '../mapping.js?v=117';
+import { num, tons, esc } from '../fmt.js?v=117';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=117';
+import { renderRelatedMovements } from './movements.js?v=117';
+import { openSiloSetupSheet } from './silosetup.js?v=117';
 
 let unsub = null;
 let listMode = 'chronological';
@@ -82,6 +83,7 @@ function paint(root) {
 
     <div class="card">
       <h2>Saved silos &amp; bunkers</h2>
+      ${storages.length > 0 && ['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="silo-setup" style="margin-bottom:10px">Season set-up&hellip;</button>` : ''}
       ${storages.length > 0 ? `
       <div class="segmented" id="list-mode">
         <button data-mode="chronological" class="${listMode === 'chronological' ? 'active' : ''}">Chronological</button>
@@ -107,6 +109,7 @@ function paint(root) {
     el.addEventListener('click', () => openStorageSheet(storages.find((s) => s.id === el.dataset.editStorage)));
   });
   root.querySelector('#add-storage').addEventListener('click', () => openStorageSheet(null));
+  root.querySelector('#silo-setup')?.addEventListener('click', () => openSiloSetupSheet());
 }
 
 function paintCalculator(root) {
