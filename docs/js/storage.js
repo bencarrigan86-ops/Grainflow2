@@ -18,16 +18,17 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=112';
+import { hydrate } from './hydrate.js?v=115';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState,
-} from './local.js?v=112';
-import { chooseBootState, resolveLegacy } from './boot.js?v=112';
-import { isLegacyDirty } from './dirty.js?v=112';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=112';
-import { schedulePush, pushOnReconnect } from './sync.js?v=112';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=112';
+} from './local.js?v=115';
+import { chooseBootState, resolveLegacy } from './boot.js?v=115';
+import { isLegacyDirty } from './dirty.js?v=115';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=115';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=115';
+import { schedulePush, pushOnReconnect } from './sync.js?v=115';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=115';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -515,8 +516,11 @@ export const db = {
         mtmPrice: 0, openingStock: 0, retainedSeed: 0, grossMarginCost: 0, ...commodity, id,
       });
       touch('commodity', id);
+      persist();
+      return id;
     }
     persist();
+    return commodity.id;
   },
   deleteCommodity(id) {
     tombstone('commodities', id);
@@ -535,8 +539,37 @@ export const db = {
       const id = uid();
       c.fields.push({ ...field, id });
       touch('field', id);
+      persist();
+      return id;
     }
     persist();
+    return field.id;
+  },
+  /**
+   * Combine two paddocks into one: the kept paddock takes the name and the
+   * summed area, every load from the other now says it came from the kept one,
+   * and the other is deleted. See merge.js for what is kept from each.
+   *
+   * @returns {{loadsMoved: number} | null} null when either paddock is missing
+   */
+  mergeFields(keepId, dropId, name) {
+    const c = current();
+    const keep = c.fields.find((f) => f.id === keepId);
+    const drop = c.fields.find((f) => f.id === dropId);
+    if (!keep || !drop || keepId === dropId) return null;
+
+    c.fields[c.fields.indexOf(keep)] = mergeFieldRecords(keep, drop, name);
+    touch('field', keepId);
+
+    const { movements, changed } = repointLoads(c.movements, dropId, keepId);
+    c.movements = movements;
+    changed.forEach((id) => touch('movement', id));
+
+    tombstone('fields', dropId);
+    tombstone('field_agronomy', drop.__agronomyId);
+    c.fields = c.fields.filter((f) => f.id !== dropId);
+    persist();
+    return { loadsMoved: changed.length };
   },
   deleteField(id) {
     const f = current().fields.find((x) => x.id === id);
@@ -579,8 +612,11 @@ export const db = {
       const id = uid();
       c.storages.push({ ...storage, id, createdAt: Date.now() });
       touch('storage', id);
+      persist();
+      return id;
     }
     persist();
+    return storage.id;
   },
   deleteStorage(id) {
     tombstone('storages', id);
@@ -602,6 +638,24 @@ export const db = {
       touch('movement', id);
     }
     persist();
+  },
+  /**
+   * Add many loads at once — an import. One save, one repaint, one push, instead
+   * of a few hundred of each. Tickets are numbered in the order given, so the
+   * caller sends them oldest first.
+   *
+   * @returns {number} how many were added
+   */
+  addMovements(list) {
+    const c = current();
+    for (const m of list) {
+      const id = uid();
+      c.movements.push({ ...m, id, ticketNo: data.nextMovementNo });
+      data.nextMovementNo += 1;
+      touch('movement', id);
+    }
+    persist();
+    return list.length;
   },
   deleteMovement(id) {
     const m = current().movements.find((x) => x.id === id);

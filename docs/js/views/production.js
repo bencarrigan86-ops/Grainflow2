@@ -1,9 +1,10 @@
-import { db } from '../storage.js?v=112';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=112';
-import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=112';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=112';
-import { renderRelatedMovements } from './movements.js?v=112';
-import { canSeeYield } from '../nav.js?v=112';
+import { db } from '../storage.js?v=115';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=115';
+import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=115';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=115';
+import { describeMerge } from '../merge.js?v=115';
+import { renderRelatedMovements } from './movements.js?v=115';
+import { canSeeYield } from '../nav.js?v=115';
 
 let unsub = null;
 
@@ -167,6 +168,7 @@ function openFieldSheet(existing) {
       <div style="height:12px"></div>
       ${field({ label: 'Notes', id: 'notes', type: 'textarea', value: existing?.notes })}
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
+      ${existing && ['owner', 'manager'].includes(db.getRole()) && db.get().fields.length > 1 ? `<button class="btn secondary" id="merge-field" style="margin-top:12px">Merge another paddock into this one&hellip;</button>` : ''}
       ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
       <div class="save-bar"><div class="total" ${showYield ? '' : 'hidden'}><div class="l">Total tons</div><div class="v" id="tons-bar">—</div></div><button class="btn" id="save">Save</button></div>
     `;
@@ -395,6 +397,7 @@ function openFieldSheet(existing) {
       });
       closeSheet(); toast('Saved');
     });
+    root.querySelector('#merge-field')?.addEventListener('click', () => { closeSheet(); openMergeSheet(existing); });
     const del = root.querySelector('#del');
     if (del) {
       del.addEventListener('click', () => {
@@ -406,4 +409,54 @@ function openFieldSheet(existing) {
     }
   });
   return body;
+}
+
+/**
+ * Combine another paddock into this one — W3 and W4 into W3/4, say. Says what
+ * will happen before it does it: the area that results, how many loads move
+ * across, and which of the other paddock's rates will be lost.
+ */
+function openMergeSheet(keep) {
+  const { fields, movements } = db.get();
+  const others = fields.filter((f) => f.id !== keep.id)
+    .sort((a, b) => (b.commodityId === keep.commodityId) - (a.commodityId === keep.commodityId) || String(a.name).localeCompare(String(b.name)));
+  openSheet(`Merge into ${keep.name}`, (root) => {
+    root.innerHTML = `
+      <div class="field hint" style="margin-bottom:10px">Use this when two paddocks are really one — the weighbridge
+        calls them W3/4 and the app has W3 and W4. The paddock you pick is merged into <strong>${esc(keep.name)}</strong>
+        and then deleted.</div>
+      ${field({ label: 'Paddock to merge in', id: 'mg-other', type: 'select', value: '', options: [{ value: '', label: 'Choose…' }, ...others.map((f) => ({ value: f.id, label: `${f.name} (${num(f.areaHa, 1)} ha)` }))] })}
+      ${field({ label: 'Name for the combined paddock', id: 'mg-name', value: keep.name })}
+      <div id="mg-preview"></div>
+      <div class="save-bar solo"><button class="btn" id="mg-go" disabled>Merge</button></div>`;
+    const preview = root.querySelector('#mg-preview');
+    const go = root.querySelector('#mg-go');
+    const pick = () => {
+      const drop = fields.find((f) => f.id === getVal(root, 'mg-other'));
+      if (!drop) { preview.innerHTML = ''; go.disabled = true; return null; }
+      const d = describeMerge(keep, drop, movements, getVal(root, 'mg-name'));
+      preview.innerHTML = `<div class="card">
+        <div class="row"><span class="label">Combined area</span><span class="value">${num(d.areaHa, 1)} ha</span></div>
+        <div class="row"><span class="label">Loads moved across from ${esc(d.droppedName)}</span><span class="value">${d.loadsMoved}</span></div>
+        <div class="row"><span class="label">Paddock deleted</span><span class="value">${esc(d.droppedName)}</span></div>
+        ${d.losing.length ? `<div class="field hint" style="margin-top:6px;color:var(--danger)">${esc(d.droppedName)}'s ${d.losing.map(esc).join(', ')} will not carry across; ${esc(keep.name)}'s are kept.</div>` : ''}
+      </div>`;
+      go.disabled = false;
+      return { drop, d };
+    };
+    root.querySelector('#mg-other').addEventListener('change', pick);
+    root.querySelector('#mg-name').addEventListener('input', pick);
+    go.addEventListener('click', async () => {
+      const chosen = pick();
+      if (!chosen) return;
+      const ok = await askConfirm(
+        `Merge ${chosen.drop.name} into ${keep.name}, as "${chosen.d.name}" (${num(chosen.d.areaHa, 1)} ha)? ${chosen.d.loadsMoved} load${chosen.d.loadsMoved === 1 ? '' : 's'} will move across and ${chosen.drop.name} will be deleted.`,
+        { confirmLabel: 'Merge', danger: true });
+      if (!ok) return;
+      const r = db.mergeFields(keep.id, chosen.drop.id, getVal(root, 'mg-name'));
+      closeSheet();
+      if (r) toast(`Merged — ${r.loadsMoved} load${r.loadsMoved === 1 ? '' : 's'} moved`);
+      else notify('Those paddocks could not be merged.');
+    });
+  });
 }

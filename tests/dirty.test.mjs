@@ -186,7 +186,7 @@ check('every kind a save records is one the selector understands', () => {
   for (const k of used) assert.ok(KINDS.includes(k), `storage.js touches "${k}", which dirty.js does not know`);
 });
 check('every save that changes a record says what it touched', () => {
-  for (const fn of ['upsertCommodity', 'upsertField', 'upsertSale', 'upsertStorage', 'upsertMovement',
+  for (const fn of ['upsertCommodity', 'upsertField', 'upsertSale', 'upsertStorage', 'upsertMovement', 'addMovements', 'mergeFields',
     'createInvoice', 'setInvoiceStatus', 'updateInvoice', 'updateOverheads', 'updateBusinessDetails']) {
     const start = storageSrc.indexOf(`${fn}(`);
     assert.ok(start >= 0, `${fn} not found`);

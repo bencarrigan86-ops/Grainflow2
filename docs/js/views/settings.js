@@ -1,17 +1,18 @@
-import { db } from '../storage.js?v=112';
-import { num, money, esc } from '../fmt.js?v=112';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=112';
-import { APP_VERSION } from '../version.js?v=112';
-import { exportRowsAsCSV } from '../csv.js?v=112';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=112';
-import { endpointLabel } from './movements.js?v=112';
+import { db } from '../storage.js?v=115';
+import { num, money, esc } from '../fmt.js?v=115';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=115';
+import { openLoadImportSheet } from './importloads.js?v=115';
+import { APP_VERSION } from '../version.js?v=115';
+import { exportRowsAsCSV } from '../csv.js?v=115';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc } from '../derived.js?v=115';
+import { endpointLabel } from './movements.js?v=115';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=112';
+} from '../invites.js?v=115';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=112';
+} from '../auth.js?v=115';
 
 let unsub = null;
 
@@ -117,6 +118,7 @@ function paint(root) {
           <button class="btn secondary small" id="import">Import backup</button>
         </div>
         <button class="btn secondary small" id="export-csv" style="margin-top:8px">Export CSV (Excel)&hellip;</button>
+        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-loads" style="margin-top:8px">Import truck loads (CSV)&hellip;</button>` : ''}
         <button class="btn danger small" id="reset" style="margin-top:10px">Reset all data</button>
         <input type="file" id="import-file" accept="application/json" style="display:none" />
       </div>
@@ -240,6 +242,7 @@ function paint(root) {
     URL.revokeObjectURL(url);
   });
   root.querySelector('#export-csv').addEventListener('click', () => openExportCsvSheet());
+  root.querySelector('#import-loads')?.addEventListener('click', () => openLoadImportSheet());
   const importFile = root.querySelector('#import-file');
   root.querySelector('#import').addEventListener('click', () => importFile.click());
   importFile.addEventListener('change', async () => {

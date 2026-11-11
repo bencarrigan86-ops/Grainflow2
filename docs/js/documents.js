@@ -17,7 +17,7 @@
 // nothing, and the failure it would hide — an upload that silently never
 // happened — is worse than being told to try again.
 
-import { supabase } from './supabase.js?v=112';
+import { supabase } from './supabase.js?v=115';
 
 const BUCKET = 'sale-documents';
 const SIGNED_URL_TTL = 60 * 60;
