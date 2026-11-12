@@ -878,3 +878,21 @@ i.sw { margin-right: 6px; vertical-align: -1px; }
 
 /* A summary table that has to fit a phone: tighter cell spacing. */
 .card.report .table-scroll table.tight th, .card.report .table-scroll table.tight td { padding-left: 5px; padding-right: 5px; }
+
+/* A section that is easy to scroll past, made a panel: tinted, outlined, with a summary on its closed header. */
+details.fold.feature {
+  background: var(--btn-tint);
+  border: 1.5px solid var(--btn-edge);
+  border-radius: 12px;
+  margin: 16px 0 12px;
+  padding: 0;
+}
+details.fold.feature > summary { padding: 12px 14px; min-height: 56px; }
+details.fold.feature > summary h2 { font-size: 16px; font-weight: 800; color: var(--btn-ink); }
+details.fold.feature > summary .sub { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 3px; }
+details.fold.feature > summary::after { width: 10px; height: 10px; border-color: var(--btn-ink); border-width: 2.5px; }
+details.fold.feature .feature-head { flex: 1; min-width: 0; }
+details.fold.feature .feature-bar { height: 8px; margin-top: 8px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--btn-edge) 50%, transparent); }
+details.fold.feature[open] > summary { border-bottom: 1.5px solid var(--btn-edge); }
+details.fold.feature > *:not(summary) { margin-left: 14px; margin-right: 14px; }
+details.fold.feature > *:last-child { margin-bottom: 14px; }

@@ -46,6 +46,9 @@ export function gradeMix(layers) {
     .sort((a, b) => b.tons - a.tons);
 }
 
+/** The grades worth showing: a sliver under 1% of the silo (a rounding crumb) is left out. */
+export const visibleMix = (mix) => (mix || []).filter((g) => g.tons > 0 && Math.round(g.pct * 100) >= 1);
+
 /** Does any layer say what grade it is? */
 export const hasGrades = (layers) => (layers || []).some((l) => gradeKey(l.spec?.grade));
 
@@ -60,7 +63,7 @@ export function dominantGrade(layers) {
  * everything adds nothing — and a long tail is cut to the biggest few.
  */
 export function mixText(mix, limit = 3) {
-  const shown = (mix || []).filter((g) => g.tons > 0);
+  const shown = visibleMix(mix);
   if (shown.length === 0) return '';
   if (shown.length === 1) return shown[0].grade;
   const parts = shown.slice(0, limit).map((g) => `${g.grade} ${Math.round(g.pct * 100)}%`);

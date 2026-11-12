@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=152';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=152';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=152';
-import { hasStorageQuality } from '../mapping.js?v=152';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=152';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=152';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=152';
-import { renderRelatedMovements } from './movements.js?v=152';
-import { openSiloSetupSheet } from './silosetup.js?v=152';
-import { commodityFills } from '../commodityfill.js?v=152';
-import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=152';
+import { db } from '../storage.js?v=158';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=158';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=158';
+import { hasStorageQuality } from '../mapping.js?v=158';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=158';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=158';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=158';
+import { renderRelatedMovements } from './movements.js?v=158';
+import { openSiloSetupSheet } from './silosetup.js?v=158';
+import { commodityFills } from '../commodityfill.js?v=158';
+import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=158';
 import {
-  gradeMix, dominantGrade, hasGrades, mixText, siloSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=152';
+  gradeMix, visibleMix, dominantGrade, hasGrades, mixText, siloSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
+} from '../silolayers.js?v=158';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -471,7 +471,7 @@ function qualityFold(existing, grades) {
   return `
     <details class="fold" ${has ? 'open' : ''}>
       <summary><div><h2>Grain quality</h2>
-        <div class="sub">Crop year, grade, moisture, protein, screenings, test weight, falling number</div></div></summary>
+        <div class="sub">The silo's own crop year, grade and specs &mdash; used when loads or samples don't say</div></div></summary>
       <datalist id="dl-grades">${grades.map((g) => `<option value="${esc(g)}">`).join('')}</datalist>
       <div class="grid-2">
         ${field({ label: 'Crop year', id: 'q-year', value: existing?.cropYear, placeholder: 'e.g. 2026/27' })}
@@ -552,7 +552,7 @@ function storageRow(s, commodities, movements) {
   // follow the measured estimate, which is zero until someone dips the silo.
   // Over capacity is shown as over, not clipped to a bar that looks merely full.
   const capPct = s.capacityTons ? Math.max(0, (ledger / s.capacityTons) * 100) : null;
-  const mix = s.__mix || [];
+  const mix = visibleMix(s.__mix);
   const layered = hasGrades(s.__layers || []);
   // The bar is the silo filled to what the books say, split by grade where grades are known:
   // bottom of the silo at the left. Without grades it is the plain fill it always was.
@@ -630,10 +630,20 @@ function bandRowHtml(r = {}) {
  */
 function contentsFold(existing, grades) {
   const rows = Array.isArray(existing?.gradeBands) ? existing.gradeBands : [];
+  // What is in it, said on the closed header itself, so the section tells you something before it is opened.
+  const held = existing ? layersForStorage(existing, db.get().movements).layers : [];
+  const heldTons = held.reduce((a, l) => a + l.tons, 0);
+  const heldMix = gradeMix(held);
+  const heldLine = !held.length ? 'Nothing in it on the books yet'
+    : hasGrades(held) ? `${esc(mixText(heldMix, 4))} · ${num(heldTons, 0)} t`
+      : `${num(heldTons, 0)} t · no grades recorded yet — tap to add`;
+  const heldBar = hasGrades(held)
+    ? `<div class="gauge layered feature-bar"><div class="lay" style="width:100%">${held.map((l) => `<i style="width:${(l.tons / heldTons) * 100}%;background:${gradeMix([l])[0].color}"></i>`).join('')}</div></div>`
+    : '';
   return `
-    <details class="fold" id="contents-fold" ${rows.length ? 'open' : ''}>
-      <summary><div><h2>Grades in it &amp; outload predictor</h2>
-        <div class="sub">What is in it, layer by layer, and what each truck will take</div></div></summary>
+    <details class="fold feature" id="contents-fold" ${rows.length ? 'open' : ''}>
+      <summary><div class="feature-head"><h2>Grade summary &amp; Outload predictor</h2>
+        <div class="sub">${heldLine}</div>${heldBar}</div></summary>
       <div id="lay-picture"></div>
       <div id="lay-bulk" class="lay-bulk"></div>
       <div class="subhead" style="margin-top:10px">In it now, top first</div>
@@ -711,7 +721,7 @@ function buildContents(root, existing) {
         <div>${siloSvg(layers, capacity)}</div>
         <div class="silo-legend">
           <div class="main">${num(total, 1)} t${capacity ? ` <span class="meta">of ${num(capacity, 0)} t</span>` : ''}</div>
-          ${mix.length ? mix.map((g) => `<div class="legend-row"><i style="background:${g.color}"></i><span>${esc(g.grade)}</span><span class="meta">${num(g.tons, 1)} t · ${Math.round(g.pct * 100)}%</span></div>`).join('')
+          ${visibleMix(mix).length ? visibleMix(mix).map((g) => `<div class="legend-row"><i style="background:${g.color}"></i><span>${esc(g.grade)}</span><span class="meta">${num(g.tons, 1)} t · ${Math.round(g.pct * 100)}%</span></div>`).join('')
             : '<div class="field hint">Nothing in it on the books.</div>'}
         </div>
       </div>`;
@@ -730,7 +740,7 @@ function buildContents(root, existing) {
     const bulk = root.querySelector('#lay-bulk');
     const typed = bulk.querySelector('#lay-bulk-grade')?.value ?? '';
     ungradedIds = layers.filter((l) => l.source === 'load' && l.id && !l.banded && !gradeKey(l.spec?.grade)).map((l) => l.id);
-    const ungradedTons = layers.filter((l) => ungradedIds.includes(l.id)).reduce((a, l) => a + l.tons, 0);
+    const ungradedTons = layers.filter((l) => l.source === 'load' && !l.banded && !gradeKey(l.spec?.grade)).reduce((a, l) => a + l.tons, 0);
     bulk.innerHTML = ungradedIds.length
       ? `<div class="field hint" style="margin:8px 0 4px">${ungradedIds.length} load${ungradedIds.length === 1 ? ' has' : 's have'} no grade (${num(ungradedTons, 1)} t). Give them all one in a single step:</div>
          <div style="display:flex;gap:6px"><input type="text" id="lay-bulk-grade" list="lay-grades" placeholder="Grade, e.g. APH1" value="${esc(typed)}" />
@@ -864,7 +874,7 @@ function buildContents(root, existing) {
 function predictorFold(existing) {
   return `
     <details class="fold">
-      <summary><div><h2>What's in it &amp; outload predictor</h2>
+      <summary><div><h2>Grade summary &amp; Outload predictor</h2>
         <div class="sub">Loads in the order they will come out, and what each truck will carry</div></div></summary>
       <div class="field hint" style="margin-bottom:8px">Last in, first out: the most recent load comes out first. Add
         the grade, protein and moisture to each load on the Movement tab and this shows what every truck will take.</div>
@@ -927,6 +937,29 @@ function buildPredictor(root, existing) {
   root.querySelector('#op-truck').addEventListener('input', draw);
 }
 
+/** The closed "Measure & dimensions" header: the measured total, the level and the capacity, kept current as they are typed. */
+function wireMeasureSummary(root) {
+  const fold = root.querySelector('#measure-fold');
+  const sub = root.querySelector('#measure-sub');
+  if (!fold || !sub) return;
+  const update = () => {
+    const total = root.querySelector('#s-total-preview')?.textContent.trim();
+    const cap = Number(root.querySelector('#s-capacity')?.value) || 0;
+    const high = root.querySelector('#s-height');
+    const level = Number((high || root.querySelector('#s-length'))?.value) || 0;
+    const bits = [];
+    if (total && total !== '—') bits.push(`${total} measured`);
+    if (level) bits.push(`${num(level, 1)} m ${high ? 'high' : 'filled'}`);
+    if (cap) bits.push(`${num(cap, 0)} t capacity`);
+    sub.textContent = bits.join(' · ') || 'Set the dimensions and dip the level';
+  };
+  // after the sheet's own handlers have worked the total out
+  fold.addEventListener('input', () => setTimeout(update, 0));
+  fold.addEventListener('click', () => setTimeout(update, 0));
+  update();
+  setTimeout(update, 0);
+}
+
 function openStorageSheet(existing) {
   const { commodities, movements, storages } = db.get();
   // Grades already used on other storages, offered as suggestions so APH1 is typed once.
@@ -953,7 +986,9 @@ function openStorageSheet(existing) {
         ${qualityFold(existing, gradesInUse)}
         ${notesField(existing)}
         ${contentsFold(existing, gradesInUse)}
-        <hr class="sep" />
+        <details class="fold feature" id="measure-fold" ${existing ? '' : 'open'}>
+          <summary><div class="feature-head"><h2>Measure &amp; dimensions</h2>
+            <div class="sub" id="measure-sub">&nbsp;</div></div></summary>
         ${kind === 'silo' ? `
           <div class="grid-2">
             ${field({ label: 'Radius (m)', id: 's-radius', type: 'number', step: '0.01', value: existing?.radius })}
@@ -989,12 +1024,14 @@ function openStorageSheet(existing) {
         <div class="row"><span class="label">Tarp width needed</span><span class="value" id="s-tarp-width">—</span></div>
         <div class="row"><span class="label">Tarp length needed</span><span class="value" id="s-tarp-length">—</span></div>
         ` : ''}
+        </details>
         ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
         ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete ${kindLabel(existing.kind).toLowerCase()}</button>` : ''}
         <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
       `;
       if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id);
       buildContents(root, existing);
+      wireMeasureSummary(root);
 
       const kindSel = root.querySelector('#s-kind');
       if (kindSel) {
