@@ -1,14 +1,14 @@
-import { db } from '../storage.js?v=162';
+import { db } from '../storage.js?v=165';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=162';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=162';
-import { num, tons, money, esc, shortDate, todayLocal } from '../fmt.js?v=162';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=162';
-import { renderRelatedMovements } from './movements.js?v=162';
-import { openInvoiceListSheet } from './invoice.js?v=162';
-import { openContractDocSheet } from './contract.js?v=162';
-import { wireJumps } from '../jump.js?v=162';
+} from '../documents.js?v=165';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=165';
+import { num, tons, money, esc, shortDate, todayLocal } from '../fmt.js?v=165';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=165';
+import { renderRelatedMovements } from './movements.js?v=165';
+import { openInvoiceListSheet } from './invoice.js?v=165';
+import { openContractDocSheet } from './contract.js?v=165';
+import { wireJumps } from '../jump.js?v=165';
 
 let unsub = null;
 

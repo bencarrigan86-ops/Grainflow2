@@ -56,6 +56,43 @@ const QUALITY_FIELDS = [
 ];
 const LOAD_QUALITY_FIELDS = QUALITY_FIELDS.filter(([key]) => key !== 'cropYear');
 
+/**
+ * One ticket as the app holds it, from its row, its legs and its photo row. Used for the
+ * whole farm at startup, and for a single ticket when two devices have changed it (see
+ * ticketmerge.js). `__rev` is the server's version of the row, so a device can tell later
+ * whether somebody else has changed it since.
+ */
+export function movementFromRow(m, legs = [], photo = null) {
+  const toLeg = (l) => ({
+    __legId: l.id,
+    type: REF_TYPE_FROM_DB[l.ref_type] || l.ref_type,
+    id: l.ref_id,
+    tons: n(l.tons),
+  });
+  return {
+    ...(photo ? {
+      __photoId: photo.id,
+      photoPath: photo.storage_path,
+      photoTakenAt: photo.taken_at ?? null,
+    } : {}),
+    id: m.id, ticketNo: m.ticket_no,
+    date: m.move_date ?? '',
+    commodityId: m.commodity_id,
+    status: m.status,
+    truckRego: m.truck_rego ?? '', driver: m.driver_name ?? '',
+    grossWeight: m.gross_weight, tareWeight: m.tare_weight,
+    tons: n(m.tons),
+    weightStatus: m.weight_status,
+    notes: m.notes ?? '',
+    correctsId: m.corrects_id,
+    ...(m.source_ref ? { sourceRef: m.source_ref } : {}),
+    ...loadQuality.fromRow(m),
+    ...(m.updated_at ? { __rev: m.updated_at } : {}),
+    froms: legs.filter((l) => l.direction === 'from').map(toLeg),
+    tos: legs.filter((l) => l.direction === 'to').map(toLeg),
+  };
+}
+
 function qualityKit(fields) {
   const has = (rec) => fields.some(([key]) => rec[key] !== undefined && rec[key] !== null && rec[key] !== '');
   const columns = (rec) => {
@@ -518,37 +555,7 @@ export function rowsToState(rows) {
         };
       }),
 
-      movements: inSeason(rows.movements, season.id).map((m) => {
-        const legs = legsByMovement.get(m.id) || [];
-        const photo = photoByMovement.get(m.id);
-        const toLeg = (l) => ({
-          __legId: l.id,
-          type: REF_TYPE_FROM_DB[l.ref_type] || l.ref_type,
-          id: l.ref_id,
-          tons: n(l.tons),
-        });
-        return {
-          ...(photo ? {
-            __photoId: photo.id,
-            photoPath: photo.storage_path,
-            photoTakenAt: photo.taken_at ?? null,
-          } : {}),
-          id: m.id, ticketNo: m.ticket_no,
-          date: m.move_date ?? '',
-          commodityId: m.commodity_id,
-          status: m.status,
-          truckRego: m.truck_rego ?? '', driver: m.driver_name ?? '',
-          grossWeight: m.gross_weight, tareWeight: m.tare_weight,
-          tons: n(m.tons),
-          weightStatus: m.weight_status,
-          notes: m.notes ?? '',
-          correctsId: m.corrects_id,
-          ...(m.source_ref ? { sourceRef: m.source_ref } : {}),
-          ...loadQuality.fromRow(m),
-          froms: legs.filter((l) => l.direction === 'from').map(toLeg),
-          tos: legs.filter((l) => l.direction === 'to').map(toLeg),
-        };
-      }),
+      movements: inSeason(rows.movements, season.id).map((m) => movementFromRow(m, legsByMovement.get(m.id) || [], photoByMovement.get(m.id))),
 
       invoices: inSeason(rows.invoices, season.id).map((inv) => ({
         id: inv.id, saleId: inv.sale_id, invoiceNo: inv.invoice_no,

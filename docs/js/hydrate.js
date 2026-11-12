@@ -11,8 +11,9 @@
 // hydration has to produce a working state object with those parts simply
 // absent. Throwing there would mean the app only runs for owners.
 
-import { supabase } from './supabase.js?v=162';
-import { rowsToState } from './mapping.js?v=162';
+import { supabase } from './supabase.js?v=165';
+import { rowsToState } from './mapping.js?v=165';
+import { stampBase } from './ticketmerge.js?v=165';
 
 // Scoped by farm_id; the child tables hang off their parents.
 const FARM_SCOPED = [
@@ -59,7 +60,11 @@ export async function fetchFarmRows(farmId) {
  */
 export async function hydrate(farmId) {
   const { rows, denied } = await fetchFarmRows(farmId);
-  return { state: rowsToState(rows), rows, denied };
+  const state = rowsToState(rows);
+  // Each ticket remembers what it looked like when the server last agreed with it, so a
+  // later send can tell which parts this device changed and which another device did.
+  for (const year of Object.values(state.years || {})) for (const m of year.movements || []) stampBase(m);
+  return { state, rows, denied };
 }
 
 /** Row counts per table — for diagnostics, not for the app. */

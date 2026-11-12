@@ -18,20 +18,20 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=162';
+import { hydrate } from './hydrate.js?v=165';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=162';
-import { chooseBootState, resolveLegacy } from './boot.js?v=162';
-import { isLegacyDirty } from './dirty.js?v=162';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=162';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=162';
-import { settleLegs, dedupeLegs } from './legs.js?v=162';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=162';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=162';
-import { schedulePush, pushOnReconnect } from './sync.js?v=162';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=162';
+} from './local.js?v=165';
+import { chooseBootState, resolveLegacy } from './boot.js?v=165';
+import { isLegacyDirty } from './dirty.js?v=165';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=165';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=165';
+import { settleLegs, dedupeLegs } from './legs.js?v=165';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=165';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=165';
+import { schedulePush, pushOnReconnect } from './sync.js?v=165';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=165';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -204,7 +204,17 @@ function persist() {
 // when a second device does not show it.
 let lastPushError = null;
 
-window.addEventListener('grainflow:push-ok', () => { lastPushError = null; });
+window.addEventListener('grainflow:push-ok', () => {
+  lastPushError = null;
+  // a send updates what each ticket remembers of the server's copy; keep that
+  saveState(data, farmId).catch((e) => console.error('Local save failed', e));
+});
+
+// Tickets were combined with another device's changes: keep the result, and redraw.
+window.addEventListener('grainflow:merged', () => {
+  saveState(data, farmId).catch((e) => console.error('Local save failed', e));
+  listeners.forEach((fn) => { try { fn(data); } catch (e) { console.error('A view failed to re-render after a merge', e); } });
+});
 
 window.addEventListener('grainflow:push-failed', (e) => {
   const { table, message, details, hint, code, sample, refused } = e.detail?.errors?.[0] || {};

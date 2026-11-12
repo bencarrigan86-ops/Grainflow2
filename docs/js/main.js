@@ -1,24 +1,25 @@
-import { db } from './storage.js?v=162';
-import { initTheme } from './theme.js?v=162';
+import { db } from './storage.js?v=165';
+import { initTheme } from './theme.js?v=165';
 initTheme();
-import { renderPosition } from './views/position.js?v=162';
-import { renderProduction } from './views/production.js?v=162';
-import { renderReports } from './views/reports.js?v=162';
-import { renderSales } from './views/sales.js?v=162';
-import { renderMovements } from './views/movements.js?v=162';
-import { renderStorage } from './views/storage.js?v=162';
-import { renderSettings } from './views/settings.js?v=162';
-import { renderLogin } from './views/login.js?v=162';
-import { renderAccount } from './views/account.js?v=162';
+import { renderPosition } from './views/position.js?v=165';
+import { renderProduction } from './views/production.js?v=165';
+import { renderReports } from './views/reports.js?v=165';
+import { renderSales } from './views/sales.js?v=165';
+import { renderMovements } from './views/movements.js?v=165';
+import { renderStorage } from './views/storage.js?v=165';
+import { renderSettings } from './views/settings.js?v=165';
+import { renderLogin } from './views/login.js?v=165';
+import { renderAccount } from './views/account.js?v=165';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=162';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=162';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=162';
-import { esc } from './fmt.js?v=162';
-import { isSheetOpen } from './ui.js?v=162';
-import { APP_VERSION } from './version.js?v=162';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=162';
+} from './auth.js?v=165';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=165';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=165';
+import { esc } from './fmt.js?v=165';
+import { isSheetOpen, notify } from './ui.js?v=165';
+import { describeMerges } from './ticketmerge.js?v=165';
+import { APP_VERSION } from './version.js?v=165';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=165';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -161,6 +162,14 @@ window.addEventListener('online', renderYearPill);
 window.addEventListener('offline', renderYearPill);
 window.addEventListener('grainflow:push-ok', renderYearPill);
 window.addEventListener('grainflow:push-failed', renderYearPill);
+
+// Two devices changed the same ticket: say what was combined and what clashed, in words.
+window.addEventListener('grainflow:merged', (e) => {
+  const notices = e.detail?.notices || [];
+  if (notices.length === 0) return;
+  const { fields, storages, sales, commodities } = db.get();
+  notify(describeMerges(notices, { fields, storages, sales, commodities }));
+});
 yearPill.addEventListener('click', () => {
   location.hash = '#/settings';
 });

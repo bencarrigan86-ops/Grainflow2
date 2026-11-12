@@ -15,11 +15,12 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=162';
-import { stateToRows } from './mapping.js?v=162';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=162';
-import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=162';
-import { flushPendingPhotos } from './photos.js?v=162';
+import { supabase } from './supabase.js?v=165';
+import { stateToRows } from './mapping.js?v=165';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=165';
+import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=165';
+import { flushPendingPhotos } from './photos.js?v=165';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=165';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -125,9 +126,36 @@ export async function push(state, farmId, role = 'owner') {
       catch (e) { console.warn('Photo flush deferred', e); }
     }
 
+    // Tickets that another device has changed since this one last looked are merged with this
+    // device's changes BEFORE anything is sent, so one device never writes its older copy over
+    // the top of another's newer work. If the server cannot be asked, tickets go as they always did.
+    const ticketIds = dirty.filter((i) => i.kind === 'movement' && i.id).map((i) => i.id);
+    let notices = [];
+    if (ticketIds.length) {
+      try {
+        notices = await reconcileTickets(state, ticketIds, {
+          movements: async (list) => {
+            const { data, error } = await supabase.from('movements').select('*').in('id', list);
+            if (error) throw error;
+            return data ?? [];
+          },
+          legs: async (list) => {
+            const { data, error } = await supabase.from('movement_legs').select('*').in('movement_id', list);
+            if (error) throw error;
+            return data ?? [];
+          },
+        });
+      } catch (e) { console.warn('Could not check tickets against the server; sending them as they are', e); }
+    }
+
     const rows = selectDirtyRows(stateToRows(state, farmId), state, dirty);
+    // What each ticket was as it went, so that is what the server's version is remembered against.
+    const sentAs = new Map();
+    for (const year of Object.values(state?.years || {})) {
+      for (const m of year.movements || []) if (ticketIds.includes(m.id)) sentAs.set(m.id, plainOf(m));
+    }
     const tables = WRITABLE[role] || [];
-    const result = { tables: {}, deleted: 0, errors: [], role, skippedTables: [] };
+    const result = { tables: {}, deleted: 0, errors: [], role, skippedTables: [], merged: notices };
 
     // Business details: an update, never an upsert. Owners only — for everyone
     // else the farms UPDATE policy refuses, and rightly.
@@ -147,7 +175,17 @@ export async function push(state, farmId, role = 'owner') {
       if (list.length === 0) continue;
       for (const part of chunk(list)) {
         const onConflict = CONFLICT_KEY[table] || 'id';
-        const { error } = await supabase.from(table).upsert(part, { onConflict });
+        const sending = supabase.from(table).upsert(part, { onConflict });
+        // For tickets, ask for the server's new version back, to remember it.
+        const { data: sent, error } = table === 'movements' ? await sending.select('id,updated_at') : await sending;
+        if (!error && table === 'movements' && sent) {
+          for (const row of sent) {
+            for (const year of Object.values(state?.years || {})) {
+              const m = (year.movements || []).find((x) => x.id === row.id);
+              if (m) { m.__rev = row.updated_at; m.__base = sentAs.get(row.id) ?? plainOf(m); }
+            }
+          }
+        }
         if (error) {
           // Stop at the first failure and leave the outbox intact. A partial
           // push that reports success is how you end up with a farm that is
@@ -212,6 +250,7 @@ export async function push(state, farmId, role = 'owner') {
 
   try {
     const out = await inFlight;
+    if (out?.merged?.length) window.dispatchEvent(new CustomEvent('grainflow:merged', { detail: { notices: out.merged } }));
     if (out?.errors?.length) {
       window.dispatchEvent(new CustomEvent('grainflow:push-failed', { detail: out }));
     } else {
