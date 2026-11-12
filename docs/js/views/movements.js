@@ -1,11 +1,11 @@
-import { db } from '../storage.js?v=203';
-import { movementsForEndpoint } from '../derived.js?v=203';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=203';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=203';
-import { compressAndStampImage } from '../img.js?v=203';
-import { displayUrlFor } from '../photos.js?v=203';
-import { specText } from '../outload.js?v=203';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=203';
+import { db } from '../storage.js?v=204';
+import { movementsForEndpoint } from '../derived.js?v=204';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=204';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=204';
+import { compressAndStampImage } from '../img.js?v=204';
+import { displayUrlFor } from '../photos.js?v=204';
+import { specText } from '../outload.js?v=204';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=204';
 
 let unsub = null;
 

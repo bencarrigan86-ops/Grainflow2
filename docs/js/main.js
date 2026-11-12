@@ -1,25 +1,25 @@
-import { db } from './storage.js?v=203';
-import { initTheme } from './theme.js?v=203';
+import { db } from './storage.js?v=204';
+import { initTheme } from './theme.js?v=204';
 initTheme();
-import { renderPosition } from './views/position.js?v=203';
-import { renderProduction } from './views/production.js?v=203';
-import { renderReports } from './views/reports.js?v=203';
-import { renderSales } from './views/sales.js?v=203';
-import { renderMovements } from './views/movements.js?v=203';
-import { renderStorage } from './views/storage.js?v=203';
-import { renderSettings } from './views/settings.js?v=203';
-import { renderLogin } from './views/login.js?v=203';
-import { renderAccount } from './views/account.js?v=203';
+import { renderPosition } from './views/position.js?v=204';
+import { renderProduction } from './views/production.js?v=204';
+import { renderReports } from './views/reports.js?v=204';
+import { renderSales } from './views/sales.js?v=204';
+import { renderMovements } from './views/movements.js?v=204';
+import { renderStorage } from './views/storage.js?v=204';
+import { renderSettings } from './views/settings.js?v=204';
+import { renderLogin } from './views/login.js?v=204';
+import { renderAccount } from './views/account.js?v=204';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=203';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=203';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=203';
-import { esc } from './fmt.js?v=203';
-import { isSheetOpen, notify } from './ui.js?v=203';
-import { describeMerges } from './ticketmerge.js?v=203';
-import { APP_VERSION } from './version.js?v=203';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=203';
+} from './auth.js?v=204';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=204';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=204';
+import { esc } from './fmt.js?v=204';
+import { isSheetOpen, notify } from './ui.js?v=204';
+import { describeMerges } from './ticketmerge.js?v=204';
+import { APP_VERSION } from './version.js?v=204';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=204';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -101,6 +101,8 @@ function renderTabbar() {
   `).join('');
   tabbar.querySelectorAll('button').forEach((btn) => {
     btn.addEventListener('click', () => {
+      // Tapping the tab already open goes back to its top; the hash does not change, so nothing else would
+      if (location.hash === `#/${btn.dataset.tab}`) window.scrollTo(0, 0);
       location.hash = `#/${btn.dataset.tab}`;
     });
   });
@@ -439,6 +441,8 @@ window.addEventListener('hashchange', () => {
   // also means "this role has one tab".
   if (!currentRole) return;
   renderActiveView();
+  // A different screen starts at its top, not wherever the last one was scrolled to
+  window.scrollTo(0, 0);
 });
 
 if (document.readyState === 'loading') {

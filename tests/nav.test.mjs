@@ -211,6 +211,21 @@ check('yield is for the roles that see Position, not for workers or drivers', ()
   for (const r of ROLES) assert.equal(canSeeYield(r), canOpen(r, 'position'), r);
 });
 
+console.log('\n=== a different tab starts at its top ===');
+
+const mainSrc = readFileSync(join(ROOT, 'docs', 'js', 'main.js'), 'utf8');
+
+check('moving to another screen scrolls the page back to the top, after drawing it', () => {
+  const handler = mainSrc.slice(mainSrc.indexOf("addEventListener('hashchange'"));
+  const render = handler.indexOf('renderActiveView()');
+  const scroll = handler.indexOf('window.scrollTo(0, 0)');
+  assert.ok(render !== -1 && scroll !== -1, 'the hashchange handler does not scroll to the top');
+  assert.ok(scroll > render, 'it scrolls before the new screen is drawn, which a taller screen would undo');
+});
+check('tapping the tab that is already open also goes back to its top', () => {
+  assert.match(mainSrc, /location\.hash === `#\/\$\{btn\.dataset\.tab\}`\) window\.scrollTo\(0, 0\)/);
+});
+
 console.log('');
 if (failures) { console.log(`${failures} FAILURES`); process.exit(1); }
 console.log('ALL PASS');
