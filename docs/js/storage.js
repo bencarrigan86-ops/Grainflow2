@@ -18,20 +18,21 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=168';
+import { hydrate } from './hydrate.js?v=170';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=168';
-import { chooseBootState, resolveLegacy } from './boot.js?v=168';
-import { isLegacyDirty } from './dirty.js?v=168';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=168';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=168';
-import { settleLegs, dedupeLegs } from './legs.js?v=168';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=168';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=168';
-import { schedulePush, pushOnReconnect } from './sync.js?v=168';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=168';
+} from './local.js?v=170';
+import { chooseBootState, resolveLegacy } from './boot.js?v=170';
+import { isLegacyDirty } from './dirty.js?v=170';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=170';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=170';
+import { settleLegs, dedupeLegs } from './legs.js?v=170';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=170';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=170';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=170';
+import { schedulePush, pushOnReconnect } from './sync.js?v=170';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=170';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -668,6 +669,52 @@ export const db = {
       touch('sale', id);
     }
     persist();
+  },
+  /**
+   * Bring contracts that still have grain to deliver from an earlier season into this one.
+   * Each becomes a contract here for the tonnes still to go, on the same price and terms; the
+   * earlier contract is left as it was apart from a note saying where its tonnes went. Each pick
+   * says how much to add to the commodity's opening stock tonnes (`openingTons`) and value
+   * (`openingValue`) — see openingChange() in carryover.js for what those are in each case —
+   * so this season does not count the same income again.
+   *
+   * One save for the whole lot, so it is all there or none of it is.
+   *
+   * @param {{fromYear: string, picks: {saleId: string, tons: number, openingTons?: number, openingValue?: number}[]}} args
+   * @returns {{made: {id: string, tons: number, commodityId: string}[], skipped: number}}
+   */
+  carryContracts({ fromYear, picks }) {
+    const src = data.years[fromYear];
+    const dst = current();
+    if (!src || src === dst) return { made: [], skipped: picks.length };
+    const made = [];
+    let skipped = 0;
+    const today = new Date().toISOString().slice(0, 10);
+    for (const pick of picks) {
+      const sale = (src.sales || []).find((s) => s.id === pick.saleId);
+      const wasName = (src.commodities || []).find((c) => c.id === sale?.commodityId)?.name;
+      const target = (dst.commodities || []).find((c) => String(c.name ?? '').trim().toLowerCase() === String(wasName ?? '').trim().toLowerCase());
+      const tons = Number(pick.tons);
+      if (!sale || !target || !(tons > 0)) { skipped += 1; continue; }
+
+      const id = uid();
+      dst.sales.push({ ...buildCarriedSale(sale, { commodityId: target.id, tons, prevLabel: fromYear }), id });
+      touch('sale', id);
+      sale.notes = appendNote(sale.notes, carriedIntoNote(data.currentYear, tons, today));
+      touch('sale', sale.id);
+
+      const addTons = Number(pick.openingTons) || 0;
+      const addValue = Number(pick.openingValue) || 0;
+      if (addTons || addValue) {
+        target.openingStock = (Number(target.openingStock) || 0) + addTons;
+        target.openingValue = (Number(target.openingValue) || 0) + addValue;
+        target.__hasOpeningValue = true;
+        touch('commodity', target.id);
+      }
+      made.push({ id, tons, commodityId: target.id });
+    }
+    if (made.length) persist();
+    return { made, skipped };
   },
   deleteSale(id) {
     const s = current().sales.find((x) => x.id === id);

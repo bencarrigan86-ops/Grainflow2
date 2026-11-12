@@ -1,11 +1,11 @@
-import { db } from '../storage.js?v=168';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=168';
-import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=168';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=168';
-import { describeMerge } from '../merge.js?v=168';
-import { renderRelatedMovements } from './movements.js?v=168';
-import { canSeeYield } from '../nav.js?v=168';
-import { wireJumps } from '../jump.js?v=168';
+import { db } from '../storage.js?v=170';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=170';
+import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=170';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=170';
+import { describeMerge } from '../merge.js?v=170';
+import { renderRelatedMovements } from './movements.js?v=170';
+import { canSeeYield } from '../nav.js?v=170';
+import { wireJumps } from '../jump.js?v=170';
 
 let unsub = null;
 

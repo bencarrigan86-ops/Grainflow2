@@ -1,14 +1,15 @@
-import { db } from '../storage.js?v=168';
+import { db } from '../storage.js?v=170';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=168';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=168';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=168';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=168';
-import { renderRelatedMovements } from './movements.js?v=168';
-import { openInvoiceListSheet } from './invoice.js?v=168';
-import { openContractDocSheet } from './contract.js?v=168';
-import { wireJumps } from '../jump.js?v=168';
+} from '../documents.js?v=170';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=170';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=170';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=170';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=170';
+import { renderRelatedMovements } from './movements.js?v=170';
+import { openInvoiceListSheet } from './invoice.js?v=170';
+import { openContractDocSheet } from './contract.js?v=170';
+import { wireJumps } from '../jump.js?v=170';
 
 let unsub = null;
 
@@ -32,6 +33,12 @@ function paint(root) {
   // column is shown in millions ($12.35m). Below that it is the full figure, to the dollar.
   const inMillions = salesTotals.totalValue >= 10000000;
   const totalText = (v) => (inMillions ? moneyMillions(v) : money(v, 0));
+
+  // Contracts from last season that still have grain to deliver, offered to be brought in.
+  const prevLabel = previousYear(db.getYears(), db.getCurrentYear());
+  const carryList = prevLabel && ['owner', 'manager'].includes(db.getRole())
+    ? carryCandidates(db.getYearData(prevLabel), db.get(), prevLabel).filter((c) => !c.alreadyBrought)
+    : [];
 
   root.innerHTML = `
     <div class="topbar">
@@ -70,6 +77,7 @@ function paint(root) {
 
       <div class="card input">
         <h2><span class="dot input"></span>Contracts</h2>
+        ${carryList.length ? `<button type="button" class="btn secondary small" id="carry-contracts" style="margin-bottom:10px">Bring in ${esc(prevLabel)} contracts&hellip; (${carryList.length})</button>` : ''}
         ${groups.length === 0 ? `<div class="empty">No contracts yet.<br/><button class="btn" id="empty-add">Add your first sale</button></div>` : groups.map((g) => `
           <div class="group-label" id="grp-${esc(g.id ?? 'none')}"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
           ${g.sales.map((s) => saleRow(s, movements, commodities)).join('')}
@@ -87,6 +95,127 @@ function paint(root) {
   });
   root.querySelector('#add-sale').addEventListener('click', () => openSaleSheet(null));
   root.querySelector('#empty-add')?.addEventListener('click', () => openSaleSheet(null));
+  root.querySelector('#carry-contracts')?.addEventListener('click', () => openCarrySheet(prevLabel));
+}
+
+/**
+ * Last season's contracts with grain still to go. Nothing is chosen for the person: they tick
+ * each contract to bring across (and may bring fewer tonnes than are left), see what it will do
+ * to the opening stock, and confirm once more before anything is written.
+ */
+function openCarrySheet(prevLabel) {
+  const here = db.getCurrentYear();
+  const list = carryCandidates(db.getYearData(prevLabel), db.get(), prevLabel).filter((c) => !c.alreadyBrought);
+  openSheet(`Bring in ${prevLabel} contracts`, (root) => {
+    root.innerHTML = `
+      <div class="field hint" style="margin-bottom:10px">These ${esc(prevLabel)} contracts still have grain to deliver. Tick the ones to bring
+        into ${esc(here)}. Each becomes a ${esc(here)} contract for the tonnes still to go, with the same price and terms, so you can deliver against
+        it here. The ${esc(prevLabel)} contract is left as it is.</div>
+      ${list.map((c, i) => `
+        <div class="card" data-row="${i}" style="margin:0 0 8px">
+          <label style="display:flex;gap:10px;align-items:flex-start">
+            <input type="checkbox" class="co-pick" ${c.problem ? 'disabled' : ''} style="width:auto;margin-top:3px" />
+            <span style="flex:1;min-width:0">
+              <strong>${esc(c.sale.buyer || 'No buyer')}</strong> &middot; ${esc(c.commodityName)}${c.sale.contractNo ? ` &middot; #${esc(c.sale.contractNo)}` : ''}
+              <div class="meta">${num(c.contracted, 1)} t contracted &middot; ${num(c.delivered, 1)} t delivered &middot; <strong>${num(c.toGo, 1)} t to go</strong></div>
+              <div class="meta">${money(c.priceExFarm, 2)}/t net &middot; ${money(c.value, 0)} still to come</div>
+              ${c.possibleDuplicate ? `<div class="meta" style="color:var(--danger)">A ${esc(here)} contract with this buyer and number already exists. Bringing it across would make a second one.</div>` : ''}
+              ${c.problem ? `<div class="meta" style="color:var(--danger)">${esc(c.problem)}</div>` : ''}
+            </span>
+          </label>
+          <div class="field" style="margin:8px 0 0 30px"><label>Tonnes to bring across</label>
+            <input type="number" class="co-tons" step="0.1" min="0" max="${c.toGo}" value="${c.toGo}" disabled /></div>
+        </div>`).join('')}
+      <div class="field" style="margin-top:10px">
+        <label><strong>Is this grain already in your opening stock?</strong></label>
+        <div class="hint" style="margin-bottom:6px">${esc(prevLabel)} already counted the income from these contracts. How the opening stock is set decides
+          whether ${esc(here)} counts it again, so choose how yours was worked out.</div>
+        <label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px"><input type="radio" name="co-mode" value="value" style="width:auto;margin-top:3px" />
+          <span><strong>Yes, it's already in the tonnes.</strong> Adjust the value only, to the contract price.
+            <span class="meta" style="display:block">For an opening stock taken from what is physically in the silos. Grain committed to a contract is worth the contract price, not the market price.</span></span></label>
+        <label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px"><input type="radio" name="co-mode" value="add" style="width:auto;margin-top:3px" />
+          <span><strong>No, add the tonnes and their value.</strong>
+            <span class="meta" style="display:block">For an opening stock of unsold grain only, such as "Use ${esc(prevLabel)} closing" gives, which leaves out grain already sold.</span></span></label>
+        <label style="display:flex;gap:10px;align-items:flex-start"><input type="radio" name="co-mode" value="none" style="width:auto;margin-top:3px" />
+          <span><strong>Leave the opening stock alone.</strong>
+            <span class="meta" style="display:block">You have already set it for these contracts yourself.</span></span></label>
+      </div>
+      <div class="card" id="co-summary" style="margin:10px 0"></div>
+      <button class="btn" id="co-go" type="button" disabled>Bring across&hellip;</button>`;
+
+    const rows = [...root.querySelectorAll('[data-row]')];
+    const picked = () => rows.map((r, i) => {
+      const c = list[i];
+      const on = r.querySelector('.co-pick').checked;
+      const tons = Math.min(c.toGo, Math.max(0, Number(r.querySelector('.co-tons').value) || 0));
+      return { c, on, tons, value: tons * c.priceExFarm };
+    }).filter((p) => p.on && p.tons > 0);
+
+    const mode = () => root.querySelector('input[name="co-mode"]:checked')?.value || '';
+    // what each picked contract does to the opening stock, in the way chosen
+    const changeOf = (p) => openingChange({ tons: p.tons, priceExFarm: p.c.priceExFarm, closingMtm: p.c.closingMtm }, mode());
+    // adjusting the value needs the price the stock was valued at; without one there is nothing to compare the contract with
+    const missingMtm = (picks) => (mode() === 'value' ? picks.filter((p) => !(p.c.closingMtm > 0)) : []);
+
+    const refresh = () => {
+      rows.forEach((r) => { r.querySelector('.co-tons').disabled = !r.querySelector('.co-pick').checked; });
+      const picks = picked();
+      const summary = root.querySelector('#co-summary');
+      const go = root.querySelector('#co-go');
+      const noMtm = missingMtm(picks);
+      go.disabled = picks.length === 0 || !mode() || noMtm.length > 0;
+      if (picks.length === 0) { summary.innerHTML = '<div class="field hint">Nothing ticked yet.</div>'; return; }
+      const total = picks.reduce((a, p) => ({ tons: a.tons + p.tons, value: a.value + p.value }), { tons: 0, value: 0 });
+      const commodities = db.get().commodities;
+      const effect = openingEffect(picks.map((p) => ({ commodityId: p.c.targetCommodityId, ...changeOf(p) })));
+      const effectLines = !mode()
+        ? '<div class="field hint" style="margin:6px 0 0">Choose whether this grain is already in your opening stock.</div>'
+        : [...effect.entries()].map(([id, e]) => {
+          const c = commodities.find((x) => x.id === id);
+          const t0 = Number(c?.openingStock) || 0; const v0 = Number(c?.openingValue) || 0;
+          const name = esc(c?.name ?? 'Commodity');
+          if (mode() === 'none') return `<div class="meta">${name} opening stock is not changed.</div>`;
+          const tonsPart = e.tons ? `opening stock ${num(t0, 1)} &rarr; ${num(t0 + e.tons, 1)} t &middot; ` : `opening stock stays ${num(t0, 1)} t &middot; `;
+          return `<div class="meta">${name} ${tonsPart}value ${money(v0, 0)} &rarr; ${money(v0 + e.value, 0)}</div>`;
+        }).join('');
+      const mtmWarning = noMtm.length
+        ? `<div class="meta" style="color:var(--danger);margin-top:6px">${[...new Set(noMtm.map((p) => p.c.commodityName))].map(esc).join(', ')} has no closing MTM price in ${esc(prevLabel)}, so there is nothing to compare the contract price with. Set it in ${esc(prevLabel)}'s commodity settings first, or choose a different option.</div>`
+        : '';
+      const detail = mode() === 'value'
+        ? picks.map((p) => `<div class="meta">${esc(p.c.sale.buyer || 'No buyer')}: ${num(p.tons, 1)} t at ${money(p.c.priceExFarm, 2)}/t against ${money(p.c.closingMtm, 2)}/t MTM</div>`).join('')
+        : '';
+      summary.innerHTML = `
+        <div class="row"><span class="label"><strong>${picks.length} contract${picks.length === 1 ? '' : 's'}</strong></span><span class="value">${num(total.tons, 1)} t &middot; ${money(total.value, 0)}</span></div>
+        ${detail}${effectLines}${mtmWarning}`;
+    };
+    root.addEventListener('input', refresh);
+    root.addEventListener('change', refresh);
+    refresh();
+
+    root.querySelector('#co-go').addEventListener('click', async () => {
+      const picks = picked();
+      if (picks.length === 0) return;
+      if (!mode() || missingMtm(picks).length) return;
+      const total = picks.reduce((a, p) => ({ tons: a.tons + p.tons, value: a.value + p.value }), { tons: 0, value: 0 });
+      const change = picks.reduce((a, p) => { const c = changeOf(p); return { tons: a.tons + c.tons, value: a.value + c.value }; }, { tons: 0, value: 0 });
+      const openingLine = mode() === 'none' ? 'The opening stock is not changed.'
+        : mode() === 'add' ? `The opening stock goes up by ${num(change.tons, 1)} t and ${money(change.value, 0)}, since these tonnes were not in it.`
+          : `The opening stock tonnes stay as they are, because this grain is already in them. Its value changes by ${money(change.value, 0)}, from market price to contract price.`;
+      const ok = await askConfirm(
+        `Bring ${picks.length} contract${picks.length === 1 ? '' : 's'} into ${here}?\n\n`
+        + picks.map((p) => `• ${p.c.sale.buyer || 'No buyer'} (${p.c.commodityName}${p.c.sale.contractNo ? ` #${p.c.sale.contractNo}` : ''}): ${num(p.tons, 1)} t, ${money(p.value, 0)}`).join('\n')
+        + `\n\nTotal ${num(total.tons, 1)} t, ${money(total.value, 0)}. Each becomes a ${here} contract with the same price and terms; the ${prevLabel} contracts stay as they are, with a note.\n\n${openingLine}`,
+        { confirmLabel: 'Bring across' });
+      if (!ok) return;
+      const { made, skipped } = db.carryContracts({
+        fromYear: prevLabel,
+        picks: picks.map((p) => { const c = changeOf(p); return { saleId: p.c.sale.id, tons: p.tons, openingTons: c.tons, openingValue: c.value }; }),
+      });
+      closeSheet();
+      toast(`${made.length} contract${made.length === 1 ? '' : 's'} brought into ${here}`);
+      if (skipped) notify(`${skipped} contract${skipped === 1 ? ' was' : 's were'} not brought across because ${skipped === 1 ? 'it' : 'they'} had no matching commodity in ${here}.`);
+    });
+  });
 }
 
 function groupSalesByCommodity(commodities, sales, movements) {
