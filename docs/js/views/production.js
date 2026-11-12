@@ -1,11 +1,11 @@
-import { db } from '../storage.js?v=173';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=173';
-import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=173';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=173';
-import { describeMerge } from '../merge.js?v=173';
-import { renderRelatedMovements } from './movements.js?v=173';
-import { canSeeYield } from '../nav.js?v=173';
-import { wireJumps } from '../jump.js?v=173';
+import { db } from '../storage.js?v=174';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=174';
+import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=174';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=174';
+import { describeMerge } from '../merge.js?v=174';
+import { renderRelatedMovements } from './movements.js?v=174';
+import { canSeeYield } from '../nav.js?v=174';
+import { wireJumps } from '../jump.js?v=174';
 
 let unsub = null;
 
@@ -122,7 +122,7 @@ function openFieldSheet(existing) {
       </div>
       <div class="row"><span class="label" id="tons-label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
       </div>
-      <details class="fold feature" ${existing ? 'open' : ''}>
+      <details class="fold feature">
         <summary><div class="feature-head"><h2>Fertiliser planning</h2><div class="sub">Target yield, urea required and applied, nitrogen</div></div></summary>
       <div class="hint" style="margin:10px 14px 12px;font-size:12px;color:var(--text-dim)">Separate from the yield estimate above — used only for the urea and starter calculations below.</div>
       <div class="row"><span class="label">Commodity's default target yield</span><span class="value" id="commodity-target-preview">— t/ha</span></div>
@@ -155,7 +155,7 @@ function openFieldSheet(existing) {
       </div>
       <div class="row"><span class="label">Urea left</span><span class="value" id="urea-preview">0.0 t</span></div>
       </details>
-      <details class="fold feature" ${existing ? 'open' : ''}>
+      <details class="fold feature">
         <summary><div class="feature-head"><h2>Starter &amp; seed</h2><div class="sub">Starter fertiliser, seed variety and rate</div></div></summary>
       <div class="grid-2">
         ${field({ label: 'Starter required (kg/ha)', id: 'starterReq', type: 'number', step: '1', value: existing?.starterRequiredKgHa ?? 0 })}
