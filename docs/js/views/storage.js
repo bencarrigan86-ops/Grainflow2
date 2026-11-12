@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=158';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=158';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=158';
-import { hasStorageQuality } from '../mapping.js?v=158';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=158';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=158';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=158';
-import { renderRelatedMovements } from './movements.js?v=158';
-import { openSiloSetupSheet } from './silosetup.js?v=158';
-import { commodityFills } from '../commodityfill.js?v=158';
-import { layersForStorage, predictPlan, specText, SPECS } from '../outload.js?v=158';
+import { db } from '../storage.js?v=159';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=159';
+import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=159';
+import { hasStorageQuality } from '../mapping.js?v=159';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=159';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=159';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=159';
+import { renderRelatedMovements } from './movements.js?v=159';
+import { openSiloSetupSheet } from './silosetup.js?v=159';
+import { commodityFills } from '../commodityfill.js?v=159';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS } from '../outload.js?v=159';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, siloSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=158';
+} from '../silolayers.js?v=159';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -766,7 +766,7 @@ function buildContents(root, existing) {
     drawPlan();
   };
 
-  const truckCard = (pl, i) => {
+  const truckCard = (pl, title, whole = false) => {
     const mix = pl.grades.map((g) => `${esc(g.grade || 'No grade')} ${Math.round(g.pct * 100)}%`).join(' · ');
     const lines = SPECS.map((sp) => {
       const v = pl.specs[sp.key];
@@ -777,8 +777,8 @@ function buildContents(root, existing) {
     }).join('');
     const from = [...new Set(pl.segments.map((sg) => (sg.layer.source === 'opening' ? 'opening stock' : `#${sg.layer.ticketNo ?? '?'}`)
       + (sg.layer.banded ? ` (stretch ${sg.layer.banded})` : '')))].join(', ');
-    return `<div class="card" style="margin:8px 0">
-      <h2 style="margin-bottom:4px">Truck ${i + 1} · ${num(pl.total, 1)} t</h2>
+    return `<div class="card${whole ? ' whole-outload' : ''}" style="margin:8px 0">
+      <h2 style="margin-bottom:4px">${title}</h2>
       <div class="meta">${mix || 'No grade recorded'}</div>
       <div class="meta" style="margin-bottom:6px">From ${esc(from)}</div>
       ${lines || '<div class="field hint">No quality recorded on these loads.</div>'}
@@ -789,7 +789,13 @@ function buildContents(root, existing) {
     const size = Number(root.querySelector('#op-truck').value) || 36;
     if (!(total > 0)) { resultEl.innerHTML = ''; return; }
     const plan = predictPlan(layers, total, size);
-    resultEl.innerHTML = plan.trucks.map(truckCard).join('')
+    // The figure for the whole outload — tonne-weighted across every truck — before the
+    // trucks one by one. Without it, 90 t in 36 t trucks shows three averages and never the
+    // one for the 90 t.
+    const wholeCard = plan.trucks.length > 1
+      ? truckCard(predictOutload(layers, total), `Whole outload · ${num(total - plan.short, 1)} t`, true) + '<div class="subhead">By truck</div>'
+      : '';
+    resultEl.innerHTML = wholeCard + plan.trucks.map((pl, i) => truckCard(pl, `Truck ${i + 1} · ${num(pl.total, 1)} t`)).join('')
       + (plan.short > 0.05 ? `<div class="field hint" style="color:var(--danger)">Only ${num(total - plan.short, 1)} t is in the storage; ${num(plan.short, 1)} t of that outload has nothing to come from.</div>` : '');
   };
 

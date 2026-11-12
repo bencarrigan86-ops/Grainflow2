@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {
   gradeMix, dominantGrade, hasGrades, mixText, gradeColor, cleanBands, layersTotal, siloSvg, NO_GRADE,
 } from '../docs/js/silolayers.js';
-import { layersForStorage, predictPlan, applyBands } from '../docs/js/outload.js';
+import { layersForStorage, predictPlan, predictOutload, applyBands } from '../docs/js/outload.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -119,6 +119,20 @@ check('the outload predictor runs through the stretches: the top stretch leaves 
   assert.equal(plan.trucks[0].specs.proteinPct.avg, 10);
   assert.equal(plan.trucks[0].specs.moisturePct.avg, 12);
   assert.deepEqual(plan.trucks[1].grades.map((g) => g.grade).sort(), ['APH1', 'AUH2']);
+});
+check('the whole outload is a tonne-weighted average: 50 t at 270 and 40 t at 300 is 283, however it is split into trucks', () => {
+  const s = { id: 's1', openingStock: 90, gradeBands: [{ tons: 50, grade: 'A', fallingNumber: 270 }, { tons: 40, grade: 'A', fallingNumber: 300 }] };
+  const { layers } = layersForStorage(s, []);
+  const whole = predictOutload(layers, 90);
+  assert.equal(Math.round(whole.specs.fallingNumber.avg), 283);
+  assert.equal(whole.specs.fallingNumber.min, 270);
+  assert.equal(whole.specs.fallingNumber.max, 300);
+  assert.equal(whole.specs.fallingNumber.coverage, 1);
+  // the trucks each have their own average; weighted by their tonnes they give the same whole
+  const plan = predictPlan(layers, 90, 36);
+  const fromTrucks = plan.trucks.reduce((a, t) => a + t.total * t.specs.fallingNumber.avg, 0) / 90;
+  assert.ok(Math.abs(fromTrucks - whole.specs.fallingNumber.avg) < 1e-9);
+  assert.deepEqual(plan.trucks.map((t) => Math.round(t.specs.fallingNumber.avg)), [300, 273, 270]);
 });
 check('applyBands leaves the layers alone when there are no bands', () => {
   const layers = [{ tons: 5, source: 'opening', spec: { grade: 'X' } }];

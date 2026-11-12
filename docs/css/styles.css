@@ -896,3 +896,7 @@ details.fold.feature .feature-bar { height: 8px; margin-top: 8px; box-shadow: 0 
 details.fold.feature[open] > summary { border-bottom: 1.5px solid var(--btn-edge); }
 details.fold.feature > *:not(summary) { margin-left: 14px; margin-right: 14px; }
 details.fold.feature > *:last-child { margin-bottom: 14px; }
+
+/* The figure for the whole outload stands apart from the trucks beneath it. */
+.card.whole-outload { border: 1.5px solid var(--btn-edge); background: var(--btn-tint); }
+.card.whole-outload h2 { color: var(--btn-ink); font-size: 16px; }
