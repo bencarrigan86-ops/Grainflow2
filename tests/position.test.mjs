@@ -9,7 +9,7 @@
 // screen.
 
 import assert from 'node:assert';
-import { positionRows, positionAtYield, paddockAtYield } from '../docs/js/derived.js';
+import { positionRows, positionAtYield, paddockAtYield, farmProfitLoss } from '../docs/js/derived.js';
 
 const wheat = { id: 'w', name: 'Wheat', mtmPrice: 400, openingStock: 0, retainedSeed: 0, grossMarginCost: 0 };
 const barley = { id: 'b', name: 'Barley', mtmPrice: 300, openingStock: 0, retainedSeed: 0, grossMarginCost: 0 };
@@ -184,6 +184,23 @@ check('with none, no column is sent, so commodities still save before the migrat
 check('a value that was cleared still sends a null/zero, so the clearing reaches the server', () => {
   const r = rowOf({ ...C, openingValue: 0, __hasOpeningValue: true });
   assert.ok('opening_stock_value' in r);
+});
+
+check('profit is the season\'s own; with the opening stock put back it is everything the farm holds', () => {
+  // 100 t opening stock worth $40,000, plus a 400 t crop at $400 MTM: the $40,000 comes off the crop's value
+  const w = { ...wheat, openingStock: 100, openingValue: 40000, grossMarginCost: 30000 };
+  const fields = [{ id: 'f1', commodityId: 'w', areaHa: 100, yieldTHa: 4, yieldMode: 'estimate' }];
+  const totals = positionTotals(positionRows([w], fields, [], []));
+  assert.equal(totals.openingValue, 40000);
+  const pl = farmProfitLoss(totals.grossMargin, { wages: 20000 }, totals.openingValue);
+  assert.equal(pl.profitLoss, totals.grossMargin - 20000, 'the season\'s profit is unchanged');
+  assert.equal(pl.profitWithOpening, pl.profitLoss + 40000);
+  assert.equal(pl.openingValue, 40000);
+});
+check('with no opening stock, the two profit figures are the same', () => {
+  const pl = farmProfitLoss(100000, { wages: 20000 });
+  assert.equal(pl.profitWithOpening, pl.profitLoss);
+  assert.equal(pl.openingValue, 0);
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }

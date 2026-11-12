@@ -1,19 +1,21 @@
-import { db } from '../storage.js?v=174';
-import { getTheme, setTheme } from '../theme.js?v=174';
-import { num, money, esc } from '../fmt.js?v=174';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=174';
-import { openLoadImportSheet } from './importloads.js?v=174';
-import { APP_VERSION } from '../version.js?v=174';
-import { exportRowsAsCSV } from '../csv.js?v=174';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, fieldUreaForTarget, nitrogenCalc, closingStock } from '../derived.js?v=174';
-import { endpointLabel } from './movements.js?v=174';
+import { db } from '../storage.js?v=183';
+import { getTheme, setTheme } from '../theme.js?v=183';
+import { num, money, esc } from '../fmt.js?v=183';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=183';
+import { openLoadImportSheet } from './importloads.js?v=183';
+import { APP_VERSION } from '../version.js?v=183';
+import { exportRowsAsCSV } from '../csv.js?v=183';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=183';
+import { endpointLabel } from './movements.js?v=183';
+import { layersForStorage } from '../outload.js?v=183';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=183';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=174';
+} from '../invites.js?v=183';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=174';
+} from '../auth.js?v=183';
 
 let unsub = null;
 
@@ -814,12 +816,15 @@ function exportFieldsCSV(year, stamp) {
     { label: 'Yield mode', get: (f) => f.yieldMode === 'actual' ? 'Actual (from movements)' : 'Estimate' },
     { label: 'Yield (t/ha)', get: (f) => f.yieldTHa ?? '' },
     { label: 'Tonnes', get: (f) => num(fieldTons(f, movements), 2) },
+    // Grade and measurements: the weighted average of the loads carted off the field
+    ...qualityColumns((f) => fieldQuality(f, movements)),
     { label: 'Urea required (kg/ha)', get: (f) => f.ureaRequiredKgHa ?? '' },
     { label: 'Urea applied (kg/ha)', get: (f) => ureaAppliedKgHaFor(f) },
     { label: 'Urea left (t)', get: (f) => num(fieldUrea(f).leftTons, 2) },
     { label: 'Seed variety', get: (f) => f.seedVariety ?? '' },
     { label: 'Seed rate (kg/ha)', get: (f) => f.seedRateKgHa ?? '' },
     { label: 'Seed required (t)', get: (f) => num(fieldSeed(f).requiredTons, 2) },
+    { label: 'Comments', get: (f) => f.notes ?? '' },
   ]);
 }
 
@@ -844,7 +849,7 @@ function exportSalesCSV(year, stamp) {
     { label: 'Net price ex-farm ($/t)', get: (s) => num(saleEconomics(s, movements).priceExFarm, 2) },
     { label: 'Total value ($)', get: (s) => num(saleEconomics(s, movements).totalValue, 2) },
     { label: 'Broker note', get: (s) => s.brokerNote ?? '' },
-    { label: 'Notes', get: (s) => s.notes ?? '' },
+    { label: 'Comments', get: (s) => s.notes ?? '' },
     // The contract's own terms. On the end rather than interleaved, so anyone
     // with a spreadsheet built on the old column order keeps it.
     { label: 'Crop year', get: (s) => s.cropYear ?? '' },
@@ -878,7 +883,9 @@ function exportMovementsCSV(year, stamp) {
     { label: 'Gross weight (t)', get: (m) => m.grossWeight ?? '' },
     { label: 'Tare weight (t)', get: (m) => m.tareWeight ?? '' },
     { label: 'Weight status', get: (m) => m.weightStatus ?? '' },
-    { label: 'Notes', get: (m) => m.notes ?? '' },
+    // Load by load: this ticket's own grade and measurements
+    ...qualityColumns(loadQuality),
+    { label: 'Comments', get: (m) => m.notes ?? '' },
   ]);
 }
 
@@ -890,11 +897,15 @@ function exportStorageCSV(year, stamp) {
     { label: 'Commodity', get: (s) => commodityName(commodities, s.commodityId) },
     { label: 'Opening stock (t)', get: (s) => s.openingStock ?? '' },
     { label: 'Tracked stock (t)', get: (s) => num(storageLedgerStock(s, movements), 2) },
+    { label: 'Crop year', get: (s) => s.cropYear ?? '' },
+    // Grade and measurements: the weighted average of what is in the silo now, layer by layer
+    ...qualityColumns((s) => averageQuality(layersForStorage(s, movements).layers.map((l) => ({ tons: l.tons, spec: l.spec })))),
     { label: 'Capacity (t)', get: (s) => s.capacityTons ?? '' },
     { label: 'Radius / Width (m)', get: (s) => s.kind === 'bunker' ? (s.width ?? '') : (s.radius ?? '') },
     { label: 'Height / Length (m)', get: (s) => s.kind === 'bunker' ? (s.length ?? '') : (s.currentHeight ?? '') },
     { label: 'Angle of repose override (°)', get: (s) => s.angleOfRepose ?? '' },
     { label: 'Test weight override (t/m³)', get: (s) => s.testWeight ?? '' },
+    { label: 'Comments', get: (s) => s.notes ?? '' },
   ]);
 }
 
@@ -918,6 +929,8 @@ function exportInvoicesCSV(year, stamp) {
     { label: 'Total payable ($)', get: (i) => num(i.totalPayable, 2) },
     { label: 'Status', get: (i) => i.status ?? '' },
     { label: 'Paid date', get: (i) => i.paidDate ?? '' },
+    // Invoices have no notes of their own; this is the contract's
+    { label: 'Comments', get: (i) => i.notes ?? sales.find((s) => s.id === i.saleId)?.notes ?? '' },
   ]);
 }
 
@@ -1031,11 +1044,6 @@ function openCommoditySheet(existing) {
       </div>
       ${existing ? `
         <div class="row"><span class="label">Fields using this commodity</span><span class="value">${fields.filter((f) => f.commodityId === existing.id).length}</span></div>
-        <hr class="sep" />
-        <h2 style="margin:0 0 4px">Fert sensitivity</h2>
-        <div class="field hint" style="margin-bottom:10px">See how urea requirement across this commodity's fields changes as the target yield above moves — overridden fields scale from their own override, not this default. Doesn't change any saved data.</div>
-        <div id="commodity-sens-form"></div>
-        <div id="commodity-sens-table"></div>
       ` : ''}
       <hr class="sep" />
       ${field({ label: 'Gross margin cost ($)', id: 'gmCost', type: 'number', step: '1', value: existing?.grossMarginCost ?? 0, hint: 'Total input cost for this commodity, for the Position tab' })}
@@ -1043,7 +1051,6 @@ function openCommoditySheet(existing) {
       ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete commodity</button>` : ''}
       <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
     `;
-    if (existing) buildCommoditySensitivity(root, existing.id);
     offerLastSeasonsClosing(root);
     const balesWrap = root.querySelector('#bales-per-round-wrap');
     const syncUnitFields = () => { balesWrap.style.display = getVal(root, 'unit') === 'bale' ? 'block' : 'none'; };
@@ -1081,74 +1088,4 @@ function openCommoditySheet(existing) {
       });
     }
   });
-}
-
-/**
- * Live "what-if" for one commodity: flexes its target yield (or, per
- * field, that field's own override) by an adjustment % and recomputes
- * urea required across every field using it — reading the target yield
- * and N/tonne straight off the form above, so it stays in sync as those
- * are edited, before anything is saved.
- */
-function buildCommoditySensitivity(root, commodityId) {
-  const { fields } = db.get();
-  const commodityFields = fields.filter((f) => f.commodityId === commodityId);
-  const formEl = root.querySelector('#commodity-sens-form');
-  const tableEl = root.querySelector('#commodity-sens-table');
-
-  formEl.innerHTML = `
-    ${field({ label: 'Sensitivity adjustment (%)', id: 'csens-pct', type: 'number', step: '5', value: 0, allowNegative: true, hint: "Applied on top of the target yield (or each field's own override)" })}
-  `;
-
-  const recompute = () => {
-    if (commodityFields.length === 0) {
-      tableEl.innerHTML = `<div class="empty">No fields use this commodity yet.</div>`;
-      return;
-    }
-    const liveCommodity = { targetYieldTHa: getNum(root, 'targetYield'), nPerTonne: getNum(root, 'nPerTonne') };
-    const factor = 1 + getNum(root, 'csens-pct') / 100;
-
-    const rows = commodityFields.map((f) => {
-      const base = fieldUreaForTarget(f, liveCommodity);
-      const scenarioYieldTHa = base.targetYieldTHa * factor;
-      const { additionalUreaRequired } = nitrogenCalc({ nPerTonne: liveCommodity.nPerTonne, targetYieldTHa: scenarioYieldTHa, soilTestN: f.soilTestNKgHa });
-      const area = Number(f.areaHa) || 0;
-      return { f, scenarioYieldTHa, kgHa: additionalUreaRequired, reqT: (area * additionalUreaRequired) / 1000, currentReqT: fieldUrea(f).requiredTons };
-    });
-    const totalArea = rows.reduce((s, r) => s + (Number(r.f.areaHa) || 0), 0);
-    const totalReqT = rows.reduce((s, r) => s + r.reqT, 0);
-    const totalCurrentT = rows.reduce((s, r) => s + r.currentReqT, 0);
-    const delta = totalReqT - totalCurrentT;
-
-    tableEl.innerHTML = `
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Field</th><th>Area</th><th>Scenario yield t/ha</th><th>Urea req kg/ha</th><th>Urea req t</th></tr></thead>
-          <tbody>
-            ${rows.map((r) => `
-              <tr>
-                <td>${esc(r.f.name)}</td>
-                <td>${num(r.f.areaHa, 1)}</td>
-                <td>${num(r.scenarioYieldTHa, 2)}</td>
-                <td>${num(r.kgHa, 0)}</td>
-                <td>${num(r.reqT, 2)}</td>
-              </tr>`).join('')}
-          </tbody>
-          <tfoot><tr>
-            <td>Total</td>
-            <td>${num(totalArea, 1)}</td>
-            <td></td>
-            <td></td>
-            <td>${num(totalReqT, 2)}</td>
-          </tr></tfoot>
-        </table>
-      </div>
-      <div class="row" style="margin-top:6px"><span class="label">Vs currently recorded "required"</span><span class="value">${num(totalCurrentT, 2)} t &nbsp; <span class="badge ${delta >= 0 ? 'neg' : 'pos'}">${delta >= 0 ? '+' : ''}${num(delta, 2)} t</span></span></div>
-    `;
-  };
-
-  formEl.querySelector('#csens-pct').addEventListener('input', recompute);
-  root.querySelector('#targetYield').addEventListener('input', recompute);
-  root.querySelector('#nPerTonne').addEventListener('input', recompute);
-  recompute();
 }

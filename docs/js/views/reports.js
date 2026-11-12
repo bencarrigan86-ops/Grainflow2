@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=174';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=174';
-import { num, tons, esc } from '../fmt.js?v=174';
-import { field, getVal, getNum } from '../ui.js?v=174';
-import { canSeeYield } from '../nav.js?v=174';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=174';
+import { db } from '../storage.js?v=183';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=183';
+import { num, tons, esc } from '../fmt.js?v=183';
+import { field, getVal, getNum } from '../ui.js?v=183';
+import { canSeeYield } from '../nav.js?v=183';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=183';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -55,7 +55,22 @@ function paintFert(root) {
   const groups = groupFieldsByCommodity(commodities, fields, movements);
   const body = root.querySelector('#reports-body');
 
+  // The two tools sit at the top, as the Yield tab's sensitivity does, so they are not lost beneath the tables.
   body.innerHTML = `
+    <details class="fold feature" style="margin-top:0">
+      <summary><div class="feature-head"><h2>Nitrogen calculator</h2><div class="sub">Urea needed to reach a target yield</div></div></summary>
+      <div id="n-calc-form"></div>
+      <div id="n-calc-result"></div>
+    </details>
+    ${groups.length === 0 ? '' : `
+    <div class="card report bare">
+      <details class="fold feature" id="fert-sens" style="margin-top:0" ${fertSens.open ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Fert sensitivity</h2><div class="sub">Urea needed if the target yield moves</div></div></summary>
+        <div class="hint" style="margin:0 0 10px;font-size:12px;color:var(--text-dim)">See how the urea requirement across a commodity's fields changes as its target yield moves. Fields with their own target yield scale from that, not the commodity default. Doesn't change any saved data.</div>
+        <div id="fert-sens-form"></div>
+        <div id="fert-sens-table"></div>
+      </details>
+    </div>`}
     <div class="card report">
       <h2><span class="dot report"></span>Urea</h2>
       ${groups.length === 0 ? `<div class="empty">Add fields with urea rates in the Production tab.</div>` : groups.map((g) => ureaTable(g, commodities.find((c) => c.id === g.id))).join('')}
@@ -64,15 +79,93 @@ function paintFert(root) {
       <h2><span class="dot report"></span>Starter fertiliser</h2>
       ${groups.length === 0 ? `<div class="empty">Add fields with starter rates in the Production tab.</div>` : groups.map((g) => starterTable(g)).join('')}
     </div>
-    <div class="card">
-      <details class="fold" style="border-top:none;margin-top:0">
-        <summary><div><h2>Nitrogen calculator</h2><div class="sub">Urea needed to reach a target yield</div></div></summary>
-        <div id="n-calc-form"></div>
-        <div id="n-calc-result"></div>
-      </details>
-    </div>
   `;
   buildNitrogenCalc(body, commodities);
+  if (groups.length > 0) buildFertSensitivity(body, groups.filter((g) => g.id), commodities, fields);
+}
+
+// What the panel was last set to, so it survives the page repainting when data changes.
+const fertSens = { open: false, commodityId: '', pct: 0 };
+
+/**
+ * A what-if for one commodity: flexes its target yield (or, per field, that field's own
+ * override) by an adjustment % and recomputes the urea required across every field using it.
+ * Reads the commodity's saved target yield and N per tonne from Settings.
+ */
+function buildFertSensitivity(root, groups, commodities, fields) {
+  const formEl = root.querySelector('#fert-sens-form');
+  const tableEl = root.querySelector('#fert-sens-table');
+  const detailsEl = root.querySelector('#fert-sens');
+  if (!formEl || !detailsEl) return;
+  detailsEl.addEventListener('toggle', () => { fertSens.open = detailsEl.open; });
+
+  const options = groups.map((g) => ({ value: g.id, label: g.name }));
+  if (!options.length) { formEl.innerHTML = '<div class="empty">No fields use a commodity yet.</div>'; return; }
+  if (!options.some((o) => o.value === fertSens.commodityId)) fertSens.commodityId = options[0].value;
+
+  formEl.innerHTML = `
+    ${field({ label: 'Commodity', id: 'fs-commodity', type: 'select', value: fertSens.commodityId, options })}
+    ${field({ label: 'Sensitivity adjustment (%)', id: 'fs-pct', type: 'number', step: '5', value: fertSens.pct, allowNegative: true, hint: "Applied on top of the target yield (or each field's own override)" })}
+  `;
+
+  const recompute = () => {
+    fertSens.commodityId = getVal(formEl, 'fs-commodity');
+    fertSens.pct = getNum(formEl, 'fs-pct');
+    const commodity = commodities.find((c) => c.id === fertSens.commodityId);
+    const commodityFields = fields.filter((f) => f.commodityId === fertSens.commodityId);
+    if (!commodity || commodityFields.length === 0) {
+      tableEl.innerHTML = `<div class="empty">No fields use this commodity yet.</div>`;
+      return;
+    }
+    const factor = 1 + fertSens.pct / 100;
+    const live = { targetYieldTHa: commodity.targetYieldTHa, nPerTonne: commodity.nPerTonne };
+
+    const rows = commodityFields.map((f) => {
+      const base = fieldUreaForTarget(f, live);
+      const scenarioYieldTHa = base.targetYieldTHa * factor;
+      const { additionalUreaRequired } = nitrogenCalc({ nPerTonne: live.nPerTonne, targetYieldTHa: scenarioYieldTHa, soilTestN: f.soilTestNKgHa });
+      const area = Number(f.areaHa) || 0;
+      return { f, scenarioYieldTHa, kgHa: additionalUreaRequired, reqT: (area * additionalUreaRequired) / 1000, currentReqT: fieldUrea(f).requiredTons };
+    });
+    const signed = (n) => `${n >= 0 ? '+' : ''}${num(n, 2)}`;
+    const totalReqT = rows.reduce((s, r) => s + r.reqT, 0);
+    const totalCurrentT = rows.reduce((s, r) => s + r.currentReqT, 0);
+    const delta = totalReqT - totalCurrentT;
+    const missing = !(Number(live.nPerTonne) > 0) || !(Number(live.targetYieldTHa) > 0);
+
+    tableEl.innerHTML = `
+      <div class="row"><span class="label">${esc(commodity.name)} in Settings</span><span class="value">${num(live.targetYieldTHa, 1)} t/ha target &middot; ${num(live.nPerTonne, 0)} kg N/t</span></div>
+      ${missing ? `<div class="field hint" style="margin:6px 0">Set this commodity's target yield and N required in Settings to get a sensible result.</div>` : ''}
+      <div class="hint" style="margin:8px 0 4px;font-size:12px;color:var(--text-dim)">kg/ha is the urea rate the scenario yield needs. Urea t is the total for the field, Now t is what is recorded as required today, and Diff t is the change.</div>
+      <div class="table-scroll tight-wrap">
+        <table class="tight">
+          <thead><tr><th>Field</th><th>kg/ha</th><th>Urea t</th><th>Now t</th><th>Diff t</th></tr></thead>
+          <tbody>
+            ${rows.map((r) => `
+              <tr>
+                <td>${esc(r.f.name)}</td>
+                <td>${num(r.kgHa, 0)}</td>
+                <td>${num(r.reqT, 2)}</td>
+                <td>${num(r.currentReqT, 2)}</td>
+                <td>${signed(r.reqT - r.currentReqT)}</td>
+              </tr>`).join('')}
+          </tbody>
+          <tfoot><tr>
+            <td>Total</td>
+            <td></td>
+            <td>${num(totalReqT, 2)}</td>
+            <td>${num(totalCurrentT, 2)}</td>
+            <td>${signed(delta)}</td>
+          </tr></tfoot>
+        </table>
+      </div>
+      <div class="row" style="margin-top:6px"><span class="label">Vs currently recorded "required"</span><span class="value">${num(totalCurrentT, 2)} t &nbsp; <span class="badge ${delta >= 0 ? 'neg' : 'pos'}">${delta >= 0 ? '+' : ''}${num(delta, 2)} t</span></span></div>
+    `;
+  };
+
+  formEl.querySelector('#fs-commodity').addEventListener('change', recompute);
+  formEl.querySelector('#fs-pct').addEventListener('input', recompute);
+  recompute();
 }
 
 function commodityOptionsCalc(commodities) {

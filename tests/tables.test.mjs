@@ -46,7 +46,7 @@ function walk(dir, out = []) {
  */
 function tablesIn(src, file) {
   const out = [];
-  const re = /<table>([\s\S]*?)<\/table>/g;
+  const re = /<table(?:\s[^>]*)?>([\s\S]*?)<\/table>/g;
   for (const m of src.matchAll(re)) {
     const block = m[1];
     const section = (tag) => {
@@ -139,8 +139,9 @@ check('Target calc is gone and nothing was left behind', () => {
 check('the columns Ben asked for are still in the order he asked for', () => {
   // "move the max t/ha column to last", then "and N available to 2nd last".
   const src = readFileSync(join(VIEWS, 'reports.js'), 'utf8');
-  const head = src.slice(src.indexOf('<th>Field</th>'));
-  const headers = [...head.slice(0, head.indexOf('</tr>')).matchAll(/<th>(.*?)<\/th>/g)].map((m) => m[1]);
+  // the report has more than one table with a Field column (the sensitivity what-if is another): take the urea one
+  const rows = [...src.matchAll(/<th>Field<\/th>[\s\S]*?<\/tr>/g)].map((m) => [...m[0].matchAll(/<th>(.*?)<\/th>/g)].map((x) => x[1]));
+  const headers = rows.find((r) => r.includes('Max t/ha')) || [];
   assert.equal(headers[headers.length - 1], 'Max t/ha', `last column is ${headers[headers.length - 1]}`);
   assert.equal(headers[headers.length - 2], 'N avail kg/ha', `second last is ${headers[headers.length - 2]}`);
   assert.equal(headers[0], 'Field', 'the frozen first column is no longer Field');

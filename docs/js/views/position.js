@@ -1,6 +1,6 @@
-import { db } from '../storage.js?v=174';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=174';
-import { num, tons, money, pct, esc } from '../fmt.js?v=174';
+import { db } from '../storage.js?v=183';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=183';
+import { num, tons, money, pct, esc } from '../fmt.js?v=183';
 
 let unsub = null;
 
@@ -15,7 +15,7 @@ function paint(root) {
   const overheads = db.getOverheads();
   const rows = positionRows(commodities, fields, sales, movements);
   const totals = positionTotals(rows);
-  const pl = farmProfitLoss(totals.grossMargin, overheads);
+  const pl = farmProfitLoss(totals.grossMargin, overheads, totals.openingValue);
 
   root.innerHTML = `
     <div class="topbar">
@@ -64,6 +64,12 @@ function farmSummaryCard(totals, overheads, pl) {
         <div class="kv"><div class="l">Overheads</div><div class="v">${money(pl.overheadsTotal, 0)}</div></div>
         <div class="kv"><div class="l">${pl.profitLoss >= 0 ? 'Profit' : 'Loss'}</div><div class="v"><span class="badge ${plClass}" style="font-size:15px">${money(pl.profitLoss, 0)}</span></div></div>
       </div>
+      ${pl.openingValue ? `
+      <div class="liquidity">
+        <div class="row"><span class="label">${pl.profitLoss >= 0 ? 'Profit' : 'Loss'} this season</span><span class="value">${money(pl.profitLoss, 0)}</span></div>
+        <div class="row"><span class="label">Plus opening stock value</span><span class="value">+${money(pl.openingValue, 0)}</span></div>
+        <div class="row total"><span class="label"><strong>Total incl. opening stock</strong><span class="sub">Profit plus the grain brought in</span></span><span class="value"><span class="badge ${pl.profitWithOpening >= 0 ? 'pos' : 'neg'}" style="font-size:15px">${money(pl.profitWithOpening, 0)}</span></span></div>
+      </div>` : ''}
       <details class="fold">
         <summary><div><h2>Overheads</h2><div class="sub">Finance, wages, drawings and the rest</div></div></summary>
         ${oh('Finance', overheads.finance)}${oh('Equipment repayments', overheads.equipmentRepayments)}${oh('Depreciation', overheads.depreciation)}

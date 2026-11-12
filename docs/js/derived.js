@@ -524,8 +524,16 @@ export function overheadsTotal(overheads) {
     + (Number(o.other) || 0);
 }
 
-/** Whole-farm profit/loss: total gross margin across commodities, less overheads. */
-export function farmProfitLoss(totalGrossMargin, overheads) {
+/**
+ * Whole-farm profit/loss: total gross margin across commodities, less overheads.
+ *
+ * That is the season's own result, because the gross margin has the opening stock's value taken off
+ * (grain carried in is not income earned this season). `profitWithOpening` puts the opening stock's
+ * value back, so it shows everything the farm holds: this season's profit plus the grain brought in.
+ */
+export function farmProfitLoss(totalGrossMargin, overheads, openingValue = 0) {
   const overheadsSum = overheadsTotal(overheads);
-  return { overheadsTotal: overheadsSum, profitLoss: totalGrossMargin - overheadsSum };
+  const profitLoss = totalGrossMargin - overheadsSum;
+  const opening = Number(openingValue) || 0;
+  return { overheadsTotal: overheadsSum, profitLoss, openingValue: opening, profitWithOpening: profitLoss + opening };
 }

@@ -918,4 +918,11 @@ details.fold.feature > *:last-child { margin-bottom: 14px; }
 .actual-callout strong { display: block; margin-bottom: 2px; }
 .actual-callout.switch { border: 1.5px solid color-mix(in srgb, var(--warn) 55%, var(--border)); background: var(--warn-bg); }
 .actual-callout.using { border-color: var(--btn-edge); }
+/* A card that only holds a coloured panel: no second frame around it. */
+.card.bare { background: none; border: none; box-shadow: none; padding: 0; margin: 0; }
+
+/* Whole farm: the season's profit, the opening stock brought in, and the two added together. */
+.liquidity { margin: 12px 0 4px; padding: 6px 12px; border-radius: 10px; border: 1.5px solid var(--btn-edge); background: var(--btn-tint); }
+.liquidity .row.total { border-top: 1px solid var(--btn-edge); padding-top: 10px; }
+.liquidity .row.total .sub { display: block; font-size: 12px; color: var(--text-dim); font-weight: 400; margin-top: 2px; }
 .actual-flag { margin-top: 4px; padding: 3px 8px; border-radius: 8px; display: inline-block; font-size: 13px; font-weight: 600; background: var(--warn-bg); border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--border)); }
