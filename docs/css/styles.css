@@ -918,6 +918,8 @@ details.fold.feature > *:last-child { margin-bottom: 14px; }
 .actual-callout strong { display: block; margin-bottom: 2px; }
 .actual-callout.switch { border: 1.5px solid color-mix(in srgb, var(--warn) 55%, var(--border)); background: var(--warn-bg); }
 .actual-callout.using { border-color: var(--btn-edge); }
+/* A table whose field names may wrap, so the figures beside them fit a phone. */
+.card.report table.wrap-first td:first-child { white-space: normal; max-width: 78px; }
 /* A card that only holds a coloured panel: no second frame around it. */
 .card.bare { background: none; border: none; box-shadow: none; padding: 0; margin: 0; }
 

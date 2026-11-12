@@ -141,7 +141,7 @@ check('the columns Ben asked for are still in the order he asked for', () => {
   const src = readFileSync(join(VIEWS, 'reports.js'), 'utf8');
   // the report has more than one table with a Field column (the sensitivity what-if is another): take the urea one
   const rows = [...src.matchAll(/<th>Field<\/th>[\s\S]*?<\/tr>/g)].map((m) => [...m[0].matchAll(/<th>(.*?)<\/th>/g)].map((x) => x[1]));
-  const headers = rows.find((r) => r.includes('Max t/ha')) || [];
+  const headers = rows.find((r) => r.includes('Soil equiv kg/ha')) || [];
   assert.equal(headers[headers.length - 1], 'Max t/ha', `last column is ${headers[headers.length - 1]}`);
   assert.equal(headers[headers.length - 2], 'N avail kg/ha', `second last is ${headers[headers.length - 2]}`);
   assert.equal(headers[0], 'Field', 'the frozen first column is no longer Field');

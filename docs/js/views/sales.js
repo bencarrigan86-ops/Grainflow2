@@ -1,15 +1,15 @@
-import { db } from '../storage.js?v=183';
+import { db } from '../storage.js?v=193';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=183';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=183';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=183';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=183';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=183';
-import { renderRelatedMovements } from './movements.js?v=183';
-import { openInvoiceListSheet } from './invoice.js?v=183';
-import { openContractDocSheet } from './contract.js?v=183';
-import { wireJumps } from '../jump.js?v=183';
+} from '../documents.js?v=193';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=193';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=193';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=193';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=193';
+import { renderRelatedMovements } from './movements.js?v=193';
+import { openInvoiceListSheet } from './invoice.js?v=193';
+import { openContractDocSheet } from './contract.js?v=193';
+import { wireJumps } from '../jump.js?v=193';
 
 let unsub = null;
 

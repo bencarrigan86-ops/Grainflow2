@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=183';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=183';
-import { num, tons, esc } from '../fmt.js?v=183';
-import { field, getVal, getNum } from '../ui.js?v=183';
-import { canSeeYield } from '../nav.js?v=183';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=183';
+import { db } from '../storage.js?v=193';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=193';
+import { num, tons, esc } from '../fmt.js?v=193';
+import { field, getVal, getNum } from '../ui.js?v=193';
+import { canSeeYield } from '../nav.js?v=193';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=193';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -85,7 +85,7 @@ function paintFert(root) {
 }
 
 // What the panel was last set to, so it survives the page repainting when data changes.
-const fertSens = { open: false, commodityId: '', pct: 0 };
+const fertSens = { open: false, commodityId: '', pct: 0, plan: '' };
 
 /**
  * A what-if for one commodity: flexes its target yield (or, per field, that field's own
@@ -106,11 +106,15 @@ function buildFertSensitivity(root, groups, commodities, fields) {
   formEl.innerHTML = `
     ${field({ label: 'Commodity', id: 'fs-commodity', type: 'select', value: fertSens.commodityId, options })}
     ${field({ label: 'Sensitivity adjustment (%)', id: 'fs-pct', type: 'number', step: '5', value: fertSens.pct, allowNegative: true, hint: "Applied on top of the target yield (or each field's own override)" })}
+    ${field({ label: 'Urea to apply (kg/ha)', id: 'fs-plan', type: 'number', step: '10', value: fertSens.plan, placeholder: 'As planned', hint: "Counts towards Max t/ha, on top of what is already applied. Leave blank to use what each field still has planned (its urea required, less applied)." })}
   `;
 
   const recompute = () => {
     fertSens.commodityId = getVal(formEl, 'fs-commodity');
     fertSens.pct = getNum(formEl, 'fs-pct');
+    fertSens.plan = String(getVal(formEl, 'fs-plan') ?? '').trim();
+    // blank means "as planned": each field's own urea required, less what is on already
+    const planKgHa = fertSens.plan === '' ? null : Math.max(0, Number(fertSens.plan) || 0);
     const commodity = commodities.find((c) => c.id === fertSens.commodityId);
     const commodityFields = fields.filter((f) => f.commodityId === fertSens.commodityId);
     if (!commodity || commodityFields.length === 0) {
@@ -125,37 +129,51 @@ function buildFertSensitivity(root, groups, commodities, fields) {
       const scenarioYieldTHa = base.targetYieldTHa * factor;
       const { additionalUreaRequired } = nitrogenCalc({ nPerTonne: live.nPerTonne, targetYieldTHa: scenarioYieldTHa, soilTestN: f.soilTestNKgHa });
       const area = Number(f.areaHa) || 0;
-      return { f, scenarioYieldTHa, kgHa: additionalUreaRequired, reqT: (area * additionalUreaRequired) / 1000, currentReqT: fieldUrea(f).requiredTons };
+      const appliedKgHa = ureaAppliedKgHaFor(f);
+      // What the paddock will have: the soil's nitrogen, the urea already applied and the urea still to go
+      // on, and the yield that much nitrogen can carry. None of it moves with the adjustment, so a
+      // paddock with nothing in the ground yet still gets a figure once some is planned.
+      const plannedKgHa = planKgHa === null ? Math.max(0, (Number(f.ureaRequiredKgHa) || 0) - appliedKgHa) : planKgHa;
+      const max = maxYieldFromUrea({ nPerTonne: live.nPerTonne, soilTestN: f.soilTestNKgHa, ureaAppliedKgHa: appliedKgHa + plannedKgHa });
+      const reqT = (area * additionalUreaRequired) / 1000;
+      return {
+        f, area, scenarioYieldTHa, kgHa: additionalUreaRequired, reqT, currentReqT: fieldUrea(f).requiredTons,
+        maxYield: max.maxYieldTHa,
+      };
     });
     const signed = (n) => `${n >= 0 ? '+' : ''}${num(n, 2)}`;
+    const totalArea = rows.reduce((s, r) => s + r.area, 0);
+    // area-weighted, as in the urea report: a big paddock counts for more than a small corner
+    const wtd = (key) => (totalArea > 0 ? rows.reduce((s, r) => s + r[key] * r.area, 0) / totalArea : 0);
     const totalReqT = rows.reduce((s, r) => s + r.reqT, 0);
     const totalCurrentT = rows.reduce((s, r) => s + r.currentReqT, 0);
     const delta = totalReqT - totalCurrentT;
-    const missing = !(Number(live.nPerTonne) > 0) || !(Number(live.targetYieldTHa) > 0);
+    const hasN = Number(live.nPerTonne) > 0;   // without N per tonne there is no yield the nitrogen can carry
+    const missing = !hasN || !(Number(live.targetYieldTHa) > 0);
 
     tableEl.innerHTML = `
       <div class="row"><span class="label">${esc(commodity.name)} in Settings</span><span class="value">${num(live.targetYieldTHa, 1)} t/ha target &middot; ${num(live.nPerTonne, 0)} kg N/t</span></div>
       ${missing ? `<div class="field hint" style="margin:6px 0">Set this commodity's target yield and N required in Settings to get a sensible result.</div>` : ''}
-      <div class="hint" style="margin:8px 0 4px;font-size:12px;color:var(--text-dim)">kg/ha is the urea rate the scenario yield needs. Urea t is the total for the field, Now t is what is recorded as required today, and Diff t is the change.</div>
+      <div class="hint" style="margin:8px 0 4px;font-size:12px;color:var(--text-dim)">kg/ha is the urea the scenario yield needs and New t that for the field. Diff is the change from what is recorded as required today, which is totalled below the table. Calc max is the yield in t/ha the paddock's nitrogen could carry: the soil's, plus the urea already applied and the urea to apply above. It turns red where it falls short of the scenario yield.</div>
       <div class="table-scroll tight-wrap">
-        <table class="tight">
-          <thead><tr><th>Field</th><th>kg/ha</th><th>Urea t</th><th>Now t</th><th>Diff t</th></tr></thead>
+        <table class="tight wrap-first">
+          <thead><tr><th>Field</th><th>kg/ha</th><th>New t</th><th>Diff</th><th>Calc max</th></tr></thead>
           <tbody>
             ${rows.map((r) => `
               <tr>
                 <td>${esc(r.f.name)}</td>
                 <td>${num(r.kgHa, 0)}</td>
                 <td>${num(r.reqT, 2)}</td>
-                <td>${num(r.currentReqT, 2)}</td>
                 <td>${signed(r.reqT - r.currentReqT)}</td>
+                <td ${hasN && r.maxYield < r.scenarioYieldTHa ? 'style="color:var(--danger);font-weight:700"' : ''}>${hasN ? num(r.maxYield, 2) : '—'}</td>
               </tr>`).join('')}
           </tbody>
           <tfoot><tr>
             <td>Total</td>
             <td></td>
             <td>${num(totalReqT, 2)}</td>
-            <td>${num(totalCurrentT, 2)}</td>
             <td>${signed(delta)}</td>
+            <td>${hasN ? num(wtd('maxYield'), 2) : '—'}</td>
           </tr></tfoot>
         </table>
       </div>
@@ -165,6 +183,7 @@ function buildFertSensitivity(root, groups, commodities, fields) {
 
   formEl.querySelector('#fs-commodity').addEventListener('change', recompute);
   formEl.querySelector('#fs-pct').addEventListener('input', recompute);
+  formEl.querySelector('#fs-plan').addEventListener('input', recompute);
   recompute();
 }
 
