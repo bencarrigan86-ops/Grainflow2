@@ -1,12 +1,12 @@
-import { db } from '../storage.js?v=159';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=159';
-import { num, tons, esc } from '../fmt.js?v=159';
-import { field, getVal, getNum } from '../ui.js?v=159';
-import { canSeeYield } from '../nav.js?v=159';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=159';
+import { db } from '../storage.js?v=162';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=162';
+import { num, tons, esc } from '../fmt.js?v=162';
+import { field, getVal, getNum } from '../ui.js?v=162';
+import { canSeeYield } from '../nav.js?v=162';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=162';
 
 let unsub = null;
-let view = 'fert';
+let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
 
 export function renderReports(root) {
   if (unsub) unsub();
@@ -26,9 +26,9 @@ function paint(root) {
     </div>
     <div class="view">
       <div class="segmented" id="reports-view">
+        ${showYield ? `<button data-view="yield" class="${view === 'yield' ? 'active' : ''}">Yield</button>` : ''}
         <button data-view="fert" class="${view === 'fert' ? 'active' : ''}">Fert</button>
         <button data-view="seed" class="${view === 'seed' ? 'active' : ''}">Seed</button>
-        ${showYield ? `<button data-view="yield" class="${view === 'yield' ? 'active' : ''}">Yield</button>` : ''}
       </div>
       <div id="reports-body" style="margin-top:12px"></div>
     </div>

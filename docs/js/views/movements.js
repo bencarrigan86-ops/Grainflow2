@@ -1,10 +1,11 @@
-import { db } from '../storage.js?v=159';
-import { movementsForEndpoint } from '../derived.js?v=159';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=159';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=159';
-import { compressAndStampImage } from '../img.js?v=159';
-import { displayUrlFor } from '../photos.js?v=159';
-import { specText } from '../outload.js?v=159';
+import { db } from '../storage.js?v=162';
+import { movementsForEndpoint } from '../derived.js?v=162';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=162';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=162';
+import { compressAndStampImage } from '../img.js?v=162';
+import { displayUrlFor } from '../photos.js?v=162';
+import { specText } from '../outload.js?v=162';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=162';
 
 let unsub = null;
 
@@ -16,7 +17,7 @@ export function renderMovements(root) {
 
 // What the list is narrowed to. Kept across repaints so a ticket saved or a
 // sync arriving does not wipe the search someone is part-way through.
-let listFilter = { q: '', commodityId: '' };
+let listFilter = { q: '', commodityId: '', toFinish: false };
 
 function ticketSearchText(m, ctx) {
   const ends = [...(m.froms || []).map((f) => endpointLabel(f.type, f.id, ctx)), ...(m.tos || []).map((t) => endpointLabel(t.type, t.id, ctx))];
@@ -35,6 +36,8 @@ function paint(root) {
   const { storages, commodities, movements } = db.get();
   const inUse = commodities.filter((c) => movements.some((m) => m.commodityId === c.id));
   if (listFilter.commodityId && !inUse.some((c) => c.id === listFilter.commodityId)) listFilter.commodityId = '';
+  const finishCount = toFinish(movements, storages).length;
+  if (listFilter.toFinish && finishCount === 0) listFilter.toFinish = false;
 
   root.innerHTML = `
     <div class="topbar">
@@ -51,9 +54,10 @@ function paint(root) {
       ${movements.length > 0 ? `
       <div class="filterbar">
         <input type="search" id="mv-q" placeholder="Search tickets, movement no., trucks, drivers, buyers" value="${esc(listFilter.q)}" aria-label="Search tickets" />
-        ${inUse.length > 1 ? `<div class="chips">
-          <button type="button" class="chip ${listFilter.commodityId ? '' : 'active'}" data-chip="">All</button>
-          ${inUse.map((c) => `<button type="button" class="chip ${listFilter.commodityId === c.id ? 'active' : ''}" data-chip="${esc(c.id)}">${esc(c.name)}</button>`).join('')}
+        ${inUse.length > 1 || finishCount > 0 ? `<div class="chips">
+          <button type="button" class="chip ${listFilter.commodityId || listFilter.toFinish ? '' : 'active'}" data-chip="">All</button>
+          ${finishCount > 0 ? `<button type="button" class="chip ${listFilter.toFinish ? 'active' : ''}" data-finish="1">To finish ${finishCount}</button>` : ''}
+          ${inUse.length > 1 ? inUse.map((c) => `<button type="button" class="chip ${listFilter.commodityId === c.id ? 'active' : ''}" data-chip="${esc(c.id)}">${esc(c.name)}</button>`).join('') : ''}
         </div>` : ''}
       </div>` : ''}
 
@@ -78,8 +82,9 @@ function paint(root) {
   });
   root.querySelector('#mv-q')?.addEventListener('input', (e) => { listFilter.q = e.target.value; paintList(root); });
   root.querySelectorAll('[data-chip]').forEach((el) => {
-    el.addEventListener('click', () => { listFilter.commodityId = el.dataset.chip; paint(root); });
+    el.addEventListener('click', () => { listFilter.commodityId = el.dataset.chip; listFilter.toFinish = false; paint(root); });
   });
+  root.querySelector('[data-finish]')?.addEventListener('click', () => { listFilter.toFinish = !listFilter.toFinish; if (listFilter.toFinish) listFilter.commodityId = ''; paint(root); });
 }
 
 /** The ticket list and its totals, repainted alone so the search box keeps focus. */
@@ -89,9 +94,10 @@ function paintList(root) {
   const q = listFilter.q.trim().toLowerCase();
   const shown = movements
     .filter((m) => !listFilter.commodityId || m.commodityId === listFilter.commodityId)
+    .filter((m) => !listFilter.toFinish || stageOf(m, storages))
     .filter((m) => !q || ticketSearchText(m, ctx).includes(q))
     .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (Number(b.ticketNo) || 0) - (Number(a.ticketNo) || 0));
-  const narrowed = !!(q || listFilter.commodityId);
+  const narrowed = !!(q || listFilter.commodityId || listFilter.toFinish);
   const totalTons = shown.reduce((s, m) => s + (Number(m.tons) || 0), 0);
 
   root.querySelector('#move-stats').innerHTML = `
@@ -147,8 +153,15 @@ function fieldOptions(fields, commodityId) {
 }
 
 function siloOptions(storages, commodityId) {
-  const list = storages.filter((s) => matchesCommodity(s, commodityId));
+  // the in-transit store is not a silo anyone picks by name: it has its own choice, on the destination only
+  const list = storages.filter((s) => !isTransit(s) && matchesCommodity(s, commodityId));
   return [{ value: '', label: 'Select…' }, ...list.map((s) => ({ value: `silo:${s.id}`, label: s.name }))];
+}
+
+/** Where a load can go: In transit first (grain on a truck, not yet in a silo), then the silos. */
+function toSiloOptions(storages, commodityId) {
+  const base = siloOptions(storages, commodityId);
+  return [base[0], { value: 'silo:__transit__', label: 'In transit (not yet allocated)' }, ...base.slice(1)];
 }
 
 function saleOptions(sales, commodities, commodityId) {
@@ -208,7 +221,7 @@ export function movementRow(m, ctx) {
   const tos = m.tos || [];
   const fromLabel = froms.map((f) => endLabel(f.type, f.id, ctx)).join(' + ') || 'Unknown';
   const toLabel = tos.map((t) => endLabel(t.type, t.id, ctx)).join(' + ') || 'Unknown';
-  const isFinal = m.weightStatus === 'final';
+  const stage = stageOf(m, ctx.storages);
   const commodity = ctx.commodities.find((c) => c.id === m.commodityId)?.name;
   const fromBreakdown = froms.length > 1
     ? froms.map((f) => `From ${endpointLabel(f.type, f.id, ctx)}: ${num(f.tons, 2)} t`).join(', ')
@@ -225,7 +238,7 @@ export function movementRow(m, ctx) {
       </div>
       <div class="li-foot" style="margin-top:2px">
         <span class="meta">${details}</span>
-        <span class="badges"><span class="badge ${isFinal ? 'pos' : 'warn'}">${isFinal ? 'Final' : 'Estimate'}</span>${(m.photoDataUrl || m.photoPath) ? '<span aria-label="Has photo">📷</span>' : ''}</span>
+        <span class="badges"><span class="badge ${stage ? 'warn' : 'pos'}">${stage ? STAGES[stage] : 'Final'}</span>${(m.photoDataUrl || m.photoPath) ? '<span aria-label="Has photo">📷</span>' : ''}</span>
       </div>
       ${specText(m) ? `<div class="meta">${esc(specText(m))}</div>` : ''}
       ${fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
@@ -324,10 +337,10 @@ function addToRow(container, ctx, onChange, existingTo) {
   let toFirstRender = true;
   function renderToSelect() {
     const selectedVal = toFirstRender
-      ? (existingTo?.id ? `silo:${existingTo.id}` : '')
+      ? (existingTo?.id ? (ctx.isTransitId(existingTo.id) ? 'silo:__transit__' : `silo:${existingTo.id}`) : '')
       : toSelectEl.value;
     toFirstRender = false;
-    toSelectEl.innerHTML = ctx.siloOpts()
+    toSelectEl.innerHTML = ctx.toSiloOpts()
       .map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
   }
   renderToSelect();
@@ -468,6 +481,8 @@ export function openMovementSheet(existing, template) {
     refreshers: [],
     fieldOpts() { return fieldOptions(fields, this.commodityId); },
     siloOpts() { return siloOptions(storages, this.commodityId); },
+    toSiloOpts() { return toSiloOptions(storages, this.commodityId); },
+    isTransitId(id) { return isTransit(storages.find((x) => x.id === id)); },
     saleOpts() { return saleOptions(sales, commodities, this.commodityId); },
     refreshAll() { this.refreshers.forEach((fn) => fn()); },
   };
@@ -617,6 +632,23 @@ export function openMovementSheet(existing, template) {
     const tonsEl = root.querySelector('#tons');
     const loadPreviewEl = root.querySelector('#load-preview');
     const showLoad = () => { loadPreviewEl.textContent = tons(getNum(root, 'tons')); };
+    // A load from one paddock into one silo (or one contract) weighs one thing. When the
+    // net load is changed — the estimate corrected, or the final weight entered after
+    // tipping — the paddock and silo figures follow it, rather than keeping the old weight
+    // while the ticket says another. A load split or blended across several is left to the
+    // person, because only they know how it divides.
+    function syncSingleLegs() {
+      const net = parseFloat(tonsEl.value);
+      if (Number.isNaN(net)) return;
+      const fromRows = fromRowsEl.querySelectorAll('.from-row');
+      const toRows = toKind === 'silo' ? root.querySelectorAll('#to-rows .to-row') : [];
+      if (fromRows.length !== 1 || (toKind === 'silo' && toRows.length !== 1)) return;
+      const follow = (el) => {
+        if (el && parseFloat(el.value) !== net) { el.value = net; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      };
+      follow(fromRows[0].querySelector('.from-tons'));
+      if (toRows[0]) follow(toRows[0].querySelector('.to-tons'));
+    }
     function recomputeNet() {
       const gross = parseFloat(grossEl.value);
       const tare = parseFloat(tareEl.value);
@@ -624,10 +656,11 @@ export function openMovementSheet(existing, template) {
         tonsEl.value = (gross - tare).toFixed(2);
       }
       showLoad();
+      syncSingleLegs();
     }
     grossEl.addEventListener('input', recomputeNet);
     tareEl.addEventListener('input', recomputeNet);
-    tonsEl.addEventListener('input', showLoad);
+    tonsEl.addEventListener('input', () => { showLoad(); syncSingleLegs(); });
     showLoad();
 
     let weightStatus = src?.weightStatus || 'estimate';
@@ -679,6 +712,7 @@ export function openMovementSheet(existing, template) {
       } else {
         tos = readToRows(toBody.querySelector('#to-rows')).filter((t) => t.type && t.id);
       }
+      tos = tos.map((t) => (t.type === 'silo' && t.id === '__transit__' ? { ...t, id: db.ensureTransit(ctx.commodityId || null) } : t));
       if (froms.length === 0 || tos.length === 0) {
         if (froms.length === 0) fromRowsEl.querySelector('.from-select')?.focus();
         else toBody.querySelector('.to-select')?.focus();

@@ -18,19 +18,20 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=159';
+import { hydrate } from './hydrate.js?v=162';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=159';
-import { chooseBootState, resolveLegacy } from './boot.js?v=159';
-import { isLegacyDirty } from './dirty.js?v=159';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=159';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=159';
-import { settleLegs, dedupeLegs } from './legs.js?v=159';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=159';
-import { schedulePush, pushOnReconnect } from './sync.js?v=159';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=159';
+} from './local.js?v=162';
+import { chooseBootState, resolveLegacy } from './boot.js?v=162';
+import { isLegacyDirty } from './dirty.js?v=162';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=162';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=162';
+import { settleLegs, dedupeLegs } from './legs.js?v=162';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=162';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=162';
+import { schedulePush, pushOnReconnect } from './sync.js?v=162';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=162';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -524,7 +525,7 @@ export const db = {
       seedVariety: '', seedRateKgHa: 0,
     }));
 
-    const storages = src.storages.map((s) => ({
+    const storages = src.storages.filter((s) => !isTransit(s)).map((s) => ({
       id: uid(), kind: s.kind, name: s.name, commodityId: mapCommodity(s.commodityId),
       radius: s.radius, coneAngle: s.coneAngle, width: s.width,
       capacityTons: s.capacityTons, angleOfRepose: s.angleOfRepose,
@@ -697,6 +698,18 @@ export const db = {
     tombstone('storages', id);
     current().storages = current().storages.filter((s) => s.id !== id);
     persist();
+  },
+  /**
+   * The id of the "In transit" store for a commodity, creating it if this is the first
+   * ticket to need one. Grain on a truck that has no silo yet is counted there, so it
+   * is never lost between the paddock and the silo.
+   */
+  ensureTransit(commodityId) {
+    const c = current();
+    const found = transitFor(c.storages, commodityId);
+    if (found) return found.id;
+    const name = transitName(c.commodities.find((x) => x.id === commodityId)?.name);
+    return db.upsertStorage({ kind: 'tally', unitLabel: TRANSIT_LABEL, name, commodityId: commodityId || null, openingStock: 0 });
   },
 
   // --- movements ---

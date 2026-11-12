@@ -8,17 +8,18 @@
 // The reading and the rules live in loadimport.js, where they are tested. This
 // file is the screen: it holds the person's choices and hands them over.
 
-import { db } from '../storage.js?v=159';
-import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=159';
-import { esc, num, shortDate } from '../fmt.js?v=159';
-import { commodityFills } from '../commodityfill.js?v=159';
-import { reconcileLoads } from '../loadcheck.js?v=159';
+import { db } from '../storage.js?v=162';
+import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=162';
+import { esc, num, shortDate } from '../fmt.js?v=162';
+import { commodityFills } from '../commodityfill.js?v=162';
+import { isTransit } from '../transit.js?v=162';
+import { reconcileLoads } from '../loadcheck.js?v=162';
 import {
   FIELD_SPECS, REQUIRED_KEYS, chooseSetup, recallSetups, rememberSetup, setupProblems, peekFile, distinctOf, likelyFinished,
-} from '../loadmap.js?v=159';
+} from '../loadmap.js?v=162';
 import {
   readFreightExport, planNames, distinctNames, matchCommodity, matchSiloByNumber, suggestCutoff, buildMovements, COMPLETED,
-} from '../loadimport.js?v=159';
+} from '../loadimport.js?v=162';
 
 const MEMORY_KEY = 'grainflow.loadImportChoices';
 const NEW = '__new';
@@ -236,7 +237,7 @@ function review(body, text, setup, source, headers, rows) {
 
   const { fields, storages, commodities, movements } = db.get();
   const fieldOpts = fields.map((f) => ({ id: f.id, name: f.name }));
-  const siloOpts = storages.map((s) => ({ id: s.id, name: s.name }));
+  const siloOpts = storages.filter((s) => !isTransit(s)).map((s) => ({ id: s.id, name: s.name }));
   const commodityOpts = commodities.map((c) => ({ id: c.id, name: c.name }));
 
   const plans = {

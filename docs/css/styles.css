@@ -900,3 +900,8 @@ details.fold.feature > *:last-child { margin-bottom: 14px; }
 /* The figure for the whole outload stands apart from the trucks beneath it. */
 .card.whole-outload { border: 1.5px solid var(--btn-edge); background: var(--btn-tint); }
 .card.whole-outload h2 { color: var(--btn-ink); font-size: 16px; }
+
+/* Grain on trucks, not yet in a silo: an amber card above the silos. */
+.card.transit-card { border: 1.5px solid color-mix(in srgb, var(--warn) 55%, var(--border)); background: var(--warn-bg); cursor: pointer; margin: 0 0 10px; padding: 12px 14px; }
+.transit-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.transit-head strong { font-size: 15px; }

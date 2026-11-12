@@ -1,17 +1,18 @@
-import { db } from '../storage.js?v=159';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=159';
-import { storageLedgerStock, movementNetForStorage } from '../derived.js?v=159';
-import { hasStorageQuality } from '../mapping.js?v=159';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=159';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=159';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=159';
-import { renderRelatedMovements } from './movements.js?v=159';
-import { openSiloSetupSheet } from './silosetup.js?v=159';
-import { commodityFills } from '../commodityfill.js?v=159';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS } from '../outload.js?v=159';
+import { db } from '../storage.js?v=162';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=162';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=162';
+import { isTransit } from '../transit.js?v=162';
+import { hasStorageQuality } from '../mapping.js?v=162';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=162';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=162';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=162';
+import { renderRelatedMovements } from './movements.js?v=162';
+import { openSiloSetupSheet } from './silosetup.js?v=162';
+import { commodityFills } from '../commodityfill.js?v=162';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS } from '../outload.js?v=162';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, siloSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=159';
+} from '../silolayers.js?v=162';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -133,6 +134,8 @@ function paint(root) {
     paintStorageParts(root);
   });
   body.querySelector('#storage-list').addEventListener('click', (e) => {
+    const card = e.target.closest('[data-open-transit]');
+    if (card) { openTransitSheet(db.get().storages.find((x) => x.id === card.dataset.openTransit)); return; }
     const row = e.target.closest('[data-edit-storage]');
     if (row) openStorageSheet(db.get().storages.find((s) => s.id === row.dataset.editStorage));
   });
@@ -178,7 +181,8 @@ function withLayers(s, movements) {
 
 function paintStorageParts(root) {
   const { commodities, storages: saved, movements } = db.get();
-  const storages = saved.map((x) => withLayers(x, movements));
+  const transits = saved.filter(isTransit);
+  const storages = saved.filter((x) => !isTransit(x)).map((x) => withLayers(x, movements));
   const found = searchStorages(storages, commodities, searchText);
 
   // ---- summary ----
@@ -225,9 +229,37 @@ function paintStorageParts(root) {
   } else chipsEl.innerHTML = '';
 
   // ---- the list ----
-  root.querySelector('#storage-list').innerHTML = shown.length
+  root.querySelector('#storage-list').innerHTML = transitCards(transits, commodities, movements) + (shown.length
     ? renderStorageList(shown, commodities, movements)
-    : `<div class="empty">No silos match &ldquo;${esc(searchText.trim())}&rdquo;.</div>`;
+    : `<div class="empty">No silos match &ldquo;${esc(searchText.trim())}&rdquo;.</div>`);
+}
+
+/**
+ * Grain on trucks that has no silo yet, one card per commodity: the tonnes, how many
+ * tickets are waiting, and a way in to allocate them. Shown only while there is something
+ * waiting, and never mixed into silo stock.
+ */
+function transitCards(transits, commodities, movements) {
+  return transits.map((t) => {
+    const waiting = movementsForEndpoint('silo', t.id, movements).filter((m) => (m.tos || []).some((x) => x.id === t.id));
+    const held = storageLedgerStock(t, movements);
+    if (waiting.length === 0 && Math.abs(held) < 0.05) return '';
+    return `<div class="card transit-card" data-open-transit="${esc(t.id)}" role="button" tabindex="0">
+      <div class="transit-head"><strong>${esc(t.name)}</strong><span class="badge warn">Needs allocating</span></div>
+      <div class="meta">${num(held, 1)} t on ${waiting.length} ticket${waiting.length === 1 ? '' : 's'} &middot; not yet in a silo. Tap to allocate.</div>
+    </div>`;
+  }).join('');
+}
+
+/** The tickets waiting in an in-transit store; opening one and choosing its silo allocates it. */
+function openTransitSheet(t) {
+  openSheet(t.name, (root) => {
+    root.innerHTML = `
+      <div class="field hint" style="margin-bottom:10px">Grain on trucks that has no silo yet. Open a ticket and choose the silo it went into
+        &mdash; or split it across two &mdash; and it moves out of here. This store should come back to zero.</div>
+      <div id="transit-list"></div>`;
+    renderRelatedMovements(root.querySelector('#transit-list'), 'silo', t.id);
+  });
 }
 
 function paintCalculator(root) {
