@@ -18,21 +18,21 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=170';
+import { hydrate } from './hydrate.js?v=173';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=170';
-import { chooseBootState, resolveLegacy } from './boot.js?v=170';
-import { isLegacyDirty } from './dirty.js?v=170';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=170';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=170';
-import { settleLegs, dedupeLegs } from './legs.js?v=170';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=170';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=170';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=170';
-import { schedulePush, pushOnReconnect } from './sync.js?v=170';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=170';
+} from './local.js?v=173';
+import { chooseBootState, resolveLegacy } from './boot.js?v=173';
+import { isLegacyDirty } from './dirty.js?v=173';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=173';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=173';
+import { settleLegs, dedupeLegs } from './legs.js?v=173';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=173';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=173';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=173';
+import { schedulePush, pushOnReconnect } from './sync.js?v=173';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=173';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.

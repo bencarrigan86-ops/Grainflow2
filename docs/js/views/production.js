@@ -1,11 +1,11 @@
-import { db } from '../storage.js?v=170';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=170';
-import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=170';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=170';
-import { describeMerge } from '../merge.js?v=170';
-import { renderRelatedMovements } from './movements.js?v=170';
-import { canSeeYield } from '../nav.js?v=170';
-import { wireJumps } from '../jump.js?v=170';
+import { db } from '../storage.js?v=173';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=173';
+import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=173';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=173';
+import { describeMerge } from '../merge.js?v=173';
+import { renderRelatedMovements } from './movements.js?v=173';
+import { canSeeYield } from '../nav.js?v=173';
+import { wireJumps } from '../jump.js?v=173';
 
 let unsub = null;
 
@@ -86,7 +86,7 @@ function fieldRow(f, movements, showYield = true) {
       <div>
         <div class="main">${esc(f.name)}</div>
         <div class="meta">${ha(f.areaHa, 0)}${showYield ? ` · <span class="badge ${isActual ? 'pos' : 'neg'}">${isActual ? 'Actual' : 'Estimate'}</span>` : ''}</div>
-        ${showYield && !isActual && actualTons > 0 ? `<div class="meta">Actual (movements): ${num(actualTons, 0)} t · ${num(actualYieldTHa, 2)} t/ha</div>` : ''}
+        ${showYield && !isActual && actualTons > 0 ? `<div class="actual-flag">Harvest tickets: ${num(actualTons, 0)} t · ${num(actualYieldTHa, 2)} t/ha. Switch to Actual</div>` : ''}
       </div>
       ${showYield ? `<div class="right">
         <div class="main">${tons(t, 0)}</div>
@@ -118,13 +118,13 @@ function openFieldSheet(existing) {
           <button data-mode="estimate" class="${(existing?.yieldMode || 'estimate') === 'estimate' ? 'active' : ''}">Estimate</button>
           <button data-mode="actual" class="${existing?.yieldMode === 'actual' ? 'active' : ''}">Actual (movements)</button>
         </div>
-        <div class="hint" id="actual-hint">Actual sums the Movement tickets carted off this field${actualTons > 0 ? ` — currently ${num(actualTons, 0)} t` : ''}.</div>
+        <div class="actual-callout" id="actual-hint"></div>
       </div>
       <div class="row"><span class="label" id="tons-label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
       </div>
-      <details class="fold" ${existing ? 'open' : ''}>
-        <summary><div><h2>Fertiliser planning</h2><div class="sub">Target yield, urea required and applied, nitrogen</div></div></summary>
-      <div class="field hint" style="margin:-4px 0 12px">Separate from the yield estimate above — used only for the urea and starter calculations below.</div>
+      <details class="fold feature" ${existing ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Fertiliser planning</h2><div class="sub">Target yield, urea required and applied, nitrogen</div></div></summary>
+      <div class="hint" style="margin:10px 14px 12px;font-size:12px;color:var(--text-dim)">Separate from the yield estimate above — used only for the urea and starter calculations below.</div>
       <div class="row"><span class="label">Commodity's default target yield</span><span class="value" id="commodity-target-preview">— t/ha</span></div>
       ${field({ label: 'Target yield override (t/ha)', id: 'targetYieldOverride', type: 'number', step: '0.1', value: existing?.targetYieldOverrideTHa || '', placeholder: 'Commodity default', hint: "Leave blank to use the commodity's default above — type a value here to override it for this field" })}
       ${field({ label: 'Soil test N (kg/ha)', id: 'soilTestN', type: 'number', step: '1', value: existing?.soilTestNKgHa ?? 0, hint: 'From your soil test report' })}
@@ -155,8 +155,8 @@ function openFieldSheet(existing) {
       </div>
       <div class="row"><span class="label">Urea left</span><span class="value" id="urea-preview">0.0 t</span></div>
       </details>
-      <details class="fold" ${existing ? 'open' : ''}>
-        <summary><div><h2>Starter &amp; seed</h2><div class="sub">Starter fertiliser, seed variety and rate</div></div></summary>
+      <details class="fold feature" ${existing ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Starter &amp; seed</h2><div class="sub">Starter fertiliser, seed variety and rate</div></div></summary>
       <div class="grid-2">
         ${field({ label: 'Starter required (kg/ha)', id: 'starterReq', type: 'number', step: '1', value: existing?.starterRequiredKgHa ?? 0 })}
         ${field({ label: 'Starter applied (kg/ha)', id: 'starterApp', type: 'number', step: '1', value: existing?.starterAppliedKgHa ?? 0 })}
@@ -246,7 +246,21 @@ function openFieldSheet(existing) {
       const unitPerHa = isBales ? 'bales/ha' : 't/ha';
       yieldLabelEl.textContent = `Yield estimate (${unitPerHa})`;
       tonsLabelEl.textContent = isBales ? 'Total bales' : 'Total tons';
-      actualHintEl.textContent = `Actual sums the Movement tickets carted off this field${actualTons > 0 ? ` — currently ${num(actualTons, 0)} ${unit}` : ''}.`;
+      {
+        const a = getNum(root, 'area');
+        const actualRate = a > 0 ? actualTons / a : 0;
+        const found = actualTons > 0 ? `${num(actualTons, 0)} ${unit} (${num(actualRate, 2)} ${unitPerHa})` : '';
+        if (yieldMode === 'actual') {
+          actualHintEl.className = 'actual-callout using';
+          actualHintEl.innerHTML = `<strong>Using the actual yield.</strong> Tonnes are the Movement tickets carted off this field${found ? `: ${found} so far` : ', and none have been recorded yet'}.`;
+        } else if (actualTons > 0) {
+          actualHintEl.className = 'actual-callout switch';
+          actualHintEl.innerHTML = `<strong>Harvest tickets are in: ${found}.</strong> This field is still on the estimate. After harvest, switch to <em>Actual (movements)</em> so production, sales and reports use the real yield.`;
+        } else {
+          actualHintEl.className = 'actual-callout';
+          actualHintEl.innerHTML = `<strong>After harvest, switch to Actual (movements).</strong> It uses the tickets carted off this field instead of the estimate. None recorded yet.`;
+        }
+      }
 
       const tonsVal = yieldMode === 'actual'
         ? actualTons

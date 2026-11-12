@@ -912,3 +912,10 @@ details.fold.feature > *:last-child { margin-bottom: 14px; }
 .card.transit-card { border: 1.5px solid color-mix(in srgb, var(--warn) 55%, var(--border)); background: var(--warn-bg); cursor: pointer; margin: 0 0 10px; padding: 12px 14px; }
 .transit-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .transit-head strong { font-size: 15px; }
+
+/* On a field: a prompt to move from the estimate to the actual yield once harvest tickets exist. */
+.actual-callout { margin-top: 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--btn-tint); font-size: 14px; line-height: 1.4; }
+.actual-callout strong { display: block; margin-bottom: 2px; }
+.actual-callout.switch { border: 1.5px solid color-mix(in srgb, var(--warn) 55%, var(--border)); background: var(--warn-bg); }
+.actual-callout.using { border-color: var(--btn-edge); }
+.actual-flag { margin-top: 4px; padding: 3px 8px; border-radius: 8px; display: inline-block; font-size: 13px; font-weight: 600; background: var(--warn-bg); border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--border)); }

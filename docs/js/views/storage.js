@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=170';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=170';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=170';
-import { isTransit } from '../transit.js?v=170';
-import { hasStorageQuality } from '../mapping.js?v=170';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=170';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=170';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=170';
-import { renderRelatedMovements } from './movements.js?v=170';
-import { openSiloSetupSheet } from './silosetup.js?v=170';
-import { commodityFills } from '../commodityfill.js?v=170';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS } from '../outload.js?v=170';
+import { db } from '../storage.js?v=173';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=173';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=173';
+import { isTransit } from '../transit.js?v=173';
+import { hasStorageQuality } from '../mapping.js?v=173';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=173';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=173';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=173';
+import { renderRelatedMovements } from './movements.js?v=173';
+import { openSiloSetupSheet } from './silosetup.js?v=173';
+import { commodityFills } from '../commodityfill.js?v=173';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS } from '../outload.js?v=173';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, siloSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=170';
+} from '../silolayers.js?v=173';
 
 let unsub = null;
 let listMode = 'commodity';

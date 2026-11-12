@@ -5,12 +5,12 @@
 // navigation per role, and that is when this gets a proper home in the
 // interface. Until then it is reachable at #/account.
 
-import { notify } from '../ui.js?v=170';
+import { notify } from '../ui.js?v=173';
 import {
   getSession, getMembership, signOut, listMyInvitations, acceptInvitation,
-} from '../auth.js?v=170';
-import { roleLabel, expiryText } from '../invites.js?v=170';
-import { esc } from '../fmt.js?v=170';
+} from '../auth.js?v=173';
+import { roleLabel, expiryText } from '../invites.js?v=173';
+import { esc } from '../fmt.js?v=173';
 
 const ROLE_LABELS = {
   owner: 'Owner',
