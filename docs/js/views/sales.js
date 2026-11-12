@@ -1,14 +1,14 @@
-import { db } from '../storage.js?v=165';
+import { db } from '../storage.js?v=168';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=165';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=165';
-import { num, tons, money, esc, shortDate, todayLocal } from '../fmt.js?v=165';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=165';
-import { renderRelatedMovements } from './movements.js?v=165';
-import { openInvoiceListSheet } from './invoice.js?v=165';
-import { openContractDocSheet } from './contract.js?v=165';
-import { wireJumps } from '../jump.js?v=165';
+} from '../documents.js?v=168';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=168';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=168';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=168';
+import { renderRelatedMovements } from './movements.js?v=168';
+import { openInvoiceListSheet } from './invoice.js?v=168';
+import { openContractDocSheet } from './contract.js?v=168';
+import { wireJumps } from '../jump.js?v=168';
 
 let unsub = null;
 
@@ -28,6 +28,10 @@ function paint(root) {
     totalValue: acc.totalValue + r.totalValue,
   }), { tons: 0, tonsDue: 0, totalValue: 0 });
   salesTotals.avgPrice = salesTotals.tons > 0 ? salesTotals.totalValue / salesTotals.tons : 0;
+  // Once the total reaches eight digits the Total column would outgrow a phone, so the whole
+  // column is shown in millions ($12.35m). Below that it is the full figure, to the dollar.
+  const inMillions = salesTotals.totalValue >= 10000000;
+  const totalText = (v) => (inMillions ? moneyMillions(v) : money(v, 0));
 
   root.innerHTML = `
     <div class="topbar">
@@ -40,7 +44,7 @@ function paint(root) {
       ${rollup.length === 0 ? '' : `
       <div class="card report">
         <h2><span class="dot report"></span>By commodity</h2>
-        <div class="table-scroll">
+        <div class="table-scroll tight-wrap">
           <table class="tight">
             <thead><tr><th>Commodity</th><th>Sold t</th><th>Due t</th><th>Avg $/t</th><th>Total $</th></tr></thead>
             <tbody>
@@ -49,16 +53,16 @@ function paint(root) {
                   <td><button type="button" class="jump-link">${esc(r.commodity.name)}</button></td>
                   <td>${num(r.tons, 0)}</td>
                   <td>${num(Math.max(0, r.tonsDue), 0)}</td>
-                  <td>${num(r.avgPrice, 0)}</td>
-                  <td>${num(r.totalValue, 0)}</td>
+                  <td>${money(r.avgPrice, 0)}</td>
+                  <td>${totalText(r.totalValue)}</td>
                 </tr>`).join('')}
             </tbody>
             <tfoot><tr>
               <td>Total</td>
               <td>${num(salesTotals.tons, 0)}</td>
               <td>${num(salesTotals.tonsDue, 0)}</td>
-              <td>${num(salesTotals.avgPrice, 0)}</td>
-              <td>${num(salesTotals.totalValue, 0)}</td>
+              <td>${money(salesTotals.avgPrice, 0)}</td>
+              <td>${totalText(salesTotals.totalValue)}</td>
             </tr></tfoot>
           </table>
         </div>

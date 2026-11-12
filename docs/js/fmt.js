@@ -17,6 +17,16 @@ export function money(n, dp = 0) {
   return `${sign}$${num(Math.abs(n), dp)}`;
 }
 
+/**
+ * Dollars in millions: 12345678 -> "$12.35m". For a column that would otherwise outgrow a
+ * phone screen once its figures reach eight digits.
+ */
+export function moneyMillions(n, dp = 2) {
+  if (n === null || n === undefined || Number.isNaN(n)) return '—';
+  const sign = n < 0 ? '-' : '';
+  return `${sign}$${num(Math.abs(n) / 1e6, dp)}m`;
+}
+
 export function pct(n, dp = 0) {
   if (n === null || n === undefined || Number.isNaN(n)) return '—';
   return `${num(n * 100, dp)}%`;
