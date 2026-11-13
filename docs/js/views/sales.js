@@ -1,15 +1,15 @@
-import { db } from '../storage.js?v=210';
+import { db } from '../storage.js?v=212';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=210';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=210';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=210';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=210';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=210';
-import { renderRelatedMovements } from './movements.js?v=210';
-import { openInvoiceListSheet } from './invoice.js?v=210';
-import { openContractDocSheet } from './contract.js?v=210';
-import { wireJumps } from '../jump.js?v=210';
+} from '../documents.js?v=212';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=212';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=212';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=212';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=212';
+import { renderRelatedMovements } from './movements.js?v=212';
+import { openInvoiceListSheet } from './invoice.js?v=212';
+import { openContractDocSheet } from './contract.js?v=212';
+import { wireJumps } from '../jump.js?v=212';
 
 let unsub = null;
 
@@ -80,7 +80,7 @@ function paint(root) {
         ${carryList.length ? `<button type="button" class="btn secondary small" id="carry-contracts" style="margin-bottom:10px">Bring in ${esc(prevLabel)} contracts&hellip; (${carryList.length})</button>` : ''}
         ${groups.length === 0 ? `<div class="empty">No contracts yet.<br/><button class="btn" id="empty-add">Add your first sale</button></div>` : groups.map((g) => `
           <div class="group-label" id="grp-${esc(g.id ?? 'none')}"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
-          ${g.sales.map((s) => saleRow(s, movements, commodities)).join('')}
+          ${g.sales.map((s, i) => saleRow(s, movements, commodities, i)).join('')}
         `).join('')}
       </div>
     </div>
@@ -258,7 +258,7 @@ function deliveryWindow(s) {
   return '';
 }
 
-function saleRow(s, movements, commodities) {
+function saleRow(s, movements, commodities, index = 0) {
   const econ = saleEconomics(s, movements);
   const window = deliveryWindow(s);
   const invoices = db.getInvoicesForSale(s.id);
@@ -267,7 +267,7 @@ function saleRow(s, movements, commodities) {
   const unit = isBales ? 'bales' : 't';
   const amount = isBales ? `${num(s.tons || 0, 1)} bales` : tons(s.tons || 0);
   return `
-    <div class="list-item stack" data-edit-sale="${s.id}">
+    <div class="list-item stack band ${index % 2 ? 'alt' : ''}" data-edit-sale="${s.id}">
       <div class="li-top">
         <div class="main">${s.buyer ? esc(s.buyer) : 'No buyer'}</div>
         <div class="main">${money(econ.totalValue, 0)}</div>

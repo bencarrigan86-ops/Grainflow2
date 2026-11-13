@@ -295,6 +295,22 @@ tr.jump-row { cursor: pointer; }
 .list-item .right { text-align: right; }
 .list-item:active { background: var(--surface-2); }
 
+/* Contracts in alternating colours, each its own block: with plain rows the figures under one contract
+   read as belonging to the next, and the volume left on the top one was taken for the second's. */
+.list-item.band {
+  padding: 12px 12px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.list-item.band:last-child { border-bottom: 1px solid var(--border); margin-bottom: 0; }
+.list-item.band.alt {
+  background: color-mix(in srgb, var(--accent-summary) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent-summary) 28%, var(--border));
+}
+.list-item.band:active { filter: brightness(.96); }
+
 .btn {
   appearance: none;
   border: 1.5px solid transparent;

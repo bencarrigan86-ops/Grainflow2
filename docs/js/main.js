@@ -1,25 +1,26 @@
-import { db } from './storage.js?v=210';
-import { initTheme } from './theme.js?v=210';
+import { db } from './storage.js?v=212';
+import { initTheme } from './theme.js?v=212';
 initTheme();
-import { renderPosition } from './views/position.js?v=210';
-import { renderProduction } from './views/production.js?v=210';
-import { renderReports } from './views/reports.js?v=210';
-import { renderSales } from './views/sales.js?v=210';
-import { renderMovements } from './views/movements.js?v=210';
-import { renderStorage } from './views/storage.js?v=210';
-import { renderSettings } from './views/settings.js?v=210';
-import { renderLogin } from './views/login.js?v=210';
-import { renderAccount } from './views/account.js?v=210';
+import { renderPosition } from './views/position.js?v=212';
+import { renderProduction } from './views/production.js?v=212';
+import { renderReports } from './views/reports.js?v=212';
+import { renderSales } from './views/sales.js?v=212';
+import { renderMovements } from './views/movements.js?v=212';
+import { renderStorage } from './views/storage.js?v=212';
+import { renderSettings } from './views/settings.js?v=212';
+import { renderLogin } from './views/login.js?v=212';
+import { renderAccount } from './views/account.js?v=212';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=210';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=210';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=210';
-import { esc } from './fmt.js?v=210';
-import { isSheetOpen, notify } from './ui.js?v=210';
-import { describeMerges } from './ticketmerge.js?v=210';
-import { APP_VERSION } from './version.js?v=210';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=210';
+} from './auth.js?v=212';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=212';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=212';
+import { esc } from './fmt.js?v=212';
+import { isSheetOpen, notify } from './ui.js?v=212';
+import { describeMerges } from './ticketmerge.js?v=212';
+import { watchLists } from './band.js?v=212';
+import { APP_VERSION } from './version.js?v=212';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=212';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -174,6 +175,9 @@ window.addEventListener('grainflow:merged', (e) => {
 });
 // A photo that could not go up stays on this device and is tried again, but it was failing without a word. Said
 // once per reason, so a retry every few minutes does not stack up messages.
+// Lists on every screen alternate in colour, so one item's figures are not read as the next one's
+watchLists();
+
 const photoFailuresShown = new Set();
 window.addEventListener('grainflow:photo-upload-failed', (e) => {
   const messages = (e.detail?.messages || []).filter((m) => !photoFailuresShown.has(m));

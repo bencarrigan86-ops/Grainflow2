@@ -1,12 +1,12 @@
-import { db } from '../storage.js?v=210';
-import { movementsForEndpoint } from '../derived.js?v=210';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=210';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=210';
-import { compressAndStampImage } from '../img.js?v=210';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=210';
-import { specText } from '../outload.js?v=210';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=210';
-import { pickableSilos } from '../silopick.js?v=210';
+import { db } from '../storage.js?v=212';
+import { movementsForEndpoint } from '../derived.js?v=212';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=212';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=212';
+import { compressAndStampImage } from '../img.js?v=212';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=212';
+import { specText } from '../outload.js?v=212';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=212';
+import { pickableSilos } from '../silopick.js?v=212';
 
 let unsub = null;
 
