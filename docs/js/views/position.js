@@ -1,6 +1,7 @@
-import { db } from '../storage.js?v=221';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=221';
-import { num, tons, money, pct, esc } from '../fmt.js?v=221';
+import { db } from '../storage.js?v=226';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=226';
+import { num, tons, money, pct, esc } from '../fmt.js?v=226';
+import { payablesCost } from '../payables.js?v=226';
 
 let unsub = null;
 
@@ -15,7 +16,9 @@ function paint(root) {
   const overheads = db.getOverheads();
   const rows = positionRows(commodities, fields, sales, movements);
   const totals = positionTotals(rows);
-  const pl = farmProfitLoss(totals.grossMargin, overheads, totals.openingValue);
+  // bills owed: brokerage, freight, storage and the rest come off profit as costs
+  const cost = payablesCost(sales, movements, db.getPayables());
+  const pl = farmProfitLoss(totals.grossMargin, overheads, totals.openingValue, cost.total);
 
   root.innerHTML = `
     <div class="topbar">
@@ -48,12 +51,12 @@ function paint(root) {
 
       ${rows.map((r) => commodityCard(r)).join('')}
 
-      ${rows.length > 0 ? farmSummaryCard(totals, overheads, pl) : ''}
+      ${rows.length > 0 ? farmSummaryCard(totals, overheads, pl, cost) : ''}
     </div>
   `;
 }
 
-function farmSummaryCard(totals, overheads, pl) {
+function farmSummaryCard(totals, overheads, pl, cost) {
   const plClass = pl.profitLoss >= 0 ? 'pos' : 'neg';
   const oh = (label, v) => `<div class="row"><span class="label">${label}</span><span class="value">${money(v, 0)}</span></div>`;
   return `
@@ -64,6 +67,13 @@ function farmSummaryCard(totals, overheads, pl) {
         <div class="kv"><div class="l">Overheads</div><div class="v">${money(pl.overheadsTotal, 0)}</div></div>
         <div class="kv"><div class="l">${pl.profitLoss >= 0 ? 'Profit' : 'Loss'}</div><div class="v"><span class="badge ${plClass}" style="font-size:15px">${money(pl.profitLoss, 0)}</span></div></div>
       </div>
+      ${pl.payablesTotal ? `
+      <details class="fold" style="margin-top:6px">
+        <summary><div><h2>Payables</h2><div class="sub">${money(pl.payablesTotal, 0)} taken off profit: brokerage, freight, storage, other</div></div></summary>
+        ${[['Brokerage', cost.brokerage], ['Freight, above or below the contract estimate', cost.freight], ['Storage', cost.storage], ['Other', cost.other]].filter(([, v]) => v).map(([l, v]) => `<div class="row"><span class="label">${l}</span><span class="value">${v < 0 ? '&minus;' : ''}${money(Math.abs(v), 0)}</span></div>`).join('')}
+        <div class="row"><span class="label"><strong>Total</strong></span><span class="value"><strong>${money(pl.payablesTotal, 0)}</strong></span></div>
+        <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Bills count at their amount before GST, paid or not. Brokerage is each contract's $/t on the tonnes delivered, or the broker's bills if more. A freight bill on a contract replaces its Freight ($/t) estimate for those tonnes, so only the difference shows here.</div>
+      </details>` : ''}
       ${pl.openingValue ? `
       <div class="liquidity">
         <div class="row"><span class="label">${pl.profitLoss >= 0 ? 'Profit' : 'Loss'} this season</span><span class="value">${money(pl.profitLoss, 0)}</span></div>

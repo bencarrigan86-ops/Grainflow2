@@ -1,7 +1,7 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=221';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=221';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=226';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=226';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -544,9 +544,11 @@ export function overheadsTotal(overheads) {
  * (grain carried in is not income earned this season). `profitWithOpening` puts the opening stock's
  * value back, so it shows everything the farm holds: this season's profit plus the grain brought in.
  */
-export function farmProfitLoss(totalGrossMargin, overheads, openingValue = 0) {
+export function farmProfitLoss(totalGrossMargin, overheads, openingValue = 0, payables = 0) {
   const overheadsSum = overheadsTotal(overheads);
-  const profitLoss = totalGrossMargin - overheadsSum;
+  // bills the farm owes (brokerage, freight, storage, other) are costs too: see payables.js
+  const payablesSum = Number(payables) || 0;
+  const profitLoss = totalGrossMargin - overheadsSum - payablesSum;
   const opening = Number(openingValue) || 0;
-  return { overheadsTotal: overheadsSum, profitLoss, openingValue: opening, profitWithOpening: profitLoss + opening };
+  return { overheadsTotal: overheadsSum, payablesTotal: payablesSum, profitLoss, openingValue: opening, profitWithOpening: profitLoss + opening };
 }

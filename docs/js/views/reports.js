@@ -1,9 +1,10 @@
-import { db } from '../storage.js?v=221';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=221';
-import { num, tons, esc } from '../fmt.js?v=221';
-import { field, getVal, getNum } from '../ui.js?v=221';
-import { canSeeYield } from '../nav.js?v=221';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=221';
+import { db } from '../storage.js?v=226';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=226';
+import { num, tons, esc } from '../fmt.js?v=226';
+import { field, getVal, getNum } from '../ui.js?v=226';
+import { canSeeYield } from '../nav.js?v=226';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=226';
+import { harvestReport, siloSpace, pctText } from '../harvest.js?v=226';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -16,7 +17,7 @@ export function renderReports(root) {
 
 function paint(root) {
   const showYield = canSeeYield(db.getRole());
-  if (view === 'yield' && !showYield) view = 'fert';
+  if ((view === 'yield' || view === 'harvest') && !showYield) view = 'fert';
   root.innerHTML = `
     <div class="topbar">
       <div>
@@ -27,6 +28,7 @@ function paint(root) {
     <div class="view">
       <div class="segmented" id="reports-view">
         ${showYield ? `<button data-view="yield" class="${view === 'yield' ? 'active' : ''}">Yield</button>` : ''}
+        ${showYield ? `<button data-view="harvest" class="${view === 'harvest' ? 'active' : ''}">Harvest</button>` : ''}
         <button data-view="fert" class="${view === 'fert' ? 'active' : ''}">Fert</button>
         <button data-view="seed" class="${view === 'seed' ? 'active' : ''}">Seed</button>
       </div>
@@ -45,6 +47,8 @@ function paint(root) {
     paintSeed(root);
   } else if (view === 'yield') {
     paintYield(root);
+  } else if (view === 'harvest') {
+    paintHarvest(root);
   } else {
     paintFert(root);
   }
@@ -411,6 +415,94 @@ function seedTable(g) {
       </table>
     </div>
   `;
+}
+
+// Which folding sections of the harvest report are open, kept while the app is open. Open until closed.
+const harvestOpen = new Map();
+
+/**
+ * Harvest progress: what is in against what is still to come, by commodity and field, and the room left in the silos
+ * to take it. "In" is the tonnes carted off the field; "to come" is its estimate less that, until the field is marked
+ * finished (see harvest.js). The silos and each commodity's fields fold away.
+ */
+function paintHarvest(root) {
+  const { commodities, fields, storages, movements } = db.get();
+  const { groups, farm } = harvestReport(commodities, fields, movements);
+  const space = siloSpace(storages, movements);
+  const body = root.querySelector('#reports-body');
+  const t1 = (n) => num(n, 0);
+  const margin = space.totalRoom - farm.toComeT;
+
+  if (groups.length === 0) {
+    body.innerHTML = `<div class="card report"><div class="empty">Add fields in the Production tab.</div></div>`;
+    return;
+  }
+  const nameOf = (id) => commodities.find((c) => c.id === id)?.name || 'No commodity';
+  const fold = (key, summary, inner) => `
+    <details class="fold" data-fold="${key}" style="border-top:none;margin-top:0" ${harvestOpen.get(key) !== false ? 'open' : ''}>
+      <summary>${summary}</summary>
+      ${inner}
+    </details>`;
+  body.innerHTML = `
+    <div class="card report">
+      <h2><span class="dot report"></span>Whole farm</h2>
+      <div class="stat-grid">
+        <div class="stat"><div class="n">${t1(farm.inT)} t</div><div class="l">Harvested</div></div>
+        <div class="stat"><div class="n">${t1(farm.toComeT)} t</div><div class="l">Still to come</div></div>
+        <div class="stat"><div class="n">${pctText(farm.pct)}</div><div class="l">Done</div></div>
+        <div class="stat"><div class="n">${t1(farm.toGoHa)} ha</div><div class="l">Left to harvest</div></div>
+      </div>
+      <div class="row" style="margin-top:8px"><span class="label">Paddocks finished</span><span class="value">${farm.doneFields} of ${farm.fields} · ${t1(farm.doneHa)} of ${t1(farm.areaHa)} ha</span></div>
+    </div>
+
+    <div class="card report">
+      <h2><span class="dot report"></span>Room in the silos</h2>
+      <div class="row"><span class="label">In silos already holding a commodity</span><span class="value">${t1(space.totalRoom - space.emptyRoom)} t</span></div>
+      <div class="row"><span class="label">In empty silos (${space.emptyCount}), for any grain</span><span class="value">${t1(space.emptyRoom)} t</span></div>
+      <div class="row"><span class="label"><strong>Room left</strong></span><span class="value"><strong>${t1(space.totalRoom)} t</strong></span></div>
+      <div class="row"><span class="label">Still to come</span><span class="value">${t1(farm.toComeT)} t</span></div>
+      <div class="row"><span class="label"><strong>${margin >= 0 ? 'Room to spare' : 'Short of room by'}</strong></span><span class="value"><span class="badge ${margin >= 0 ? 'pos' : 'neg'}">${t1(Math.abs(margin))} t</span></span></div>
+      ${space.silos.length ? fold('silos', `<div><h2>Each silo</h2><div class="sub">${space.silos.length} silo${space.silos.length === 1 ? '' : 's'}, most room first</div></div>`, space.silos.map((s) => `
+        <div class="list-item stack">
+          <div class="li-top"><div class="main">${esc(s.name)}</div><div class="main">${t1(s.room)} t room</div></div>
+          <div class="meta">${s.empty ? 'Empty, takes any grain' : esc(nameOf(s.commodityId))} · ${t1(s.stock)} of ${t1(s.capacity)} t</div>
+          <div class="gauge" role="img" aria-label="${Math.round(s.pct * 100)} percent full"><i style="width:${s.pct * 100}%"></i></div>
+        </div>`).join('')) : ''}
+      ${space.notCounted.length ? `<div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Not counted: ${space.notCounted.map(esc).join('; ')}. Set the capacity or commodity on the Storage tab to include them.</div>` : ''}
+      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Third-party storage is not counted. An empty silo can take any grain, so it is counted once, here, and not under each commodity.</div>
+    </div>
+
+    ${groups.map((g) => {
+      const own = g.id ? space.byCommodity.get(g.id) : null;
+      const summary = `<div><h2>${esc(g.name)} <span class="badge ${g.totals.pct >= 1 ? 'pos' : 'muted'}">${pctText(g.totals.pct)} in</span></h2>
+        <div class="sub">${t1(g.totals.toComeT)} t still to come · ${t1(g.totals.doneHa)} of ${t1(g.totals.areaHa)} ha finished</div></div>`;
+      return `
+      <div class="card report">
+        ${fold('c-' + (g.id || 'none'), summary, `
+        <div class="table-scroll tight-wrap">
+          <table class="tight wrap-first">
+            <thead><tr><th>Field</th><th>Est t</th><th>In t</th><th>To come</th><th>Done</th></tr></thead>
+            <tbody>
+              ${g.rows.map((r) => `<tr>
+                <td>${r.done ? '&#10003;&nbsp;' : ''}${esc(r.field.name)}</td>
+                <td>${t1(r.estimateT)}</td>
+                <td>${t1(r.inT)}</td>
+                <td>${t1(r.toComeT)}</td>
+                <td>${r.done ? 'Done' : (r.ahead ? 'Over' : pctText(r.pct))}</td>
+              </tr>`).join('')}
+            </tbody>
+            <tfoot><tr>
+              <td>Total</td><td>${t1(g.totals.estimateT)}</td><td>${t1(g.totals.inT)}</td><td>${t1(g.totals.toComeT)}</td><td>${pctText(g.totals.pct)}</td>
+            </tr></tfoot>
+          </table>
+        </div>
+        <div class="row" style="margin-top:6px"><span class="label">Hectares finished</span><span class="value">${t1(g.totals.doneHa)} of ${t1(g.totals.areaHa)} ha</span></div>
+        ${g.id ? `<div class="row"><span class="label">Room in its silos (${own ? own.silos : 0})</span><span class="value">${t1(own ? own.room : 0)} t</span></div>` : ''}`)}
+      </div>`;
+    }).join('')}`;
+
+  // remember which sections were opened or closed, so a repaint does not undo it
+  body.querySelectorAll('details[data-fold]').forEach((d) => d.addEventListener('toggle', () => harvestOpen.set(d.dataset.fold, d.open)));
 }
 
 function paintYield(root) {

@@ -1,23 +1,25 @@
-import { db } from '../storage.js?v=221';
-import { getTheme, setTheme } from '../theme.js?v=221';
-import { num, money, esc } from '../fmt.js?v=221';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=221';
-import { openLoadImportSheet } from './importloads.js?v=221';
-import { APP_VERSION } from '../version.js?v=221';
-import { exportRowsAsCSV } from '../csv.js?v=221';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=221';
-import { endpointLabel } from './movements.js?v=221';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=221';
-import { layersForStorage } from '../outload.js?v=221';
-import { holdings, totalHeld } from '../offfarm.js?v=221';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=221';
+import { db } from '../storage.js?v=226';
+import { getTheme, setTheme } from '../theme.js?v=226';
+import { num, money, esc } from '../fmt.js?v=226';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=226';
+import { openLoadImportSheet } from './importloads.js?v=226';
+import { APP_VERSION } from '../version.js?v=226';
+import { exportRowsAsCSV } from '../csv.js?v=226';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=226';
+import { endpointLabel } from './movements.js?v=226';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=226';
+import { layersForStorage } from '../outload.js?v=226';
+import { holdings, totalHeld } from '../offfarm.js?v=226';
+import { kindLabel, billTotal } from '../payables.js?v=226';
+import { fieldHarvest } from '../harvest.js?v=226';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=226';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=221';
+} from '../invites.js?v=226';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=221';
+} from '../auth.js?v=226';
 
 let unsub = null;
 
@@ -809,7 +811,8 @@ function openExportCsvSheet() {
       <button class="btn secondary" id="exp-sales" style="margin-bottom:8px">Sales</button>
       <button class="btn secondary" id="exp-movements" style="margin-bottom:8px">Movements</button>
       <button class="btn secondary" id="exp-storage" style="margin-bottom:8px">Storage (silos &amp; bunkers)</button>
-      <button class="btn secondary" id="exp-invoices">Invoices</button>
+      <button class="btn secondary" id="exp-invoices" style="margin-bottom:8px">Invoices</button>
+      <button class="btn secondary" id="exp-payables">Payables (bills owed)</button>
     `;
 
     root.querySelector('#exp-fields').addEventListener('click', () => exportFieldsCSV(year, stamp));
@@ -817,6 +820,7 @@ function openExportCsvSheet() {
     root.querySelector('#exp-movements').addEventListener('click', () => exportMovementsCSV(year, stamp));
     root.querySelector('#exp-storage').addEventListener('click', () => exportStorageCSV(year, stamp));
     root.querySelector('#exp-invoices').addEventListener('click', () => exportInvoicesCSV(year, stamp));
+    root.querySelector('#exp-payables').addEventListener('click', () => exportPayablesCSV(year, stamp));
   });
 }
 
@@ -837,6 +841,9 @@ function exportFieldsCSV(year, stamp) {
     { label: 'Seed variety', get: (f) => f.seedVariety ?? '' },
     { label: 'Seed rate (kg/ha)', get: (f) => f.seedRateKgHa ?? '' },
     { label: 'Seed required (t)', get: (f) => num(fieldSeed(f).requiredTons, 2) },
+    { label: 'Harvested so far (t)', get: (f) => num(fieldHarvest(f, movements).inT, 2) },
+    { label: 'Still to come (t)', get: (f) => num(fieldHarvest(f, movements).toComeT, 2) },
+    { label: 'Harvest finished', get: (f) => (f.harvestDone ? 'Yes' : 'No') },
     { label: 'Comments', get: (f) => f.notes ?? '' },
   ]);
 }
@@ -881,6 +888,7 @@ function exportSalesCSV(year, stamp) {
     { label: 'Trade rules', get: (s) => s.tradeRules ?? '' },
     // The grades a contract lists, each with its $/t adjustment, and what the loads delivered so far have added
     { label: 'Grade premiums/discounts ($/t)', get: (s) => (s.gradeOptions || []).map((o) => `${o.grade} ${o.adjust >= 0 ? '+' : ''}${o.adjust}`).join('; ') },
+    { label: 'Brokerage ($/t)', get: (s) => s.brokerageRate || '' },
     { label: 'Grade adjustment to date ($)', get: (s) => (s.gradeOptions?.length ? num(saleEconomics(s, movements).gradeAdjustment, 2) : '') },
     // Canola priced for oil: the base, the % of price per 1%, and what the loads delivered so far have added
     { label: 'Oil base (%)', get: (s) => (s.oilAdjustPct ? s.oilBasePct : '') },
@@ -931,6 +939,28 @@ function exportStorageCSV(year, stamp) {
     { label: 'Angle of repose override (°)', get: (s) => s.angleOfRepose ?? '' },
     { label: 'Test weight override (t/m³)', get: (s) => s.testWeight ?? '' },
     { label: 'Comments', get: (s) => s.notes ?? '' },
+  ]);
+}
+
+function exportPayablesCSV(year, stamp) {
+  const { commodities, sales, storages } = db.get();
+  const contract = (id) => { const s = sales.find((x) => x.id === id); return s ? [commodityName(commodities, s.commodityId), s.buyer, s.contractNo ? `#${s.contractNo}` : null].filter(Boolean).join(' · ') : ''; };
+  exportRowsAsCSV(`grainflow-payables-${year}-${stamp}.csv`, db.getPayables(), [
+    { label: 'Type', get: (p) => kindLabel(p.kind) },
+    { label: 'From', get: (p) => p.supplier ?? '' },
+    { label: 'Their invoice no.', get: (p) => p.reference ?? '' },
+    { label: 'Invoice date', get: (p) => p.invoiceDate ?? '' },
+    { label: 'Due date', get: (p) => p.dueDate ?? '' },
+    { label: 'Contract', get: (p) => contract(p.saleId) },
+    { label: 'Storage location', get: (p) => storages.find((s) => s.id === p.storageId)?.name ?? '' },
+    { label: 'Tonnes', get: (p) => p.tons ?? '' },
+    { label: 'Rate ($/t)', get: (p) => p.rate ?? '' },
+    { label: 'Amount ex GST ($)', get: (p) => num(p.amount, 2) },
+    { label: 'GST ($)', get: (p) => num(p.gst, 2) },
+    { label: 'Total ($)', get: (p) => num(billTotal(p), 2) },
+    { label: 'Status', get: (p) => (p.status === 'paid' ? 'Paid' : 'Unpaid') },
+    { label: 'Paid date', get: (p) => p.paidDate ?? '' },
+    { label: 'Comments', get: (p) => p.notes ?? '' },
   ]);
 }
 

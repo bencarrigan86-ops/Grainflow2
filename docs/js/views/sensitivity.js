@@ -4,9 +4,10 @@
 // Half of it is dollars — position value and profit — and the roles that cannot
 // see Position are the ones the app keeps money from.
 
-import { db } from '../storage.js?v=221';
-import { positionRows, positionAtYield, positionTotals, farmProfitLoss, paddockAtYield } from '../derived.js?v=221';
-import { num, money, esc } from '../fmt.js?v=221';
+import { db } from '../storage.js?v=226';
+import { positionRows, positionAtYield, positionTotals, farmProfitLoss, paddockAtYield } from '../derived.js?v=226';
+import { payablesCost } from '../payables.js?v=226';
+import { num, money, esc } from '../fmt.js?v=226';
 
 // Starts folded away: it is a what-if, not the first thing the Yield tab is for.
 // Kept across repaints so a sync arriving does not change what you left open.
@@ -88,12 +89,14 @@ function paintSensitivity(root) {
   const { commodities, fields, sales, movements } = db.get();
   const overheads = db.getOverheads();
   const base = positionRows(commodities, fields, sales, movements);
+  const payablesTotal = payablesCost(sales, movements, db.getPayables()).total;
   const STEPS = stepsFor(sensStep);
 
   const cols = STEPS.map((pct) => {
     const rows = positionAtYield(base, pct);
     const t = positionTotals(rows);
-    return { pct, rows, t, pl: farmProfitLoss(t.grossMargin, overheads) };
+    // the same bills come off profit in every scenario: they do not move with the yield
+    return { pct, rows, t, pl: farmProfitLoss(t.grossMargin, overheads, 0, payablesTotal) };
   });
   const asYield = sensMode === 'yield';
   const areaOf = (rows) => rows.reduce((a, r) => a + r.area, 0);

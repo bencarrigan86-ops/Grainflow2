@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=221';
-import { cleanOffFarm } from './offfarm.js?v=221';
+import { cleanGradeOptions } from './gradeprice.js?v=226';
+import { cleanOffFarm } from './offfarm.js?v=226';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -180,7 +180,7 @@ export function stateToRows(state, farmId) {
   const out = {
     farms: [], seasons: [], commodities: [], fields: [], field_agronomy: [],
     storages: [], sales: [], sale_terms: [], movements: [], movement_legs: [],
-    movement_photos: [], invoices: [], overheads: [], sale_documents: [],
+    movement_photos: [], invoices: [], overheads: [], sale_documents: [], payables: [],
   };
 
   const b = state.businessDetails || {};
@@ -239,6 +239,8 @@ export function stateToRows(state, farmId) {
         // A note about a boggy corner or a locked gate belongs with the load,
         // not behind the agronomy wall.
         notes: orNull(f.notes),
+        // Whether harvest of this paddock is finished. Optional like the other later columns: left out until it is set.
+        ...((f.harvestDone || f.__hasHarvestDone) ? { harvest_done: !!f.harvestDone } : {}),
       });
       // The agronomy half. Always written, even when empty — a missing row and
       // a zeroed row are different things, and the app expects the fields to
@@ -340,6 +342,8 @@ export function stateToRows(state, farmId) {
         trade_rules: orNull(sale.tradeRules),
         // The grades this contract lists, each with its $/t premium or discount. Optional like the other later
         // columns: left out until a grade is listed, kept once one has been, so clearing the list reaches the server.
+        // Brokerage in $/t, charged on the tonnes delivered. Optional like the other later columns.
+        ...((Number(sale.brokerageRate) || sale.__hasBrokerageRate) ? { brokerage_rate: n(sale.brokerageRate) } : {}),
         ...((sale.gradeOptions?.length || sale.__hasGradeOptions) ? { grade_options: cleanGradeOptions(sale.gradeOptions) } : {}),
         // Canola priced for oil: the base oil and the % of price per 1% of oil. Optional in the same way.
         ...((Number(sale.oilAdjustPct) || sale.__hasOilTerms) ? { oil_base_pct: n(sale.oilBasePct), oil_adjust_pct: n(sale.oilAdjustPct) } : {}),
@@ -422,6 +426,22 @@ export function stateToRows(state, farmId) {
       });
     }
 
+    // Bills the farm owes: brokerage, freight, storage and the rest.
+    for (const p of year.payables || []) {
+      out.payables.push({
+        id: p.id, farm_id: farmId, season_id: seasonId,
+        kind: p.kind || 'other',
+        supplier: orNull(p.supplier), reference: orNull(p.reference),
+        invoice_date: orNull(p.invoiceDate), due_date: orNull(p.dueDate),
+        amount: n(p.amount), gst: n(p.gst),
+        sale_id: orNull(p.saleId), storage_id: orNull(p.storageId),
+        tons: p.tons === '' || p.tons == null ? null : n(p.tons),
+        rate: p.rate === '' || p.rate == null ? null : n(p.rate),
+        status: p.status || 'unpaid', paid_date: orNull(p.paidDate),
+        notes: orNull(p.notes),
+      });
+    }
+
     const oh = year.overheads || {};
     out.overheads.push({
       id: year.__overheadsId || uid(), farm_id: farmId, season_id: seasonId,
@@ -501,6 +521,7 @@ export function rowsToState(rows) {
         return {
           id: f.id, name: f.name, areaHa: n(f.area_ha),
           commodityId: f.commodity_id,
+          ...(f.harvest_done != null ? { harvestDone: !!f.harvest_done, __hasHarvestDone: true } : {}),
           __agronomyId: a.id,
           yieldTHa: n(a.yield_t_ha),
           yieldMode: a.yield_mode || 'estimate',
@@ -575,6 +596,7 @@ export function rowsToState(rows) {
           carryFrom: t.carry_from ?? '',
           paymentTermsBasis: t.payment_terms_basis ?? '',
           tradeRules: t.trade_rules ?? '',
+          ...(t.brokerage_rate != null ? { brokerageRate: n(t.brokerage_rate), __hasBrokerageRate: true } : {}),
           ...(Array.isArray(t.grade_options) ? { gradeOptions: cleanGradeOptions(t.grade_options), __hasGradeOptions: true } : {}),
           ...(t.oil_adjust_pct != null ? { oilBasePct: n(t.oil_base_pct), oilAdjustPct: n(t.oil_adjust_pct), __hasOilTerms: true } : {}),
           documents: (docsBySale.get(sale.id) || []).map((d) => ({
@@ -593,6 +615,16 @@ export function rowsToState(rows) {
         id: inv.id, saleId: inv.sale_id, invoiceNo: inv.invoice_no,
         status: inv.status, paidDate: inv.paid_date,
         lines: inv.lines || [], totals: inv.totals || {},
+      })),
+
+      payables: inSeason(rows.payables, season.id).map((p) => ({
+        id: p.id, kind: p.kind,
+        supplier: p.supplier ?? '', reference: p.reference ?? '',
+        invoiceDate: p.invoice_date ?? '', dueDate: p.due_date ?? '',
+        amount: n(p.amount), gst: n(p.gst),
+        saleId: p.sale_id, storageId: p.storage_id,
+        tons: p.tons == null ? '' : n(p.tons), rate: p.rate == null ? '' : n(p.rate),
+        status: p.status, paidDate: p.paid_date ?? '', notes: p.notes ?? '',
       })),
 
       overheads: (() => {

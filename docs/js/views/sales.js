@@ -1,19 +1,21 @@
-import { db } from '../storage.js?v=221';
+import { db } from '../storage.js?v=226';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=221';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=221';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=221';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=221';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=221';
-import { renderRelatedMovements } from './movements.js?v=221';
-import { openInvoiceListSheet } from './invoice.js?v=221';
-import { openContractDocSheet } from './contract.js?v=221';
-import { wireJumps } from '../jump.js?v=221';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=221';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=221';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=221';
-import { standardFor } from '../grades.js?v=221';
+} from '../documents.js?v=226';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=226';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=226';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=226';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=226';
+import { renderRelatedMovements } from './movements.js?v=226';
+import { openInvoiceListSheet } from './invoice.js?v=226';
+import { openContractDocSheet } from './contract.js?v=226';
+import { wireJumps } from '../jump.js?v=226';
+import { openPayablesSheet } from './payables.js?v=226';
+import { summarise as summarisePayables } from '../payables.js?v=226';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=226';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=226';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=226';
+import { standardFor } from '../grades.js?v=226';
 
 let unsub = null;
 
@@ -27,6 +29,8 @@ function paint(root) {
   const { commodities, sales, movements } = db.get();
   const rollup = salesByCommodity(commodities, sales, movements).filter((r) => r.contractCount > 0);
   const groups = groupSalesByCommodity(commodities, sales, movements);
+  // what is owed, for the Payables button
+  const payablesSum = summarisePayables(db.getPayables(), todayLocal());
   const salesTotals = rollup.reduce((acc, r) => ({
     tons: acc.tons + r.tons,
     tonsDue: acc.tonsDue + Math.max(0, r.tonsDue),
@@ -52,6 +56,7 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      ${['owner', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-payables" style="margin-bottom:12px">Payables${payablesSum.unpaid.count ? ` &middot; ${money(payablesSum.unpaid.total, 0)} unpaid${payablesSum.overdue.count ? ` (${money(payablesSum.overdue.total, 0)} overdue)` : ''}` : ''}</button>` : ''}
       ${rollup.length === 0 ? '' : `
       <div class="card report">
         <h2><span class="dot report"></span>By commodity</h2>
@@ -98,6 +103,7 @@ function paint(root) {
     el.addEventListener('click', () => openSaleSheet(sales.find((s) => s.id === el.dataset.editSale)));
   });
   root.querySelector('#add-sale').addEventListener('click', () => openSaleSheet(null));
+  root.querySelector('#open-payables')?.addEventListener('click', () => openPayablesSheet());
   root.querySelector('#empty-add')?.addEventListener('click', () => openSaleSheet(null));
   root.querySelector('#carry-contracts')?.addEventListener('click', () => openCarrySheet(prevLabel));
 }
@@ -384,8 +390,9 @@ function openSaleSheet(existing) {
           { value: 'seller', label: 'Seller (you)' },
           { value: 'buyer', label: 'Buyer' },
         ] })}
-        ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
+        ${field({ label: 'Brokerage ($/t)', id: 'brokerageRate', type: 'number', step: '0.01', value: existing?.brokerageRate || '', placeholder: '0', hint: 'On tonnes delivered. Bills go in Payables.' })}
       </div>
+      ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
       ${field({ label: 'Comments', id: 'notes', type: 'textarea', rows: 2, value: commentsText, placeholder: 'Anything worth knowing about this contract' })}
 
       <details class="fold" ${openTerms ? 'open' : ''}>
@@ -626,7 +633,7 @@ function openSaleSheet(existing) {
     };
     const COPY_FIELDS = [
       'location', 'paymentTermsDays', 'paymentTermsBasis', 'weightsToGovern', 'broker', 'brokeragePaidBy',
-      'freight', 'deliveryTerms', 'contractType', 'pricingPoint', 'buyerContact', 'tradeRules', 'buyerAbn', 'buyerAddress',
+      'freight', 'brokerageRate', 'deliveryTerms', 'contractType', 'pricingPoint', 'buyerContact', 'tradeRules', 'buyerAbn', 'buyerAddress',
     ];
     const isBlank = (el) => el.value === '' || el.value === '0';
     const offerCopy = () => {
@@ -788,6 +795,7 @@ function openSaleSheet(existing) {
         grade: gradeCtl.read(),
         gradeOptions: readGradeOptions(),
         ...readOilTerms(),
+        brokerageRate: getNum(root, 'brokerageRate'),
         buyer: getVal(root, 'buyer')?.trim(),
         contractNo: getVal(root, 'contractNo')?.trim(),
         location: getVal(root, 'location')?.trim(),

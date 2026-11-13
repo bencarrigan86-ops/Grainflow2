@@ -18,22 +18,22 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=221';
+import { hydrate } from './hydrate.js?v=226';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=221';
-import { chooseBootState, resolveLegacy } from './boot.js?v=221';
-import { isLegacyDirty } from './dirty.js?v=221';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=221';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=221';
-import { settleLegs, dedupeLegs } from './legs.js?v=221';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=221';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=221';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=221';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=221';
-import { schedulePush, pushOnReconnect } from './sync.js?v=221';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=221';
+} from './local.js?v=226';
+import { chooseBootState, resolveLegacy } from './boot.js?v=226';
+import { isLegacyDirty } from './dirty.js?v=226';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=226';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=226';
+import { settleLegs, dedupeLegs } from './legs.js?v=226';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=226';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=226';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=226';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=226';
+import { schedulePush, pushOnReconnect } from './sync.js?v=226';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=226';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -65,7 +65,7 @@ function defaultOverheads() {
 function defaultYear() {
   return {
     commodities: defaultCommodities(), fields: [], sales: [], storages: [],
-    movements: [], overheads: defaultOverheads(), invoices: [],
+    movements: [], overheads: defaultOverheads(), invoices: [], payables: [],
   };
 }
 
@@ -558,7 +558,7 @@ export const db = {
 
     data.years[label] = {
       commodities, fields, storages, sales: [], movements: [],
-      overheads: defaultOverheads(), invoices: [],
+      overheads: defaultOverheads(), invoices: [], payables: [],
     };
     data.currentYear = label;
     touch('year', label);
@@ -578,6 +578,7 @@ export const db = {
     y.sales?.forEach((s) => { tombstone('sales', s.id); tombstone('sale_terms', s.__termsId); });
     y.movements?.forEach((m) => tombstone('movements', m.id));
     y.invoices?.forEach((i) => tombstone('invoices', i.id));
+    y.payables?.forEach((p) => tombstone('payables', p.id));
     tombstone('overheads', y.__overheadsId);
     tombstone('seasons', y.__seasonId);
 
@@ -623,11 +624,15 @@ export const db = {
     const c = current();
     if (field.id) {
       const idx = c.fields.findIndex((f) => f.id === field.id);
-      if (idx >= 0) c.fields[idx] = { ...c.fields[idx], ...field };
+      if (idx >= 0) {
+        const merged = { ...c.fields[idx], ...field };
+        if (merged.harvestDone) merged.__hasHarvestDone = true;   // keeps un-ticking it reaching the server
+        c.fields[idx] = merged;
+      }
       touch('field', field.id);
     } else {
       const id = uid();
-      c.fields.push({ ...field, id });
+      c.fields.push({ ...field, id, ...(field.harvestDone ? { __hasHarvestDone: true } : {}) });
       touch('field', id);
       persist();
       return id;
@@ -674,11 +679,15 @@ export const db = {
     const c = current();
     if (sale.id) {
       const idx = c.sales.findIndex((s) => s.id === sale.id);
-      if (idx >= 0) c.sales[idx] = { ...c.sales[idx], ...sale };
+      if (idx >= 0) {
+        const merged = { ...c.sales[idx], ...sale };
+        if (Number(merged.brokerageRate)) merged.__hasBrokerageRate = true;   // keeps clearing it reaching the server
+        c.sales[idx] = merged;
+      }
       touch('sale', sale.id);
     } else {
       const id = uid();
-      c.sales.push({ ...sale, id });
+      c.sales.push({ ...sale, id, ...(Number(sale.brokerageRate) ? { __hasBrokerageRate: true } : {}) });
       touch('sale', id);
     }
     persist();
@@ -887,6 +896,32 @@ export const db = {
   deleteInvoice(id) {
     tombstone('invoices', id);
     current().invoices = current().invoices.filter((inv) => inv.id !== id);
+    persist();
+  },
+
+  // --- payables: bills the farm owes ---
+  getPayables() { return current().payables || []; },
+  upsertPayable(bill) {
+    const c = current();
+    c.payables = c.payables || [];
+    if (bill.id) {
+      const idx = c.payables.findIndex((p) => p.id === bill.id);
+      if (idx >= 0) c.payables[idx] = { ...c.payables[idx], ...bill };
+      touch('payable', bill.id);
+    } else {
+      const id = uid();
+      c.payables.push({ status: 'unpaid', ...bill, id });
+      touch('payable', id);
+      persist();
+      return id;
+    }
+    persist();
+    return bill.id;
+  },
+  deletePayable(id) {
+    tombstone('payables', id);
+    const c = current();
+    c.payables = (c.payables || []).filter((p) => p.id !== id);
     persist();
   },
 

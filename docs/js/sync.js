@@ -15,12 +15,12 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=221';
-import { stateToRows } from './mapping.js?v=221';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=221';
-import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=221';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=221';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=221';
+import { supabase } from './supabase.js?v=226';
+import { stateToRows } from './mapping.js?v=226';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=226';
+import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=226';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=226';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=226';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -34,7 +34,7 @@ const ORDER = [
   'seasons', 'commodities', 'fields', 'field_agronomy',
   'storages', 'sales', 'sale_terms', 'sale_documents',
   'movements', 'movement_legs', 'movement_photos',
-  'invoices', 'overheads',
+  'invoices', 'overheads', 'payables',
 ];
 
 // What each role is allowed to write, mirroring the RLS policies exactly.
@@ -48,7 +48,7 @@ const WRITABLE = {
   manager: ['seasons', 'commodities', 'fields', 'field_agronomy', 'storages',
             'sale_documents',
             'movements', 'movement_legs', 'movement_photos'],
-  bookkeeper: ['sales', 'sale_terms', 'sale_documents', 'invoices', 'overheads'],
+  bookkeeper: ['sales', 'sale_terms', 'sale_documents', 'invoices', 'overheads', 'payables'],
   farm_worker: ['fields', 'field_agronomy', 'movements', 'movement_legs', 'movement_photos'],
   driver: ['movements', 'movement_legs', 'movement_photos'],
 };

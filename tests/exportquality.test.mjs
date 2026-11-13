@@ -105,8 +105,8 @@ console.log('\n=== a comments column on every export ===');
 const settingsSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs', 'js', 'views', 'settings.js'), 'utf8');
 const exportsIn = [...settingsSrc.matchAll(/exportRowsAsCSV\(`grainflow-(\w+)-[\s\S]*?\n  \]\);/g)].map((m) => ({ name: m[1], src: m[0] }));
 
-check('all five exports were found', () => {
-  assert.deepEqual(exportsIn.map((e) => e.name).sort(), ['fields', 'invoices', 'movements', 'sales', 'storage']);
+check('all six exports were found', () => {
+  assert.deepEqual(exportsIn.map((e) => e.name).sort(), ['fields', 'invoices', 'movements', 'payables', 'sales', 'storage']);
 });
 check('each has a Comments column', () => {
   for (const e of exportsIn) assert.ok(e.src.includes("label: 'Comments'"), `${e.name} has no Comments column`);

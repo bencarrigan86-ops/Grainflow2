@@ -103,6 +103,7 @@ function markerFor(key, ids) {
   if (key === 'tos') return [{ type: 'silo', id: ids.storage, tons: 11.5 }];
   if (key === 'ureaApplications') return [{ date: '2026-06-01', kgHa: 90 }];
   if (key === 'date' || key.endsWith('Date')) return '2026-06-01';
+  if (key === 'harvestDone') return true;
   if (key === 'gradeOptions') return [{ grade: 'APW1', adjust: 0 }, { grade: 'H2', adjust: 15 }, { grade: 'ASW1', adjust: -20 }];
   if (key === 'offFarm') return { operator: 'GrainCorp', opening: [{ commodityId: ids.commodity, grade: 'APH1', tons: 450 }] };
   if (key === 'gradeBands') return [{ tons: 500, grade: 'APH1' }, { tons: 250, grade: 'AUH2', proteinPct: 11.5, moisturePct: 11, fallingNumber: 400 }];
@@ -116,7 +117,7 @@ function markerFor(key, ids) {
   // not produce a false alarm — a value that comes back coerced is reported
   // separately from one that comes back missing — but it keeps the output
   // honest about which is which.
-  if (/(kgha|tha|ha|rate|tons|price|height|radius|angle|weight|no|days|stock|cost|overhang|width|length|capacity|ratio|pertonne|pct|repose|freight|discount|ginning|levies|seed|bales|value)$/i
+  if (/(kgha|tha|ha|rate|tons|price|height|radius|angle|weight|no|days|stock|cost|overhang|width|length|capacity|ratio|pertonne|pct|repose|freight|discount|ginning|levies|seed|bales|value|amount|gst)$/i
         .test(key)) {
     return 7.25;
   }
