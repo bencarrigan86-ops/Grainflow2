@@ -5,7 +5,7 @@
  * Resized client-side because these are stored as data URLs in localStorage,
  * which has a small (few MB) quota shared with the rest of the app's data.
  */
-export function compressAndStampImage(file, { maxWidth = 1280, quality = 0.72 } = {}) {
+export function compressAndStampImage(file, { maxWidth = 1280, quality = 0.72, takenAt = null } = {}) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(reader.error || new Error('Could not read file'));
@@ -22,7 +22,9 @@ export function compressAndStampImage(file, { maxWidth = 1280, quality = 0.72 } 
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, w, h);
 
-        const stamp = new Date().toLocaleString('en-AU', {
+        // the time the photo was taken when it is known (a library photo), otherwise now
+        const when = takenAt instanceof Date && !Number.isNaN(takenAt.getTime()) ? takenAt : new Date();
+        const stamp = when.toLocaleString('en-AU', {
           day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
         });
         const fontSize = Math.max(14, Math.round(w * 0.032));

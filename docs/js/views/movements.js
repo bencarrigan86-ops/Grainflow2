@@ -1,12 +1,12 @@
-import { db } from '../storage.js?v=206';
-import { movementsForEndpoint } from '../derived.js?v=206';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=206';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=206';
-import { compressAndStampImage } from '../img.js?v=206';
-import { displayUrlFor } from '../photos.js?v=206';
-import { specText } from '../outload.js?v=206';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=206';
-import { pickableSilos } from '../silopick.js?v=206';
+import { db } from '../storage.js?v=207';
+import { movementsForEndpoint } from '../derived.js?v=207';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=207';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=207';
+import { compressAndStampImage } from '../img.js?v=207';
+import { displayUrlFor } from '../photos.js?v=207';
+import { specText } from '../outload.js?v=207';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=207';
+import { pickableSilos } from '../silopick.js?v=207';
 
 let unsub = null;
 
@@ -553,8 +553,13 @@ export function openMovementSheet(existing, template) {
       ${field({ label: 'Notes', id: 'notes', value: src?.notes })}
       <div class="field">
         <label>Photo (e.g. truck rego)</label>
-        <input id="m-photo-file" type="file" accept="image/*" capture="environment" />
-        <div class="hint">Kept with this load and uploaded once you have signal. A date/time stamp is added automatically.</div>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn secondary small" id="m-photo-take" style="flex:1">Take photo</button>
+          <button type="button" class="btn secondary small" id="m-photo-pick" style="flex:1">Choose from library</button>
+        </div>
+        <input id="m-photo-file" type="file" accept="image/*" capture="environment" hidden />
+        <input id="m-photo-lib" type="file" accept="image/*" hidden />
+        <div class="hint">Kept with this load and uploaded once you have signal. A date/time stamp is added automatically: now for a new photo, or when the photo was taken for one from your library.</div>
         <div id="m-photo-preview" style="margin-top:8px"></div>
       </div>
       ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete movement</button>` : ''}
@@ -690,16 +695,23 @@ export function openMovementSheet(existing, template) {
       if (removeBtn) removeBtn.addEventListener('click', () => { photoDataUrl = null; photoPath = null; renderPhotoPreview(); });
     }
     renderPhotoPreview();
-    root.querySelector('#m-photo-file').addEventListener('change', async (e) => {
+    // Two ways in: the camera, and the photo library. A new camera photo is stamped with the time it is taken;
+    // one from the library is stamped with when it was taken, as it may be from earlier in the day.
+    const onPhoto = (fromLibrary) => async (e) => {
       const file = e.target.files[0];
+      e.target.value = '';   // so choosing the same photo again still counts
       if (!file) return;
       try {
-        photoDataUrl = await compressAndStampImage(file);
+        photoDataUrl = await compressAndStampImage(file, fromLibrary && file.lastModified ? { takenAt: new Date(file.lastModified) } : {});
         renderPhotoPreview();
       } catch (err) {
         notify('Could not process that photo.');
       }
-    });
+    };
+    root.querySelector('#m-photo-file').addEventListener('change', onPhoto(false));
+    root.querySelector('#m-photo-lib').addEventListener('change', onPhoto(true));
+    root.querySelector('#m-photo-take').addEventListener('click', () => root.querySelector('#m-photo-file').click());
+    root.querySelector('#m-photo-pick').addEventListener('click', () => root.querySelector('#m-photo-lib').click());
 
     root.querySelector('#save').addEventListener('click', () => {
       const froms = readFromRows(fromRowsEl).filter((f) => f.type && f.id);
