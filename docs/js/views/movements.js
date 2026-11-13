@@ -1,11 +1,12 @@
-import { db } from '../storage.js?v=204';
-import { movementsForEndpoint } from '../derived.js?v=204';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=204';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=204';
-import { compressAndStampImage } from '../img.js?v=204';
-import { displayUrlFor } from '../photos.js?v=204';
-import { specText } from '../outload.js?v=204';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=204';
+import { db } from '../storage.js?v=206';
+import { movementsForEndpoint } from '../derived.js?v=206';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=206';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=206';
+import { compressAndStampImage } from '../img.js?v=206';
+import { displayUrlFor } from '../photos.js?v=206';
+import { specText } from '../outload.js?v=206';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=206';
+import { pickableSilos } from '../silopick.js?v=206';
 
 let unsub = null;
 
@@ -152,15 +153,15 @@ function fieldOptions(fields, commodityId) {
   return [{ value: '', label: 'Select…' }, ...list.map((f) => ({ value: `field:${f.id}`, label: f.name }))];
 }
 
-function siloOptions(storages, commodityId) {
+function siloOptions(storages, commodityId, opts = {}) {
   // the in-transit store is not a silo anyone picks by name: it has its own choice, on the destination only
-  const list = storages.filter((s) => !isTransit(s) && matchesCommodity(s, commodityId));
+  const list = pickableSilos(storages.filter((s) => !isTransit(s)), commodityId, opts);
   return [{ value: '', label: 'Select…' }, ...list.map((s) => ({ value: `silo:${s.id}`, label: s.name }))];
 }
 
 /** Where a load can go: In transit first (grain on a truck, not yet in a silo), then the silos. */
-function toSiloOptions(storages, commodityId) {
-  const base = siloOptions(storages, commodityId);
+function toSiloOptions(storages, commodityId, opts = {}) {
+  const base = siloOptions(storages, commodityId, { ...opts, to: true });
   return [base[0], { value: 'silo:__transit__', label: 'In transit (not yet allocated)' }, ...base.slice(1)];
 }
 
@@ -476,12 +477,14 @@ export function openMovementSheet(existing, template) {
     return '';
   }
 
+  const keepSilos = [...(src?.froms || []), ...(src?.tos || [])].filter((l) => l.type === 'silo' && l.id).map((l) => l.id);
   const ctx = {
     commodityId: inferCommodityId(),
     refreshers: [],
     fieldOpts() { return fieldOptions(fields, this.commodityId); },
-    siloOpts() { return siloOptions(storages, this.commodityId); },
-    toSiloOpts() { return toSiloOptions(storages, this.commodityId); },
+    // silos already on this ticket always stay on the list, so editing an old ticket never loses one
+    siloOpts() { return siloOptions(storages, this.commodityId, { movements, keep: keepSilos }); },
+    toSiloOpts() { return toSiloOptions(storages, this.commodityId, { movements, keep: keepSilos }); },
     isTransitId(id) { return isTransit(storages.find((x) => x.id === id)); },
     saleOpts() { return saleOptions(sales, commodities, this.commodityId); },
     refreshAll() { this.refreshers.forEach((fn) => fn()); },

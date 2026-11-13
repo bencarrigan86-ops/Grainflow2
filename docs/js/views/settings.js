@@ -1,21 +1,21 @@
-import { db } from '../storage.js?v=204';
-import { getTheme, setTheme } from '../theme.js?v=204';
-import { num, money, esc } from '../fmt.js?v=204';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=204';
-import { openLoadImportSheet } from './importloads.js?v=204';
-import { APP_VERSION } from '../version.js?v=204';
-import { exportRowsAsCSV } from '../csv.js?v=204';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=204';
-import { endpointLabel } from './movements.js?v=204';
-import { layersForStorage } from '../outload.js?v=204';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=204';
+import { db } from '../storage.js?v=206';
+import { getTheme, setTheme } from '../theme.js?v=206';
+import { num, money, esc } from '../fmt.js?v=206';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=206';
+import { openLoadImportSheet } from './importloads.js?v=206';
+import { APP_VERSION } from '../version.js?v=206';
+import { exportRowsAsCSV } from '../csv.js?v=206';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=206';
+import { endpointLabel } from './movements.js?v=206';
+import { layersForStorage } from '../outload.js?v=206';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=206';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=204';
+} from '../invites.js?v=206';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=204';
+} from '../auth.js?v=206';
 
 let unsub = null;
 
