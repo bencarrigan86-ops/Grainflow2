@@ -27,6 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
+import { cleanGradeOptions } from './gradeprice.js?v=214';
+
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
 
@@ -319,6 +321,9 @@ export function stateToRows(state, farmId) {
         carry_from: orNull(sale.carryFrom),
         payment_terms_basis: orNull(sale.paymentTermsBasis),
         trade_rules: orNull(sale.tradeRules),
+        // The grades this contract lists, each with its $/t premium or discount. Optional like the other later
+        // columns: left out until a grade is listed, kept once one has been, so clearing the list reaches the server.
+        ...((sale.gradeOptions?.length || sale.__hasGradeOptions) ? { grade_options: cleanGradeOptions(sale.gradeOptions) } : {}),
       });
 
       // The buyer's contract and the broker's note. Only the path travels in
@@ -548,6 +553,7 @@ export function rowsToState(rows) {
           carryFrom: t.carry_from ?? '',
           paymentTermsBasis: t.payment_terms_basis ?? '',
           tradeRules: t.trade_rules ?? '',
+          ...(Array.isArray(t.grade_options) ? { gradeOptions: cleanGradeOptions(t.grade_options), __hasGradeOptions: true } : {}),
           documents: (docsBySale.get(sale.id) || []).map((d) => ({
             id: d.id, kind: d.kind || 'contract',
             fileName: d.file_name ?? '',

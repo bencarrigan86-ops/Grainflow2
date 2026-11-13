@@ -1,13 +1,13 @@
-import { db } from '../storage.js?v=213';
-import { movementsForEndpoint } from '../derived.js?v=213';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=213';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=213';
-import { compressAndStampImage } from '../img.js?v=213';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=213';
-import { specText } from '../outload.js?v=213';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=213';
-import { pickableSilos } from '../silopick.js?v=213';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=213';
+import { db } from '../storage.js?v=214';
+import { movementsForEndpoint } from '../derived.js?v=214';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=214';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=214';
+import { compressAndStampImage } from '../img.js?v=214';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=214';
+import { specText } from '../outload.js?v=214';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=214';
+import { pickableSilos } from '../silopick.js?v=214';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=214';
 
 let unsub = null;
 

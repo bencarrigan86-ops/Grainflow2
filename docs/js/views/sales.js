@@ -1,16 +1,17 @@
-import { db } from '../storage.js?v=213';
+import { db } from '../storage.js?v=214';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=213';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=213';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=213';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=213';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=213';
-import { renderRelatedMovements } from './movements.js?v=213';
-import { openInvoiceListSheet } from './invoice.js?v=213';
-import { openContractDocSheet } from './contract.js?v=213';
-import { wireJumps } from '../jump.js?v=213';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=213';
+} from '../documents.js?v=214';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=214';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=214';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=214';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=214';
+import { renderRelatedMovements } from './movements.js?v=214';
+import { openInvoiceListSheet } from './invoice.js?v=214';
+import { openContractDocSheet } from './contract.js?v=214';
+import { wireJumps } from '../jump.js?v=214';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=214';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=214';
 
 let unsub = null;
 
@@ -273,7 +274,7 @@ function saleRow(s, movements, commodities, index = 0) {
         <div class="main">${s.buyer ? esc(s.buyer) : 'No buyer'}</div>
         <div class="main">${money(econ.totalValue, 0)}</div>
       </div>
-      <div class="meta">${[s.grade, s.contractNo ? `#${s.contractNo}` : '', s.brokerNote].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</div>
+      <div class="meta">${[s.grade, s.gradeOptions?.length ? `${s.gradeOptions.length} grades` : '', s.contractNo ? `#${s.contractNo}` : '', s.brokerNote].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</div>
       <div class="meta">${amount} @ ${money(econ.priceExFarm, 2)}/${isBales ? 'bale' : 't'} net</div>
       <div class="meta">${[s.location, window].filter(Boolean).map(esc).join(' · ') || 'No delivery location/date set'}</div>
       ${fillGauge(econ, s.tons)}
@@ -307,6 +308,7 @@ function openSaleSheet(existing) {
   // Folds start closed on a new contract and open on an edit that has something in them.
   const openTerms = !!existing && ['cropYear', 'contractType', 'pricingPoint', 'deliveryTerms', 'buyerContact', 'tradeRules'].some((k) => existing[k]);
   const openAdjust = !!existing && (!!existing.premiumDiscount || !!existing.ginning || Math.abs((existing.leviesPct ?? 0) * 100 - 1.02) > 1e-6);
+  const openGrades = !!existing?.gradeOptions?.length;
   const openDelivered = !!existing && (!!existing.tonsDelivered || !!existing.notes || !!existing.buyerAbn || !!existing.buyerAddress);
   const openAdvanced = !!existing && (!!existing.carryRate || !!existing.carryFrom
     || (existing.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS) !== DEFAULT_TOLERANCE_CAP_TONS);
@@ -404,6 +406,17 @@ function openSaleSheet(existing) {
         ${field({ label: 'Ginning cost ($)', id: 'ginning', type: 'number', step: '0.01', value: existing?.ginning ?? 0, hint: 'Net ginning deduction, e.g. cotton seed. A total, not a rate.' })}
       </details>
 
+      <details class="fold feature" id="grade-fold" ${openGrades ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Several grades</h2>
+          <div class="sub">A premium or discount for each grade the buyer will take</div></div></summary>
+        <div class="field hint" style="margin:10px 0">List the grades this contract accepts, each with its $/t
+          premium or discount. Every load delivered is paid the price above plus the adjustment for its own grade.
+          A load whose grade is not listed is paid the price as it stands.</div>
+        <div id="go-rows"></div>
+        <button type="button" class="btn secondary small" id="go-add">+ Add a grade</button>
+        <div id="go-summary" style="margin-top:10px"></div>
+      </details>
+
       <details class="fold" ${openDelivered ? 'open' : ''}>
         <summary><div><h2>Delivered &amp; other</h2>
           <div class="sub">Tons delivered, notes, buyer ABN and address</div></div></summary>
@@ -470,19 +483,71 @@ function openSaleSheet(existing) {
     };
     ['tons', 'tolPct', 'tolCap'].forEach((id) => root.querySelector(`#${id}`).addEventListener('input', recomputeTolerance));
 
+    // --- several grades ------------------------------------------------------
+    // Each row is a grade and its $/t premium or discount. Every load delivered to this contract is paid the
+    // price plus the adjustment for its own grade, so what has been delivered so far is shown below the rows.
+    const goRows = root.querySelector('#go-rows');
+    const goSummary = root.querySelector('#go-summary');
+    const goCtls = [];   // one { row, grade control, adjustment box } per row, in order
+    let goCount = 0;
+    const commodityNow = () => commodities.find((cc) => cc.id === getVal(root, 'commodity'));
+    const readGradeOptions = () => cleanGradeOptions(goCtls.map((r) => ({
+      grade: r.ctl.read(), adjust: parseFloat(r.adjust.value),
+    })));
+    const drawGradeSummary = () => {
+      const opts = readGradeOptions();
+      if (!existing || !opts.length) { goSummary.innerHTML = ''; return; }
+      const a = gradeAdjustment({ id: existing.id, gradeOptions: opts }, movements);
+      const signed = (n) => `${n >= 0 ? '+' : '−'}${money(Math.abs(n), 0)}`;
+      const lines = a.lines.filter((l) => l.tons > 0)
+        .map((l) => `<div class="row"><span class="label">${esc(l.grade)}: ${num(l.tons, 1)} t at ${l.adjust >= 0 ? '+' : '−'}${money(Math.abs(l.adjust), 2)}/t</span><span class="value">${signed(l.dollars)}</span></div>`);
+      if (a.otherTons > 0) lines.push(`<div class="row"><span class="label">Other grades: ${num(a.otherTons, 1)} t at the price as it stands</span><span class="value">$0</span></div>`);
+      goSummary.innerHTML = lines.length
+        ? `<div class="subhead" style="margin-top:0">Delivered so far</div>${lines.join('')}<div class="row"><span class="label"><strong>Grades add</strong></span><span class="value"><strong>${signed(a.total)}</strong></span></div>`
+        : '<div class="hint">No loads delivered to this contract yet, so the grades have not changed its value.</div>';
+    };
+    const addGradeRow = (opt = {}) => {
+      const n = goCount += 1;
+      const row = document.createElement('div');
+      row.className = 'go-row';
+      row.style.cssText = 'margin-bottom:10px;padding:10px;border:1px solid var(--border);border-radius:10px';
+      row.innerHTML = `
+        <div class="grid-2">
+          ${gradeFieldHtml({ id: `go-g-${n}`, commodity: commodityNow(), value: opt.grade })}
+          ${field({ label: 'Premium/discount ($/t)', id: `go-a-${n}`, type: 'number', step: '0.01', value: opt.adjust ?? 0, allowNegative: true, hint: 'Negative for a discount' })}
+        </div>
+        <button type="button" class="btn danger small go-remove" style="width:auto">Remove</button>`;
+      goRows.appendChild(row);
+      const entry = { row, ctl: wireGradeField(row, `go-g-${n}`, commodityNow), adjust: row.querySelector(`#go-a-${n}`) };
+      goCtls.push(entry);
+      row.querySelector('.go-remove').addEventListener('click', () => {
+        goCtls.splice(goCtls.indexOf(entry), 1);
+        row.remove();
+        onGradesChanged();
+      });
+    };
+    const onGradesChanged = () => { recomputeValue(); drawGradeSummary(); };
+    goRows.addEventListener('input', onGradesChanged);
+    goRows.addEventListener('change', onGradesChanged);
+    root.querySelector('#go-add').addEventListener('click', () => { addGradeRow(); });
+    (existing?.gradeOptions || []).forEach((o) => addGradeRow(o));
+    drawGradeSummary();
+
     // What the figures above come to, as you type — the same arithmetic the
     // sales list uses, run on the form's values rather than a saved record.
     const valuePreview = root.querySelector('#value-preview');
     const totalPreview = root.querySelector('#total-preview');
     const recomputeValue = () => {
       const e = saleEconomics({
+        id: existing?.id,
+        gradeOptions: readGradeOptions(),
         tons: getNum(root, 'tons'),
         price: getNum(root, 'price'),
         freight: getNum(root, 'freight'),
         premiumDiscount: getNum(root, 'premium'),
         ginning: getNum(root, 'ginning'),
         leviesPct: getNum(root, 'levies') / 100,
-      });
+      }, existing ? movements : []);
       valuePreview.textContent = `${money(e.totalValue, 0)} · ${money(e.priceExFarm, 2)}/${currentUnit === 'bales' ? 'bale' : 't'} net`;
       totalPreview.textContent = money(e.totalValue, 0);
     };
@@ -555,7 +620,7 @@ function openSaleSheet(existing) {
     };
     // the grade dropdown follows the commodity: its published grades and the farm's own
     const gradeCtl = wireGradeField(root, 'grade', () => commodities.find((cc) => cc.id === getVal(root, 'commodity')));
-    root.querySelector('#commodity').addEventListener('change', () => { syncUnitLabels(); gradeCtl.refresh(); });
+    root.querySelector('#commodity').addEventListener('change', () => { syncUnitLabels(); gradeCtl.refresh(); goCtls.forEach((r) => r.ctl.refresh()); });
     syncUnitLabels();
 
     // --- documents -------------------------------------------------------
@@ -662,6 +727,7 @@ function openSaleSheet(existing) {
         date: getVal(root, 'date'),
         commodityId: getVal(root, 'commodity'),
         grade: gradeCtl.read(),
+        gradeOptions: readGradeOptions(),
         buyer: getVal(root, 'buyer')?.trim(),
         contractNo: getVal(root, 'contractNo')?.trim(),
         location: getVal(root, 'location')?.trim(),

@@ -1,5 +1,7 @@
 // Roll-up / position calculations shared across views.
 
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=214';
+
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
 
@@ -76,7 +78,10 @@ export function saleEconomics(sale, movements = []) {
   // straight off the gin's settlement statement), so it's subtracted once
   // here rather than folded into the per-unit price chain above — e.g. a
   // "net ginning" cotton seed sale: seed tonnes x $/t, less the ginning fee.
-  const totalValue = tons * priceExFarm - ginning;
+  // A contract that lists several grades pays each load the price plus the adjustment for that load's own
+  // grade, so the value moves as loads are delivered: tonnes not yet delivered are counted at the price as it stands.
+  const grades = gradeAdjustment(sale, movements);
+  const totalValue = tons * priceExFarm - ginning + grades.total;
   const tonsDue = tons - tonsDelivered;
 
   const { toleranceTons, minTons, maxTons } = contractTolerance(tons, sale.tolerancePct, sale.toleranceCapTons);
@@ -87,6 +92,7 @@ export function saleEconomics(sale, movements = []) {
 
   return {
     netOfFreight, levies, priceExFarm, ginning, totalValue, tonsDue,
+    gradeAdjustment: grades.total, gradeLines: grades.lines, gradeOtherTons: grades.otherTons,
     manualDelivered, movementDelivered, tonsDelivered,
     toleranceTons, minTons, maxTons, isFull, isOverDelivered, tonsToFill, tonsRemainingMax,
   };
@@ -106,9 +112,12 @@ export function invoiceLineItems(sale, movements) {
   return (movements || [])
     .map((m) => {
       const t = toTonsForEndpoint(m, 'sale', sale.id);
+      // each load at its own grade's rate, when the contract lists several
+      const loadRate = rate + gradeRateFor(sale, m);
       return {
         date: m.date, rego: m.truckRego || '—', tons: t, movementId: m.id,
-        rate, subtotal: t * rate,
+        grade: m.grade || '',
+        rate: loadRate, subtotal: t * loadRate,
       };
     })
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
