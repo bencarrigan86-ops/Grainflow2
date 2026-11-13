@@ -1,12 +1,12 @@
-import { db } from '../storage.js?v=208';
-import { movementsForEndpoint } from '../derived.js?v=208';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=208';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=208';
-import { compressAndStampImage } from '../img.js?v=208';
-import { displayUrlFor } from '../photos.js?v=208';
-import { specText } from '../outload.js?v=208';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=208';
-import { pickableSilos } from '../silopick.js?v=208';
+import { db } from '../storage.js?v=210';
+import { movementsForEndpoint } from '../derived.js?v=210';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=210';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=210';
+import { compressAndStampImage } from '../img.js?v=210';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=210';
+import { specText } from '../outload.js?v=210';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=210';
+import { pickableSilos } from '../silopick.js?v=210';
 
 let unsub = null;
 
@@ -690,7 +690,7 @@ export function openMovementSheet(existing, template) {
       const src = photoDataUrl || (photoPath ? await displayUrlFor({ photoPath }) : null);
       // Say where the photo is: still only on this phone, up on the server, or up there but not showing
       const where = photoDataUrl ? 'Waiting to upload. It is kept on this phone and goes up when there is signal.'
-        : photoPath ? (src ? 'Uploaded.' : 'Uploaded, but it cannot be shown right now. Check your signal and reopen this ticket.')
+        : photoPath ? (src ? 'Uploaded.' : `Uploaded, but it cannot be shown right now${photoLookupError() ? `: ${esc(photoLookupError())}` : ''}. Check your signal and reopen this ticket.`)
           : '';
       const note = where ? `<div class="hint" style="margin-top:6px">${where}</div>` : '';
       photoPreview.innerHTML = src

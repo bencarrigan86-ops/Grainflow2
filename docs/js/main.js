@@ -1,25 +1,25 @@
-import { db } from './storage.js?v=208';
-import { initTheme } from './theme.js?v=208';
+import { db } from './storage.js?v=210';
+import { initTheme } from './theme.js?v=210';
 initTheme();
-import { renderPosition } from './views/position.js?v=208';
-import { renderProduction } from './views/production.js?v=208';
-import { renderReports } from './views/reports.js?v=208';
-import { renderSales } from './views/sales.js?v=208';
-import { renderMovements } from './views/movements.js?v=208';
-import { renderStorage } from './views/storage.js?v=208';
-import { renderSettings } from './views/settings.js?v=208';
-import { renderLogin } from './views/login.js?v=208';
-import { renderAccount } from './views/account.js?v=208';
+import { renderPosition } from './views/position.js?v=210';
+import { renderProduction } from './views/production.js?v=210';
+import { renderReports } from './views/reports.js?v=210';
+import { renderSales } from './views/sales.js?v=210';
+import { renderMovements } from './views/movements.js?v=210';
+import { renderStorage } from './views/storage.js?v=210';
+import { renderSettings } from './views/settings.js?v=210';
+import { renderLogin } from './views/login.js?v=210';
+import { renderAccount } from './views/account.js?v=210';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=208';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=208';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=208';
-import { esc } from './fmt.js?v=208';
-import { isSheetOpen, notify } from './ui.js?v=208';
-import { describeMerges } from './ticketmerge.js?v=208';
-import { APP_VERSION } from './version.js?v=208';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=208';
+} from './auth.js?v=210';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=210';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=210';
+import { esc } from './fmt.js?v=210';
+import { isSheetOpen, notify } from './ui.js?v=210';
+import { describeMerges } from './ticketmerge.js?v=210';
+import { APP_VERSION } from './version.js?v=210';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=210';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set

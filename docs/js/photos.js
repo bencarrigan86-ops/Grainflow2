@@ -14,7 +14,7 @@
 // stays a data URL until there is signal to upload it, and displays fine in
 // the meantime.
 
-import { supabase } from './supabase.js?v=208';
+import { supabase } from './supabase.js?v=210';
 
 const BUCKET = 'movement-photos';
 const SIGNED_URL_TTL = 60 * 60; // an hour is plenty for a screen, short enough to not be a link
@@ -58,12 +58,23 @@ export async function uploadPhoto(dataUrl, { farmId, movementId }) {
  */
 export async function signedUrlFor(path) {
   if (!path) return null;
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(path, SIGNED_URL_TTL);
-  if (error) return null;
-  return data?.signedUrl ?? null;
+  lastLookupError = '';
+  try {
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(path, SIGNED_URL_TTL);
+    if (error) { lastLookupError = error.message || String(error); return null; }
+    return data?.signedUrl ?? null;
+  } catch (e) {
+    lastLookupError = e?.message || String(e);
+    return null;
+  }
 }
+
+// Why the last photo could not be shown, for the ticket to say. A photo that is up on the server but will not
+// display looks the same as one that never went up, unless something says which.
+let lastLookupError = '';
+export const photoLookupError = () => lastLookupError;
 
 export async function deletePhoto(path) {
   if (!path) return;
