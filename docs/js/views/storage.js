@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=216';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=216';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=216';
-import { isTransit } from '../transit.js?v=216';
-import { gradesFor, allGradeCodes } from '../grades.js?v=216';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=216';
-import { hasStorageQuality } from '../mapping.js?v=216';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=216';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=216';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=216';
-import { renderRelatedMovements } from './movements.js?v=216';
-import { openSiloSetupSheet } from './silosetup.js?v=216';
-import { commodityFills } from '../commodityfill.js?v=216';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS } from '../outload.js?v=216';
+import { db } from '../storage.js?v=220';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=220';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=220';
+import { isTransit } from '../transit.js?v=220';
+import { gradesFor, allGradeCodes } from '../grades.js?v=220';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=220';
+import { hasStorageQuality } from '../mapping.js?v=220';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=220';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=220';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=220';
+import { renderRelatedMovements } from './movements.js?v=220';
+import { openSiloSetupSheet } from './silosetup.js?v=220';
+import { commodityFills } from '../commodityfill.js?v=220';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS } from '../outload.js?v=220';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, siloSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=216';
+} from '../silolayers.js?v=220';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -519,6 +519,7 @@ function qualityFold(existing, commodity) {
         ${field({ label: 'Test weight (kg/hL)', id: 'q-tw', type: 'number', step: '0.1', value: existing?.testWeightKgHl ?? '', hint: 'As measured. Not the volume density below.' })}
       </div>
       ${field({ label: 'Falling number (seconds)', id: 'q-fn', type: 'number', step: '1', value: existing?.fallingNumber ?? '' })}
+      ${field({ label: 'Oil (%)', id: 'q-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '', hint: 'Canola' })}
     </details>`;
 }
 
@@ -533,6 +534,7 @@ function readQuality(root, gradeCtl) {
     screeningsPct: n('q-screenings'),
     testWeightKgHl: n('q-tw'),
     fallingNumber: n('q-fn'),
+    oilPct: n('q-oil'),
   };
 }
 
@@ -544,6 +546,7 @@ function qualityLine(s) {
     pct(s.moisturePct, 'moisture'), pct(s.proteinPct, 'protein'), pct(s.screeningsPct, 'screenings'),
     s.testWeightKgHl != null && s.testWeightKgHl !== '' ? `${num(s.testWeightKgHl, 1)} kg/hL` : '',
     s.fallingNumber != null && s.fallingNumber !== '' ? `FN ${num(s.fallingNumber, 0)}` : '',
+    pct(s.oilPct, 'oil'),
   ].filter(Boolean).map(esc).join(' · ');
 }
 

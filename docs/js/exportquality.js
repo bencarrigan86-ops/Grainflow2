@@ -22,6 +22,7 @@ const HEADINGS = {
   screeningsPct: 'Screenings (%)',
   testWeightKgHl: 'Test weight (kg/hL)',
   fallingNumber: 'Falling number (s)',
+  oilPct: 'Oil (%)',
 };
 
 /** One load's own grade and measurements; anything not recorded is blank, never zero. */

@@ -30,6 +30,23 @@ check('nothing, or nothing but headings, is nothing', () => {
   assert.deepEqual(altFlags([false, false]), [false, false]);
 });
 
+console.log('\n=== folding sections ===');
+
+import { foldBands } from '../docs/js/band.js';
+
+check('two or more sections in a row alternate, from the first colour', () => {
+  assert.deepEqual(foldBands([true, true, true]), [{ alt: false }, { alt: true }, { alt: false }]);
+});
+check('a section on its own is left plain', () => {
+  assert.deepEqual(foldBands([true]), [null]);
+  assert.deepEqual(foldBands([false, true, false]), [null, null, null]);
+});
+check('something that is not a section ends the run, and the next run starts again', () => {
+  // two sections, a coloured panel between, then two more
+  assert.deepEqual(foldBands([true, true, false, true, true]),
+    [{ alt: false }, { alt: true }, null, { alt: false }, { alt: true }]);
+});
+
 console.log('\n=== wired in ===');
 
 const main = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs', 'js', 'main.js'), 'utf8');

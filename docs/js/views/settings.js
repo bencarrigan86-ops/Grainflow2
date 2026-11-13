@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=216';
-import { getTheme, setTheme } from '../theme.js?v=216';
-import { num, money, esc } from '../fmt.js?v=216';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=216';
-import { openLoadImportSheet } from './importloads.js?v=216';
-import { APP_VERSION } from '../version.js?v=216';
-import { exportRowsAsCSV } from '../csv.js?v=216';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=216';
-import { endpointLabel } from './movements.js?v=216';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=216';
-import { layersForStorage } from '../outload.js?v=216';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=216';
+import { db } from '../storage.js?v=220';
+import { getTheme, setTheme } from '../theme.js?v=220';
+import { num, money, esc } from '../fmt.js?v=220';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=220';
+import { openLoadImportSheet } from './importloads.js?v=220';
+import { APP_VERSION } from '../version.js?v=220';
+import { exportRowsAsCSV } from '../csv.js?v=220';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=220';
+import { endpointLabel } from './movements.js?v=220';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=220';
+import { layersForStorage } from '../outload.js?v=220';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=220';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=216';
+} from '../invites.js?v=220';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=216';
+} from '../auth.js?v=220';
 
 let unsub = null;
 
@@ -881,6 +881,10 @@ function exportSalesCSV(year, stamp) {
     // The grades a contract lists, each with its $/t adjustment, and what the loads delivered so far have added
     { label: 'Grade premiums/discounts ($/t)', get: (s) => (s.gradeOptions || []).map((o) => `${o.grade} ${o.adjust >= 0 ? '+' : ''}${o.adjust}`).join('; ') },
     { label: 'Grade adjustment to date ($)', get: (s) => (s.gradeOptions?.length ? num(saleEconomics(s, movements).gradeAdjustment, 2) : '') },
+    // Canola priced for oil: the base, the % of price per 1%, and what the loads delivered so far have added
+    { label: 'Oil base (%)', get: (s) => (s.oilAdjustPct ? s.oilBasePct : '') },
+    { label: 'Oil adjustment (% of price per 1%)', get: (s) => (s.oilAdjustPct ? s.oilAdjustPct : '') },
+    { label: 'Oil adjustment to date ($)', get: (s) => (s.oilAdjustPct ? num(saleEconomics(s, movements).oilAdjustment, 2) : '') },
   ]);
 }
 

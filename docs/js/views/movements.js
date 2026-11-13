@@ -1,13 +1,13 @@
-import { db } from '../storage.js?v=216';
-import { movementsForEndpoint } from '../derived.js?v=216';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=216';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=216';
-import { compressAndStampImage } from '../img.js?v=216';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=216';
-import { specText } from '../outload.js?v=216';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=216';
-import { pickableSilos } from '../silopick.js?v=216';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=216';
+import { db } from '../storage.js?v=220';
+import { movementsForEndpoint } from '../derived.js?v=220';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=220';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=220';
+import { compressAndStampImage } from '../img.js?v=220';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=220';
+import { specText } from '../outload.js?v=220';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=220';
+import { pickableSilos } from '../silopick.js?v=220';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=220';
 
 let unsub = null;
 
@@ -535,9 +535,9 @@ export function openMovementSheet(existing, template) {
         </div>
       </div>
       ${existing?.sourceRef ? `<div class="field hint" style="margin-bottom:8px">Movement number from the freight platform: <strong>${esc(existing.sourceRef)}</strong></div>` : ''}
-      <details class="fold" ${existing && (existing.grade || existing.proteinPct != null || existing.moisturePct != null) ? 'open' : ''}>
+      <details class="fold" ${existing && (existing.grade || existing.proteinPct != null || existing.moisturePct != null || existing.oilPct != null) ? 'open' : ''}>
         <summary><div><h2>Load quality</h2>
-          <div class="sub">Grade, moisture, protein, screenings, test weight, falling number</div></div></summary>
+          <div class="sub">Grade, moisture, protein, screenings, test weight, falling number, oil</div></div></summary>
         <div class="field hint" style="margin-bottom:8px">What was on this truck. It lets the storage it went into say what
           each load out of it will carry.</div>
         ${gradeFieldHtml({ id: 'lq-grade', commodity: commodities.find((c) => c.id === ctx.commodityId), value: existing?.grade })}
@@ -549,7 +549,10 @@ export function openMovementSheet(existing, template) {
           ${field({ label: 'Screenings (%)', id: 'lq-screenings', type: 'number', step: '0.1', value: existing?.screeningsPct ?? '' })}
           ${field({ label: 'Test weight (kg/hL)', id: 'lq-tw', type: 'number', step: '0.1', value: existing?.testWeightKgHl ?? '' })}
         </div>
-        ${field({ label: 'Falling number (seconds)', id: 'lq-fn', type: 'number', step: '1', value: existing?.fallingNumber ?? '' })}
+        <div class="grid-2">
+          ${field({ label: 'Falling number (seconds)', id: 'lq-fn', type: 'number', step: '1', value: existing?.fallingNumber ?? '' })}
+          ${field({ label: 'Oil (%)', id: 'lq-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '', hint: 'Canola' })}
+        </div>
       </details>
       ${field({ label: 'Notes', id: 'notes', value: src?.notes })}
       <div class="field">
@@ -759,7 +762,7 @@ export function openMovementSheet(existing, template) {
           return {
             grade: gradeCtl.read() || '',
             moisturePct: n('lq-moisture'), proteinPct: n('lq-protein'), screeningsPct: n('lq-screenings'),
-            testWeightKgHl: n('lq-tw'), fallingNumber: n('lq-fn'),
+            testWeightKgHl: n('lq-tw'), fallingNumber: n('lq-fn'), oilPct: n('lq-oil'),
           };
         })(),
         photoDataUrl,

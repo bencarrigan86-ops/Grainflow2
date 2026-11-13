@@ -27,7 +27,7 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=216';
+import { cleanGradeOptions } from './gradeprice.js?v=220';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -55,6 +55,10 @@ const QUALITY_FIELDS = [
   ['screeningsPct', 'screenings_pct', 'num'],
   ['testWeightKgHl', 'test_weight_kg_hl', 'num'],
   ['fallingNumber', 'falling_number', 'num'],
+  // Canola oil. A later column than the rest, so it is sent on its own: only once an oil figure has been
+  // recorded (see __hasOil), never along with a grade or a protein. Otherwise every graded load would be
+  // refused until the database had the column.
+  ['oilPct', 'oil_pct', 'num', 'optional'],
 ];
 const LOAD_QUALITY_FIELDS = QUALITY_FIELDS.filter(([key]) => key !== 'cropYear');
 
@@ -98,19 +102,27 @@ export function movementFromRow(m, legs = [], photo = null) {
 function qualityKit(fields) {
   const has = (rec) => fields.some(([key]) => rec[key] !== undefined && rec[key] !== null && rec[key] !== '');
   const columns = (rec) => {
-    if (!has(rec) && !rec.__hasQuality) return {};
-    return Object.fromEntries(fields.map(([key, col, kind]) => [
-      col,
-      kind === 'num' ? (rec[key] === '' || rec[key] == null ? null : Number(rec[key])) : orNull(rec[key] ?? ''),
-    ]));
+    if (!has(rec) && !rec.__hasQuality && !rec.__hasOil) return {};
+    return Object.fromEntries(fields
+      // an optional column is left out until a value has been recorded for it
+      .filter(([key, , , optional]) => !optional || (rec[key] !== undefined && rec[key] !== null && rec[key] !== '') || rec.__hasOil)
+      .map(([key, col, kind]) => [
+        col,
+        kind === 'num' ? (rec[key] === '' || rec[key] == null ? null : Number(rec[key])) : orNull(rec[key] ?? ''),
+      ]));
   };
   const fromRow = (row) => {
     // Nothing recorded comes back with no quality keys at all, the way it went
     // out, so a round trip changes nothing.
     if (!fields.some(([, col]) => row[col] !== null && row[col] !== undefined)) return {};
     const out = {};
-    for (const [key, col, kind] of fields) out[key] = kind === 'num' ? (row[col] == null ? null : Number(row[col])) : (row[col] ?? '');
-    out.__hasQuality = true;
+    for (const [key, col, kind, optional] of fields) {
+      if (optional && row[col] === undefined) continue;   // the database has no such column yet
+      out[key] = kind === 'num' ? (row[col] == null ? null : Number(row[col])) : (row[col] ?? '');
+      if (optional && row[col] != null) out.__hasOil = true;
+    }
+    // only the optional oil recorded: not "quality" in the older sense
+    if (fields.some(([, col, , optional]) => !optional && row[col] !== null && row[col] !== undefined)) out.__hasQuality = true;
     return out;
   };
   return { has, columns, fromRow };
@@ -324,6 +336,8 @@ export function stateToRows(state, farmId) {
         // The grades this contract lists, each with its $/t premium or discount. Optional like the other later
         // columns: left out until a grade is listed, kept once one has been, so clearing the list reaches the server.
         ...((sale.gradeOptions?.length || sale.__hasGradeOptions) ? { grade_options: cleanGradeOptions(sale.gradeOptions) } : {}),
+        // Canola priced for oil: the base oil and the % of price per 1% of oil. Optional in the same way.
+        ...((Number(sale.oilAdjustPct) || sale.__hasOilTerms) ? { oil_base_pct: n(sale.oilBasePct), oil_adjust_pct: n(sale.oilAdjustPct) } : {}),
       });
 
       // The buyer's contract and the broker's note. Only the path travels in
@@ -554,6 +568,7 @@ export function rowsToState(rows) {
           paymentTermsBasis: t.payment_terms_basis ?? '',
           tradeRules: t.trade_rules ?? '',
           ...(Array.isArray(t.grade_options) ? { gradeOptions: cleanGradeOptions(t.grade_options), __hasGradeOptions: true } : {}),
+          ...(t.oil_adjust_pct != null ? { oilBasePct: n(t.oil_base_pct), oilAdjustPct: n(t.oil_adjust_pct), __hasOilTerms: true } : {}),
           documents: (docsBySale.get(sale.id) || []).map((d) => ({
             id: d.id, kind: d.kind || 'contract',
             fileName: d.file_name ?? '',

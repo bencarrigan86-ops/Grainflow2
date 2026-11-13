@@ -1,6 +1,7 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=216';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=220';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=220';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -81,7 +82,9 @@ export function saleEconomics(sale, movements = []) {
   // A contract that lists several grades pays each load the price plus the adjustment for that load's own
   // grade, so the value moves as loads are delivered: tonnes not yet delivered are counted at the price as it stands.
   const grades = gradeAdjustment(sale, movements);
-  const totalValue = tons * priceExFarm - ginning + grades.total;
+  // Canola is also paid for its oil: each delivered load moves the price by its own oil against the base.
+  const oil = oilAdjustment(sale, movements);
+  const totalValue = tons * priceExFarm - ginning + grades.total + oil.total;
   const tonsDue = tons - tonsDelivered;
 
   const { toleranceTons, minTons, maxTons } = contractTolerance(tons, sale.tolerancePct, sale.toleranceCapTons);
@@ -93,6 +96,7 @@ export function saleEconomics(sale, movements = []) {
   return {
     netOfFreight, levies, priceExFarm, ginning, totalValue, tonsDue,
     gradeAdjustment: grades.total, gradeLines: grades.lines, gradeOtherTons: grades.otherTons,
+    oilAdjustment: oil.total, oilSummary: oil,
     manualDelivered, movementDelivered, tonsDelivered,
     toleranceTons, minTons, maxTons, isFull, isOverDelivered, tonsToFill, tonsRemainingMax,
   };
@@ -113,7 +117,7 @@ export function invoiceLineItems(sale, movements) {
     .map((m) => {
       const t = toTonsForEndpoint(m, 'sale', sale.id);
       // each load at its own grade's rate, when the contract lists several
-      const loadRate = rate + gradeRateFor(sale, m);
+      const loadRate = rate + gradeRateFor(sale, m) + oilRateFor(sale, m);
       return {
         date: m.date, rego: m.truckRego || '—', tons: t, movementId: m.id,
         grade: m.grade || '',

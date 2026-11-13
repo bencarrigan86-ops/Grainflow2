@@ -24,6 +24,7 @@ export const SPECS = [
   { key: 'screeningsPct', label: 'Screenings', unit: '%', dp: 1 },
   { key: 'testWeightKgHl', label: 'Test weight', unit: 'kg/hL', dp: 1 },
   { key: 'fallingNumber', label: 'Falling no.', unit: 's', dp: 0 },
+  { key: 'oilPct', label: 'Oil', unit: '%', dp: 1 },
 ];
 
 /** A record's quality as plain numbers and text; blank is null, never zero. */
@@ -241,5 +242,6 @@ export function specText(rec) {
     sp.screeningsPct !== null ? `${fmt(sp.screeningsPct, 1)}% screenings` : '',
     sp.testWeightKgHl !== null ? `${fmt(sp.testWeightKgHl, 1)} kg/hL` : '',
     sp.fallingNumber !== null ? `FN ${fmt(sp.fallingNumber, 0)}` : '',
+    sp.oilPct !== null ? `${fmt(sp.oilPct, 1)}% oil` : '',
   ].filter(Boolean).join(' · ');
 }

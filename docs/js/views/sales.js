@@ -1,17 +1,19 @@
-import { db } from '../storage.js?v=216';
+import { db } from '../storage.js?v=220';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=216';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=216';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=216';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=216';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=216';
-import { renderRelatedMovements } from './movements.js?v=216';
-import { openInvoiceListSheet } from './invoice.js?v=216';
-import { openContractDocSheet } from './contract.js?v=216';
-import { wireJumps } from '../jump.js?v=216';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=216';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=216';
+} from '../documents.js?v=220';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=220';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=220';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=220';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=220';
+import { renderRelatedMovements } from './movements.js?v=220';
+import { openInvoiceListSheet } from './invoice.js?v=220';
+import { openContractDocSheet } from './contract.js?v=220';
+import { wireJumps } from '../jump.js?v=220';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=220';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=220';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=220';
+import { standardFor } from '../grades.js?v=220';
 
 let unsub = null;
 
@@ -274,7 +276,7 @@ function saleRow(s, movements, commodities, index = 0) {
         <div class="main">${s.buyer ? esc(s.buyer) : 'No buyer'}</div>
         <div class="main">${money(econ.totalValue, 0)}</div>
       </div>
-      <div class="meta">${[s.grade, s.gradeOptions?.length ? `${s.gradeOptions.length} grades` : '', s.contractNo ? `#${s.contractNo}` : '', s.brokerNote].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</div>
+      <div class="meta">${[s.grade, s.gradeOptions?.length ? `${s.gradeOptions.length} grades` : '', s.contractNo ? `#${s.contractNo}` : '', s.brokerNote, (s.notes || '').split('\n')[0].slice(0, 60)].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</div>
       <div class="meta">${amount} @ ${money(econ.priceExFarm, 2)}/${isBales ? 'bale' : 't'} net</div>
       <div class="meta">${[s.location, window].filter(Boolean).map(esc).join(' · ') || 'No delivery location/date set'}</div>
       ${fillGauge(econ, s.tons)}
@@ -309,7 +311,14 @@ function openSaleSheet(existing) {
   const openTerms = !!existing && ['cropYear', 'contractType', 'pricingPoint', 'deliveryTerms', 'buyerContact', 'tradeRules'].some((k) => existing[k]);
   const openAdjust = !!existing && (!!existing.premiumDiscount || !!existing.ginning || Math.abs((existing.leviesPct ?? 0) * 100 - 1.02) > 1e-6);
   const openGrades = !!existing?.gradeOptions?.length;
-  const openDelivered = !!existing && (!!existing.tonsDelivered || !!existing.notes || !!existing.buyerAbn || !!existing.buyerAddress);
+  // The oil section is for canola; it shows for any contract that already prices oil, whatever it is called.
+  const openOil = oilPricingOn(existing);
+  const isCanola = (c) => standardFor(c?.name)?.key === 'canola';
+  const showOil = openOil || isCanola(commodities.find((c) => c.id === (existing?.commodityId ?? commodities[0]?.id)));
+  const openDelivered = !!existing && (!!existing.tonsDelivered || !!existing.buyerAbn || !!existing.buyerAddress);
+  // Comments. The old Broker note box is gone (Broker and Broker reference cover it), so a contract that has one
+  // keeps it: it is brought into the comments, and cleared from its own field when the contract is saved.
+  const commentsText = [existing?.notes, existing?.brokerNote ? `Broker note: ${existing.brokerNote}` : ''].filter(Boolean).join('\n');
   const openAdvanced = !!existing && (!!existing.carryRate || !!existing.carryFrom
     || (existing.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS) !== DEFAULT_TOLERANCE_CAP_TONS);
 
@@ -365,7 +374,6 @@ function openSaleSheet(existing) {
           { value: 'invoice date', label: 'Invoice date' },
         ], hint: '"30 days" and "30 days from end of week" are up to six days apart' })}
       </div>
-      ${field({ label: 'Broker note', id: 'brokerNote', type: 'textarea', value: existing?.brokerNote })}
       <div class="grid-2">
         ${field({ label: 'Broker', id: 'broker', value: existing?.broker, placeholder: 'e.g. Knight Commodities', list: 'dl-brokers' })}
         ${field({ label: 'Broker reference', id: 'brokerRef', value: existing?.brokerRef, placeholder: 'Their contract ref' })}
@@ -378,6 +386,7 @@ function openSaleSheet(existing) {
         ] })}
         ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
       </div>
+      ${field({ label: 'Comments', id: 'notes', type: 'textarea', rows: 2, value: commentsText, placeholder: 'Anything worth knowing about this contract' })}
 
       <details class="fold" ${openTerms ? 'open' : ''}>
         <summary><div><h2>Contract terms</h2>
@@ -417,12 +426,29 @@ function openSaleSheet(existing) {
         <div id="go-summary" style="margin-top:10px"></div>
       </details>
 
+      <details class="fold feature" id="oil-fold" ${openOil ? 'open' : ''} ${showOil ? '' : 'hidden'}>
+        <summary><div class="feature-head"><h2>Oil</h2>
+          <div class="sub">Canola priced for its oil content</div></div></summary>
+        <div class="field hint" style="margin:10px 14px">Canola is paid on a base oil level, with the price moving a set
+          percentage for every 1% of oil above or below it. Under the AOF terms that is 42% oil and 1.5% of the price
+          per 1%. Each load is priced on its own oil, recorded on the load. A load with no oil recorded is paid the
+          price as it stands.</div>
+        ${field({ label: 'Price for oil', id: 'oil-on', type: 'select', value: openOil ? 'yes' : 'no', options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }] })}
+        <div id="oil-terms" ${openOil ? '' : 'hidden'}>
+          <div class="grid-2">
+            ${field({ label: 'Base oil (%)', id: 'oilBase', type: 'number', step: '0.1', value: existing?.oilBasePct || AOF_OIL_BASE_PCT })}
+            ${field({ label: 'Per 1% of oil (% of price)', id: 'oilAdjust', type: 'number', step: '0.1', value: existing?.oilAdjustPct || AOF_OIL_ADJUST_PCT })}
+          </div>
+          <div class="row"><span class="label">Each 1% of oil is worth</span><span class="value" id="oil-point">—</span></div>
+        </div>
+        <div id="oil-summary" style="margin-top:10px"></div>
+      </details>
+
       <details class="fold" ${openDelivered ? 'open' : ''}>
         <summary><div><h2>Delivered &amp; other</h2>
-          <div class="sub">Tons delivered, notes, buyer ABN and address</div></div></summary>
+          <div class="sub">Tons delivered, buyer ABN and address</div></div></summary>
         ${field({ label: 'Tons delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a Movement' })}
         ${movementDelivered > 0 ? `<div class="row"><span class="label">+ Delivered via movements</span><span class="value" id="movement-delivered-value">${num(movementDelivered, 1)} t</span></div>` : ''}
-        ${field({ label: 'Notes', id: 'notes', type: 'textarea', value: existing?.notes })}
         <div class="grid-2">
           ${field({ label: 'Buyer ABN (optional)', id: 'buyerAbn', value: existing?.buyerAbn, hint: 'For invoices' })}
           ${field({ label: 'Buyer address (optional)', id: 'buyerAddress', value: existing?.buyerAddress })}
@@ -533,6 +559,38 @@ function openSaleSheet(existing) {
     (existing?.gradeOptions || []).forEach((o) => addGradeRow(o));
     drawGradeSummary();
 
+    // --- oil (canola) --------------------------------------------------------
+    // Priced for oil when "Price for oil" is Yes. What the loads delivered so far add is shown below.
+    const oilFold = root.querySelector('#oil-fold');
+    const oilOn = root.querySelector('#oil-on');
+    const oilTerms = root.querySelector('#oil-terms');
+    const oilSummary = root.querySelector('#oil-summary');
+    const readOilTerms = () => (oilOn.value === 'yes'
+      ? { oilBasePct: getNum(root, 'oilBase'), oilAdjustPct: getNum(root, 'oilAdjust') }
+      : { oilBasePct: 0, oilAdjustPct: 0 });
+    const drawOilSummary = () => {
+      const terms = readOilTerms();
+      const perPoint = getNum(root, 'price') * (terms.oilAdjustPct / 100);
+      root.querySelector('#oil-point').textContent = oilOn.value === 'yes' ? `${money(perPoint, 2)}/t` : '—';
+      if (!existing || oilOn.value !== 'yes') { oilSummary.innerHTML = ''; return; }
+      const o = oilAdjustment({ id: existing.id, price: getNum(root, 'price'), ...terms }, movements);
+      const signed = (n) => `${n >= 0 ? '+' : '−'}${money(Math.abs(n), 0)}`;
+      oilSummary.innerHTML = o.tons + o.missingTons === 0
+        ? '<div class="hint">No loads delivered to this contract yet, so oil has not changed its value.</div>'
+        : `<div class="subhead" style="margin-top:0">Delivered so far</div>
+           ${o.tons > 0 ? `<div class="row"><span class="label">${num(o.tons, 1)} t at ${num(o.avgOil, 1)}% oil on average</span><span class="value">${signed(o.total)}</span></div>` : ''}
+           ${o.missingTons > 0 ? `<div class="row"><span class="label">${num(o.missingTons, 1)} t with no oil recorded, paid the price as it stands</span><span class="value">$0</span></div>` : ''}
+           <div class="row"><span class="label"><strong>Oil adds</strong></span><span class="value"><strong>${signed(o.total)}</strong></span></div>`;
+    };
+    const onOilChanged = () => { oilTerms.hidden = oilOn.value !== 'yes'; recomputeValue(); drawOilSummary(); };
+    ['oil-on', 'oilBase', 'oilAdjust', 'price'].forEach((id) => {
+      root.querySelector(`#${id}`).addEventListener('input', onOilChanged);
+      root.querySelector(`#${id}`).addEventListener('change', onOilChanged);
+    });
+    // the section is for canola: shown when the commodity is canola, or when the contract already prices oil
+    const syncOilVisibility = () => { oilFold.hidden = !(isCanola(commodityNow()) || oilOn.value === 'yes'); };
+    drawOilSummary();
+
     // What the figures above come to, as you type — the same arithmetic the
     // sales list uses, run on the form's values rather than a saved record.
     const valuePreview = root.querySelector('#value-preview');
@@ -541,6 +599,7 @@ function openSaleSheet(existing) {
       const e = saleEconomics({
         id: existing?.id,
         gradeOptions: readGradeOptions(),
+        ...readOilTerms(),
         tons: getNum(root, 'tons'),
         price: getNum(root, 'price'),
         freight: getNum(root, 'freight'),
@@ -620,7 +679,7 @@ function openSaleSheet(existing) {
     };
     // the grade dropdown follows the commodity: its published grades and the farm's own
     const gradeCtl = wireGradeField(root, 'grade', () => commodities.find((cc) => cc.id === getVal(root, 'commodity')));
-    root.querySelector('#commodity').addEventListener('change', () => { syncUnitLabels(); gradeCtl.refresh(); goCtls.forEach((r) => r.ctl.refresh()); });
+    root.querySelector('#commodity').addEventListener('change', () => { syncUnitLabels(); gradeCtl.refresh(); goCtls.forEach((r) => r.ctl.refresh()); syncOilVisibility(); });
     syncUnitLabels();
 
     // --- documents -------------------------------------------------------
@@ -728,6 +787,7 @@ function openSaleSheet(existing) {
         commodityId: getVal(root, 'commodity'),
         grade: gradeCtl.read(),
         gradeOptions: readGradeOptions(),
+        ...readOilTerms(),
         buyer: getVal(root, 'buyer')?.trim(),
         contractNo: getVal(root, 'contractNo')?.trim(),
         location: getVal(root, 'location')?.trim(),
@@ -742,7 +802,7 @@ function openSaleSheet(existing) {
         leviesPct: getNum(root, 'levies') / 100,
         tolerancePct: getNum(root, 'tolPct'),
         toleranceCapTons: getNum(root, 'tolCap'),
-        brokerNote: getVal(root, 'brokerNote')?.trim(),
+        brokerNote: '',   // the old box: whatever it held is in the comments now
         notes: getVal(root, 'notes')?.trim(),
         buyerAbn: getVal(root, 'buyerAbn')?.trim(),
         buyerAddress: getVal(root, 'buyerAddress')?.trim(),

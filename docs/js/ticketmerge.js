@@ -28,7 +28,7 @@ export const TICKET_FIELDS = [
   ['grossWeight', 'Gross weight'], ['tareWeight', 'Tare weight'], ['tons', 'Net load'],
   ['weightStatus', 'Weight status'], ['notes', 'Notes'],
   ['grade', 'Grade'], ['proteinPct', 'Protein'], ['moisturePct', 'Moisture'], ['screeningsPct', 'Screenings'],
-  ['testWeightKgHl', 'Test weight'], ['fallingNumber', 'Falling number'],
+  ['testWeightKgHl', 'Test weight'], ['fallingNumber', 'Falling number'], ['oilPct', 'Oil'],
   ['froms', 'Where it came from'], ['tos', 'Where it went'],
 ];
 
@@ -177,7 +177,7 @@ export function valueText(key, v, ctx = {}) {
   if (key === 'commodityId') return nameOf(ctx.commodities, v, 'a commodity');
   if (key === 'weightStatus') return v === 'final' ? 'Final' : 'Estimate';
   if (['tons', 'grossWeight', 'tareWeight'].includes(key)) return `${n} t`;
-  if (['proteinPct', 'moisturePct', 'screeningsPct'].includes(key)) return `${n}%`;
+  if (['proteinPct', 'moisturePct', 'screeningsPct', 'oilPct'].includes(key)) return `${n}%`;
   if (key === 'testWeightKgHl') return `${n} kg/hL`;
   return String(n);
 }

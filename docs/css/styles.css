@@ -311,6 +311,19 @@ tr.jump-row { cursor: pointer; }
 }
 .list-item.band:active { filter: brightness(.96); }
 
+/* Folding sections one under another, in the same two colours as the lists. */
+details.fold.fold-band {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  margin-top: 8px;
+  padding: 0 12px;
+}
+details.fold.fold-band.fold-alt {
+  background: color-mix(in srgb, var(--accent-summary) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent-summary) 28%, var(--border));
+}
+
 .btn {
   appearance: none;
   border: 1.5px solid transparent;
@@ -398,6 +411,17 @@ tr.jump-row { cursor: pointer; }
   font-family: inherit;
 }
 .field .hint { font-size: 11.5px; color: var(--text-dim); margin-top: 4px; }
+/* A date box on iPhone draws itself, ignoring the height and width the others are given, so it is taken back
+   from the browser's own look and made the same as the rest. */
+.field input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  line-height: 1.2;
+}
+.field input[type="date"]::-webkit-date-and-time-value { text-align: left; min-height: 1.2em; margin: 0; }
 /* One height for every single-line box and dropdown. A date or a dropdown is two pixels taller than a text or
    number box on its own, which showed as one box sitting out of line whenever two were side by side. */
 .field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), .field select {
@@ -566,7 +590,10 @@ tr.jump-row { cursor: pointer; }
   min-height: 44px;
 }
 
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* minmax(0, 1fr), not 1fr: a plain 1fr will not shrink below the widest thing inside it, and on a phone a date box
+   brings its own minimum width, so the column holding the date came out wider than its neighbour. */
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.grid-2 > * { min-width: 0; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 
 .swipe-actions { display: flex; gap: 8px; margin-top: 8px; }

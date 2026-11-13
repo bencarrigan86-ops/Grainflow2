@@ -28,7 +28,7 @@ export const transitFor = (storages, commodityId) =>
 /** Has a grade or any measurement been recorded on this ticket? */
 export function hasQualityRecorded(m) {
   if (String(m?.grade ?? '').trim()) return true;
-  return ['moisturePct', 'proteinPct', 'screeningsPct', 'testWeightKgHl', 'fallingNumber']
+  return ['moisturePct', 'proteinPct', 'screeningsPct', 'testWeightKgHl', 'fallingNumber', 'oilPct']
     .some((k) => m?.[k] !== undefined && m?.[k] !== null && m?.[k] !== '');
 }
 

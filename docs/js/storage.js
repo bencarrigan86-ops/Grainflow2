@@ -18,21 +18,21 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=216';
+import { hydrate } from './hydrate.js?v=220';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=216';
-import { chooseBootState, resolveLegacy } from './boot.js?v=216';
-import { isLegacyDirty } from './dirty.js?v=216';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=216';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=216';
-import { settleLegs, dedupeLegs } from './legs.js?v=216';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=216';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=216';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=216';
-import { schedulePush, pushOnReconnect } from './sync.js?v=216';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=216';
+} from './local.js?v=220';
+import { chooseBootState, resolveLegacy } from './boot.js?v=220';
+import { isLegacyDirty } from './dirty.js?v=220';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=220';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=220';
+import { settleLegs, dedupeLegs } from './legs.js?v=220';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=220';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=220';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=220';
+import { schedulePush, pushOnReconnect } from './sync.js?v=220';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=220';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -142,6 +142,11 @@ let touched = [];
 let localEdits = 0;
 let refreshing = false;
 function touch(kind, id) { touched.push(id === undefined ? { kind } : { kind, id }); }
+
+/** Once an oil figure has been recorded, keep sending the column, so clearing it reaches the server (see mapping.js). */
+function markOil(rec) {
+  if (rec.oilPct !== null && rec.oilPct !== undefined && rec.oilPct !== '' && Number.isFinite(Number(rec.oilPct))) rec.__hasOil = true;
+}
 
 /** What this device owes the server, not counting pre-tracking markers (which
  *  cannot be sent, and are settled once at startup). */
@@ -735,6 +740,7 @@ export const db = {
       if (idx >= 0) {
         const merged = { ...c.storages[idx], ...storage };
         if (hasStorageQuality(merged)) merged.__hasQuality = true;   // see mapping.js: keeps clearing a value reaching the server
+        markOil(merged);
         if (hasStorageNote(merged)) merged.__hasNotes = true;
         if (hasGradeBands(merged)) merged.__hasBands = true;
         c.storages[idx] = merged;
@@ -744,6 +750,7 @@ export const db = {
       const id = uid();
       const made = { ...storage, id, createdAt: Date.now() };
       if (hasStorageQuality(made)) made.__hasQuality = true;
+      markOil(made);
       if (hasStorageNote(made)) made.__hasNotes = true;
       if (hasGradeBands(made)) made.__hasBands = true;
       c.storages.push(made);
@@ -781,6 +788,7 @@ export const db = {
         const before = c.movements[idx];
         const merged = { ...before, ...movement };
         if (hasLoadQuality(merged)) merged.__hasQuality = true;
+        markOil(merged);
         // Legs keep the id they had; a leg taken out is retired on the server.
         for (const side of ['froms', 'tos']) {
           const { legs, retired } = settleLegs(before[side], merged[side], uid);
@@ -794,6 +802,7 @@ export const db = {
       const id = uid();
       const made = { ...movement, id, ticketNo: data.nextMovementNo };
       if (hasLoadQuality(made)) made.__hasQuality = true;
+      markOil(made);
       made.froms = settleLegs([], made.froms, uid).legs;
       made.tos = settleLegs([], made.tos, uid).legs;
       c.movements.push(made);
@@ -815,6 +824,7 @@ export const db = {
       const id = uid();
       const made = { ...m, id, ticketNo: data.nextMovementNo };
       if (hasLoadQuality(made)) made.__hasQuality = true;
+      markOil(made);
       made.froms = settleLegs([], made.froms, uid).legs;
       made.tos = settleLegs([], made.tos, uid).legs;
       c.movements.push(made);

@@ -70,7 +70,7 @@ export function mixText(mix, limit = 3) {
   return parts.join(' · ') + (shown.length > limit ? ` · +${shown.length - limit} more` : '');
 }
 
-const BAND_SPECS = ['proteinPct', 'moisturePct', 'screeningsPct', 'testWeightKgHl', 'fallingNumber'];
+const BAND_SPECS = ['proteinPct', 'moisturePct', 'screeningsPct', 'testWeightKgHl', 'fallingNumber', 'oilPct'];
 
 /**
  * Grade bands as they are saved: tonnes above zero, a trimmed grade, and a number for

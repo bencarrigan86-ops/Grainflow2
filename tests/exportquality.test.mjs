@@ -20,7 +20,7 @@ console.log('\n=== the columns ===');
 
 check('grade, then each measurement, in a fixed order', () => {
   assert.deepEqual(qualityColumns(loadQuality).map((c) => c.label),
-    ['Grade', 'Protein (%)', 'Moisture (%)', 'Screenings (%)', 'Test weight (kg/hL)', 'Falling number (s)']);
+    ['Grade', 'Protein (%)', 'Moisture (%)', 'Screenings (%)', 'Test weight (kg/hL)', 'Falling number (s)', 'Oil (%)']);
 });
 
 console.log('\n=== movements: load by load ===');
@@ -28,12 +28,17 @@ console.log('\n=== movements: load by load ===');
 check('a load carries its own grade and measurements', () => {
   const m = { grade: 'APH1', proteinPct: 11.8, moisturePct: 11.2, screeningsPct: 1.4, testWeightKgHl: 79.5, fallingNumber: 410 };
   const row = qualityColumns(loadQuality).map((c) => c.get(m));
-  assert.deepEqual(row, ['APH1', 11.8, 11.2, 1.4, 79.5, 410]);
+  assert.deepEqual(row, ['APH1', 11.8, 11.2, 1.4, 79.5, 410, '']);
 });
 check('what is not recorded is blank, never zero', () => {
   const row = qualityColumns(loadQuality).map((c) => c.get({ grade: 'AUH2', proteinPct: 10.4 }));
-  assert.deepEqual(row, ['AUH2', 10.4, '', '', '', '']);
-  assert.deepEqual(qualityColumns(loadQuality).map((c) => c.get({})), ['', '', '', '', '', '']);
+  assert.deepEqual(row, ['AUH2', 10.4, '', '', '', '', '']);
+  assert.deepEqual(qualityColumns(loadQuality).map((c) => c.get({})), ['', '', '', '', '', '', '']);
+});
+check('a canola load\'s oil is the last measurement', () => {
+  const cols = qualityColumns(loadQuality);
+  assert.equal(cols[cols.length - 1].label, 'Oil (%)');
+  assert.equal(cols[cols.length - 1].get({ grade: 'CAN', oilPct: 43.5 }), 43.5);
 });
 check('a zero that was really recorded stays a zero', () => {
   assert.equal(qualityColumns(loadQuality)[3].get({ screeningsPct: 0 }), 0);
@@ -80,7 +85,7 @@ check('a field is the loads carted off it, weighted by what came from it', () =>
 });
 check('a field nothing has been carted off has blanks', () => {
   const cells = qualityColumns((f) => fieldQuality(f, [])).map((c) => c.get({ id: 'f1' }));
-  assert.deepEqual(cells, ['', '', '', '', '', '']);
+  assert.deepEqual(cells, ['', '', '', '', '', '', '']);
 });
 check('a silo is what is in it now: the opening stock and the loads, less what went out', () => {
   const silo = { id: 's1', openingStock: 100, grade: 'APH1', proteinPct: 11, fallingNumber: 400 };
