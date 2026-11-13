@@ -936,6 +936,16 @@ details.fold.feature > *:last-child { margin-bottom: 14px; }
 .actual-callout.using { border-color: var(--btn-edge); }
 /* A table whose field names may wrap, so the figures beside them fit a phone. */
 .card.report table.wrap-first td:first-child { white-space: normal; max-width: 78px; }
+/* The grade standards: the parameter on the left, one column per grade, values wrapping where a limit is wordy. */
+.card.report table.std th, .card.report table.std td { white-space: normal; text-align: center; vertical-align: top; min-width: 74px; }
+.card.report table.std th:first-child, .card.report table.std td:first-child { text-align: left; min-width: 132px; max-width: 150px; }
+.std-notes { margin: 10px 0 0; padding-left: 18px; font-size: 13px; color: var(--text-dim); display: flex; flex-direction: column; gap: 6px; }
+
+/* A farm's own grades, as small removable tags. */
+.my-grades { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip.own { display: inline-flex; align-items: center; gap: 4px; padding-right: 4px; }
+.chip.own button { appearance: none; border: none; background: none; color: inherit; font-size: 17px; line-height: 1; padding: 0 6px; cursor: pointer; }
+
 /* A card that only holds a coloured panel: no second frame around it. */
 .card.bare { background: none; border: none; box-shadow: none; padding: 0; margin: 0; }
 

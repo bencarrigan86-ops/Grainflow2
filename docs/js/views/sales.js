@@ -1,15 +1,16 @@
-import { db } from '../storage.js?v=212';
+import { db } from '../storage.js?v=213';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=212';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=212';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=212';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=212';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=212';
-import { renderRelatedMovements } from './movements.js?v=212';
-import { openInvoiceListSheet } from './invoice.js?v=212';
-import { openContractDocSheet } from './contract.js?v=212';
-import { wireJumps } from '../jump.js?v=212';
+} from '../documents.js?v=213';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=213';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=213';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=213';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=213';
+import { renderRelatedMovements } from './movements.js?v=213';
+import { openInvoiceListSheet } from './invoice.js?v=213';
+import { openContractDocSheet } from './contract.js?v=213';
+import { wireJumps } from '../jump.js?v=213';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=213';
 
 let unsub = null;
 
@@ -329,7 +330,7 @@ function openSaleSheet(existing) {
       <div class="subhead">Quantity &amp; price</div>
       <div class="grid-2">
         ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
-        ${field({ label: 'Grade', id: 'grade', value: existing?.grade, placeholder: 'e.g. APW1, H2' })}
+        ${gradeFieldHtml({ id: 'grade', commodity: commodities.find((c) => c.id === (existing?.commodityId ?? commodities[0]?.id)), value: existing?.grade })}
       </div>
       ${field({ label: 'Tons', id: 'tons', type: 'number', step: '0.01', value: existing?.tons })}
       <div class="grid-2">
@@ -552,7 +553,9 @@ function openSaleSheet(existing) {
       recomputeTolerance();
       recomputeValue();
     };
-    root.querySelector('#commodity').addEventListener('change', syncUnitLabels);
+    // the grade dropdown follows the commodity: its published grades and the farm's own
+    const gradeCtl = wireGradeField(root, 'grade', () => commodities.find((cc) => cc.id === getVal(root, 'commodity')));
+    root.querySelector('#commodity').addEventListener('change', () => { syncUnitLabels(); gradeCtl.refresh(); });
     syncUnitLabels();
 
     // --- documents -------------------------------------------------------
@@ -658,7 +661,7 @@ function openSaleSheet(existing) {
         id: existing?.id,
         date: getVal(root, 'date'),
         commodityId: getVal(root, 'commodity'),
-        grade: getVal(root, 'grade')?.trim(),
+        grade: gradeCtl.read(),
         buyer: getVal(root, 'buyer')?.trim(),
         contractNo: getVal(root, 'contractNo')?.trim(),
         location: getVal(root, 'location')?.trim(),

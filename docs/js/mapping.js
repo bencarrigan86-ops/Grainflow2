@@ -202,6 +202,8 @@ export function stateToRows(state, farmId) {
         // Optional column (a migration added it): left out until a value has been recorded,
         // kept once one has, so clearing it still reaches the server.
         ...((Number(c.openingValue) || c.__hasOpeningValue) ? { opening_stock_value: n(c.openingValue) } : {}),
+        // The farm's own grades for this commodity. Optional in the same way: left out until there are some.
+        ...((c.customGrades?.length || c.__hasCustomGrades) ? { custom_grades: c.customGrades || [] } : {}),
         gross_margin_cost: n(c.grossMarginCost),
         // Cotton is counted in bales, not tonnes; without unit and the ginning
         // ratio the whole lint/seed flow has nothing to work from.
@@ -459,6 +461,7 @@ export function rowsToState(rows) {
         nPerTonne: n(c.n_per_tonne), mtmPrice: n(c.mtm_price),
         openingStock: n(c.opening_stock), retainedSeed: n(c.retained_seed),
         ...(c.opening_stock_value != null ? { openingValue: n(c.opening_stock_value), __hasOpeningValue: true } : {}),
+        ...(Array.isArray(c.custom_grades) ? { customGrades: c.custom_grades, __hasCustomGrades: true } : {}),
         grossMarginCost: n(c.gross_margin_cost),
         unit: c.unit ?? 't',
         balesPerRoundBale: n(c.bales_per_round_bale),

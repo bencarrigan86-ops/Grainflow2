@@ -1,18 +1,20 @@
-import { db } from '../storage.js?v=212';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=212';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=212';
-import { isTransit } from '../transit.js?v=212';
-import { hasStorageQuality } from '../mapping.js?v=212';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=212';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=212';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=212';
-import { renderRelatedMovements } from './movements.js?v=212';
-import { openSiloSetupSheet } from './silosetup.js?v=212';
-import { commodityFills } from '../commodityfill.js?v=212';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS } from '../outload.js?v=212';
+import { db } from '../storage.js?v=213';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=213';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=213';
+import { isTransit } from '../transit.js?v=213';
+import { gradesFor, allGradeCodes } from '../grades.js?v=213';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=213';
+import { hasStorageQuality } from '../mapping.js?v=213';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=213';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=213';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=213';
+import { renderRelatedMovements } from './movements.js?v=213';
+import { openSiloSetupSheet } from './silosetup.js?v=213';
+import { commodityFills } from '../commodityfill.js?v=213';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS } from '../outload.js?v=213';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, siloSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=212';
+} from '../silolayers.js?v=213';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -498,16 +500,15 @@ function computeStorageTons(s, commodities) {
  * density override further down the sheet (t/m³), which is a setting that turns a
  * measured volume into tonnes; 78 kg/hL is 0.78 t/m³ but the two are kept apart.
  */
-function qualityFold(existing, grades) {
+function qualityFold(existing, commodity) {
   const has = hasStorageQuality(existing || {});
   return `
     <details class="fold" ${has ? 'open' : ''}>
       <summary><div><h2>Grain quality</h2>
         <div class="sub">The silo's own crop year, grade and specs &mdash; used when loads or samples don't say</div></div></summary>
-      <datalist id="dl-grades">${grades.map((g) => `<option value="${esc(g)}">`).join('')}</datalist>
       <div class="grid-2">
         ${field({ label: 'Crop year', id: 'q-year', value: existing?.cropYear, placeholder: 'e.g. 2026/27' })}
-        ${field({ label: 'Grade', id: 'q-grade', value: existing?.grade, placeholder: 'e.g. APH1', list: 'dl-grades' })}
+        ${gradeFieldHtml({ id: 'q-grade', commodity, value: existing?.grade })}
       </div>
       <div class="grid-2">
         ${field({ label: 'Moisture (%)', id: 'q-moisture', type: 'number', step: '0.1', value: existing?.moisturePct ?? '' })}
@@ -522,11 +523,11 @@ function qualityFold(existing, grades) {
 }
 
 /** The quality fields from the form; a blank box is null, not zero. */
-function readQuality(root) {
+function readQuality(root, gradeCtl) {
   const n = (id) => (getVal(root, id) === '' || getVal(root, id) == null ? null : getNum(root, id));
   return {
     cropYear: getVal(root, 'q-year')?.trim() || '',
-    grade: getVal(root, 'q-grade')?.trim() || '',
+    grade: gradeCtl ? gradeCtl.read() : (getVal(root, 'q-grade')?.trim() || ''),
     moisturePct: n('q-moisture'),
     proteinPct: n('q-protein'),
     screeningsPct: n('q-screenings'),
@@ -1000,8 +1001,19 @@ function wireMeasureSummary(root) {
 
 function openStorageSheet(existing) {
   const { commodities, movements, storages } = db.get();
-  // Grades already used on other storages, offered as suggestions so APH1 is typed once.
-  const gradesInUse = [...new Set(storages.map((x) => x.grade).filter(Boolean))].sort();
+  // Suggestions for the grade of a stretch of grain in this silo: this commodity's grades if it has one, otherwise
+  // every commodity's, and any grade already used on another storage.
+  const ownCommodity = commodities.find((c) => c.id === existing?.commodityId);
+  const gradesInUse = [...new Set([
+    ...(ownCommodity ? gradesFor(ownCommodity.name, ownCommodity.customGrades).map((g) => g.code) : allGradeCodes(commodities)),
+    ...storages.map((x) => x.grade).filter(Boolean),
+  ])].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  // the grade dropdown in the quality section, set up each time the form is drawn
+  let gradeCtl = null;
+  const wireGrade = (root) => {
+    gradeCtl = wireGradeField(root, 'q-grade', () => commodities.find((c) => c.id === getVal(root, 's-commodity')));
+    root.querySelector('#s-commodity')?.addEventListener('change', () => gradeCtl.refresh());
+  };
   const fixedMovementNet = existing ? movementNetForStorage(existing.id, movements) : 0;
   let kind = existing?.kind || 'silo';
 
@@ -1021,7 +1033,7 @@ function openStorageSheet(existing) {
         ${field({ label: 'Commodity currently stored', id: 's-commodity', type: 'select', value: existing?.commodityId, options: commodityOptions(commodities) })}
         ${field({ label: 'Opening / current stock (t)', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
-        ${qualityFold(existing, gradesInUse)}
+        ${qualityFold(existing, commodities.find((c) => c.id === existing?.commodityId))}
         ${notesField(existing)}
         ${contentsFold(existing, gradesInUse)}
         <details class="fold feature" id="measure-fold" ${existing ? '' : 'open'}>
@@ -1099,6 +1111,7 @@ function openStorageSheet(existing) {
       }
       root.querySelector('#s-opening').addEventListener('input', recomputeLedger);
       recomputeLedger();
+      wireGrade(root);
 
       const preview = root.querySelector('#s-total-preview');
       const tarpWidthEl = root.querySelector('#s-tarp-width');
@@ -1141,7 +1154,7 @@ function openStorageSheet(existing) {
           testWeight: twOverride ? parseFloat(twOverride) : null,
           gradeBands: cleanBands(readLayerRows(root)),
           gradeBandsDate: root.querySelector('#lay-asof')?.value || todayLocal(),
-          ...readQuality(root),
+          ...readQuality(root, gradeCtl),
           notes: getVal(root, 's-notes')?.trim() || '',
         };
         if (kind === 'silo') {
@@ -1185,7 +1198,7 @@ function openStorageSheet(existing) {
         ${field({ label: 'Unit', id: 's-unit', value: existing?.unitLabel, placeholder: 'e.g. round bales, bales, t', hint: "Whatever this storage counts — shown next to the tracked stock figure" })}
         ${field({ label: 'Opening / current stock', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
-        ${qualityFold(existing, gradesInUse)}
+        ${qualityFold(existing, commodities.find((c) => c.id === existing?.commodityId))}
         ${notesField(existing)}
         ${existing ? predictorFold(existing) : ''}
         ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
@@ -1213,12 +1226,13 @@ function openStorageSheet(existing) {
       root.querySelector('#s-opening').addEventListener('input', recomputeLedger);
       root.querySelector('#s-unit').addEventListener('input', recomputeLedger);
       recomputeLedger();
+      wireGrade(root);
 
       root.querySelector('#save').addEventListener('click', () => {
         const name = getVal(root, 's-name')?.trim();
         if (!name) { root.querySelector('#s-name').focus(); return; }
         db.upsertStorage({
-          ...readQuality(root),
+          ...readQuality(root, gradeCtl),
           notes: getVal(root, 's-notes')?.trim() || '',
           id: existing?.id,
           kind,

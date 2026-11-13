@@ -1,21 +1,22 @@
-import { db } from '../storage.js?v=212';
-import { getTheme, setTheme } from '../theme.js?v=212';
-import { num, money, esc } from '../fmt.js?v=212';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=212';
-import { openLoadImportSheet } from './importloads.js?v=212';
-import { APP_VERSION } from '../version.js?v=212';
-import { exportRowsAsCSV } from '../csv.js?v=212';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=212';
-import { endpointLabel } from './movements.js?v=212';
-import { layersForStorage } from '../outload.js?v=212';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=212';
+import { db } from '../storage.js?v=213';
+import { getTheme, setTheme } from '../theme.js?v=213';
+import { num, money, esc } from '../fmt.js?v=213';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=213';
+import { openLoadImportSheet } from './importloads.js?v=213';
+import { APP_VERSION } from '../version.js?v=213';
+import { exportRowsAsCSV } from '../csv.js?v=213';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=213';
+import { endpointLabel } from './movements.js?v=213';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=213';
+import { layersForStorage } from '../outload.js?v=213';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=213';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=212';
+} from '../invites.js?v=213';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=212';
+} from '../auth.js?v=213';
 
 let unsub = null;
 
@@ -61,6 +62,15 @@ function paint(root) {
       <div class="card input">
         <h2><span class="dot input"></span>Commodities</h2>
         ${commodities.length === 0 ? `<div class="empty">Tap + to add a commodity.</div>` : commodities.map((c) => commodityRow(c)).join('')}
+      </div>
+
+      <div class="card input">
+        <h2><span class="dot input"></span>Grades</h2>
+        <div class="hint" style="margin-bottom:8px">The grade lists in the contract, load and storage dropdowns, and the standards behind each grade.</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn secondary small" id="grade-standards" style="flex:1">Grade standards</button>
+          <button class="btn secondary small" id="my-grades" style="flex:1">My grades</button>
+        </div>
       </div>
 
       <div class="card">
@@ -188,6 +198,8 @@ function paint(root) {
     el.addEventListener('click', () => openCommoditySheet(commodities.find((c) => c.id === el.dataset.editCommodity)));
   });
   root.querySelector('#add-commodity').addEventListener('click', () => openCommoditySheet(null));
+  root.querySelector('#grade-standards').addEventListener('click', () => openGradeStandardsSheet());
+  root.querySelector('#my-grades').addEventListener('click', () => openMyGradesSheet());
 
   root.querySelector('#go-account').addEventListener('click', () => {
     location.hash = '#/account';

@@ -18,21 +18,21 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=212';
+import { hydrate } from './hydrate.js?v=213';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=212';
-import { chooseBootState, resolveLegacy } from './boot.js?v=212';
-import { isLegacyDirty } from './dirty.js?v=212';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=212';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=212';
-import { settleLegs, dedupeLegs } from './legs.js?v=212';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=212';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=212';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=212';
-import { schedulePush, pushOnReconnect } from './sync.js?v=212';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=212';
+} from './local.js?v=213';
+import { chooseBootState, resolveLegacy } from './boot.js?v=213';
+import { isLegacyDirty } from './dirty.js?v=213';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=213';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=213';
+import { settleLegs, dedupeLegs } from './legs.js?v=213';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=213';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=213';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=213';
+import { schedulePush, pushOnReconnect } from './sync.js?v=213';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=213';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -526,6 +526,8 @@ export const db = {
         id, name: c.name, angleOfRepose: c.angleOfRepose, testWeight: c.testWeight,
         nPerTonne: c.nPerTonne, mtmPrice: 0, openingStock: 0, retainedSeed: 0,
         grossMarginCost: 0,
+        // the farm's own grades carry into the new season with the commodity
+        ...(c.customGrades?.length ? { customGrades: [...c.customGrades], __hasCustomGrades: true } : {}),
       };
     });
     const mapCommodity = (oldId) => (oldId && idMap.has(oldId) ? idMap.get(oldId) : null);
@@ -584,6 +586,7 @@ export const db = {
       if (idx >= 0) {
         const merged = { ...c.commodities[idx], ...commodity };
         if (Number(merged.openingValue)) merged.__hasOpeningValue = true;
+        if (merged.customGrades?.length) merged.__hasCustomGrades = true;
         c.commodities[idx] = merged;
       }
       touch('commodity', commodity.id);

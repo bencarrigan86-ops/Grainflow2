@@ -1,12 +1,13 @@
-import { db } from '../storage.js?v=212';
-import { movementsForEndpoint } from '../derived.js?v=212';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=212';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=212';
-import { compressAndStampImage } from '../img.js?v=212';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=212';
-import { specText } from '../outload.js?v=212';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=212';
-import { pickableSilos } from '../silopick.js?v=212';
+import { db } from '../storage.js?v=213';
+import { movementsForEndpoint } from '../derived.js?v=213';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=213';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=213';
+import { compressAndStampImage } from '../img.js?v=213';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=213';
+import { specText } from '../outload.js?v=213';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=213';
+import { pickableSilos } from '../silopick.js?v=213';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=213';
 
 let unsub = null;
 
@@ -539,7 +540,7 @@ export function openMovementSheet(existing, template) {
           <div class="sub">Grade, moisture, protein, screenings, test weight, falling number</div></div></summary>
         <div class="field hint" style="margin-bottom:8px">What was on this truck. It lets the storage it went into say what
           each load out of it will carry.</div>
-        ${field({ label: 'Grade', id: 'lq-grade', value: existing?.grade, placeholder: 'e.g. APH1' })}
+        ${gradeFieldHtml({ id: 'lq-grade', commodity: commodities.find((c) => c.id === ctx.commodityId), value: existing?.grade })}
         <div class="grid-2">
           ${field({ label: 'Moisture (%)', id: 'lq-moisture', type: 'number', step: '0.1', value: existing?.moisturePct ?? '' })}
           ${field({ label: 'Protein (%)', id: 'lq-protein', type: 'number', step: '0.1', value: existing?.proteinPct ?? '' })}
@@ -576,10 +577,13 @@ export function openMovementSheet(existing, template) {
     root.querySelector('#add-from').addEventListener('click', () => addFromRow(fromRowsEl, ctx, recomputeSourcesTotal));
     recomputeSourcesTotal();
 
+    // the grade dropdown follows the commodity: its published grades and the farm's own
+    const gradeCtl = wireGradeField(root, 'lq-grade', () => commodities.find((c) => c.id === ctx.commodityId));
     root.querySelector('#m-commodity').addEventListener('change', (e) => {
       ctx.commodityId = e.target.value;
       ctx.refreshAll();
       recomputeSourcesTotal();
+      gradeCtl.refresh();
     });
 
     let toKind = existingSaleTo ? 'sale' : 'silo';
@@ -753,7 +757,7 @@ export function openMovementSheet(existing, template) {
         ...(() => {
           const n = (id) => (getVal(root, id) === '' || getVal(root, id) == null ? null : getNum(root, id));
           return {
-            grade: getVal(root, 'lq-grade')?.trim() || '',
+            grade: gradeCtl.read() || '',
             moisturePct: n('lq-moisture'), proteinPct: n('lq-protein'), screeningsPct: n('lq-screenings'),
             testWeightKgHl: n('lq-tw'), fallingNumber: n('lq-fn'),
           };
