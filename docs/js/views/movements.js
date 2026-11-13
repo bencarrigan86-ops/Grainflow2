@@ -1,12 +1,12 @@
-import { db } from '../storage.js?v=207';
-import { movementsForEndpoint } from '../derived.js?v=207';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=207';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=207';
-import { compressAndStampImage } from '../img.js?v=207';
-import { displayUrlFor } from '../photos.js?v=207';
-import { specText } from '../outload.js?v=207';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=207';
-import { pickableSilos } from '../silopick.js?v=207';
+import { db } from '../storage.js?v=208';
+import { movementsForEndpoint } from '../derived.js?v=208';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=208';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=208';
+import { compressAndStampImage } from '../img.js?v=208';
+import { displayUrlFor } from '../photos.js?v=208';
+import { specText } from '../outload.js?v=208';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=208';
+import { pickableSilos } from '../silopick.js?v=208';
 
 let unsub = null;
 
@@ -239,7 +239,7 @@ export function movementRow(m, ctx) {
       </div>
       <div class="li-foot" style="margin-top:2px">
         <span class="meta">${details}</span>
-        <span class="badges"><span class="badge ${stage ? 'warn' : 'pos'}">${stage ? STAGES[stage] : 'Final'}</span>${(m.photoDataUrl || m.photoPath) ? '<span aria-label="Has photo">📷</span>' : ''}</span>
+        <span class="badges"><span class="badge ${stage ? 'warn' : 'pos'}">${stage ? STAGES[stage] : 'Final'}</span>${m.photoDataUrl ? '<span aria-label="Photo waiting to upload" title="Photo waiting to upload">📷⏳</span>' : (m.photoPath ? '<span aria-label="Has photo">📷</span>' : '')}</span>
       </div>
       ${specText(m) ? `<div class="meta">${esc(specText(m))}</div>` : ''}
       ${fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
@@ -688,9 +688,14 @@ export function openMovementSheet(existing, template) {
 
     async function renderPhotoPreview() {
       const src = photoDataUrl || (photoPath ? await displayUrlFor({ photoPath }) : null);
+      // Say where the photo is: still only on this phone, up on the server, or up there but not showing
+      const where = photoDataUrl ? 'Waiting to upload. It is kept on this phone and goes up when there is signal.'
+        : photoPath ? (src ? 'Uploaded.' : 'Uploaded, but it cannot be shown right now. Check your signal and reopen this ticket.')
+          : '';
+      const note = where ? `<div class="hint" style="margin-top:6px">${where}</div>` : '';
       photoPreview.innerHTML = src
-        ? `<img src="${src}" style="width:100%;border-radius:10px;display:block" /><button class="btn secondary small" id="m-photo-remove" style="margin-top:8px">Remove photo</button>`
-        : '';
+        ? `<img src="${src}" style="width:100%;border-radius:10px;display:block" />${note}<button class="btn secondary small" id="m-photo-remove" style="margin-top:8px">Remove photo</button>`
+        : note;
       const removeBtn = photoPreview.querySelector('#m-photo-remove');
       if (removeBtn) removeBtn.addEventListener('click', () => { photoDataUrl = null; photoPath = null; renderPhotoPreview(); });
     }

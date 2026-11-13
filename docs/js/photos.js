@@ -14,7 +14,7 @@
 // stays a data URL until there is signal to upload it, and displays fine in
 // the meantime.
 
-import { supabase } from './supabase.js?v=207';
+import { supabase } from './supabase.js?v=208';
 
 const BUCKET = 'movement-photos';
 const SIGNED_URL_TTL = 60 * 60; // an hour is plenty for a screen, short enough to not be a link
@@ -78,6 +78,19 @@ export async function displayUrlFor(movement) {
   if (movement?.photoDataUrl) return movement.photoDataUrl;
   if (movement?.photoPath) return signedUrlFor(movement.photoPath);
   return null;
+}
+
+/**
+ * The tickets whose photo is still only on this device, as a data URL waiting to go up. Such a ticket
+ * must stay owed to the server: nothing else holds the photo, so a refresh that swapped in the server's
+ * copy would lose it.
+ */
+export function pendingPhotoIds(state) {
+  const ids = [];
+  for (const year of Object.values(state?.years || {})) {
+    for (const m of year.movements || []) if (m.photoDataUrl && m.id) ids.push(m.id);
+  }
+  return ids;
 }
 
 /**

@@ -41,5 +41,31 @@ check('a library photo is stamped with when it was taken, a camera photo with no
   assert.match(img, /takenAt instanceof Date/);
 });
 
+console.log('\n=== a photo that has not uploaded is not lost, and not silent ===');
+
+const sync = readFileSync(join(ROOT, 'sync.js'), 'utf8');
+const photos = readFileSync(join(ROOT, 'photos.js'), 'utf8');
+const main = readFileSync(join(ROOT, 'main.js'), 'utf8');
+
+check('a ticket whose photo is still only on the device is kept owed after a push, so a refresh cannot wipe it', () => {
+  const clear = sync.indexOf('await clearOutboxItems(');
+  const keep = sync.indexOf('pendingPhotoIds(state)');
+  assert.ok(clear !== -1 && keep !== -1, 'the push does not look for photos still waiting');
+  assert.ok(keep > clear, 'it marks the ticket before the outbox is cleared, so the mark is skipped as already there');
+  assert.match(sync, /markDirty\(waiting\.map/);
+});
+check('the photos waiting are the tickets still holding a data URL', () => {
+  assert.match(photos, /export function pendingPhotoIds/);
+  assert.match(photos, /if \(m\.photoDataUrl && m\.id\) ids\.push\(m\.id\)/);
+});
+check('a failed upload is said out loud, once per reason', () => {
+  assert.match(main, /grainflow:photo-upload-failed/);
+  assert.match(main, /photoFailuresShown/);
+});
+check('the ticket form and list say whether the photo is uploaded or waiting', () => {
+  assert.match(view, /Waiting to upload/);
+  assert.match(view, /Photo waiting to upload/);
+});
+
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
 console.log('\nall passed');

@@ -15,12 +15,12 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=207';
-import { stateToRows } from './mapping.js?v=207';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=207';
-import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=207';
-import { flushPendingPhotos } from './photos.js?v=207';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=207';
+import { supabase } from './supabase.js?v=208';
+import { stateToRows } from './mapping.js?v=208';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=208';
+import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=208';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=208';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=208';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -243,6 +243,14 @@ export async function push(state, farmId, role = 'owner') {
     }
 
     await clearOutboxItems(sentSeqs.filter((q) => !stuck.has(q)));
+    // A photo that could not go up is still only on this device. Its ticket stays owed, so the next push
+    // tries again and a refresh from the server cannot swap the photo away. (After the clear above, because
+    // an entry for the ticket still sitting in the outbox would stop it being added again.)
+    const waiting = pendingPhotoIds(state);
+    if (waiting.length) {
+      await markDirty(waiting.map((id) => ({ kind: 'movement', id }))).catch((e) => console.warn('Could not keep the photo owed', e));
+      result.photosWaiting = waiting.length;
+    }
     if (stuck.size) return result;
     result.ok = true;
     return result;
