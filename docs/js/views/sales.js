@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=214';
+import { db } from '../storage.js?v=216';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=214';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=214';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=214';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=214';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=214';
-import { renderRelatedMovements } from './movements.js?v=214';
-import { openInvoiceListSheet } from './invoice.js?v=214';
-import { openContractDocSheet } from './contract.js?v=214';
-import { wireJumps } from '../jump.js?v=214';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=214';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=214';
+} from '../documents.js?v=216';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=216';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=216';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=216';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=216';
+import { renderRelatedMovements } from './movements.js?v=216';
+import { openInvoiceListSheet } from './invoice.js?v=216';
+import { openContractDocSheet } from './contract.js?v=216';
+import { wireJumps } from '../jump.js?v=216';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=216';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=216';
 
 let unsub = null;
 
@@ -407,9 +407,9 @@ function openSaleSheet(existing) {
       </details>
 
       <details class="fold feature" id="grade-fold" ${openGrades ? 'open' : ''}>
-        <summary><div class="feature-head"><h2>Several grades</h2>
+        <summary><div class="feature-head"><h2>Multigrade</h2>
           <div class="sub">A premium or discount for each grade the buyer will take</div></div></summary>
-        <div class="field hint" style="margin:10px 0">List the grades this contract accepts, each with its $/t
+        <div class="field hint" style="margin:10px 14px">List the grades this contract accepts, each with its $/t
           premium or discount. Every load delivered is paid the price above plus the adjustment for its own grade.
           A load whose grade is not listed is paid the price as it stands.</div>
         <div id="go-rows"></div>
