@@ -27,7 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=220';
+import { cleanGradeOptions } from './gradeprice.js?v=221';
+import { cleanOffFarm } from './offfarm.js?v=221';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -92,6 +93,7 @@ export function movementFromRow(m, legs = [], photo = null) {
     notes: m.notes ?? '',
     correctsId: m.corrects_id,
     ...(m.source_ref ? { sourceRef: m.source_ref } : {}),
+    ...(m.external_ticket_no != null ? { externalTicketNo: m.external_ticket_no, __hasExtTicket: true } : {}),
     ...loadQuality.fromRow(m),
     ...(m.updated_at ? { __rev: m.updated_at } : {}),
     froms: legs.filter((l) => l.direction === 'from').map(toLeg),
@@ -277,6 +279,9 @@ export function stateToRows(state, farmId) {
         ...qualityColumns(st),
         ...noteColumns(st),
         ...bandColumns(st),
+        // A location held by a third party, with who runs it and what it held at the start of the season by grade.
+        // Optional like the other later columns: only locations that are off-farm send it.
+        ...((st.offFarm || st.__hasOffFarm) ? { off_farm: st.offFarm ? cleanOffFarm(st.offFarm) : null } : {}),
       });
     }
 
@@ -364,6 +369,8 @@ export function stateToRows(state, farmId) {
         ticket_no: m.ticketNo ?? null,
         move_date: orNull(m.date),
         commodity_id: orNull(m.commodityId),
+        // The receiving site's own ticket number, for a load that goes to another site. Optional like the other later columns.
+        ...((m.externalTicketNo || m.__hasExtTicket) ? { external_ticket_no: orNull(m.externalTicketNo) } : {}),
         status: m.status || 'open',
         truck_rego: orNull(m.truckRego), driver_name: orNull(m.driver),
         gross_weight: orNull(m.grossWeight), tare_weight: orNull(m.tareWeight),
@@ -525,6 +532,7 @@ export function rowsToState(rows) {
         ...qualityFromRow(st),
         ...noteFromRow(st),
         ...bandsFromRow(st),
+        ...(st.off_farm ? { offFarm: cleanOffFarm(st.off_farm), __hasOffFarm: true } : {}),
       })),
 
       sales: inSeason(rows.sales, season.id).map((sale) => {

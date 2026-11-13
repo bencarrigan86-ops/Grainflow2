@@ -1,20 +1,22 @@
-import { db } from '../storage.js?v=220';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=220';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=220';
-import { isTransit } from '../transit.js?v=220';
-import { gradesFor, allGradeCodes } from '../grades.js?v=220';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=220';
-import { hasStorageQuality } from '../mapping.js?v=220';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=220';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=220';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=220';
-import { renderRelatedMovements } from './movements.js?v=220';
-import { openSiloSetupSheet } from './silosetup.js?v=220';
-import { commodityFills } from '../commodityfill.js?v=220';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS } from '../outload.js?v=220';
+import { db } from '../storage.js?v=221';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=221';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=221';
+import { isTransit } from '../transit.js?v=221';
+import { isOffFarm } from '../offfarm.js?v=221';
+import { paintOffFarmCard } from './offfarm.js?v=221';
+import { gradesFor, allGradeCodes } from '../grades.js?v=221';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=221';
+import { hasStorageQuality } from '../mapping.js?v=221';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=221';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=221';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=221';
+import { renderRelatedMovements } from './movements.js?v=221';
+import { openSiloSetupSheet } from './silosetup.js?v=221';
+import { commodityFills } from '../commodityfill.js?v=221';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS } from '../outload.js?v=221';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, siloSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=220';
+} from '../silolayers.js?v=221';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -46,7 +48,9 @@ export function renderStorage(root) {
 }
 
 function paint(root) {
-  const { commodities, storages, movements } = db.get();
+  const { commodities, storages: allStorages, movements } = db.get();
+  // locations held by a third party have their own card; they are not silos to measure
+  const storages = allStorages.filter((s) => !isOffFarm(s));
 
   root.innerHTML = `
     <div class="topbar">
@@ -80,8 +84,10 @@ function paint(root) {
   const body = root.querySelector('#storage-body');
   if (storages.length === 0) {
     body.innerHTML = `<div class="card"><h2>Saved silos &amp; bunkers</h2>
-      <div class="empty">Tap + to save a silo or bunker so you only enter today's level next time.</div></div>`;
+      <div class="empty">Tap + to save a silo or bunker so you only enter today's level next time.</div></div>
+      <div id="offfarm-card"></div>`;
     root.querySelector('#add-storage').addEventListener('click', () => openStorageSheet(null));
+    paintOffFarmCard(root.querySelector('#offfarm-card'));
     return;
   }
 
@@ -109,8 +115,10 @@ function paint(root) {
       <div id="storage-chips" style="margin-top:10px"></div>
       <div id="storage-list" style="margin-top:10px"></div>
     </div>
+    <div id="offfarm-card"></div>
   `;
   paintStorageParts(root);
+  paintOffFarmCard(root.querySelector('#offfarm-card'));
 
   // Typing repaints only what depends on the search, so the box keeps its cursor.
   root.querySelector('#storage-search').addEventListener('input', (e) => {
@@ -184,7 +192,7 @@ function withLayers(s, movements) {
 function paintStorageParts(root) {
   const { commodities, storages: saved, movements } = db.get();
   const transits = saved.filter(isTransit);
-  const storages = saved.filter((x) => !isTransit(x)).map((x) => withLayers(x, movements));
+  const storages = saved.filter((x) => !isTransit(x) && !isOffFarm(x)).map((x) => withLayers(x, movements));
   const found = searchStorages(storages, commodities, searchText);
 
   // ---- summary ----

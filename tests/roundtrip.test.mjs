@@ -104,6 +104,7 @@ function markerFor(key, ids) {
   if (key === 'ureaApplications') return [{ date: '2026-06-01', kgHa: 90 }];
   if (key === 'date' || key.endsWith('Date')) return '2026-06-01';
   if (key === 'gradeOptions') return [{ grade: 'APW1', adjust: 0 }, { grade: 'H2', adjust: 15 }, { grade: 'ASW1', adjust: -20 }];
+  if (key === 'offFarm') return { operator: 'GrainCorp', opening: [{ commodityId: ids.commodity, grade: 'APH1', tons: 450 }] };
   if (key === 'gradeBands') return [{ tons: 500, grade: 'APH1' }, { tons: 250, grade: 'AUH2', proteinPct: 11.5, moisturePct: 11, fallingNumber: 400 }];
   if (key === 'ticketNo' || key === 'invoiceNo') return 41;
   // A few the suffix rule below cannot see: the quantity word is in the middle

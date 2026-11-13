@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=220';
+import { db } from '../storage.js?v=221';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=220';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=220';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=220';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=220';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=220';
-import { renderRelatedMovements } from './movements.js?v=220';
-import { openInvoiceListSheet } from './invoice.js?v=220';
-import { openContractDocSheet } from './contract.js?v=220';
-import { wireJumps } from '../jump.js?v=220';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=220';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=220';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=220';
-import { standardFor } from '../grades.js?v=220';
+} from '../documents.js?v=221';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=221';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=221';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=221';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=221';
+import { renderRelatedMovements } from './movements.js?v=221';
+import { openInvoiceListSheet } from './invoice.js?v=221';
+import { openContractDocSheet } from './contract.js?v=221';
+import { wireJumps } from '../jump.js?v=221';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=221';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=221';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=221';
+import { standardFor } from '../grades.js?v=221';
 
 let unsub = null;
 

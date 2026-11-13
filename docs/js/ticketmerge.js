@@ -26,7 +26,7 @@ import { movementFromRow } from './mapping.js';
 export const TICKET_FIELDS = [
   ['date', 'Date'], ['commodityId', 'Commodity'], ['truckRego', 'Truck'], ['driver', 'Driver'],
   ['grossWeight', 'Gross weight'], ['tareWeight', 'Tare weight'], ['tons', 'Net load'],
-  ['weightStatus', 'Weight status'], ['notes', 'Notes'],
+  ['weightStatus', 'Weight status'], ['notes', 'Notes'], ['externalTicketNo', 'Their ticket number'],
   ['grade', 'Grade'], ['proteinPct', 'Protein'], ['moisturePct', 'Moisture'], ['screeningsPct', 'Screenings'],
   ['testWeightKgHl', 'Test weight'], ['fallingNumber', 'Falling number'], ['oilPct', 'Oil'],
   ['froms', 'Where it came from'], ['tos', 'Where it went'],

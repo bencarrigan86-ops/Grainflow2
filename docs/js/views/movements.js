@@ -1,13 +1,14 @@
-import { db } from '../storage.js?v=220';
-import { movementsForEndpoint } from '../derived.js?v=220';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=220';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=220';
-import { compressAndStampImage } from '../img.js?v=220';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=220';
-import { specText } from '../outload.js?v=220';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=220';
-import { pickableSilos } from '../silopick.js?v=220';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=220';
+import { db } from '../storage.js?v=221';
+import { movementsForEndpoint } from '../derived.js?v=221';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=221';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=221';
+import { compressAndStampImage } from '../img.js?v=221';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=221';
+import { specText } from '../outload.js?v=221';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=221';
+import { pickableSilos } from '../silopick.js?v=221';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=221';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=221';
 
 let unsub = null;
 
@@ -24,7 +25,7 @@ let listFilter = { q: '', commodityId: '', toFinish: false };
 function ticketSearchText(m, ctx) {
   const ends = [...(m.froms || []).map((f) => endpointLabel(f.type, f.id, ctx)), ...(m.tos || []).map((t) => endpointLabel(t.type, t.id, ctx))];
   const c = ctx.commodities.find((cc) => cc.id === m.commodityId);
-  return [m.ticketNo, m.sourceRef, m.date, m.truckRego, m.driver, m.notes, c?.name, ...ends].filter(Boolean).join(' ').toLowerCase();
+  return [m.ticketNo, m.sourceRef, m.externalTicketNo, m.date, m.truckRego, m.driver, m.notes, c?.name, ...ends].filter(Boolean).join(' ').toLowerCase();
 }
 
 function dayHeading(iso) {
@@ -157,7 +158,7 @@ function fieldOptions(fields, commodityId) {
 function siloOptions(storages, commodityId, opts = {}) {
   // the in-transit store is not a silo anyone picks by name: it has its own choice, on the destination only
   const list = pickableSilos(storages.filter((s) => !isTransit(s)), commodityId, opts);
-  return [{ value: '', label: 'Select…' }, ...list.map((s) => ({ value: `silo:${s.id}`, label: s.name }))];
+  return [{ value: '', label: 'Select…' }, ...list.map((s) => ({ value: `silo:${s.id}`, label: s.offFarm ? `${s.name} (off-farm)` : s.name }))];
 }
 
 /** Where a load can go: In transit first (grain on a truck, not yet in a silo), then the silos. */
@@ -231,7 +232,7 @@ export function movementRow(m, ctx) {
   const toBreakdown = tos.length > 1
     ? tos.map((t) => `To ${endpointLabel(t.type, t.id, ctx)}: ${num(t.tons, 2)} t`).join(', ')
     : null;
-  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
+  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
   return `
     <div class="list-item stack" data-edit-movement="${m.id}">
       <div class="li-top">
@@ -478,14 +479,17 @@ export function openMovementSheet(existing, template) {
     return '';
   }
 
+  // an off-farm location is offered to take grain out of only when it holds some of the commodity
+  const offCtx = { fields, storages, sales };
+  const holdsHere = (loc, commodityId) => holdsCommodity(loc, movements, offCtx, commodityId);
   const keepSilos = [...(src?.froms || []), ...(src?.tos || [])].filter((l) => l.type === 'silo' && l.id).map((l) => l.id);
   const ctx = {
     commodityId: inferCommodityId(),
     refreshers: [],
     fieldOpts() { return fieldOptions(fields, this.commodityId); },
     // silos already on this ticket always stay on the list, so editing an old ticket never loses one
-    siloOpts() { return siloOptions(storages, this.commodityId, { movements, keep: keepSilos }); },
-    toSiloOpts() { return toSiloOptions(storages, this.commodityId, { movements, keep: keepSilos }); },
+    siloOpts() { return siloOptions(storages, this.commodityId, { movements, keep: keepSilos, holds: holdsHere }); },
+    toSiloOpts() { return toSiloOptions(storages, this.commodityId, { movements, keep: keepSilos, holds: holdsHere }); },
     isTransitId(id) { return isTransit(storages.find((x) => x.id === id)); },
     saleOpts() { return saleOptions(sales, commodities, this.commodityId); },
     refreshAll() { this.refreshers.forEach((fn) => fn()); },
@@ -508,6 +512,7 @@ export function openMovementSheet(existing, template) {
       <div id="from-rows"></div>
       <button type="button" class="btn secondary small" id="add-from">+ Add source</button>
       <div class="row" style="margin-bottom:14px"><span class="label">Sources total</span><span class="value" id="from-sources-total">0.0 t</span></div>
+      <div id="offfarm-note" class="hint" style="margin:-6px 0 12px"></div>
       <div class="field">
         <label>To</label>
         <div class="segmented" id="to-kind">
@@ -520,6 +525,7 @@ export function openMovementSheet(existing, template) {
         ${field({ label: 'Truck rego', id: 'truckRego', value: src?.truckRego, list: 'dl-regos' })}
         ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
       </div>
+      ${field({ label: 'Their ticket no.', id: 'extTicket', value: existing?.externalTicketNo, placeholder: 'Their number for this load', hint: 'When the load goes to another site, the number on their ticket' })}
       <hr class="sep" />
       <div class="field"><label>Weight</label></div>
       <div class="grid-2">
@@ -572,9 +578,11 @@ export function openMovementSheet(existing, template) {
 
     const fromRowsEl = root.querySelector('#from-rows');
     const sourcesTotalEl = root.querySelector('#from-sources-total');
+    let offFarmNoteHook = null;   // set once the grade box exists, below
     function recomputeSourcesTotal() {
       const total = readFromRows(fromRowsEl).reduce((s, f) => s + (Number(f.tons) || 0), 0);
       sourcesTotalEl.textContent = tons(total);
+      offFarmNoteHook?.();
     }
     existingFroms.forEach((f) => addFromRow(fromRowsEl, ctx, recomputeSourcesTotal, f));
     root.querySelector('#add-from').addEventListener('click', () => addFromRow(fromRowsEl, ctx, recomputeSourcesTotal));
@@ -582,6 +590,34 @@ export function openMovementSheet(existing, template) {
 
     // the grade dropdown follows the commodity: its published grades and the farm's own
     const gradeCtl = wireGradeField(root, 'lq-grade', () => commodities.find((c) => c.id === ctx.commodityId));
+    // What an off-farm location holds of this commodity and grade, against what this load takes out of it, and
+    // the grade a load going into one will be held under.
+    const offFarmNoteEl = root.querySelector('#offfarm-note');
+    offFarmNoteHook = () => {
+      const grade = gradeCtl.read();
+      const lines = [];
+      for (const from of readFromRows(fromRowsEl)) {
+        const loc = from.type === 'silo' ? storages.find((s) => s.id === from.id) : null;
+        if (!loc?.offFarm) continue;
+        if (!ctx.commodityId) { lines.push(`Choose the commodity above to check what ${esc(loc.name)} holds.`); continue; }
+        const held = heldOf(loc, movements, offCtx, ctx.commodityId, grade, { except: existing?.id });
+        const what = grade ? esc(grade) : 'ungraded grain';
+        lines.push(from.tons > held + 0.0005
+          ? `<strong style="color:var(--danger)">${esc(loc.name)} holds ${num(held, 1)} t of ${what}; this load takes ${num(from.tons, 1)} t.</strong>`
+          : `${esc(loc.name)} holds ${num(held, 1)} t of ${what}.`);
+      }
+      const toRowsBox = root.querySelector('#to-rows');
+      for (const to of toRowsBox ? readToRows(toRowsBox) : []) {
+        const loc = to.type === 'silo' ? storages.find((s) => s.id === to.id) : null;
+        if (!loc?.offFarm) continue;
+        lines.push(grade ? `${esc(loc.name)} will hold this load as ${esc(grade)}.` : `This load has no grade, so ${esc(loc.name)} will hold it as ungraded. Set the grade under Load quality to keep it by grade.`);
+      }
+      offFarmNoteEl.innerHTML = lines.join(' ');
+    };
+    root.addEventListener('change', () => offFarmNoteHook());
+    root.addEventListener('input', () => offFarmNoteHook());
+    offFarmNoteHook();
+
     root.querySelector('#m-commodity').addEventListener('change', (e) => {
       ctx.commodityId = e.target.value;
       ctx.refreshAll();
@@ -750,6 +786,9 @@ export function openMovementSheet(existing, template) {
         date: getVal(root, 'date'),
         froms,
         tos,
+        // the commodity of the load, when one is chosen: holdings off-farm are kept by commodity and grade
+        ...(ctx.commodityId ? { commodityId: ctx.commodityId } : {}),
+        externalTicketNo: getVal(root, 'extTicket')?.trim() || '',
         truckRego: getVal(root, 'truckRego')?.trim(),
         driver: getVal(root, 'driver')?.trim(),
         grossWeight: getVal(root, 'gross') ? getNum(root, 'gross') : null,

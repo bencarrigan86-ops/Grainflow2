@@ -21,7 +21,7 @@ function commodityOfLoad(m, fieldsById) {
  * @returns {{fills: {storage: object, commodityId: string, loads: number}[],
  *            mixed: {storage: object, commodityIds: string[]}[]}}
  */
-import { isTransit } from './transit.js?v=220';
+import { isTransit } from './transit.js?v=221';
 
 export function commodityFills(storages, movements, fields = []) {
   const fieldsById = new Map(fields.map((f) => [f.id, f]));
@@ -39,7 +39,8 @@ export function commodityFills(storages, movements, fields = []) {
   const fills = [];
   const mixed = [];
   for (const s of storages) {
-    if (s.commodityId || isTransit(s)) continue;
+    // an off-farm location holds several commodities, so it is never given one
+    if (s.commodityId || isTransit(s) || s.offFarm) continue;
     const by = seen.get(s.id);
     if (!by || by.size === 0) continue;
     if (by.size === 1) {

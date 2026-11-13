@@ -18,21 +18,22 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=220';
+import { hydrate } from './hydrate.js?v=221';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=220';
-import { chooseBootState, resolveLegacy } from './boot.js?v=220';
-import { isLegacyDirty } from './dirty.js?v=220';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=220';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=220';
-import { settleLegs, dedupeLegs } from './legs.js?v=220';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=220';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=220';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=220';
-import { schedulePush, pushOnReconnect } from './sync.js?v=220';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=220';
+} from './local.js?v=221';
+import { chooseBootState, resolveLegacy } from './boot.js?v=221';
+import { isLegacyDirty } from './dirty.js?v=221';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=221';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=221';
+import { settleLegs, dedupeLegs } from './legs.js?v=221';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=221';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=221';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=221';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=221';
+import { schedulePush, pushOnReconnect } from './sync.js?v=221';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=221';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -146,6 +147,8 @@ function touch(kind, id) { touched.push(id === undefined ? { kind } : { kind, id
 /** Once an oil figure has been recorded, keep sending the column, so clearing it reaches the server (see mapping.js). */
 function markOil(rec) {
   if (rec.oilPct !== null && rec.oilPct !== undefined && rec.oilPct !== '' && Number.isFinite(Number(rec.oilPct))) rec.__hasOil = true;
+  // the same for a ticket's own number from the receiving site
+  if (rec.externalTicketNo) rec.__hasExtTicket = true;
 }
 
 /** What this device owes the server, not counting pre-tracking markers (which
@@ -549,6 +552,8 @@ export const db = {
       capacityTons: s.capacityTons, angleOfRepose: s.angleOfRepose,
       testWeight: s.testWeight, tarpOverhangM: s.tarpOverhangM,
       currentHeight: 0, length: 0, fillState: 'peak', openingStock: 0,
+      // grain held by a third party is still held when the season turns: what it holds now is what it opens with
+      ...(isOffFarm(s) ? { offFarm: carryOffFarm(s, src.movements, { fields: src.fields, storages: src.storages, sales: src.sales }, idMap), __hasOffFarm: true } : {}),
     }));
 
     data.years[label] = {
@@ -743,6 +748,7 @@ export const db = {
         markOil(merged);
         if (hasStorageNote(merged)) merged.__hasNotes = true;
         if (hasGradeBands(merged)) merged.__hasBands = true;
+        if (merged.offFarm) merged.__hasOffFarm = true;
         c.storages[idx] = merged;
       }
       touch('storage', storage.id);
@@ -753,6 +759,7 @@ export const db = {
       markOil(made);
       if (hasStorageNote(made)) made.__hasNotes = true;
       if (hasGradeBands(made)) made.__hasBands = true;
+      if (made.offFarm) made.__hasOffFarm = true;
       c.storages.push(made);
       touch('storage', id);
       persist();

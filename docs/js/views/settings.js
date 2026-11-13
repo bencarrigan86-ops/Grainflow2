@@ -1,22 +1,23 @@
-import { db } from '../storage.js?v=220';
-import { getTheme, setTheme } from '../theme.js?v=220';
-import { num, money, esc } from '../fmt.js?v=220';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=220';
-import { openLoadImportSheet } from './importloads.js?v=220';
-import { APP_VERSION } from '../version.js?v=220';
-import { exportRowsAsCSV } from '../csv.js?v=220';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=220';
-import { endpointLabel } from './movements.js?v=220';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=220';
-import { layersForStorage } from '../outload.js?v=220';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=220';
+import { db } from '../storage.js?v=221';
+import { getTheme, setTheme } from '../theme.js?v=221';
+import { num, money, esc } from '../fmt.js?v=221';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=221';
+import { openLoadImportSheet } from './importloads.js?v=221';
+import { APP_VERSION } from '../version.js?v=221';
+import { exportRowsAsCSV } from '../csv.js?v=221';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=221';
+import { endpointLabel } from './movements.js?v=221';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=221';
+import { layersForStorage } from '../outload.js?v=221';
+import { holdings, totalHeld } from '../offfarm.js?v=221';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=221';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=220';
+} from '../invites.js?v=221';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=220';
+} from '../auth.js?v=221';
 
 let unsub = null;
 
@@ -893,6 +894,7 @@ function exportMovementsCSV(year, stamp) {
   const { movements } = data;
   exportRowsAsCSV(`grainflow-movements-${year}-${stamp}.csv`, movements, [
     { label: 'Ticket No', get: (m) => m.ticketNo ?? '' },
+    { label: 'Their ticket no.', get: (m) => m.externalTicketNo ?? '' },
     { label: 'Date', get: (m) => m.date ?? '' },
     { label: 'From', get: (m) => endpointsLabel(m.froms, data) },
     { label: 'To', get: (m) => endpointsLabel(m.tos, data) },
@@ -909,16 +911,20 @@ function exportMovementsCSV(year, stamp) {
 }
 
 function exportStorageCSV(year, stamp) {
-  const { commodities, storages, movements } = db.get();
+  const data = db.get();
+  const { commodities, storages, movements } = data;
   exportRowsAsCSV(`grainflow-storage-${year}-${stamp}.csv`, storages, [
     { label: 'Name', get: (s) => s.name },
-    { label: 'Kind', get: (s) => s.kind === 'bunker' ? 'Bunker' : 'Silo' },
+    { label: 'Kind', get: (s) => (s.offFarm ? 'Off-farm' : s.kind === 'bunker' ? 'Bunker' : 'Silo') },
     { label: 'Commodity', get: (s) => commodityName(commodities, s.commodityId) },
     { label: 'Opening stock (t)', get: (s) => s.openingStock ?? '' },
-    { label: 'Tracked stock (t)', get: (s) => num(storageLedgerStock(s, movements), 2) },
+    // an off-farm location is held by grade: its tracked stock is what it holds, all grades
+    { label: 'Tracked stock (t)', get: (s) => num(s.offFarm ? totalHeld(holdings(s, movements, { fields: data.fields, storages: data.storages, sales: data.sales })) : storageLedgerStock(s, movements), 2) },
+    { label: 'Held by grade (off-farm)', get: (s) => (s.offFarm ? holdings(s, movements, { fields: data.fields, storages: data.storages, sales: data.sales }).map((h) => `${commodityName(commodities, h.commodityId) || 'Unknown'} ${h.grade || 'No grade'} ${num(h.tons, 2)} t`).join('; ') : '') },
+    { label: 'Run by (off-farm)', get: (s) => s.offFarm?.operator ?? '' },
     { label: 'Crop year', get: (s) => s.cropYear ?? '' },
     // Grade and measurements: the weighted average of what is in the silo now, layer by layer
-    ...qualityColumns((s) => averageQuality(layersForStorage(s, movements).layers.map((l) => ({ tons: l.tons, spec: l.spec })))),
+    ...qualityColumns((s) => averageQuality(s.offFarm ? [] : layersForStorage(s, movements).layers.map((l) => ({ tons: l.tons, spec: l.spec })))),
     { label: 'Capacity (t)', get: (s) => s.capacityTons ?? '' },
     { label: 'Radius / Width (m)', get: (s) => s.kind === 'bunker' ? (s.width ?? '') : (s.radius ?? '') },
     { label: 'Height / Length (m)', get: (s) => s.kind === 'bunker' ? (s.length ?? '') : (s.currentHeight ?? '') },

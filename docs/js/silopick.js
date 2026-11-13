@@ -14,14 +14,18 @@ const EMPTY_T = 0.05;
 /**
  * @param {object[]} storages
  * @param {string} commodityId   '' means no commodity chosen: every silo is offered
- * @param {{movements?: object[], to?: boolean, keep?: string[]}} opts
+ * @param {{movements?: object[], to?: boolean, keep?: string[], holds?: (loc: object, commodityId: string) => boolean}} opts
  *   to    - the silos a load can go into, which also include empty ones
  *   keep  - silos already on the ticket, which stay on the list so an old ticket does not lose them
+ *   holds - whether an off-farm location holds any of the commodity; it holds many commodities, so
+ *           it is offered to take grain out of only if it holds some, and to put grain into always
  */
-export function pickableSilos(storages, commodityId, { movements = [], to = false, keep = [] } = {}) {
+export function pickableSilos(storages, commodityId, { movements = [], to = false, keep = [], holds = null } = {}) {
   return (storages || []).filter((s) => {
     if (keep.includes(s.id)) return true;
     if (!commodityId) return true;
+    // a third party's location is not matched on one commodity: see `holds`
+    if (s.offFarm) return to || (typeof holds === 'function' && holds(s, commodityId));
     // an empty silo can take any grain, whatever it last held
     if (to && storageLedgerStock(s, movements) <= EMPTY_T) return true;
     return !!s.commodityId && s.commodityId === commodityId;
