@@ -4,19 +4,28 @@
 // and Bought, Used and Count record an entry. Seed and fertiliser also show what this season's paddocks call for
 // against what is in the shed. The arithmetic is in inputs.js.
 
-import { db } from '../storage.js?v=245';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=245';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=245';
-import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=245';
+import { db } from '../storage.js?v=246';
+import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=246';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=246';
+import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=246';
+import { isTransit } from '../transit.js?v=246';
+import { isOffFarm } from '../offfarm.js?v=246';
 import {
   KINDS, UNITS, MOVE_TYPES, kindLabel, defaultUnit, productKey, stockLevels, productMoves, stockValue,
-  plannedNeeds, planVsStock, inputProblems, adjustmentFor, moveDelta, qtyText,
-} from '../inputs.js?v=245';
+  plannedNeeds, planVsStock, inputProblems, adjustmentFor, moveDelta, qtyText, onHandAt,
+} from '../inputs.js?v=246';
 
 const TYPE_LABEL = { buy: 'Bought', use: 'Used', adjust: 'Count' };
 const TYPE_BADGE = { buy: 'pos', use: 'warn', adjust: 'muted' };
 
-const levelsNow = () => stockLevels(db.getInputMoves());
+// The places stock can be kept: the farm's own silos, sheds and other storages (not a truck in transit, nor
+// grain held by someone else).
+const storageNames = () => [...new Set(db.get().storages.filter((x) => !isTransit(x) && !isOffFarm(x)).map((x) => String(x.name || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+/** "Shed 2 25 t, Silo 3 15 t" for a product kept in more than one place; nothing when no place is recorded. */
+const whereText = (l) => (l.locations.some((x) => x.location)
+  ? l.locations.map((x) => `${esc(x.location || 'No place recorded')} ${qtyText(x.onHand, l.unit)}`).join(' &middot; ')
+  : '');
 
 /** The stock screen: every product with what is on hand. */
 export function openInputsSheet() {
@@ -46,6 +55,7 @@ export function openInputsSheet() {
         return `<div class="group-label"><span>${esc(k.plural)}</span></div>${mine.map((l) => `
           <div class="list-item stack" data-product="${esc(l.key)}">
             <div class="li-top"><div class="main">${esc(l.product)}</div><div class="main" ${l.onHand < 0 ? 'style="color:var(--danger)"' : ''}>${qtyText(l.onHand, l.unit)}</div></div>
+            ${whereText(l) ? `<div class="meta">${whereText(l)}</div>` : ''}
             <div class="li-foot"><span class="meta">Bought ${qtyText(l.bought, l.unit)} &middot; used ${qtyText(l.used, l.unit)}${l.avgCost > 0 ? ` &middot; ${money(l.avgCost, 2)} /${esc(l.unit)}` : ''}</span>
               <span class="badges">${l.onHand < 0 ? '<span class="badge neg">Check count</span>' : l.onHand === 0 ? '<span class="badge muted">None left</span>' : ''}</span></div>
           </div>`).join('')}`;
@@ -81,12 +91,16 @@ function openProductSheet(level) {
         <button type="button" class="btn secondary" data-new="use">Used</button>
         <button type="button" class="btn secondary" data-new="adjust">Count</button>
       </div>
+      ${level.locations.some((x) => x.location) ? `<div class="card" style="margin-top:12px">
+        <h2>Where it is</h2>
+        ${level.locations.map((x) => `<div class="row"><span class="label">${esc(x.location || 'No place recorded')}</span><span class="value" ${x.onHand < 0 ? 'style="color:var(--danger)"' : ''}>${qtyText(x.onHand, level.unit)}</span></div>`).join('')}
+      </div>` : ''}
       <div class="card" style="margin-top:12px">
         <h2>History</h2>
         ${moves.map((m) => `
           <div class="list-item stack" data-edit-move="${esc(m.id)}">
             <div class="li-top"><div class="main">${esc(dmy(m.date) || 'No date')}</div><div class="main">${moveDelta(m) >= 0 ? '+' : '&minus;'}${qtyText(Math.abs(moveDelta(m)), m.unit)}</div></div>
-            <div class="li-foot"><span class="meta">${[m.supplier, m.reference ? `Ref ${m.reference}` : '', Number(m.unitCost) > 0 ? `${money(m.unitCost, 2)} /${m.unit}` : '', m.notes].filter(Boolean).map(esc).join(' &middot; ')}</span>
+            <div class="li-foot"><span class="meta">${[m.location, m.supplier, m.reference ? `Ref ${m.reference}` : '', Number(m.unitCost) > 0 ? `${money(m.unitCost, 2)} /${m.unit}` : '', m.notes].filter(Boolean).map(esc).join(' &middot; ')}</span>
               <span class="badges"><span class="badge ${TYPE_BADGE[m.type]}">${TYPE_LABEL[m.type]}</span></span></div>
           </div>`).join('')}
       </div>
@@ -107,7 +121,7 @@ export function openMoveSheet(existing, start = {}) {
   const otherLevels = stockLevels(others);
   let d = existing ? { ...existing } : {
     type: start.type || 'buy', kind: start.kind || 'fert', product: start.product || '',
-    unit: '', qty: '', unitCost: '', date: todayLocal(), supplier: '', reference: '', notes: '', counted: '',
+    unit: '', qty: '', unitCost: '', date: todayLocal(), supplier: '', reference: '', notes: '', counted: '', location: start.location || '',
   };
   if (!d.unit) d.unit = defaultUnit(d.kind);
   const known = () => otherLevels.find((l) => l.key === productKey(d.kind, d.product));
@@ -118,6 +132,7 @@ export function openMoveSheet(existing, start = {}) {
       if (lvl) d.unit = lvl.unit;
       const names = otherLevels.filter((l) => l.kind === d.kind).map((l) => l.product);
       const isNewCount = d.type === 'adjust' && !existing;
+      const places = storageNames();
       root.innerHTML = `
         <datalist id="dl-products">${names.map((p) => `<option value="${esc(p)}">`).join('')}</datalist>
         ${existing ? '' : `<div class="segmented" id="in-type" style="margin-bottom:10px">
@@ -126,7 +141,7 @@ export function openMoveSheet(existing, start = {}) {
         ${field({ label: 'What is it', id: 'in-kind', type: 'select', value: d.kind, options: KINDS.map((k) => ({ value: k.key, label: k.label })) })}
         ${field({ label: 'Product', id: 'in-product', value: d.product, list: 'dl-products', placeholder: KINDS.find((k) => k.key === d.kind)?.hint || '' })}
         ${lvl
-          ? `<div class="row"><span class="label">On hand now</span><span class="value">${qtyText(lvl.onHand, lvl.unit)}</span></div>`
+          ? `<div class="row"><span class="label">On hand now</span><span class="value">${qtyText(lvl.onHand, lvl.unit)}</span></div>${d.location ? `<div class="row"><span class="label">In ${esc(d.location)}</span><span class="value">${qtyText(onHandAt(lvl, d.location), lvl.unit)}</span></div>` : ''}`
           : (d.product.trim() ? '<div class="hint" style="margin:0 0 8px">A new product. Choose its unit below; it stays the same from here on.</div>' : '')}
         <div class="grid-2">
           ${isNewCount
@@ -135,6 +150,9 @@ export function openMoveSheet(existing, start = {}) {
           ${lvl ? `<div class="field"><label>Unit</label><div class="meta" style="padding:10px 0">${esc(lvl.unit)}</div></div>`
             : field({ label: 'Unit', id: 'in-unit', type: 'select', value: d.unit, options: UNITS.map((u) => ({ value: u, label: u })) })}
         </div>
+        ${places.length || d.location ? field({ label: ({ buy: 'Put into', use: 'Taken from', adjust: 'Counted in' })[d.type], id: 'in-loc', type: 'select', value: d.location || '',
+          options: [{ value: '', label: 'Not recorded' }, ...(d.location && !places.includes(d.location) ? [d.location] : []), ...places].map((o) => (typeof o === 'string' ? { value: o, label: o } : o)) })
+          : '<div class="hint" style="margin:0 0 8px">Set up your silos and sheds under Storage to say where it is kept.</div>'}
         ${field({ label: 'Date', id: 'in-date', type: 'date', value: d.date })}
         ${d.type === 'buy' ? `
         <div class="grid-2">
@@ -145,6 +163,7 @@ export function openMoveSheet(existing, start = {}) {
         <datalist id="dl-suppliers">${[...new Set(all.map((m) => String(m.supplier || '').trim()).filter(Boolean))].sort().map((s) => `<option value="${esc(s)}">`).join('')}</datalist>` : ''}
         ${field({ label: 'Notes', id: 'in-notes', value: d.notes, placeholder: d.type === 'use' ? 'e.g. sown to SR1-3, sprayed pre-emergent' : '' })}
         <div class="row"><span class="label">Stock after this</span><span class="value" id="in-after">-</span></div>
+        ${d.location ? `<div class="row"><span class="label">In ${esc(d.location)} after this</span><span class="value" id="in-after-loc">-</span></div>` : ''}
         <div id="in-problems" class="hint" style="color:var(--danger);margin:8px 0"></div>
         ${existing ? '<button class="btn ghost-danger" id="in-del" style="margin-top:4px">Delete this entry</button>' : ''}
         <div class="save-bar solo"><button class="btn" id="in-save">Save</button></div>`;
@@ -159,6 +178,7 @@ export function openMoveSheet(existing, start = {}) {
       if (root.querySelector('#in-unit')) d.unit = val('in-unit');
       if (root.querySelector('#in-qty')) d.qty = val('in-qty') === '' ? '' : getNum(root, 'in-qty');
       if (root.querySelector('#in-counted')) d.counted = val('in-counted') === '' ? '' : getNum(root, 'in-counted');
+      if (root.querySelector('#in-loc')) d.location = val('in-loc');
       if (val('in-date') != null) d.date = val('in-date');
       if (root.querySelector('#in-cost')) d.unitCost = val('in-cost') === '' ? '' : getNum(root, 'in-cost');
       if (root.querySelector('#in-ref')) d.reference = val('in-ref').trim();
@@ -170,7 +190,7 @@ export function openMoveSheet(existing, start = {}) {
     const entry = () => {
       const lvl = known();
       if (d.type === 'adjust' && !existing) {
-        return { ...d, qty: d.counted === '' ? 0 : adjustmentFor(lvl?.onHand || 0, d.counted) };
+        return { ...d, qty: d.counted === '' ? 0 : adjustmentFor(d.location ? onHandAt(lvl, d.location) : (lvl?.onHand || 0), d.counted) };
       }
       return { ...d, qty: d.qty === '' ? 0 : d.qty };
     };
@@ -185,12 +205,16 @@ export function openMoveSheet(existing, start = {}) {
         el.textContent = qtyText(after, d.unit);
         el.style.color = after < -0.0005 ? 'var(--danger)' : '';
       }
+      const afterLoc = onHandAt(lvl, d.location) + moveDelta(e);
+      const elLoc = root.querySelector('#in-after-loc');
+      if (elLoc) { elLoc.textContent = qtyText(afterLoc, d.unit); elLoc.style.color = afterLoc < -0.0005 ? 'var(--danger)' : ''; }
       const note = root.querySelector('#in-problems');
       if (note) note.textContent = d.type === 'use' && after < -0.0005 ? 'That is more than the book says is on hand. Check the count, or record the delivery first.' : '';
     };
 
     const wire = () => {
       root.querySelector('#in-type')?.addEventListener('click', (e) => { const b = e.target.closest('[data-type]'); if (b) { collect(); d.type = b.dataset.type; paint(); } });
+      root.querySelector('#in-loc')?.addEventListener('change', () => { collect(); paint(); });
       root.querySelector('#in-kind').addEventListener('change', () => { collect(); if (!known()) d.unit = defaultUnit(d.kind); paint(); });
       root.querySelector('#in-product').addEventListener('change', () => { collect(); if (!known()) d.unit = d.unit || defaultUnit(d.kind); paint(); });
       ['in-qty', 'in-counted', 'in-unit'].forEach((id) => root.querySelector(`#${id}`)?.addEventListener('input', calc));

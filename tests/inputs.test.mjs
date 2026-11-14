@@ -9,7 +9,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   KINDS as INPUT_KINDS, normName, productKey, moveDelta, convert, stockLevels, productMoves, stockValue,
-  plannedNeeds, planVsStock, inputProblems, adjustmentFor, qtyText,
+  plannedNeeds, planVsStock, inputProblems, adjustmentFor, qtyText, onHandAt, locationKey,
 } from '../docs/js/inputs.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 import { selectDirtyRows, KINDS } from '../docs/js/dirty.js';
@@ -147,6 +147,15 @@ check('an entry with no price or detail comes back with them blank, and a correc
   assert.equal(rows.input_stock[0].qty, -120.5);
   assert.deepEqual({ ...rowsToState(rows).years[2026].inputStock[0] }, bare);
 });
+check('the place an entry was put is stored and comes back, is only sent once recorded, and clearing it reaches the server', () => {
+  const placed = { ...ENTRY, location: 'Shed 2' };
+  const rows = stateToRows(baseState({ inputStock: [placed] }), FARM);
+  assert.equal(rows.input_stock[0].location, 'Shed 2');
+  assert.deepEqual({ ...rowsToState(rows).years[2026].inputStock[0] }, { ...placed, __hasLocation: true });
+  assert.ok(!('location' in stateToRows(baseState({ inputStock: [ENTRY] }), FARM).input_stock[0]), 'not sent until one is named');
+  const cleared = stateToRows(baseState({ inputStock: [{ ...ENTRY, location: '', __hasLocation: true }] }), FARM);
+  assert.equal(cleared.input_stock[0].location, null);
+});
 check('only the entries a device changed are sent', () => {
   const a = { ...ENTRY };
   const b = { ...ENTRY, id: '44444444-4444-4444-4444-444444444444', product: 'MAP' };
@@ -176,6 +185,12 @@ check('stock is summed across every season, and a new season starts with no entr
   assert.ok(s.includes('Object.values(data.years).flatMap((y) => y.inputStock || [])'));
   assert.ok(s.includes("tombstone('input_stock', m.id)"), 'deleting a season stamps them');
   assert.ok(s.includes("touch('inputmove'"));
+});
+check('the location column is in the paste-in file, and the screen offers the farm own storages', () => {
+  assert.match(read('supabase/paste-into-sql-editor.sql'), /alter table input_stock\s+add column if not exists location text/);
+  const v = read('docs/js/views/inputs.js');
+  for (const t of ['in-loc', 'storageNames', 'isTransit', 'isOffFarm', 'Where it is']) assert.ok(v.includes(t), t);
+  assert.ok(read('docs/js/storage.js').includes('__hasLocation: true'));
 });
 check('the database has the table (owner, manager, bookkeeper only) and the delete rule', () => {
   const sql = read('supabase/paste-into-sql-editor.sql');

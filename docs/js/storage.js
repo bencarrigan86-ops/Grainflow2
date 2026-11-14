@@ -18,22 +18,22 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=245';
+import { hydrate } from './hydrate.js?v=246';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=245';
-import { chooseBootState, resolveLegacy } from './boot.js?v=245';
-import { isLegacyDirty } from './dirty.js?v=245';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=245';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=245';
-import { settleLegs, dedupeLegs } from './legs.js?v=245';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=245';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=245';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=245';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=245';
-import { schedulePush, pushOnReconnect } from './sync.js?v=245';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=245';
+} from './local.js?v=246';
+import { chooseBootState, resolveLegacy } from './boot.js?v=246';
+import { isLegacyDirty } from './dirty.js?v=246';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=246';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=246';
+import { settleLegs, dedupeLegs } from './legs.js?v=246';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=246';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=246';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=246';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=246';
+import { schedulePush, pushOnReconnect } from './sync.js?v=246';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=246';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -1061,6 +1061,7 @@ export const db = {
   upsertInputMove(m) {
     const c = current();
     c.inputStock = c.inputStock || [];
+    if (m.location) m = { ...m, __hasLocation: true };   // so clearing it later reaches the server
     if (m.id) {
       // the entry may sit in an earlier season: change it where it is
       for (const y of Object.values(data.years)) {

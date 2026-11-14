@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=245';
-import { cleanOffFarm } from './offfarm.js?v=245';
+import { cleanGradeOptions } from './gradeprice.js?v=246';
+import { cleanOffFarm } from './offfarm.js?v=246';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -551,6 +551,8 @@ export function stateToRows(state, farmId) {
         move_date: orNull(m.date),
         supplier: orNull(m.supplier), reference: orNull(m.reference),
         notes: orNull(m.notes),
+        // where it is kept: sent only once one is recorded, so entries still save before the column exists
+        ...((m.location || m.__hasLocation) ? { location: orNull(String(m.location || '').trim()) } : {}),
       });
     }
 
@@ -792,6 +794,7 @@ export function rowsToState(rows) {
         id: m.id, kind: m.kind, product: m.product ?? '', unit: m.unit || 't', type: m.move_type || 'buy',
         qty: n(m.qty), unitCost: m.unit_cost == null ? '' : n(m.unit_cost),
         date: m.move_date ?? '', supplier: m.supplier ?? '', reference: m.reference ?? '', notes: m.notes ?? '',
+        ...(m.location ? { location: m.location, __hasLocation: true } : {}),
       })),
 
       overheads: (() => {

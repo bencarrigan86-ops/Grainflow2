@@ -33,6 +33,12 @@ export function normName(s) {
 }
 export const productKey = (kind, product) => `${kind}|${normName(product)}`;
 
+/**
+ * Where an entry was put or taken from is the name of a silo, shed or other storage. A name, not an id: a season
+ * rollover gives every storage a new id, and the stock has to stay in the same place across it.
+ */
+export const locationKey = (location) => normName(location);
+
 /** What one entry does to the stock: + in, - out. */
 export function moveDelta(m) {
   const q = Number(m?.qty) || 0;
@@ -62,11 +68,15 @@ export function stockLevels(moves = []) {
     const key = productKey(m.kind, m.product);
     let p = map.get(key);
     if (!p) {
-      p = { key, kind: m.kind, product: String(m.product).trim(), unit: m.unit || defaultUnit(m.kind), onHand: 0, bought: 0, used: 0, adjusted: 0, lastDate: '', paidQty: 0, paid: 0, count: 0 };
+      p = { key, kind: m.kind, product: String(m.product).trim(), unit: m.unit || defaultUnit(m.kind), onHand: 0, bought: 0, used: 0, adjusted: 0, lastDate: '', paidQty: 0, paid: 0, count: 0, locs: new Map() };
       map.set(key, p);
     }
     const q = Number(m.qty) || 0;
     p.count += 1;
+    const lk = locationKey(m.location);
+    const here = p.locs.get(lk) || { location: String(m.location || '').trim(), onHand: 0 };
+    here.onHand += moveDelta(m);
+    p.locs.set(lk, here);
     if (m.type === 'buy') {
       p.bought += q;
       if (Number(m.unitCost) > 0) { p.paidQty += q; p.paid += q * Number(m.unitCost); }
@@ -77,7 +87,7 @@ export function stockLevels(moves = []) {
   }
   const order = KINDS.map((k) => k.key);
   return [...map.values()]
-    .map((p) => ({ ...p, onHand: round(p.onHand), bought: round(p.bought), used: round(p.used), adjusted: round(p.adjusted), avgCost: p.paidQty > 0 ? p.paid / p.paidQty : 0 }))
+    .map(({ locs, ...p }) => ({ ...p, locations: [...locs.values()].map((l) => ({ ...l, onHand: round(l.onHand) })).filter((l) => l.onHand !== 0).sort((a, b) => (a.location ? 0 : 1) - (b.location ? 0 : 1) || a.location.localeCompare(b.location)), onHand: round(p.onHand), bought: round(p.bought), used: round(p.used), adjusted: round(p.adjusted), avgCost: p.paidQty > 0 ? p.paid / p.paidQty : 0 }))
     .sort((a, b) => (order.indexOf(a.kind) - order.indexOf(b.kind)) || a.product.localeCompare(b.product));
 }
 
@@ -137,6 +147,13 @@ export function inputProblems(m) {
   if (m.type !== 'adjust' && !(Number(m.qty) > 0)) out.push('Enter how much.');
   if (m.type === 'adjust' && !(Number(m.qty) !== 0)) out.push('The count matches the book already: nothing to correct.');
   return out;
+}
+
+/** What is on hand of a product in one place ('' is what has no place recorded). */
+export function onHandAt(level, location) {
+  if (!level) return 0;
+  const lk = locationKey(location);
+  return level.locations.find((l) => locationKey(l.location) === lk)?.onHand || 0;
 }
 
 /** What a stock take of `counted` does against the book: the signed correction. */
