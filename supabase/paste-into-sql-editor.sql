@@ -831,3 +831,9 @@ grant execute on function soft_delete_row(text, uuid) to authenticated;
 -- Optional: an entry with no place recorded is simply stock with no location.
 alter table input_stock
   add column if not exists location text;
+
+-- ==== which farm a paddock is on (build 247) ====
+-- Which farm (property) a paddock belongs to, so the farm map can label each farm and show or hide them.
+-- Plain text, filled in from the shapefile's farm name or typed on the paddock. Optional.
+alter table fields
+  add column if not exists property text;

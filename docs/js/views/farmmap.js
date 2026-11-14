@@ -4,12 +4,12 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=246';
-import { openSheet, toast, notify, askConfirm } from '../ui.js?v=246';
-import { esc, num } from '../fmt.js?v=246';
+import { db } from '../storage.js?v=247';
+import { openSheet, toast, notify, askConfirm } from '../ui.js?v=247';
+import { esc, num } from '../fmt.js?v=247';
 import {
-  readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP,
-} from '../farmmap.js?v=246';
+  readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox,
+} from '../farmmap.js?v=247';
 
 const MAX_ZOOM = 40;
 
@@ -18,6 +18,10 @@ const SHOW_KEY = 'grainflow.farmmap.show';
 const readShow = () => {
   try { return { names: true, areas: false, ...JSON.parse(localStorage.getItem(SHOW_KEY) || '{}') }; } catch { return { names: true, areas: false }; }
 };
+// which farms are switched off, remembered on this device
+const HIDDEN_KEY = 'grainflow.farmmap.hidden';
+const readHidden = () => { try { const h = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]'); return Array.isArray(h) ? h : []; } catch { return []; } };
+const saveHidden = (list) => { try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(list)); } catch { /* not remembered */ } };
 const saveShow = (show) => { try { localStorage.setItem(SHOW_KEY, JSON.stringify(show)); } catch { /* private mode: it just is not remembered */ } };
 
 /** @param {{onOpenField?: (field: object) => void}} [opts] */
@@ -31,17 +35,20 @@ export function openMapSheet({ onOpenField } = {}) {
       // a colour for each commodity that has a mapped paddock
       const inUse = commodities.filter((c) => mapped.some((f) => f.commodityId === c.id));
       const colourOf = (f) => { const i = inUse.findIndex((c) => c.id === f.commodityId); return i < 0 ? NO_CROP : PALETTE[i % PALETTE.length]; };
-      const layout = mapLayout(mapped.map((f) => ({ id: f.id, name: f.name, color: colourOf(f), rings: f.boundary })));
+      const layout = mapLayout(mapped.map((f) => ({ id: f.id, name: f.name, farm: f.property, color: colourOf(f), rings: f.boundary })));
+      const groups = farmGroups(layout.items, readHidden());
+      const hasFarms = groups.some((g) => g.name !== NO_FARM);
       const vb = layout.viewBox;
       const unmapped = fields.filter((f) => !f.boundary?.length);
       const mappedHa = mapped.reduce((s, f) => s + (Number(f.areaHa) || 0), 0);
 
       root.innerHTML = `
-        <div class="hint" style="margin-bottom:8px">${mapped.length} paddock${mapped.length === 1 ? '' : 's'} mapped, ${num(mappedHa, 0)} ha. Tap one to open it. Pinch or use the buttons to zoom.</div>
+        <div class="hint" style="margin-bottom:8px">${mapped.length} paddock${mapped.length === 1 ? '' : 's'} mapped${hasFarms ? ` on ${groups.filter((g) => g.name !== NO_FARM).length} farm${groups.filter((g) => g.name !== NO_FARM).length === 1 ? '' : 's'}` : ''}, ${num(mappedHa, 0)} ha. Tap one to open it. Pinch or use the buttons to zoom.</div>
         <div id="fm-wrap" style="position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg);touch-action:none">
           <svg id="fm-svg" viewBox="0 0 ${vb.w} ${vb.h}" style="display:block;width:100%;height:auto;max-height:68vh" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of the paddocks">
-            ${layout.items.map((i) => `<path data-id="${esc(i.id)}" d="${i.d}" fill="${i.color}" fill-opacity="0.55" fill-rule="evenodd" stroke="var(--text)" stroke-opacity="0.55" stroke-width="1" vector-effect="non-scaling-stroke" style="cursor:pointer"><title>${esc(i.name)}</title></path>`).join('')}
-            ${layout.items.map((i) => `<text data-label="${esc(i.id)}" data-area="${Math.round(i.areaHa * 10000)}" x="${Math.round(i.cx)}" y="${Math.round(i.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="3" paint-order="stroke" pointer-events="none" style="font-weight:600"><tspan class="fm-n" x="${Math.round(i.cx)}">${esc(i.name)}</tspan><tspan class="fm-a" x="${Math.round(i.cx)}" dy="1.15em" style="font-weight:500">${num(Number(mapped.find((f) => f.id === i.id)?.areaHa) || i.areaHa, 1)} ha</tspan></text>`).join('')}
+            ${layout.items.map((i) => `<path data-id="${esc(i.id)}" data-farm="${esc(i.farm || NO_FARM)}" d="${i.d}" fill="${i.color}" fill-opacity="0.55" fill-rule="evenodd" stroke="var(--text)" stroke-opacity="0.55" stroke-width="1" vector-effect="non-scaling-stroke" style="cursor:pointer"><title>${esc(i.name)}</title></path>`).join('')}
+            ${layout.items.map((i) => `<text data-label="${esc(i.id)}" data-farm="${esc(i.farm || NO_FARM)}" data-area="${Math.round(i.areaHa * 10000)}" x="${Math.round(i.cx)}" y="${Math.round(i.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="3" paint-order="stroke" pointer-events="none" style="font-weight:600"><tspan class="fm-n" x="${Math.round(i.cx)}">${esc(i.name)}</tspan><tspan class="fm-a" x="${Math.round(i.cx)}" dy="1.15em" style="font-weight:500">${num(Number(mapped.find((f) => f.id === i.id)?.areaHa) || i.areaHa, 1)} ha</tspan></text>`).join('')}
+            ${hasFarms ? groups.filter((g) => g.name !== NO_FARM).map((g) => `<text data-farm-label="${esc(g.name)}" x="${Math.round(g.cx)}" y="${Math.round(g.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="4" paint-order="stroke" pointer-events="none" style="font-weight:800;letter-spacing:.05em;text-transform:uppercase">${esc(g.name)}</text>`).join('') : ''}
           </svg>
           <div style="position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px">
             <button type="button" class="btn secondary small" id="fm-in" aria-label="Zoom in" style="width:40px;padding:6px 0">+</button>
@@ -53,6 +60,11 @@ export function openMapSheet({ onOpenField } = {}) {
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="fm-names" style="width:18px;height:18px" /> Names</label>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="fm-areas" style="width:18px;height:18px" /> Areas (ha)</label>
         </div>
+        ${hasFarms ? `<div class="card" style="margin-top:12px">
+          <h2>Farms</h2>
+          ${groups.map((g) => `<label class="row" style="cursor:pointer"><span class="label"><input type="checkbox" class="fm-farm" data-farm="${esc(g.name)}" ${g.hidden ? '' : 'checked'} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />${esc(g.name)}</span><span class="value">${g.paddocks} &middot; ${num(g.ha, 0)} ha</span></label>`).join('')}
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px"><input type="checkbox" id="fm-farmnames" style="width:18px;height:18px" /> Farm names on the map</label>
+        </div>` : ''}
         <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0">
           ${inUse.map((c, i) => `<span class="meta"><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${PALETTE[i % PALETTE.length]};vertical-align:-1px"></span> ${esc(c.name)}</span>`).join('')}
           ${mapped.some((f) => colourOf(f) === NO_CROP) ? `<span class="meta"><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${NO_CROP};vertical-align:-1px"></span> No crop set</span>` : ''}
@@ -61,7 +73,7 @@ export function openMapSheet({ onOpenField } = {}) {
         <button type="button" class="btn secondary" id="fm-update" style="margin-top:6px">Update from a file</button>
         <button type="button" class="btn ghost-danger" id="fm-clear" style="margin-top:8px">Remove the map</button>`;
 
-      wireMap(root, vb, layout, (id) => { const f = fields.find((x) => x.id === id); if (f && onOpenField) onOpenField(f); });
+      wireMap(root, vb, layout, (id) => { const f = fields.find((x) => x.id === id); if (f && onOpenField) onOpenField(f); }, { groups });
       root.querySelector('#fm-update').addEventListener('click', () => importView(root, draw, true));
       root.querySelector('#fm-clear').addEventListener('click', async () => {
         if (!(await askConfirm('Remove the outlines from every paddock? The paddocks and their areas stay. You can import the file again.', { confirmLabel: 'Remove', danger: true }))) return;
@@ -75,7 +87,7 @@ export function openMapSheet({ onOpenField } = {}) {
 }
 
 /** Pan, pinch and button zoom on the map, by moving the viewBox. A tap on a paddock opens it. */
-function wireMap(root, full, layout, open) {
+function wireMap(root, full, layout, open, { groups = [] } = {}) {
   const svg = root.querySelector('#fm-svg');
   let v = { ...full };
   const fit = () => { svg.setAttribute('viewBox', `${v.x} ${v.y} ${v.w} ${v.h}`); labels(); };
@@ -87,6 +99,17 @@ function wireMap(root, full, layout, open) {
   };
   // names are drawn at one size on screen, and left out of paddocks too small to hold them
   const show = readShow();
+  const hidden = new Set(groups.filter((g) => g.hidden).map((g) => g.name));
+  const applyFarms = () => { svg.querySelectorAll('path[data-farm]').forEach((el) => { el.style.display = hidden.has(el.dataset.farm) ? 'none' : ''; }); };
+  // fit the picture to the farms that are switched on (everything when none are switched off)
+  const fitToVisible = () => {
+    if (!hidden.size) { v = { ...full }; return; }
+    const [x0, y0, x1, y1] = visibleBox(layout.items, [...hidden]);
+    const aspect = full.h / full.w;
+    const w = Math.max((x1 - x0) * 1.12, ((y1 - y0) * 1.12) / aspect, full.w / MAX_ZOOM);
+    v = { x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - (w * aspect) / 2, w, h: w * aspect };
+    clamp();
+  };
   const labels = () => {
     const width = svg.getBoundingClientRect().width || 360;
     const unit = v.w / width;                              // map metres to a pixel
@@ -94,7 +117,7 @@ function wireMap(root, full, layout, open) {
     const both = show.names && show.areas;
     svg.querySelectorAll('text[data-label]').forEach((t) => {
       const px2 = Number(t.dataset.area) / (unit * unit);   // the paddock's area in square pixels (data-area is square metres)
-      t.style.display = (show.names || show.areas) && px2 > (both ? 4200 : 2600) ? '' : 'none';
+      t.style.display = !hidden.has(t.dataset.farm) && (show.names || show.areas) && px2 > (both ? 4200 : 2600) ? '' : 'none';
       t.setAttribute('font-size', size);
       t.setAttribute('stroke-width', 3 * unit);
       const n = t.querySelector('.fm-n'); const a = t.querySelector('.fm-a');
@@ -102,11 +125,23 @@ function wireMap(root, full, layout, open) {
       a.style.display = show.areas ? '' : 'none';
       a.setAttribute('dy', show.names ? '1.15em' : '0');
     });
+    svg.querySelectorAll('text[data-farm-label]').forEach((t) => {
+      t.style.display = show.farmNames !== false && !hidden.has(t.dataset.farmLabel) ? '' : 'none';
+      t.setAttribute('font-size', 15 * unit);
+      t.setAttribute('stroke-width', 4 * unit);
+    });
   };
   const nameBox = root.querySelector('#fm-names'); const areaBox = root.querySelector('#fm-areas');
   nameBox.checked = show.names; areaBox.checked = show.areas;
   const ticked = () => { show.names = nameBox.checked; show.areas = areaBox.checked; saveShow(show); labels(); };
   nameBox.addEventListener('change', ticked); areaBox.addEventListener('change', ticked);
+  const farmNamesBox = root.querySelector('#fm-farmnames');
+  if (farmNamesBox) { farmNamesBox.checked = show.farmNames !== false; farmNamesBox.addEventListener('change', () => { show.farmNames = farmNamesBox.checked; saveShow(show); labels(); }); }
+  root.querySelectorAll('.fm-farm').forEach((box) => box.addEventListener('change', () => {
+    if (box.checked) hidden.delete(box.dataset.farm); else hidden.add(box.dataset.farm);
+    saveHidden([...hidden]);
+    applyFarms(); fitToVisible(); fit();
+  }));
   const zoomAt = (factor, cx = 0.5, cy = 0.5) => {         // cx, cy: where on the map to hold still, as a fraction of it
     const nx = v.x + v.w * cx; const ny = v.y + v.h * cy;
     v.w /= factor; v.h = v.w * (full.h / full.w);
@@ -115,7 +150,7 @@ function wireMap(root, full, layout, open) {
   };
   root.querySelector('#fm-in').addEventListener('click', () => zoomAt(1.6));
   root.querySelector('#fm-out').addEventListener('click', () => zoomAt(1 / 1.6));
-  root.querySelector('#fm-reset').addEventListener('click', () => { v = { ...full }; fit(); });
+  root.querySelector('#fm-reset').addEventListener('click', () => { fitToVisible(); fit(); });
 
   const frac = (clientX, clientY) => { const r = svg.getBoundingClientRect(); return [(clientX - r.left) / r.width, (clientY - r.top) / r.height]; };
   svg.addEventListener('wheel', (e) => { e.preventDefault(); const [cx, cy] = frac(e.clientX, e.clientY); zoomAt(e.deltaY < 0 ? 1.2 : 1 / 1.2, cx, cy); }, { passive: false });
@@ -154,7 +189,7 @@ function wireMap(root, full, layout, open) {
   };
   svg.addEventListener('pointerup', up);
   svg.addEventListener('pointercancel', up);
-  fit();
+  applyFarms(); fitToVisible(); fit();
   window.addEventListener('resize', labels, { once: true });
 }
 
@@ -205,14 +240,16 @@ function importView(root, done, haveMap = false) {
   const preview = (features, fieldsNow) => {
     const { matched, unmatched } = matchBoundaries(features, fieldsNow);
     // the area comes from the full outline, before it is thinned
-    const items = matched.map((m) => ({ id: m.field.id, name: m.field.name, was: Number(m.field.areaHa) || 0, areaHa: Math.round(ringsAreaHa(m.feature.rings) * 100) / 100, boundary: simplifyRings(m.feature.rings) }));
-    const extra = unmatched.map((f) => ({ name: f.name, farm: f.farm, areaHa: Math.round(ringsAreaHa(f.rings) * 100) / 100, boundary: simplifyRings(f.rings) }));
+    const items = matched.map((m) => ({ id: m.field.id, name: m.field.name, was: Number(m.field.areaHa) || 0, areaHa: Math.round(ringsAreaHa(m.feature.rings) * 100) / 100, boundary: simplifyRings(m.feature.rings), property: String(m.feature.farm || '').trim() }));
+    const extra = unmatched.map((f) => ({ name: f.name, farm: f.farm, property: String(f.farm || '').trim(), areaHa: Math.round(ringsAreaHa(f.rings) * 100) / 100, boundary: simplifyRings(f.rings) }));
+    const farmNames = [...new Set(features.map((f) => String(f.farm || '').trim()).filter(Boolean))];
     const was = items.reduce((s, i) => s + i.was, 0);
     const now = items.reduce((s, i) => s + i.areaHa, 0);
     const box = root.querySelector('#fm-preview');
     box.innerHTML = `
       <div class="card" style="margin-top:10px">
         <h2>${features.length} outlines found</h2>
+        ${farmNames.length ? `<div class="row"><span class="label">Farms in the file</span><span class="value">${farmNames.length}</span></div><div class="hint" style="margin:0 0 8px">${farmNames.map(esc).join(', ')}. Each paddock keeps its farm name, so the map can label the farms and show or hide them.</div>` : ''}
         <div class="row"><span class="label">Matched to your paddocks</span><span class="value">${items.length}</span></div>
         <div class="row"><span class="label">Their area now</span><span class="value">${num(was, 1)} ha</span></div>
         <div class="row"><span class="label">Their area after saving</span><span class="value" id="fm-after"><strong>${num(now, 1)} ha</strong></span></div>
@@ -243,7 +280,7 @@ function importView(root, done, haveMap = false) {
       const add = !!box.querySelector('#fm-add')?.checked;
       if (!items.length && !(add && extra.length)) { notify('Nothing matched your paddocks. Tick Add these as new paddocks, or check the names.'); return; }
       // an unticked paddock keeps its outline but not the new area (0 = leave the typed area alone)
-      db.applyFieldBoundaries({ matched: items.map((i, n) => ({ id: i.id, boundary: i.boundary, areaHa: useBoxes[n]?.checked === false ? 0 : i.areaHa })), added: add ? extra : [] });
+      db.applyFieldBoundaries({ matched: items.map((i, n) => ({ id: i.id, boundary: i.boundary, property: i.property, areaHa: useBoxes[n]?.checked === false ? 0 : i.areaHa })), added: add ? extra : [] });
       toast(`Map saved: ${items.length} paddock${items.length === 1 ? '' : 's'}${add && extra.length ? `, ${extra.length} added` : ''}`);
       done();
     });

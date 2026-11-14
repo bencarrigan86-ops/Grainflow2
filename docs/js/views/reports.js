@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=246';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=246';
-import { num, tons, esc } from '../fmt.js?v=246';
-import { field, getVal, getNum } from '../ui.js?v=246';
-import { canSeeYield } from '../nav.js?v=246';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=246';
-import { harvestReport, siloSpace, pctText } from '../harvest.js?v=246';
+import { db } from '../storage.js?v=247';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=247';
+import { num, tons, esc } from '../fmt.js?v=247';
+import { field, getVal, getNum } from '../ui.js?v=247';
+import { canSeeYield } from '../nav.js?v=247';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=247';
+import { harvestReport, siloSpace, pctText } from '../harvest.js?v=247';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below

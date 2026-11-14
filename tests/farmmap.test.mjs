@@ -9,7 +9,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateRawSync } from 'node:zlib';
 import {
-  parseDbf, parseShp, readBoundaries, unzipFiles, simplifyRing, simplifyRings, ringsAreaHa, normName, matchBoundaries, mapLayout, PALETTE, NO_CROP,
+  parseDbf, parseShp, readBoundaries, unzipFiles, simplifyRing, simplifyRings, ringsAreaHa, normName, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox,
 } from '../docs/js/farmmap.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
@@ -189,6 +189,15 @@ await check('the outline is stored once a paddock has one, comes back, and clear
   assert.deepEqual(rowsToState(stateToRows(state([field({ boundary: ring })]), FARM)).years[2026].fields[0].boundary, ring);
   assert.equal(stateToRows(state([field({ boundary: null, __hasBoundary: true })]), FARM).fields[0].boundary, null);
 });
+await check('the farm a paddock is on is stored once named, comes back, and clearing it reaches the server', () => {
+  const FARM = '11111111-1111-1111-1111-111111111111';
+  const state = (fields) => ({ currentYear: '2026', nextMovementNo: 1, businessDetails: {}, years: { 2026: { commodities: [], storages: [], fields, sales: [], movements: [], overheads: {}, invoices: [], payables: [], orders: [], freightOrders: [], inputStock: [] } } });
+  const field = (extra) => ({ id: '22222222-2222-2222-2222-222222222222', name: 'A 1', areaHa: 108, commodityId: null, yieldTHa: 0, yieldMode: 'estimate', ...extra });
+  assert.ok(!('property' in stateToRows(state([field({})]), FARM).fields[0]), 'not sent until one is named');
+  assert.equal(stateToRows(state([field({ property: 'Aralu' })]), FARM).fields[0].property, 'Aralu');
+  assert.equal(rowsToState(stateToRows(state([field({ property: 'Aralu' })]), FARM)).years[2026].fields[0].property, 'Aralu');
+  assert.equal(stateToRows(state([field({ property: '', __hasProperty: true })]), FARM).fields[0].property, null);
+});
 
 console.log('\n=== wired in ===');
 
@@ -225,6 +234,16 @@ await check('the map sheet never asks "Close without saving?" after the paddock 
 await check('the map has tick boxes for the paddock names and their areas, remembered on the device', () => {
   const v = read('docs/js/views/farmmap.js');
   for (const t of ['id="fm-names"', 'id="fm-areas"', 'grainflow.farmmap.show', 'fm-a', 'show.names', 'show.areas']) assert.ok(v.includes(t), t);
+});
+await check('each paddock keeps its farm from the file, the map labels and switches farms, and a paddock can be given one', () => {
+  const v = read('docs/js/views/farmmap.js');
+  for (const t of ['property: String(m.feature.farm', 'fm-farm', 'fm-farmnames', 'data-farm-label', 'grainflow.farmmap.hidden', 'fitToVisible']) assert.ok(v.includes(t), t);
+  const s = read('docs/js/storage.js');
+  assert.ok(s.includes('m.property ? { property: m.property') && s.includes('a.property ? { property: a.property'));
+  assert.ok(s.includes('f.property ? { property: f.property, __hasProperty: true }'), 'a new season keeps the farm names');
+  const p = read('docs/js/views/production.js');
+  assert.ok(p.includes("id: 'property'") && p.includes("property: String(getVal(root, 'property')"));
+  assert.match(read('supabase/paste-into-sql-editor.sql'), /alter table fields\s+add column if not exists property text/);
 });
 await check('the column is in the paste-in file', () => {
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists boundary jsonb'));

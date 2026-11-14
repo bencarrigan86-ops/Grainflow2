@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=246';
-import { movementsForEndpoint } from '../derived.js?v=246';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=246';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=246';
-import { compressAndStampImage } from '../img.js?v=246';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=246';
-import { specText } from '../outload.js?v=246';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=246';
-import { pickableSilos } from '../silopick.js?v=246';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=246';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=246';
-import { activeSales } from '../paidsales.js?v=246';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=246';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=246';
+import { db } from '../storage.js?v=247';
+import { movementsForEndpoint } from '../derived.js?v=247';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=247';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=247';
+import { compressAndStampImage } from '../img.js?v=247';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=247';
+import { specText } from '../outload.js?v=247';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=247';
+import { pickableSilos } from '../silopick.js?v=247';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=247';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=247';
+import { activeSales } from '../paidsales.js?v=247';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=247';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=247';
 
 let unsub = null;
 

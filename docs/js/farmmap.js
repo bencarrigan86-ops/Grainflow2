@@ -223,7 +223,9 @@ export function mapLayout(items, { pad = 0.04 } = {}) {
     const d = i.projected.map((r) => `M${r.map(([x, y]) => `${Math.round((x - ox) * 10) / 10} ${Math.round((y - oy) * 10) / 10}`).join('L')}Z`).join('');
     const biggest = i.projected.reduce((a, r) => (ringArea(r) > ringArea(a) ? r : a), i.projected[0]);
     const [cx, cy] = centroid(biggest);
-    return { id: i.id, name: i.name, color: i.color || NO_CROP, d, cx: cx - ox, cy: cy - oy, areaHa: ringArea(biggest) / 10000 };
+    const xs = i.projected.flatMap((r) => r.map((p) => p[0] - ox)); const ys = i.projected.flatMap((r) => r.map((p) => p[1] - oy));
+    const bbox = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+    return { id: i.id, name: i.name, farm: String(i.farm || '').trim(), color: i.color || NO_CROP, d, cx: cx - ox, cy: cy - oy, areaHa: ringArea(biggest) / 10000, bbox };
   });
   return { viewBox: { x: 0, y: 0, w: w + px * 2, h: h + px * 2 }, items: out };
 }
@@ -241,4 +243,36 @@ function centroid(r) {
   }
   if (!a) return r[0] || [0, 0];
   return [cx / (3 * a), cy / (3 * a)];
+}
+
+/**
+ * The farms on the map: each farm's name, how many paddocks and hectares it has, and where to write its name (the
+ * middle of its paddocks, weighted by their size) and the box around it. `hidden` is a list of farm names switched off.
+ * Paddocks with no farm name are one group, called "No farm set".
+ */
+export const NO_FARM = 'No farm set';
+export function farmGroups(items, hidden = []) {
+  const off = new Set(hidden);
+  const map = new Map();
+  for (const i of items) {
+    const name = i.farm || NO_FARM;
+    const g = map.get(name) || { name, paddocks: 0, ha: 0, wx: 0, wy: 0, w: 0, bbox: [Infinity, Infinity, -Infinity, -Infinity] };
+    const w = Math.max(i.areaHa, 0.0001);
+    g.paddocks += 1; g.ha += i.areaHa; g.wx += i.cx * w; g.wy += i.cy * w; g.w += w;
+    g.bbox = [Math.min(g.bbox[0], i.bbox[0]), Math.min(g.bbox[1], i.bbox[1]), Math.max(g.bbox[2], i.bbox[2]), Math.max(g.bbox[3], i.bbox[3])];
+    map.set(name, g);
+  }
+  return [...map.values()]
+    .map((g) => ({ name: g.name, paddocks: g.paddocks, ha: g.ha, cx: g.wx / g.w, cy: g.wy / g.w, bbox: g.bbox, hidden: off.has(g.name) }))
+    .sort((a, b) => (a.name === NO_FARM) - (b.name === NO_FARM) || a.name.localeCompare(b.name));
+}
+
+/** The box around the paddocks of the farms that are switched on (or all of them if none are). */
+export function visibleBox(items, hidden = []) {
+  const off = new Set(hidden);
+  const shown = items.filter((i) => !off.has(i.farm || NO_FARM));
+  const use = shown.length ? shown : items;
+  const b = [Infinity, Infinity, -Infinity, -Infinity];
+  for (const i of use) { b[0] = Math.min(b[0], i.bbox[0]); b[1] = Math.min(b[1], i.bbox[1]); b[2] = Math.max(b[2], i.bbox[2]); b[3] = Math.max(b[3], i.bbox[3]); }
+  return b;
 }

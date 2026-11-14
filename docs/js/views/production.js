@@ -1,14 +1,14 @@
-import { db } from '../storage.js?v=246';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=246';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=246';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=246';
-import { describeMerge } from '../merge.js?v=246';
-import { renderRelatedMovements } from './movements.js?v=246';
-import { canSeeYield } from '../nav.js?v=246';
-import { wireJumps } from '../jump.js?v=246';
-import { openMapSheet } from './farmmap.js?v=246';
-import { openInputsSheet } from './inputs.js?v=246';
-import { stockLevels } from '../inputs.js?v=246';
+import { db } from '../storage.js?v=247';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=247';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=247';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=247';
+import { describeMerge } from '../merge.js?v=247';
+import { renderRelatedMovements } from './movements.js?v=247';
+import { canSeeYield } from '../nav.js?v=247';
+import { wireJumps } from '../jump.js?v=247';
+import { openMapSheet } from './farmmap.js?v=247';
+import { openInputsSheet } from './inputs.js?v=247';
+import { stockLevels } from '../inputs.js?v=247';
 
 let unsub = null;
 
@@ -116,6 +116,8 @@ export function openFieldSheet(existing) {
   const body = openSheet(existing ? 'Edit field' : 'Add field', (root) => {
     root.innerHTML = `
       ${field({ label: 'Field name', id: 'name', value: existing?.name, placeholder: 'e.g. SR1-3' })}
+      ${field({ label: 'Farm', id: 'property', value: existing?.property ?? '', list: 'dl-farms', placeholder: 'Which farm it is on, e.g. Aralu', hint: 'Used on the farm map to label each farm and to show or hide them.' })}
+      <datalist id="dl-farms">${[...new Set(db.get().fields.map((f) => String(f.property || '').trim()).filter(Boolean))].sort().map((p) => `<option value="${esc(p)}">`).join('')}</datalist>
       ${field({ label: 'Area (ha)', id: 'area', type: 'number', step: '0.01', value: existing?.areaHa })}
       ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
       ${field({ label: 'Harvest finished', id: 'harvestDone', type: 'select', value: existing?.harvestDone ? 'yes' : 'no', options: [{ value: 'no', label: 'No, still harvesting' }, { value: 'yes', label: 'Yes, all of it is in' }], hint: 'Shows in the harvest report. A finished paddock has nothing left to come, whatever its estimate said.' })}
@@ -410,6 +412,7 @@ export function openFieldSheet(existing) {
       db.upsertField({
         id: existing?.id,
         name,
+        property: String(getVal(root, 'property') ?? '').trim(),
         areaHa: getNum(root, 'area'),
         commodityId: getVal(root, 'commodity'),
         harvestDone: getVal(root, 'harvestDone') === 'yes',

@@ -18,22 +18,22 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=246';
+import { hydrate } from './hydrate.js?v=247';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=246';
-import { chooseBootState, resolveLegacy } from './boot.js?v=246';
-import { isLegacyDirty } from './dirty.js?v=246';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=246';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=246';
-import { settleLegs, dedupeLegs } from './legs.js?v=246';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=246';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=246';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=246';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=246';
-import { schedulePush, pushOnReconnect } from './sync.js?v=246';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=246';
+} from './local.js?v=247';
+import { chooseBootState, resolveLegacy } from './boot.js?v=247';
+import { isLegacyDirty } from './dirty.js?v=247';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=247';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=247';
+import { settleLegs, dedupeLegs } from './legs.js?v=247';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=247';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=247';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=247';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=247';
+import { schedulePush, pushOnReconnect } from './sync.js?v=247';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=247';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -550,6 +550,7 @@ export const db = {
       seedVariety: '', seedRateKgHa: 0,
       // the paddock's outline on the farm map goes with it into the new season
       ...(f.boundary ? { boundary: f.boundary, __hasBoundary: true } : {}),
+      ...(f.property ? { property: f.property, __hasProperty: true } : {}),
     }));
 
     const storages = src.storages.filter((s) => !isTransit(s)).map((s) => ({
@@ -637,6 +638,7 @@ export const db = {
       if (idx >= 0) {
         const merged = { ...c.fields[idx], ...field };
         if (merged.boundary) merged.__hasBoundary = true;
+        if (merged.property) merged.__hasProperty = true;   // keeps clearing the farm name reaching the server
         if (merged.harvestDone) merged.__hasHarvestDone = true;   // keeps un-ticking it reaching the server
         if (merged.harvestHaLeft != null) merged.__hasHarvestHaLeft = true;   // and so does clearing the hectares left
         c.fields[idx] = merged;
@@ -661,12 +663,12 @@ export const db = {
     for (const m of matched) {
       const idx = c.fields.findIndex((f) => f.id === m.id);
       if (idx < 0) continue;
-      c.fields[idx] = { ...c.fields[idx], boundary: m.boundary, __hasBoundary: true, ...(m.areaHa > 0 ? { areaHa: m.areaHa } : {}) };
+      c.fields[idx] = { ...c.fields[idx], boundary: m.boundary, __hasBoundary: true, ...(m.areaHa > 0 ? { areaHa: m.areaHa } : {}), ...(m.property ? { property: m.property, __hasProperty: true } : {}) };
       touch('field', m.id);
     }
     for (const a of added) {
       const id = uid();
-      c.fields.push({ id, name: a.name, areaHa: a.areaHa || 0, commodityId: null, yieldTHa: 0, yieldMode: 'estimate', ureaRequiredKgHa: 0, ureaAppliedKgHa: 0, seedVariety: '', seedRateKgHa: 0, boundary: a.boundary, __hasBoundary: true });
+      c.fields.push({ id, name: a.name, areaHa: a.areaHa || 0, commodityId: null, yieldTHa: 0, yieldMode: 'estimate', ureaRequiredKgHa: 0, ureaAppliedKgHa: 0, seedVariety: '', seedRateKgHa: 0, boundary: a.boundary, __hasBoundary: true, ...(a.property ? { property: a.property, __hasProperty: true } : {}) });
       touch('field', id);
     }
     persist();
