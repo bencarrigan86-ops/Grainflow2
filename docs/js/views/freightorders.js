@@ -5,18 +5,18 @@
 // It goes to the carrier as a PDF (shared or emailed) and a copy is filed with the contract. Loads then name the
 // freight order they travel on, and the carrier's bill is recorded against it. The arithmetic is in freight.js.
 
-import { db } from '../storage.js?v=238';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=238';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=238';
-import { orderTitle } from '../orders.js?v=238';
+import { db } from '../storage.js?v=239';
+import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=239';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=239';
+import { orderTitle } from '../orders.js?v=239';
 import {
   BASES, STATE_LABEL, freightState, freightOwed, freightTitle, freightDefaults, freightProblems,
   perTonne, rateText, estimatedTotal, windowText, freightOrderPdf,
-} from '../freight.js?v=238';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=238';
-import { fileSentCopy } from '../sentcopy.js?v=238';
-import { movementRow, openMovementSheet } from './movements.js?v=238';
-import { openBillSheet, returnToAfterBill } from './payables.js?v=238';
+} from '../freight.js?v=239';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=239';
+import { fileSentCopy } from '../sentcopy.js?v=239';
+import { movementRow, openMovementSheet } from './movements.js?v=239';
+import { openBillSheet, returnToAfterBill } from './payables.js?v=239';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | closed | all
@@ -50,7 +50,7 @@ export function openFreightOrdersSheet({ saleId = '' } = {}) {
         <div class="segmented" id="fo-status" style="margin:12px 0 10px">
           ${[['open', 'Open'], ['closed', 'Done'], ['all', 'All']].map(([k, l]) => `<button data-status="${k}" class="${filterStatus === k ? 'active' : ''}">${l}</button>`).join('')}
         </div>
-        ${shown.length === 0 ? `<div class="empty" style="padding:10px 0">${list.length ? 'No freight orders match.' : 'No freight orders yet. Make one from a buyer\'s order, or add one here.'}</div>` : shown.map((f) => {
+        ${shown.length === 0 ? `<div class="empty" style="padding:10px 0">${list.length ? 'No freight orders match.' : 'No freight orders yet. Make one from a grain order, or add one here.'}</div>` : shown.map((f) => {
           const st = freightState(f, movements);
           const s = sales.find((x) => x.id === f.saleId);
           const o = freightOwed(f, movements, payables);
@@ -72,6 +72,29 @@ export function openFreightOrdersSheet({ saleId = '' } = {}) {
     };
     draw();
   });
+}
+
+/** A card of one contract's freight orders for the contract's own sheet, with a way to make a new one from it. */
+export function renderContractFreight(container, saleId) {
+  if (!container) return;
+  const { movements } = db.get();
+  const mine = db.getFreightOrders().filter((f) => f.saleId === saleId)
+    .sort((a, b) => String(a.loadBy || '9999').localeCompare(String(b.loadBy || '9999')));
+  container.className = 'card';
+  container.innerHTML = `
+    <h2>Freight orders</h2>
+    ${mine.length === 0 ? '<div class="empty">No freight orders against this contract yet.</div>' : mine.map((f) => {
+      const st = freightState(f, movements);
+      return `
+      <div class="list-item stack" data-edit-fo="${esc(f.id)}">
+        <div class="li-top"><div class="main">${esc(freightTitle(f))}</div><div class="main">${num(st.left, 0)} t left</div></div>
+        <div class="li-foot"><span class="meta">${esc(windowText(f)) || 'No window set'}</span>
+          <span class="badges"><span class="badge ${st.active ? 'warn' : 'pos'}">${st.active ? 'Open' : 'Done'}</span></span></div>
+      </div>`;
+    }).join('')}
+    <button type="button" class="btn secondary small" id="add-contract-fo" style="margin-top:8px;width:auto">+ Add a freight order</button>`;
+  container.querySelectorAll('[data-edit-fo]').forEach((el) => el.addEventListener('click', () => openFreightOrderSheet(mine.find((f) => f.id === el.dataset.editFo))));
+  container.querySelector('#add-contract-fo').addEventListener('click', () => openFreightOrderSheet(null, { saleId }));
 }
 
 /**
@@ -106,8 +129,8 @@ export function openFreightOrderSheet(existing, start = {}) {
         <datalist id="dl-carriers">${carriers.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
         ${field({ label: 'Contract', id: 'fo-sale', type: 'select', value: d.saleId,
           options: sales.map((s) => ({ value: s.id, label: contractLabel(s, commodities) })) })}
-        ${field({ label: "Buyer's order (optional)", id: 'fo-order', type: 'select', value: d.orderId || '',
-          options: [{ value: '', label: 'Not for one order' }, ...saleOrders.map((o) => ({ value: o.id, label: [orderTitle(o), o.freightCompany].filter(Boolean).join(' · ') }))],
+        ${field({ label: 'Grain order (optional)', id: 'fo-order', type: 'select', value: d.orderId || '',
+          options: [{ value: '', label: 'Not for one grain order' }, ...saleOrders.map((o) => ({ value: o.id, label: [orderTitle(o), o.freightCompany].filter(Boolean).join(' · ') }))],
           hint: 'Choosing one fills in its tonnes, window, carrier and where it is going.' })}
         ${existing ? '<div id="fo-progress" style="margin:0 0 12px"></div>' : ''}
         <div class="grid-2">

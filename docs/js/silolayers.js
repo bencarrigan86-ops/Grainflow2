@@ -105,10 +105,11 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
  * Colours are fixed per grade; the outline takes the page's text colour, so it
  * reads in light and dark.
  */
-export function siloSvg(layers, capacityTons, { width = 96, height = 170 } = {}) {
+export function siloSvg(layers, capacityTons, { width = 96, height = 170, coneAngle = 0 } = {}) {
   const list = (layers || []).filter((l) => tonsOf(l) > 0);
   const total = list.reduce((a, l) => a + tonsOf(l), 0);
   const cap = Number(capacityTons) > 0 ? Math.max(Number(capacityTons), total) : total;
+  if (Number(coneAngle) > 0) return coneSiloSvg(list, total, cap, { width, height, coneAngle: Number(coneAngle) });
   const bodyX = 16; const bodyW = width - 32;
   const top = 26; const bottom = height - 8;
   const bodyH = bottom - top;
@@ -132,6 +133,51 @@ export function siloSvg(layers, capacityTons, { width = 96, height = 170 } = {})
     <rect x="${bodyX}" y="${top}" width="${bodyW}" height="${bodyH}" rx="6" fill="rgba(128,138,150,.10)"/>
     <g clip-path="url(#${clip})">${bars.join('')}</g>
     <rect x="${bodyX}" y="${top}" width="${bodyW}" height="${bodyH}" rx="6" fill="none" stroke="currentColor" stroke-width="2"/>
+  </svg>`;
+}
+
+/**
+ * A silo with a cone (hopper) bottom. The cone angle is the one the silo is saved with; its height is drawn from it
+ * (half the width times its tangent), the body stands on top and an outlet comes out of the tip. The grain is stacked
+ * by volume, not by height, so the cone takes the small share of the tonnes it really holds and the layers above
+ * it are not squashed.
+ */
+function coneSiloSvg(list, total, cap, { width, height, coneAngle }) {
+  const bodyX = 16; const bodyW = width - 32; const cx = width / 2;
+  const top = 26;
+  const tipY = height - 14;                                   // the outlet below it is the last few pixels
+  const hc = Math.min(Math.max((bodyW / 2) * Math.tan((Math.min(coneAngle, 75) * Math.PI) / 180), 10), 60);
+  const coneTopY = tipY - hc;
+  const bodyH = coneTopY - top;
+  // volumes in units of pi r^2: a cone is a third of a cylinder of the same height
+  const vCone = hc / 3; const vBody = bodyH; const vAll = vCone + vBody;
+  const levelAt = (f) => {                                    // how far up from the tip the grain stands
+    const v = Math.min(Math.max(f, 0), 1) * vAll;
+    return v <= vCone ? hc * Math.cbrt(v / vCone) : hc + (v - vCone);
+  };
+  const bars = [];
+  let cum = 0;
+  let prev = 0;
+  for (const l of list) {
+    cum += cap > 0 ? tonsOf(l) / cap : 0;
+    const next = levelAt(cum);
+    const grade = gradeKey(l.spec?.grade) ? String(l.spec.grade).trim() : '';
+    bars.push(`<rect x="${bodyX}" y="${(tipY - next).toFixed(2)}" width="${bodyW}" height="${Math.max(next - prev, 0.5).toFixed(2)}" fill="${gradeColor(grade)}"><title>${esc(grade || NO_GRADE)} · ${Math.round(tonsOf(l) * 10) / 10} t</title></rect>`);
+    bars.push(`<line x1="${bodyX}" x2="${bodyX + bodyW}" y1="${(tipY - next).toFixed(2)}" y2="${(tipY - next).toFixed(2)}" stroke="rgba(255,255,255,.55)" stroke-width="1"/>`);
+    prev = next;
+  }
+  const shape = `M${bodyX} ${top} L${bodyX} ${coneTopY} L${cx} ${tipY} L${bodyX + bodyW} ${coneTopY} L${bodyX + bodyW} ${top} Z`;
+  const label = list.length
+    ? `Cone-bottom silo holding ${Math.round(total)} tonnes: ${gradeMix(list).map((g) => `${g.grade} ${Math.round(g.tons)} t`).join(', ')}`
+    : 'Empty cone-bottom silo';
+  const clip = `silo-clip-${Math.abs(Math.round(total * 100)) % 100000}-${list.length}`;
+  return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${esc(label)}" style="color:var(--text)">
+    <defs><clipPath id="${clip}"><path d="${shape}"/></clipPath></defs>
+    <path d="M${bodyX} ${top} L${cx} 6 L${bodyX + bodyW} ${top} Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+    <path d="${shape}" fill="rgba(128,138,150,.10)"/>
+    <g clip-path="url(#${clip})">${bars.join('')}</g>
+    <path d="${shape}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M${cx - 4} ${tipY} L${cx - 4} ${height - 4} L${cx + 4} ${height - 4} L${cx + 4} ${tipY}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   </svg>`;
 }
 
@@ -185,6 +231,6 @@ export function bunkerSvg(layers, capacityTons, { width = 300, height = 120, out
 }
 
 /** The right picture for the kind of storage: a bunker or shed lies down; a silo stands up. */
-export function storageSvg(kind, layers, capacityTons, { outloadEnd = 'last' } = {}) {
-  return kind === 'bunker' ? bunkerSvg(layers, capacityTons, { outloadEnd }) : siloSvg(layers, capacityTons);
+export function storageSvg(kind, layers, capacityTons, { outloadEnd = 'last', coneAngle = 0 } = {}) {
+  return kind === 'bunker' ? bunkerSvg(layers, capacityTons, { outloadEnd }) : siloSvg(layers, capacityTons, { coneAngle });
 }

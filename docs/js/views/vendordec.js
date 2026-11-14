@@ -5,17 +5,17 @@
 // assurance program is remembered with the business details so it is typed once. The form itself is in
 // vendordec.js; getting the PDF out is in sharefile.js.
 
-import { db } from '../storage.js?v=238';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=238';
-import { todayLocal, tightDate, dmy } from '../fmt.js?v=238';
-import { loadMySignature } from '../mysignature.js?v=238';
-import { fileSentCopy } from '../sentcopy.js?v=238';
-import { mountSignaturePad, signatureSvg } from './signaturepad.js?v=238';
-import { orderTitle, windowText } from '../orders.js?v=238';
+import { db } from '../storage.js?v=239';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=239';
+import { todayLocal, tightDate, dmy } from '../fmt.js?v=239';
+import { loadMySignature } from '../mysignature.js?v=239';
+import { fileSentCopy } from '../sentcopy.js?v=239';
+import { mountSignaturePad, signatureSvg } from './signaturepad.js?v=239';
+import { orderTitle, windowText } from '../orders.js?v=239';
 import {
   buildDeclaration, declarationPdf, declarationProblems, GMO_OPTIONS, MAX_VARIETIES,
-} from '../vendordec.js?v=238';
-import { sharePdf, downloadFile, safeFileName, mailtoLink, canShareFiles } from '../sharefile.js?v=238';
+} from '../vendordec.js?v=239';
+import { sharePdf, downloadFile, safeFileName, mailtoLink, canShareFiles } from '../sharefile.js?v=239';
 
 const contractName = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);

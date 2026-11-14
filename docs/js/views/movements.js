@@ -1,16 +1,16 @@
-import { db } from '../storage.js?v=238';
-import { movementsForEndpoint } from '../derived.js?v=238';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=238';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=238';
-import { compressAndStampImage } from '../img.js?v=238';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=238';
-import { specText } from '../outload.js?v=238';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=238';
-import { pickableSilos } from '../silopick.js?v=238';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=238';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=238';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=238';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=238';
+import { db } from '../storage.js?v=239';
+import { movementsForEndpoint } from '../derived.js?v=239';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=239';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=239';
+import { compressAndStampImage } from '../img.js?v=239';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=239';
+import { specText } from '../outload.js?v=239';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=239';
+import { pickableSilos } from '../silopick.js?v=239';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=239';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=239';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=239';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=239';
 
 let unsub = null;
 
@@ -236,7 +236,7 @@ export function movementRow(m, ctx) {
     : null;
   // the order it was delivered against, if any
   const order = m.orderId ? (ctx.orders || db.getOrders()).find((o) => o.id === m.orderId) : null;
-  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', order ? (order.orderNo ? `order #${order.orderNo}` : 'against an order') : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date, { tight: true }) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
+  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', order ? (order.orderNo ? `grain order #${order.orderNo}` : 'against a grain order') : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date, { tight: true }) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
   return `
     <div class="list-item stack" data-edit-movement="${m.id}">
       <div class="li-top">
@@ -519,12 +519,12 @@ export function openMovementSheet(existing, template) {
       ${field({ label: 'Date', id: 'date', type: 'date', value: existing ? existing.date : todayLocal() })}
       ${pickableOrders.length ? `
       <div class="field">
-        <label for="m-order">Delivering against an order</label>
+        <label for="m-order">Delivering against a grain order</label>
         <select id="m-order">
-          <option value="">No order</option>
+          <option value="">No grain order</option>
           ${pickableOrders.map((o) => `<option value="${esc(o.id)}" ${o.id === existing?.orderId ? 'selected' : ''}>${esc(orderOptionLabel(o))}</option>`).join('')}
         </select>
-        <div class="hint" id="m-order-note">Choosing an order fills in its contract, the commodity and the grade.</div>
+        <div class="hint" id="m-order-note">Choosing a grain order fills in its contract, the commodity and the grade.</div>
       </div>` : ''}
       <div class="field">
         <label>Commodity</label>
@@ -666,7 +666,7 @@ export function openMovementSheet(existing, template) {
       const note = root.querySelector('#m-order-note');
       if (!note) return;
       const o = orders.find((x) => x.id === orderChoice);
-      if (!o) { note.textContent = 'Choosing an order fills in its contract, the commodity and the grade.'; return; }
+      if (!o) { note.textContent = 'Choosing a grain order fills in its contract, the commodity and the grade.'; return; }
       const s = saleOfOrder(o);
       note.textContent = [o.freightCompany ? `Freight: ${o.freightCompany}` : '', s?.location ? `Delivery: ${s.location}` : '', o.deliverBy ? `Deliver by ${shortDate(o.deliverBy)}` : '', o.notes || ''].filter(Boolean).join(' · ');
     }
@@ -748,7 +748,7 @@ export function openMovementSheet(existing, template) {
             <div class="field" style="margin-top:10px;margin-bottom:0">
               <label>Fills order</label>
               <select id="to-order-select">
-                <option value="">Not against an order</option>
+                <option value="">Not against a grain order</option>
                 ${list.map((o) => {
                   const st = orderState(o, movements, todayLocal());
                   const label = [orderTitle(o), windowText(o, tightDate), `${num(st.left, 0)} t left`, st.state === 'overdue' ? 'overdue' : '', o.freightCompany].filter(Boolean).join(' · ');

@@ -4,10 +4,10 @@
 // Half of it is dollars — position value and profit — and the roles that cannot
 // see Position are the ones the app keeps money from.
 
-import { db } from '../storage.js?v=238';
-import { positionRows, positionAtYield, positionTotals, farmProfitLoss, paddockAtYield } from '../derived.js?v=238';
-import { payablesCost } from '../payables.js?v=238';
-import { num, money, esc } from '../fmt.js?v=238';
+import { db } from '../storage.js?v=239';
+import { positionRows, positionAtYield, positionTotals, farmProfitLoss, paddockAtYield } from '../derived.js?v=239';
+import { payablesCost } from '../payables.js?v=239';
+import { num, money, esc } from '../fmt.js?v=239';
 
 // Starts folded away: it is a what-if, not the first thing the Yield tab is for.
 // Kept across repaints so a sync arriving does not change what you left open.

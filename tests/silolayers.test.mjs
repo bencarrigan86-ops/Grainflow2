@@ -194,6 +194,40 @@ check('the start of outload moves to the back when the bunker is emptied from th
   // the arrow stands over the start end
   assert.ok(front.includes('M256 8 L256 30') && back.includes('M44 8 L44 30'), 'the arrow comes down onto the front (right) or the back (left) end');
 });
+check('a silo with no cone angle is drawn flat-bottomed, as before', () => {
+  const L = [{ tons: 100, spec: { grade: 'A' } }];
+  assert.equal(siloSvg(L, 200, { coneAngle: 0 }), siloSvg(L, 200));
+  assert.ok(!siloSvg(L, 200).includes('Cone-bottom'));
+  assert.equal(storageSvg('silo', L, 200, { coneAngle: 0 }), siloSvg(L, 200));
+});
+check('a silo with a cone angle is drawn with a hopper bottom and an outlet', () => {
+  const L = [{ tons: 100, spec: { grade: 'A' } }];
+  const svg = siloSvg(L, 200, { coneAngle: 35 });
+  assert.ok(svg.includes('Cone-bottom silo holding 100 tonnes'));
+  assert.ok(svg.startsWith('<svg') && svg.includes('<clipPath'));
+  assert.notEqual(svg, siloSvg(L, 200));
+  assert.ok(siloSvg([], 200, { coneAngle: 35 }).includes('Empty cone-bottom silo'));
+  assert.ok(storageSvg('silo', L, 200, { coneAngle: 35 }).includes('Cone-bottom'));
+  assert.ok(!storageSvg('bunker', L, 200, { coneAngle: 35 }).includes('Cone-bottom'), 'a bunker has no cone');
+});
+check('a steeper cone is drawn taller', () => {
+  const tip = (a) => Number(siloSvg([{ tons: 1, spec: { grade: 'A' } }], 200, { coneAngle: a }).match(/L48 (\d+(?:\.\d+)?) L80/)[1]);
+  assert.ok(tip(45) > 0 && tip(20) > 0);
+  const coneTop = (a) => Number(siloSvg([{ tons: 1, spec: { grade: 'A' } }], 200, { coneAngle: a }).match(/M16 26 L16 (\d+(?:\.\d+)?) L48/)[1]);
+  assert.ok(coneTop(45) < coneTop(20), 'the body ends higher when the cone is taller');
+});
+check('layers fill the cone by volume: the cone holds a small share, and layers stack in order', () => {
+  const L = [{ tons: 50, spec: { grade: 'A' } }, { tons: 50, spec: { grade: 'B' } }];
+  const svg = siloSvg(L, 200, { coneAngle: 35 });
+  const ys = [...svg.matchAll(/<rect x="16" y="([\d.]+)" width="64" height="([\d.]+)"/g)].map((m) => [Number(m[1]), Number(m[2])]);
+  assert.equal(ys.length, 2);
+  assert.ok(ys[1][0] < ys[0][0], 'the second layer sits above the first');
+  assert.ok(ys[0][1] > 0 && ys[1][1] > 0);
+  // a quarter full is more than a quarter of the way up the cone height, because a cone holds so little
+  const quarter = siloSvg([{ tons: 50, spec: { grade: 'A' } }], 200, { coneAngle: 35 }).match(/<rect x="16" y="([\d.]+)" width="64" height="([\d.]+)"/);
+  const tipY = 156;
+  assert.ok(tipY - Number(quarter[1]) > 0 && Number(quarter[1]) < tipY);
+});
 check('the storage picks its picture by kind', () => {
   const layers = [{ tons: 100, spec: { grade: 'A' } }];
   assert.ok(storageSvg('bunker', layers, 200).includes('START'));

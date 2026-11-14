@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=238';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=238';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=238';
-import { isTransit } from '../transit.js?v=238';
-import { isOffFarm } from '../offfarm.js?v=238';
-import { paintOffFarmCard } from './offfarm.js?v=238';
-import { gradesFor, allGradeCodes } from '../grades.js?v=238';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=238';
-import { hasStorageQuality } from '../mapping.js?v=238';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=238';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=238';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=238';
-import { renderRelatedMovements } from './movements.js?v=238';
-import { openSiloSetupSheet } from './silosetup.js?v=238';
-import { commodityFills } from '../commodityfill.js?v=238';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker } from '../outload.js?v=238';
+import { db } from '../storage.js?v=239';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=239';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=239';
+import { isTransit } from '../transit.js?v=239';
+import { isOffFarm } from '../offfarm.js?v=239';
+import { paintOffFarmCard } from './offfarm.js?v=239';
+import { gradesFor, allGradeCodes } from '../grades.js?v=239';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=239';
+import { hasStorageQuality } from '../mapping.js?v=239';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=239';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=239';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=239';
+import { renderRelatedMovements } from './movements.js?v=239';
+import { openSiloSetupSheet } from './silosetup.js?v=239';
+import { commodityFills } from '../commodityfill.js?v=239';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker } from '../outload.js?v=239';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=238';
+} from '../silolayers.js?v=239';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -780,7 +780,7 @@ function buildContents(root, existing, kind = existing?.kind) {
 
     root.querySelector('#lay-picture').innerHTML = `
       <div class="silo-pic${isBunker ? ' stack' : ''}">
-        <div>${storageSvg(isBunker ? 'bunker' : existing?.kind, layers, capacity, { outloadEnd: outEnd })}</div>
+        <div>${storageSvg(isBunker ? 'bunker' : existing?.kind, layers, capacity, { outloadEnd: outEnd, coneAngle: Number(root.querySelector('#s-cone')?.value ?? existing?.coneAngle) || 0 })}</div>
         <div class="silo-legend">
           <div class="main">${num(total, 1)} t${capacity ? ` <span class="meta">of ${num(capacity, 0)} t</span>` : ''}</div>
           ${visibleMix(mix).length ? visibleMix(mix).map((g) => `<div class="legend-row"><i style="background:${g.color}"></i><span>${esc(g.grade)}</span><span class="meta">${num(g.tons, 1)} t · ${Math.round(g.pct * 100)}%</span></div>`).join('')
@@ -947,6 +947,7 @@ function buildContents(root, existing, kind = existing?.kind) {
   root.querySelector('#op-truck').addEventListener('input', drawPlan);
   root.querySelector('#lay-asof').addEventListener('change', redraw);
   root.querySelector('#s-capacity')?.addEventListener('input', redraw);
+  root.querySelector('#s-cone')?.addEventListener('input', redraw);          // a silo's picture follows its bottom
   root.querySelector('#s-opening')?.addEventListener('input', redraw);
   redraw();
 }

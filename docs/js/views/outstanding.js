@@ -4,14 +4,14 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=238';
-import { openSheet } from '../ui.js?v=238';
-import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=238';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=238';
-import { windowText } from '../orders.js?v=238';
-import { openOrderSheet } from './orders.js?v=238';
-import { openInvoiceListSheet } from './invoice.js?v=238';
-import { renderPayables, returnToAfterBill } from './payables.js?v=238';
+import { db } from '../storage.js?v=239';
+import { openSheet } from '../ui.js?v=239';
+import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=239';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=239';
+import { windowText } from '../orders.js?v=239';
+import { openOrderSheet } from './orders.js?v=239';
+import { openInvoiceListSheet } from './invoice.js?v=239';
+import { renderPayables, returnToAfterBill } from './payables.js?v=239';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -69,7 +69,7 @@ export function openDeliveriesSheet() {
           <div class="stat"><div class="n" ${rep.ended.count ? 'style="color:var(--danger)"' : ''}>${num(rep.ended.due, 0)} t</div><div class="l">Past the contract end${rep.ended.count ? ` (${rep.ended.count})` : ''}</div></div>
         </div>
         <div class="row" style="margin-top:8px"><span class="label">Ending within 30 days</span><span class="value">${num(rep.soon.due, 0)} t${rep.soon.count ? ` (${rep.soon.count})` : ''}</span></div>
-        ${rep.ordersOverdue ? `<div class="row"><span class="label">Orders past their deliver-by date</span><span class="value"><span class="badge neg">${rep.ordersOverdue}</span></span></div>` : ''}
+        ${rep.ordersOverdue ? `<div class="row"><span class="label">Grain orders past their deliver-by date</span><span class="value"><span class="badge neg">${rep.ordersOverdue}</span></span></div>` : ''}
         <div class="chips" style="margin:12px 0 10px">
           ${[['', 'All'], ['ended', 'Past end'], ['soon', 'Ending soon']].map(([k, l]) => `<button type="button" class="chip ${deliveriesFilter === k ? 'active' : ''}" data-filter="${k}">${l}</button>`).join('')}
         </div>
@@ -88,7 +88,7 @@ export function openDeliveriesSheet() {
             <div class="meta">${ord.count ? `${ord.count} open order${ord.count === 1 ? '' : 's'} for ${num(ord.left, 0)} t${ord.nextBy ? `, next due ${esc(shortDate(ord.nextBy))}` : ''}${ord.overdue ? ` (${ord.overdue} overdue)` : ''}` : 'No open orders'}${r.unordered > 0.5 ? ` · ${num(r.unordered, 0)} t not yet ordered` : ''}</div>
             <div class="gauge" role="img" aria-label="${Math.round(pct * 100)} percent delivered"><i style="width:${pct * 100}%"></i></div>
             <div class="li-foot"><span class="badges"><span class="badge ${END_BADGE[r.state]}">${END_WORD[r.state]}</span></span>
-              ${canOrder ? `<button type="button" class="btn secondary small" data-add-order="${esc(r.sale.id)}" style="width:auto">Add an order</button>` : ''}</div>
+              ${canOrder ? `<button type="button" class="btn secondary small" data-add-order="${esc(r.sale.id)}" style="width:auto">Add a grain order</button>` : ''}</div>
           </div>`;
         }).join('')}`;
 

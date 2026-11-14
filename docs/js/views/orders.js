@@ -4,16 +4,16 @@
 // carting it and the buyer's own order number. Everything else about the sale is the contract's and is shown from it.
 // Loads are matched to an order on the movement. The arithmetic is in orders.js.
 
-import { db } from '../storage.js?v=238';
-import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=238';
-import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=238';
-import { movementTonsToSale } from '../derived.js?v=238';
-import { movementRow, openMovementSheet } from './movements.js?v=238';
-import { openVendorDecSheet } from './vendordec.js?v=238';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=238';
-import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=238';
-import { freightTitle, freightState, rateText } from '../freight.js?v=238';
-import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=238';
+import { db } from '../storage.js?v=239';
+import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=239';
+import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=239';
+import { movementTonsToSale } from '../derived.js?v=239';
+import { movementRow, openMovementSheet } from './movements.js?v=239';
+import { openVendorDecSheet } from './vendordec.js?v=239';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=239';
+import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=239';
+import { freightTitle, freightState, rateText } from '../freight.js?v=239';
+import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=239';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | filled | closed | all
@@ -27,7 +27,7 @@ const contractLabel = (s, commodities) => {
 
 /** The Orders screen. */
 export function openOrdersSheet() {
-  openSheet('Orders', (root) => {
+  openSheet('Grain orders', (root) => {
     const draw = () => {
       const { sales, movements, commodities } = db.get();
       const orders = db.getOrders();
@@ -54,7 +54,7 @@ export function openOrdersSheet() {
         <div class="segmented" id="ord-status" style="margin:12px 0 10px">
           ${[['open', 'Open'], ['filled', 'Filled'], ['closed', 'Closed'], ['all', 'All']].map(([k, l]) => `<button data-status="${k}" class="${filterStatus === k ? 'active' : ''}">${l}</button>`).join('')}
         </div>
-        ${shown.length === 0 ? `<div class="empty" style="padding:10px 0">${orders.length ? 'No orders match.' : 'No orders yet. Add one when a buyer sends you an order against a contract.'}</div>` : shown.map((o) => {
+        ${shown.length === 0 ? `<div class="empty" style="padding:10px 0">${orders.length ? 'No grain orders match.' : 'No grain orders yet. Add one when a buyer sends you an order against a contract.'}</div>` : shown.map((o) => {
           const st = stateOf(o);
           const s = sales.find((x) => x.id === o.saleId);
           const win = windowText(o, tightDate);
@@ -68,7 +68,7 @@ export function openOrdersSheet() {
               <span class="badges"><span class="badge ${BADGE[st.state]}">${STATE_LABEL[st.state]}</span></span></div>
           </div>`;
         }).join('')}
-        <button type="button" class="btn" id="add-order" style="margin-top:10px">+ Add an order</button>
+        <button type="button" class="btn" id="add-order" style="margin-top:10px">+ Add a grain order</button>
         <button type="button" class="btn secondary" id="open-freight" style="margin-top:8px">Freight orders${db.getFreightOrders().filter((f) => freightState(f, movements).active).length ? ` &middot; ${db.getFreightOrders().filter((f) => freightState(f, movements).active).length} open` : ''}</button>`;
 
       root.querySelector('#ord-status').addEventListener('click', (e) => { const b = e.target.closest('[data-status]'); if (b) { filterStatus = b.dataset.status; draw(); } });
@@ -89,8 +89,8 @@ export function renderContractOrders(container, saleId) {
     .sort((a, b) => String(a.deliverBy || '9999').localeCompare(String(b.deliverBy || '9999')));
   container.className = 'card';
   container.innerHTML = `
-    <h2>Orders</h2>
-    ${mine.length === 0 ? '<div class="empty">No orders against this contract yet.</div>' : mine.map((o) => {
+    <h2>Grain orders</h2>
+    ${mine.length === 0 ? '<div class="empty">No grain orders against this contract yet.</div>' : mine.map((o) => {
       const st = orderState(o, movements, today);
       return `
       <div class="list-item stack" data-edit-order="${esc(o.id)}">
@@ -99,7 +99,7 @@ export function renderContractOrders(container, saleId) {
           <span class="badges"><span class="badge ${BADGE[st.state]}">${STATE_LABEL[st.state]}</span></span></div>
       </div>`;
     }).join('')}
-    <button type="button" class="btn secondary small" id="add-contract-order" style="margin-top:8px;width:auto">+ Add an order</button>`;
+    <button type="button" class="btn secondary small" id="add-contract-order" style="margin-top:8px;width:auto">+ Add a grain order</button>`;
   container.querySelectorAll('[data-edit-order]').forEach((el) => el.addEventListener('click', () => openOrderSheet(mine.find((o) => o.id === el.dataset.editOrder))));
   container.querySelector('#add-contract-order').addEventListener('click', () => openOrderSheet(null, { saleId }));
 }
@@ -117,7 +117,7 @@ export function openOrderSheet(existing, defaults = {}) {
   // newest contracts last in the data, so list them as the Sales tab does: by buyer
   const contracts = [...sales].sort((a, b) => contractLabel(a, commodities).localeCompare(contractLabel(b, commodities)));
 
-  openSheet(existing ? 'Edit order' : 'Add an order', (root) => {
+  openSheet(existing ? 'Edit grain order' : 'Add a grain order', (root) => {
     root.innerHTML = `
       <datalist id="dl-freightcos">${companies.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
       ${field({ label: 'Contract', id: 'o-sale', type: 'select', value: src.saleId ?? '',
@@ -148,7 +148,7 @@ export function openOrderSheet(existing, defaults = {}) {
       <button type="button" class="btn secondary" id="o-vendordec" style="margin-bottom:8px">Vendor declaration&hellip;</button>
       ` : ''}
       ${attachmentsHtml('order', src.documents || [], { sub: "The buyer's order and anything else that came with it" })}
-      ${existing ? '<button class="btn ghost-danger" id="o-del" style="margin-top:8px">Delete order</button>' : ''}
+      ${existing ? '<button class="btn ghost-danger" id="o-del" style="margin-top:8px">Delete grain order</button>' : ''}
       <div class="save-bar solo"><button class="btn" id="save">Save</button></div>`;
     // a new order has no id yet, so one is minted up front and the files wait here until Save
     const recId = existing?.id || crypto.randomUUID();
@@ -203,7 +203,7 @@ export function openOrderSheet(existing, defaults = {}) {
       fosEl.innerHTML = `<h2>Freight orders</h2>${mine.length ? mine.map((f) => {
         const fst = freightState(f, movements);
         return `<div class="list-item stack" data-edit-fo="${esc(f.id)}"><div class="li-top"><div class="main">${esc(freightTitle(f))}</div><div class="main">${num(fst.left, 0)} t left</div></div><div class="meta">${esc(rateText(f))}</div></div>`;
-      }).join('') : '<div class="empty">No freight order for this order yet.</div>'}
+      }).join('') : '<div class="empty">No freight order for this grain order yet.</div>'}
         <button type="button" class="btn secondary small" id="o-make-fo" style="margin-top:8px;width:auto">+ Make a freight order</button>`;
       fosEl.querySelectorAll('[data-edit-fo]').forEach((el) => el.addEventListener('click', () => openFreightOrderSheet(mine.find((f) => f.id === el.dataset.editFo))));
       fosEl.querySelector('#o-make-fo').addEventListener('click', () => openFreightOrderSheet(null, { orderId: existing.id }));
@@ -216,7 +216,7 @@ export function openOrderSheet(existing, defaults = {}) {
       });
       root.querySelector('#o-vendordec').addEventListener('click', () => openVendorDecSheet({ orderId: existing.id }));
       root.querySelector('#o-del').addEventListener('click', () => {
-        confirmDelete('Delete this order? Loads delivered against it stay, but are no longer against an order.', () => { db.deleteOrder(existing.id); openOrdersSheet(); });
+        confirmDelete('Delete this grain order? Loads delivered against it stay, but are no longer against a grain order.', () => { db.deleteOrder(existing.id); openOrdersSheet(); });
       });
       root.querySelector('#save').addEventListener('click', () => save(status));
     } else {

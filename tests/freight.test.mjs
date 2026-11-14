@@ -210,6 +210,19 @@ check('a sent freight order is filed with its contract as a document kind the co
   assert.match(read('docs/js/documents.js'), /value: 'freight_order'/);
   assert.match(read('docs/js/views/freightorders.js'), /kind: 'freight_order'/);
 });
+check('a freight order can be made from the contract itself, for the contract', () => {
+  const sales = read('docs/js/views/sales.js');
+  assert.ok(sales.includes('id="contract-freight"') && sales.includes('renderContractFreight('));
+  const fo = read('docs/js/views/freightorders.js');
+  assert.ok(fo.includes('export function renderContractFreight('));
+  assert.ok(fo.includes("openFreightOrderSheet(null, { saleId })"), 'the new one starts with the contract chosen');
+});
+check('a buyer\'s order is called a grain order wherever it is named, so it is not mistaken for a freight order', () => {
+  const orders = read('docs/js/views/orders.js');
+  assert.ok(orders.includes("openSheet('Grain orders'") && orders.includes("'Add a grain order'") && orders.includes('<h2>Grain orders</h2>'));
+  assert.ok(read('docs/js/views/sales.js').includes('id="open-orders" style="margin-bottom:12px">Grain orders'));
+  assert.ok(read('docs/js/views/movements.js').includes('Delivering against a grain order'));
+});
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
 console.log('\nall passed');

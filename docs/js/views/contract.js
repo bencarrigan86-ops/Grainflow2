@@ -18,9 +18,9 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=238';
-import { openSheet } from '../ui.js?v=238';
-import { esc, num, money } from '../fmt.js?v=238';
+import { db } from '../storage.js?v=239';
+import { openSheet } from '../ui.js?v=239';
+import { esc, num, money } from '../fmt.js?v=239';
 
 const DASH = '—';
 

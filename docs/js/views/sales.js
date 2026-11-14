@@ -1,24 +1,25 @@
-import { db } from '../storage.js?v=238';
+import { db } from '../storage.js?v=239';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=238';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=238';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=238';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=238';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=238';
-import { renderRelatedMovements } from './movements.js?v=238';
-import { openInvoiceListSheet } from './invoice.js?v=238';
-import { openContractDocSheet } from './contract.js?v=238';
-import { wireJumps } from '../jump.js?v=238';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=238';
-import { openVendorDecSheet } from './vendordec.js?v=238';
-import { summarise as summariseOrders } from '../orders.js?v=238';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=238';
-import { deliveries, moneyPosition } from '../outstanding.js?v=238';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=238';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=238';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=238';
-import { standardFor } from '../grades.js?v=238';
+} from '../documents.js?v=239';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=239';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=239';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=239';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=239';
+import { renderRelatedMovements } from './movements.js?v=239';
+import { openInvoiceListSheet } from './invoice.js?v=239';
+import { openContractDocSheet } from './contract.js?v=239';
+import { wireJumps } from '../jump.js?v=239';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=239';
+import { renderContractFreight } from './freightorders.js?v=239';
+import { openVendorDecSheet } from './vendordec.js?v=239';
+import { summarise as summariseOrders } from '../orders.js?v=239';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=239';
+import { deliveries, moneyPosition } from '../outstanding.js?v=239';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=239';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=239';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=239';
+import { standardFor } from '../grades.js?v=239';
 
 let unsub = null;
 
@@ -63,7 +64,7 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
-      ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-orders" style="margin-bottom:12px">Orders${ordersSum.open.count ? ` &middot; ${num(ordersSum.open.left, 0)} t to deliver${ordersSum.overdue.count ? ` (${ordersSum.overdue.count} overdue)` : ordersSum.soon.count ? ` (${ordersSum.soon.count} due soon)` : ''}` : ''}</button>` : ''}
+      ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-orders" style="margin-bottom:12px">Grain orders${ordersSum.open.count ? ` &middot; ${num(ordersSum.open.left, 0)} t to deliver${ordersSum.overdue.count ? ` (${ordersSum.overdue.count} overdue)` : ordersSum.soon.count ? ` (${ordersSum.soon.count} due soon)` : ''}` : ''}</button>` : ''}
       ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-deliveries" style="margin-bottom:12px">Deliveries to go${deliverySum.total.count ? ` &middot; ${num(deliverySum.total.due, 0)} t${deliverySum.ended.count ? ` (${deliverySum.ended.count} past end)` : deliverySum.soon.count ? ` (${deliverySum.soon.count} ending soon)` : ''}` : ''}</button>` : ''}
       ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-money" style="margin-bottom:12px">Receivables &amp; payables${moneySum.owedToYou.outstanding.count || moneySum.youOwe.outstanding.count ? ` &middot; ${money(moneySum.owedToYou.outstanding.total, 0)} in, ${money(moneySum.youOwe.outstanding.total, 0)} out${moneySum.owedToYou.overdue.count || moneySum.youOwe.overdue.count ? ' (overdue)' : ''}` : ''}</button>` : ''}
       ${rollup.length === 0 ? '' : `
@@ -503,6 +504,7 @@ function openSaleSheet(existing) {
           attach the buyer's contract and the broker's note to it.</div>
       `}
       ${existing ? `<div id="contract-orders" style="margin:12px 0"></div>` : ''}
+      ${existing && ['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div id="contract-freight" style="margin:12px 0"></div>` : ''}
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       ${existing ? `<button class="btn secondary" id="view-invoice" style="margin-top:12px">${invoiceButtonLabel(existing)}</button>` : ''}
       ${existing ? `<button class="btn secondary" id="view-contract" style="margin-top:8px">Confirmation of sale (PDF)&hellip;</button>` : ''}
@@ -514,6 +516,7 @@ function openSaleSheet(existing) {
       </div>
     `;
     if (existing) renderContractOrders(root.querySelector('#contract-orders'), existing.id);
+    if (existing) renderContractFreight(root.querySelector('#contract-freight'), existing.id);
     if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'sale', existing.id);
     const invoiceBtn = root.querySelector('#view-invoice');
     if (invoiceBtn) invoiceBtn.addEventListener('click', () => openInvoiceListSheet(existing));
