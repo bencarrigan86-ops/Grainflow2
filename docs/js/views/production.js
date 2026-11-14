@@ -1,12 +1,14 @@
-import { db } from '../storage.js?v=243';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=243';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=243';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=243';
-import { describeMerge } from '../merge.js?v=243';
-import { renderRelatedMovements } from './movements.js?v=243';
-import { canSeeYield } from '../nav.js?v=243';
-import { wireJumps } from '../jump.js?v=243';
-import { openMapSheet } from './farmmap.js?v=243';
+import { db } from '../storage.js?v=244';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=244';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=244';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=244';
+import { describeMerge } from '../merge.js?v=244';
+import { renderRelatedMovements } from './movements.js?v=244';
+import { canSeeYield } from '../nav.js?v=244';
+import { wireJumps } from '../jump.js?v=244';
+import { openMapSheet } from './farmmap.js?v=244';
+import { openInputsSheet } from './inputs.js?v=244';
+import { stockLevels } from '../inputs.js?v=244';
 
 let unsub = null;
 
@@ -19,6 +21,9 @@ export function renderProduction(root) {
 function paint(root) {
   const showYield = canSeeYield(db.getRole());
   const { commodities, fields, movements } = db.get();
+  // prices are money: the people who see the books see the stock
+  const canSeeInputs = ['owner', 'manager', 'bookkeeper'].includes(db.getRole());
+  const inputProducts = canSeeInputs ? stockLevels(db.getInputMoves()).length : 0;
   const rollup = productionByCommodity(commodities, fields, movements).filter((r) => r.fieldCount > 0);
   const groups = groupFieldsByCommodity(commodities, fields, movements);
   const productionTotals = rollup.reduce((acc, r) => ({ area: acc.area + r.area, tons: acc.tons + r.tons }), { area: 0, tons: 0 });
@@ -33,6 +38,7 @@ function paint(root) {
     </div>
     <div class="view">
       ${fields.length ? `<button type="button" class="btn secondary" id="open-map" style="margin-bottom:12px">Farm map${fields.some((f) => f.boundary) ? ` &middot; ${fields.filter((f) => f.boundary).length} of ${fields.length} paddocks mapped` : ' &middot; add your paddock outlines'}</button>` : ''}
+      ${canSeeInputs ? `<button type="button" class="btn secondary" id="open-inputs" style="margin-bottom:12px">Inputs and stock${inputProducts ? ` &middot; ${inputProducts} product${inputProducts === 1 ? '' : 's'} in stock` : ' &middot; seed, fertiliser, fuel, chemical'}</button>` : ''}
       ${rollup.length === 0 ? '' : `
       <div class="card report">
         <h2><span class="dot report"></span>By commodity</h2>
@@ -74,6 +80,7 @@ function paint(root) {
     el.addEventListener('click', () => openFieldSheet(fields.find((f) => f.id === el.dataset.editField)));
   });
   root.querySelector('#add-field').addEventListener('click', () => openFieldSheet(null));
+  root.querySelector('#open-inputs')?.addEventListener('click', () => openInputsSheet());
   root.querySelector('#open-map')?.addEventListener('click', () => openMapSheet({ onOpenField: openFieldSheet }));
   root.querySelector('#empty-add-field')?.addEventListener('click', () => openFieldSheet(null));
 }

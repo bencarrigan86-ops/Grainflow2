@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=243';
-import { cleanOffFarm } from './offfarm.js?v=243';
+import { cleanGradeOptions } from './gradeprice.js?v=244';
+import { cleanOffFarm } from './offfarm.js?v=244';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -216,7 +216,7 @@ export function stateToRows(state, farmId) {
   const out = {
     farms: [], seasons: [], commodities: [], fields: [], field_agronomy: [],
     storages: [], sales: [], sale_terms: [], movements: [], movement_legs: [],
-    movement_photos: [], invoices: [], overheads: [], sale_documents: [], payables: [], orders: [], freight_orders: [], record_documents: [],
+    movement_photos: [], invoices: [], overheads: [], sale_documents: [], payables: [], orders: [], freight_orders: [], input_stock: [], record_documents: [],
   };
 
   const b = state.businessDetails || {};
@@ -540,6 +540,20 @@ export function stateToRows(state, farmId) {
       });
     }
 
+    // Input stock: seed, fertiliser, fuel and chemical coming in and going out.
+    for (const m of year.inputStock || []) {
+      out.input_stock.push({
+        id: m.id, farm_id: farmId, season_id: seasonId,
+        kind: m.kind, product: String(m.product || '').trim(),
+        unit: m.unit || 't', move_type: m.type || 'buy',
+        qty: n(m.qty),
+        unit_cost: m.unitCost === '' || m.unitCost == null ? null : n(m.unitCost),
+        move_date: orNull(m.date),
+        supplier: orNull(m.supplier), reference: orNull(m.reference),
+        notes: orNull(m.notes),
+      });
+    }
+
     const oh = year.overheads || {};
     out.overheads.push({
       id: year.__overheadsId || uid(), farm_id: farmId, season_id: seasonId,
@@ -772,6 +786,12 @@ export function rowsToState(rows) {
         pickup: f.pickup ?? '', deliverTo: f.deliver_to ?? '',
         loadFrom: f.load_from ?? '', loadBy: f.load_by ?? '',
         status: f.status || 'open', notes: f.notes ?? '',
+      })),
+
+      inputStock: inSeason(rows.input_stock || [], season.id).map((m) => ({
+        id: m.id, kind: m.kind, product: m.product ?? '', unit: m.unit || 't', type: m.move_type || 'buy',
+        qty: n(m.qty), unitCost: m.unit_cost == null ? '' : n(m.unit_cost),
+        date: m.move_date ?? '', supplier: m.supplier ?? '', reference: m.reference ?? '', notes: m.notes ?? '',
       })),
 
       overheads: (() => {

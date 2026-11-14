@@ -18,22 +18,22 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=243';
+import { hydrate } from './hydrate.js?v=244';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=243';
-import { chooseBootState, resolveLegacy } from './boot.js?v=243';
-import { isLegacyDirty } from './dirty.js?v=243';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=243';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=243';
-import { settleLegs, dedupeLegs } from './legs.js?v=243';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=243';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=243';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=243';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=243';
-import { schedulePush, pushOnReconnect } from './sync.js?v=243';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=243';
+} from './local.js?v=244';
+import { chooseBootState, resolveLegacy } from './boot.js?v=244';
+import { isLegacyDirty } from './dirty.js?v=244';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=244';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=244';
+import { settleLegs, dedupeLegs } from './legs.js?v=244';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=244';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=244';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=244';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=244';
+import { schedulePush, pushOnReconnect } from './sync.js?v=244';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=244';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -65,7 +65,7 @@ function defaultOverheads() {
 function defaultYear() {
   return {
     commodities: defaultCommodities(), fields: [], sales: [], storages: [],
-    movements: [], overheads: defaultOverheads(), invoices: [], payables: [], orders: [], freightOrders: [],
+    movements: [], overheads: defaultOverheads(), invoices: [], payables: [], orders: [], freightOrders: [], inputStock: [],
   };
 }
 
@@ -565,7 +565,7 @@ export const db = {
 
     data.years[label] = {
       commodities, fields, storages, sales: [], movements: [],
-      overheads: defaultOverheads(), invoices: [], payables: [], orders: [], freightOrders: [],
+      overheads: defaultOverheads(), invoices: [], payables: [], orders: [], freightOrders: [], inputStock: [],   // stock is not carried: it is summed across every season
     };
     data.currentYear = label;
     touch('year', label);
@@ -588,6 +588,7 @@ export const db = {
     y.payables?.forEach((p) => tombstone('payables', p.id));
     y.orders?.forEach((o) => tombstone('orders', o.id));
     y.freightOrders?.forEach((f) => tombstone('freight_orders', f.id));
+    y.inputStock?.forEach((m) => tombstone('input_stock', m.id));
     tombstone('overheads', y.__overheadsId);
     tombstone('seasons', y.__seasonId);
 
@@ -1049,6 +1050,36 @@ export const db = {
     // loads carted on it, and bills for it, are left, naming nothing
     for (const m of c.movements || []) if (m.freightOrderId === id) { m.freightOrderId = null; touch('movement', m.id); }
     for (const p of c.payables || []) if (p.freightOrderId === id) { p.freightOrderId = null; touch('payable', p.id); }
+    persist();
+  },
+
+  // --- input stock: seed, fertiliser, fuel and chemical in and out (see inputs.js) ---
+  /** Every entry from every season: what is on hand does not stop at the end of a year. */
+  getInputMoves() {
+    return Object.values(data.years).flatMap((y) => y.inputStock || []);
+  },
+  upsertInputMove(m) {
+    const c = current();
+    c.inputStock = c.inputStock || [];
+    if (m.id) {
+      // the entry may sit in an earlier season: change it where it is
+      for (const y of Object.values(data.years)) {
+        const idx = (y.inputStock || []).findIndex((x) => x.id === m.id);
+        if (idx >= 0) { y.inputStock[idx] = { ...y.inputStock[idx], ...m }; touch('inputmove', m.id); persist(); return m.id; }
+      }
+    }
+    const id = m.id || uid();
+    c.inputStock.push({ ...m, id });
+    touch('inputmove', id);
+    persist();
+    return id;
+  },
+  deleteInputMove(id) {
+    for (const y of Object.values(data.years)) {
+      if (!(y.inputStock || []).some((x) => x.id === id)) continue;
+      tombstone('input_stock', id);
+      y.inputStock = y.inputStock.filter((x) => x.id !== id);
+    }
     persist();
   },
 

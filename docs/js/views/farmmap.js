@@ -4,12 +4,12 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=243';
-import { openSheet, toast, notify, askConfirm } from '../ui.js?v=243';
-import { esc, num } from '../fmt.js?v=243';
+import { db } from '../storage.js?v=244';
+import { openSheet, toast, notify, askConfirm } from '../ui.js?v=244';
+import { esc, num } from '../fmt.js?v=244';
 import {
   readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP,
-} from '../farmmap.js?v=243';
+} from '../farmmap.js?v=244';
 
 const MAX_ZOOM = 40;
 
@@ -145,8 +145,9 @@ function importView(root, done, haveMap = false) {
       In John Deere Operations Center export your boundaries as a shapefile, then choose the <strong>.shp</strong> and <strong>.dbf</strong> files together
       (select both at once), or the <strong>.zip</strong> they came in. Paddocks are matched to yours by name.</div>
     <label class="btn" style="display:block;text-align:center;cursor:pointer">Choose the files&hellip;
-      <input type="file" id="fm-files" multiple accept=".shp,.dbf,.zip,.prj,.cpg,.shx" style="display:none" />
+      <input type="file" id="fm-files" multiple style="display:none" />
     </label>
+    <div class="meta" style="margin-top:6px">Every kind of file is offered, so the picker lists all your locations, OneDrive included. If your OneDrive is not in the list, open the Files app or the OneDrive app, make the files available on this device (or zip them), and choose them again.</div>
     <div id="fm-problem" class="hint" style="color:var(--danger);margin:8px 0"></div>
     <div id="fm-preview"></div>
     ${haveMap ? '<button type="button" class="btn secondary" id="fm-back" style="margin-top:8px">Back to the map</button>' : ''}`;

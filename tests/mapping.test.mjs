@@ -23,7 +23,7 @@ const state = {
   },
   years: {
     '2025': {
-      commodities: [], fields: [], storages: [], sales: [], movements: [], invoices: [], payables: [], orders: [], freightOrders: [],
+      commodities: [], fields: [], storages: [], sales: [], movements: [], invoices: [], payables: [], orders: [], freightOrders: [], inputStock: [],
       overheads: { finance: 0, equipmentRepayments: 0, depreciation: 0, wages: 0,
                    drawings: 0, admin: 0, energy: 0, insurance: 0,
                    repairsMaintenance: 0, other: 0 },
@@ -131,6 +131,10 @@ const state = {
         { id: u(), saleId: sale1, orderId: null, freightNo: 'FO-001', carrier: 'Ace Haulage', carrierEmail: 'dispatch@ace.example.com',
           tons: 120, rate: 0.12, rateBasis: 'per_tkm', flatRate: '', distanceKm: 240, pickup: 'Gate 2', deliverTo: 'Newbridge silo',
           loadFrom: '2026-02-01', loadBy: '2026-02-20', status: 'open', notes: 'Side tipper' },
+      ],
+      inputStock: [
+        { id: u(), kind: 'fert', product: 'Urea', unit: 't', type: 'buy', qty: 40, unitCost: 880, date: '2026-03-04', supplier: 'Elders', reference: 'INV-221', notes: '' },
+        { id: u(), kind: 'seed', product: 'Scepter wheat', unit: 't', type: 'use', qty: 6.5, unitCost: '', date: '2026-05-02', supplier: '', reference: '', notes: 'SR1-3' },
       ],
       overheads: { finance: 50000, equipmentRepayments: 30000, depreciation: 40000,
                    wages: 180000, drawings: 90000, admin: 12000, energy: 22000,

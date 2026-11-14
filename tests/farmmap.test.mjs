@@ -211,6 +211,12 @@ await check('each matched paddock can keep its typed area instead of taking the 
   // storage leaves the typed area alone when the area passed is 0
   assert.ok(read('docs/js/storage.js').includes('m.areaHa > 0 ? { areaHa: m.areaHa }'));
 });
+await check('the file chooser puts no filter on the picker, so OneDrive and other locations are listed', () => {
+  const v = read('docs/js/views/farmmap.js');
+  const tag = v.match(/<input type="file" id="fm-files"[^>]*>/)[0];
+  assert.ok(!/accept=/.test(tag), tag);
+  assert.ok(tag.includes('multiple'));
+});
 await check('the column is in the paste-in file', () => {
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists boundary jsonb'));
 });

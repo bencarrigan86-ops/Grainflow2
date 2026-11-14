@@ -95,7 +95,7 @@ check('the push writes them last, and for the roles that can write the record th
   assert.ok(!/farm_worker: \[[^\]]*'record_documents'/.test(sync) && !/driver: \[[^\]]*'record_documents'/.test(sync));
 });
 check('they are read back when the farm loads', () => {
-  assert.match(read('docs/js/hydrate.js'), /'freight_orders', 'record_documents',/);
+  assert.match(read('docs/js/hydrate.js'), /'freight_orders', 'input_stock', 'record_documents',/);
 });
 check('owners, managers and bookkeepers see and attach files to orders, invoices and bills; nobody else does', () => {
   const sql = read('supabase/migrations/20261114190000_record_documents.sql');

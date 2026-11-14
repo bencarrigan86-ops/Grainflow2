@@ -15,12 +15,12 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=243';
-import { stateToRows } from './mapping.js?v=243';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=243';
-import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=243';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=243';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=243';
+import { supabase } from './supabase.js?v=244';
+import { stateToRows } from './mapping.js?v=244';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=244';
+import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=244';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=244';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=244';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -35,6 +35,7 @@ const ORDER = [
   'storages', 'sales', 'sale_terms', 'sale_documents',
   'orders',                                   // before movements: a load can name its order
   'freight_orders',                           // before movements and payables: both can name one
+  'input_stock',                              // seed, fertiliser, fuel and chemical in and out
   'movements', 'movement_legs', 'movement_photos',
   'invoices', 'overheads', 'payables',
   'record_documents',                         // files attached to an order, an invoice or a bill
@@ -49,9 +50,9 @@ const ORDER = [
 const WRITABLE = {
   owner: ORDER,
   manager: ['seasons', 'commodities', 'fields', 'field_agronomy', 'storages',
-            'sale_documents', 'orders', 'freight_orders', 'record_documents', 'invoices', 'payables',
+            'sale_documents', 'orders', 'freight_orders', 'input_stock', 'record_documents', 'invoices', 'payables',
             'movements', 'movement_legs', 'movement_photos'],
-  bookkeeper: ['sales', 'sale_terms', 'sale_documents', 'orders', 'freight_orders', 'invoices', 'overheads', 'payables', 'record_documents'],
+  bookkeeper: ['sales', 'sale_terms', 'sale_documents', 'orders', 'freight_orders', 'input_stock', 'invoices', 'overheads', 'payables', 'record_documents'],
   farm_worker: ['fields', 'field_agronomy', 'movements', 'movement_legs', 'movement_photos'],
   driver: ['movements', 'movement_legs', 'movement_photos'],
 };
