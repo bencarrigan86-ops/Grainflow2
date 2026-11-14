@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=244';
-import { getTheme, setTheme } from '../theme.js?v=244';
-import { num, money, esc, todayLocal } from '../fmt.js?v=244';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=244';
-import { openLoadImportSheet } from './importloads.js?v=244';
-import { openDeletedSheet } from './deleted.js?v=244';
-import { APP_VERSION } from '../version.js?v=244';
-import { exportRowsAsCSV } from '../csv.js?v=244';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=244';
-import { endpointLabel } from './movements.js?v=244';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=244';
-import { layersForStorage } from '../outload.js?v=244';
-import { holdings, totalHeld } from '../offfarm.js?v=244';
-import { kindLabel, billTotal } from '../payables.js?v=244';
-import { orderState, STATE_LABEL } from '../orders.js?v=244';
-import { fieldHarvest } from '../harvest.js?v=244';
-import { openMySignatureSheet } from './signaturepad.js?v=244';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=244';
+import { db } from '../storage.js?v=245';
+import { getTheme, setTheme } from '../theme.js?v=245';
+import { num, money, esc, todayLocal } from '../fmt.js?v=245';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=245';
+import { openLoadImportSheet } from './importloads.js?v=245';
+import { openDeletedSheet } from './deleted.js?v=245';
+import { APP_VERSION } from '../version.js?v=245';
+import { exportRowsAsCSV } from '../csv.js?v=245';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=245';
+import { endpointLabel } from './movements.js?v=245';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=245';
+import { layersForStorage } from '../outload.js?v=245';
+import { holdings, totalHeld } from '../offfarm.js?v=245';
+import { kindLabel, billTotal } from '../payables.js?v=245';
+import { orderState, STATE_LABEL } from '../orders.js?v=245';
+import { fieldHarvest } from '../harvest.js?v=245';
+import { openMySignatureSheet } from './signaturepad.js?v=245';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=245';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=244';
+} from '../invites.js?v=245';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=244';
+} from '../auth.js?v=245';
 
 let unsub = null;
 

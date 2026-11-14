@@ -217,6 +217,15 @@ await check('the file chooser puts no filter on the picker, so OneDrive and othe
   assert.ok(!/accept=/.test(tag), tag);
   assert.ok(tag.includes('multiple'));
 });
+await check('the map sheet never asks "Close without saving?" after the paddock ticks, because it has nothing typed to lose', () => {
+  const ui = read('docs/js/ui.js');
+  assert.ok(ui.includes('askBeforeClose = true') && ui.includes('if (!askBeforeClose) return;'));
+  assert.ok(read('docs/js/views/farmmap.js').includes('{ askBeforeClose: false }'));
+});
+await check('the map has tick boxes for the paddock names and their areas, remembered on the device', () => {
+  const v = read('docs/js/views/farmmap.js');
+  for (const t of ['id="fm-names"', 'id="fm-areas"', 'grainflow.farmmap.show', 'fm-a', 'show.names', 'show.areas']) assert.ok(v.includes(t), t);
+});
 await check('the column is in the paste-in file', () => {
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists boundary jsonb'));
 });

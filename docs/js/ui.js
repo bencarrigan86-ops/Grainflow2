@@ -21,7 +21,7 @@ export function escHtml(v) {
  * Open a bottom sheet. `buildBody(container)` receives the sheet's content div
  * to populate with fields/buttons. Returns the content container for convenience.
  */
-export function openSheet(title, buildBody) {
+export function openSheet(title, buildBody, { askBeforeClose = true } = {}) {
   closeSheet();
   backdrop = document.createElement('div');
   backdrop.className = 'sheet-backdrop';
@@ -51,6 +51,9 @@ export function openSheet(title, buildBody) {
   sheet.addEventListener('input', (e) => {
     // Search boxes and file pickers are not edits.
     if (e.target.matches?.('input[type="search"], input[type="file"]')) return;
+    // A sheet that saves as it goes (the farm map: choosing which paddocks take the map area, then Save) has
+    // nothing typed to lose, and must not warn once it has been saved.
+    if (!askBeforeClose) return;
     dirty = true;
   });
   backdrop.appendChild(sheet);

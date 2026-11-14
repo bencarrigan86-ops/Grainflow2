@@ -4,14 +4,21 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=244';
-import { openSheet, toast, notify, askConfirm } from '../ui.js?v=244';
-import { esc, num } from '../fmt.js?v=244';
+import { db } from '../storage.js?v=245';
+import { openSheet, toast, notify, askConfirm } from '../ui.js?v=245';
+import { esc, num } from '../fmt.js?v=245';
 import {
   readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP,
-} from '../farmmap.js?v=244';
+} from '../farmmap.js?v=245';
 
 const MAX_ZOOM = 40;
+
+// what is written on the paddocks, remembered on this device
+const SHOW_KEY = 'grainflow.farmmap.show';
+const readShow = () => {
+  try { return { names: true, areas: false, ...JSON.parse(localStorage.getItem(SHOW_KEY) || '{}') }; } catch { return { names: true, areas: false }; }
+};
+const saveShow = (show) => { try { localStorage.setItem(SHOW_KEY, JSON.stringify(show)); } catch { /* private mode: it just is not remembered */ } };
 
 /** @param {{onOpenField?: (field: object) => void}} [opts] */
 export function openMapSheet({ onOpenField } = {}) {
@@ -34,13 +41,17 @@ export function openMapSheet({ onOpenField } = {}) {
         <div id="fm-wrap" style="position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg);touch-action:none">
           <svg id="fm-svg" viewBox="0 0 ${vb.w} ${vb.h}" style="display:block;width:100%;height:auto;max-height:68vh" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of the paddocks">
             ${layout.items.map((i) => `<path data-id="${esc(i.id)}" d="${i.d}" fill="${i.color}" fill-opacity="0.55" fill-rule="evenodd" stroke="var(--text)" stroke-opacity="0.55" stroke-width="1" vector-effect="non-scaling-stroke" style="cursor:pointer"><title>${esc(i.name)}</title></path>`).join('')}
-            ${layout.items.map((i) => `<text data-label="${esc(i.id)}" data-area="${Math.round(i.areaHa * 10000)}" x="${Math.round(i.cx)}" y="${Math.round(i.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="3" paint-order="stroke" pointer-events="none" style="font-weight:600">${esc(i.name)}</text>`).join('')}
+            ${layout.items.map((i) => `<text data-label="${esc(i.id)}" data-area="${Math.round(i.areaHa * 10000)}" x="${Math.round(i.cx)}" y="${Math.round(i.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="3" paint-order="stroke" pointer-events="none" style="font-weight:600"><tspan class="fm-n" x="${Math.round(i.cx)}">${esc(i.name)}</tspan><tspan class="fm-a" x="${Math.round(i.cx)}" dy="1.15em" style="font-weight:500">${num(Number(mapped.find((f) => f.id === i.id)?.areaHa) || i.areaHa, 1)} ha</tspan></text>`).join('')}
           </svg>
           <div style="position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px">
             <button type="button" class="btn secondary small" id="fm-in" aria-label="Zoom in" style="width:40px;padding:6px 0">+</button>
             <button type="button" class="btn secondary small" id="fm-out" aria-label="Zoom out" style="width:40px;padding:6px 0">&minus;</button>
             <button type="button" class="btn secondary small" id="fm-reset" aria-label="Show everything" style="width:40px;padding:6px 0">&#8962;</button>
           </div>
+        </div>
+        <div style="display:flex;gap:18px;margin:10px 0 0">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="fm-names" style="width:18px;height:18px" /> Names</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="fm-areas" style="width:18px;height:18px" /> Areas (ha)</label>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0">
           ${inUse.map((c, i) => `<span class="meta"><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${PALETTE[i % PALETTE.length]};vertical-align:-1px"></span> ${esc(c.name)}</span>`).join('')}
@@ -60,7 +71,7 @@ export function openMapSheet({ onOpenField } = {}) {
       });
     };
     draw();
-  });
+  }, { askBeforeClose: false });   // the ticks on the import screen are not typing to lose: once saved, Close just closes
 }
 
 /** Pan, pinch and button zoom on the map, by moving the viewBox. A tap on a paddock opens it. */
@@ -75,17 +86,27 @@ function wireMap(root, full, layout, open) {
     v.y = Math.min(full.h - v.h * 0.1, Math.max(-v.h * 0.9, v.y));
   };
   // names are drawn at one size on screen, and left out of paddocks too small to hold them
+  const show = readShow();
   const labels = () => {
     const width = svg.getBoundingClientRect().width || 360;
     const unit = v.w / width;                              // map metres to a pixel
     const size = 11 * unit;
+    const both = show.names && show.areas;
     svg.querySelectorAll('text[data-label]').forEach((t) => {
       const px2 = Number(t.dataset.area) / (unit * unit);   // the paddock's area in square pixels (data-area is square metres)
-      t.style.display = px2 > 2600 ? '' : 'none';
+      t.style.display = (show.names || show.areas) && px2 > (both ? 4200 : 2600) ? '' : 'none';
       t.setAttribute('font-size', size);
       t.setAttribute('stroke-width', 3 * unit);
+      const n = t.querySelector('.fm-n'); const a = t.querySelector('.fm-a');
+      n.style.display = show.names ? '' : 'none';
+      a.style.display = show.areas ? '' : 'none';
+      a.setAttribute('dy', show.names ? '1.15em' : '0');
     });
   };
+  const nameBox = root.querySelector('#fm-names'); const areaBox = root.querySelector('#fm-areas');
+  nameBox.checked = show.names; areaBox.checked = show.areas;
+  const ticked = () => { show.names = nameBox.checked; show.areas = areaBox.checked; saveShow(show); labels(); };
+  nameBox.addEventListener('change', ticked); areaBox.addEventListener('change', ticked);
   const zoomAt = (factor, cx = 0.5, cy = 0.5) => {         // cx, cy: where on the map to hold still, as a fraction of it
     const nx = v.x + v.w * cx; const ny = v.y + v.h * cy;
     v.w /= factor; v.h = v.w * (full.h / full.w);

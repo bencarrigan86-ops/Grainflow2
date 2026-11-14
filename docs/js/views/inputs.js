@@ -4,14 +4,14 @@
 // and Bought, Used and Count record an entry. Seed and fertiliser also show what this season's paddocks call for
 // against what is in the shed. The arithmetic is in inputs.js.
 
-import { db } from '../storage.js?v=244';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=244';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=244';
-import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=244';
+import { db } from '../storage.js?v=245';
+import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=245';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=245';
+import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=245';
 import {
   KINDS, UNITS, MOVE_TYPES, kindLabel, defaultUnit, productKey, stockLevels, productMoves, stockValue,
   plannedNeeds, planVsStock, inputProblems, adjustmentFor, moveDelta, qtyText,
-} from '../inputs.js?v=244';
+} from '../inputs.js?v=245';
 
 const TYPE_LABEL = { buy: 'Bought', use: 'Used', adjust: 'Count' };
 const TYPE_BADGE = { buy: 'pos', use: 'warn', adjust: 'muted' };
