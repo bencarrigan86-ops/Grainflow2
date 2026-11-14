@@ -1,15 +1,15 @@
-import { db } from '../storage.js?v=230';
-import { movementsForEndpoint } from '../derived.js?v=230';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=230';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=230';
-import { compressAndStampImage } from '../img.js?v=230';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=230';
-import { specText } from '../outload.js?v=230';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=230';
-import { pickableSilos } from '../silopick.js?v=230';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=230';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=230';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=230';
+import { db } from '../storage.js?v=234';
+import { movementsForEndpoint } from '../derived.js?v=234';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=234';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=234';
+import { compressAndStampImage } from '../img.js?v=234';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=234';
+import { specText } from '../outload.js?v=234';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=234';
+import { pickableSilos } from '../silopick.js?v=234';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=234';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=234';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=234';
 
 let unsub = null;
 
@@ -32,8 +32,8 @@ function ticketSearchText(m, ctx) {
 function dayHeading(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
   if (!m) return 'No date';
-  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
-    .toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  const day = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return `${day.toLocaleDateString('en-AU', { weekday: 'short' })} ${m[3]}-${m[2]}-${m[1]}`;
 }
 
 function paint(root) {
@@ -235,7 +235,7 @@ export function movementRow(m, ctx) {
     : null;
   // the order it was delivered against, if any
   const order = m.orderId ? (ctx.orders || db.getOrders()).find((o) => o.id === m.orderId) : null;
-  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', order ? (order.orderNo ? `order #${order.orderNo}` : 'against an order') : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
+  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', order ? (order.orderNo ? `order #${order.orderNo}` : 'against an order') : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date, { tight: true }) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
   return `
     <div class="list-item stack" data-edit-movement="${m.id}">
       <div class="li-top">
@@ -505,7 +505,7 @@ export function openMovementSheet(existing, template) {
   const orderOptionLabel = (o) => {
     const s = saleOfOrder(o);
     const c = commodities.find((cc) => cc.id === s?.commodityId);
-    return [c?.name, s?.buyer, orderTitle(o), windowText(o, shortDate), `${num(orderState(o, movements, todayLocal()).left, 0)} t left`].filter(Boolean).join(' · ');
+    return [c?.name, s?.buyer, orderTitle(o), windowText(o, tightDate), `${num(orderState(o, movements, todayLocal()).left, 0)} t left`].filter(Boolean).join(' · ');
   };
   const pickableOrders = orders
     .filter((o) => saleOfOrder(o) && (o.id === existing?.orderId || orderState(o, movements, todayLocal()).active))
@@ -724,7 +724,7 @@ export function openMovementSheet(existing, template) {
                 <option value="">Not against an order</option>
                 ${list.map((o) => {
                   const st = orderState(o, movements, todayLocal());
-                  const label = [orderTitle(o), windowText(o, shortDate), `${num(st.left, 0)} t left`, st.state === 'overdue' ? 'overdue' : '', o.freightCompany].filter(Boolean).join(' · ');
+                  const label = [orderTitle(o), windowText(o, tightDate), `${num(st.left, 0)} t left`, st.state === 'overdue' ? 'overdue' : '', o.freightCompany].filter(Boolean).join(' · ');
                   return `<option value="${esc(o.id)}" ${o.id === orderChoice ? 'selected' : ''}>${esc(label)}</option>`;
                 }).join('')}
               </select>

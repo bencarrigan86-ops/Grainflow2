@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=230';
-import { cleanOffFarm } from './offfarm.js?v=230';
+import { cleanGradeOptions } from './gradeprice.js?v=234';
+import { cleanOffFarm } from './offfarm.js?v=234';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -62,6 +62,16 @@ const QUALITY_FIELDS = [
   ['oilPct', 'oil_pct', 'num', 'optional'],
 ];
 const LOAD_QUALITY_FIELDS = QUALITY_FIELDS.filter(([key]) => key !== 'cropYear');
+
+// What an invoice carries that has no column of its own: when it was issued and is due, and its figures. Kept in the
+// row's `totals` under this key, so they come back with the invoice.
+const INVOICE_KEY = '__invoice';
+const INVOICE_EXTRAS = ['issueDate', 'dueDate', 'totalTons', 'subtotalExGST', 'freightTotal', 'levies', 'gst', 'totalPayable'];
+function invoiceExtras(inv) {
+  const out = {};
+  for (const k of INVOICE_EXTRAS) if (inv[k] !== undefined) out[k] = inv[k];
+  return Object.keys(out).length ? { [INVOICE_KEY]: out } : {};
+}
 
 /**
  * One ticket as the app holds it, from its row, its legs and its photo row. Used for the
@@ -347,6 +357,9 @@ export function stateToRows(state, farmId) {
         // columns: left out until a grade is listed, kept once one has been, so clearing the list reaches the server.
         // Brokerage in $/t, charged on the tonnes delivered. Optional like the other later columns.
         ...((Number(sale.brokerageRate) || sale.__hasBrokerageRate) ? { brokerage_rate: n(sale.brokerageRate) } : {}),
+        // Who pays the freight: 'we' (a bill in Payables) or 'buyer' (taken off the invoice). Sent once it is 'buyer', or
+        // has been stored, so a contract that is never changed from the default never needs the column.
+        ...((sale.freightPaidBy === 'buyer' || sale.__hasFreightPaidBy) ? { freight_paid_by: sale.freightPaidBy === 'buyer' ? 'buyer' : 'we' } : {}),
         ...((sale.gradeOptions?.length || sale.__hasGradeOptions) ? { grade_options: cleanGradeOptions(sale.gradeOptions) } : {}),
         // Canola priced for oil: the base oil and the % of price per 1% of oil. Optional in the same way.
         ...((Number(sale.oilAdjustPct) || sale.__hasOilTerms) ? { oil_base_pct: n(sale.oilBasePct), oil_adjust_pct: n(sale.oilAdjustPct) } : {}),
@@ -427,7 +440,9 @@ export function stateToRows(state, farmId) {
         status: inv.status || 'outstanding',
         paid_date: orNull(inv.paidDate),
         lines: inv.lines || [],
-        totals: inv.totals || {},
+        // The invoice's own figures and dates have no columns of their own, so they travel inside `totals`, under
+        // one key. Without this an invoice came back from the server with no amount and no due date.
+        totals: { ...(inv.totals || {}), ...invoiceExtras(inv) },
       });
     }
 
@@ -618,6 +633,7 @@ export function rowsToState(rows) {
           paymentTermsBasis: t.payment_terms_basis ?? '',
           tradeRules: t.trade_rules ?? '',
           ...(t.brokerage_rate != null ? { brokerageRate: n(t.brokerage_rate), __hasBrokerageRate: true } : {}),
+          ...(t.freight_paid_by != null ? { freightPaidBy: t.freight_paid_by === 'buyer' ? 'buyer' : 'we', __hasFreightPaidBy: true } : {}),
           ...(Array.isArray(t.grade_options) ? { gradeOptions: cleanGradeOptions(t.grade_options), __hasGradeOptions: true } : {}),
           ...(t.oil_adjust_pct != null ? { oilBasePct: n(t.oil_base_pct), oilAdjustPct: n(t.oil_adjust_pct), __hasOilTerms: true } : {}),
           documents: (docsBySale.get(sale.id) || []).map((d) => ({
@@ -632,11 +648,15 @@ export function rowsToState(rows) {
 
       movements: inSeason(rows.movements, season.id).map((m) => movementFromRow(m, legsByMovement.get(m.id) || [], photoByMovement.get(m.id))),
 
-      invoices: inSeason(rows.invoices, season.id).map((inv) => ({
-        id: inv.id, saleId: inv.sale_id, invoiceNo: inv.invoice_no,
-        status: inv.status, paidDate: inv.paid_date,
-        lines: inv.lines || [], totals: inv.totals || {},
-      })),
+      invoices: inSeason(rows.invoices, season.id).map((inv) => {
+        const { [INVOICE_KEY]: extras, ...totals } = inv.totals || {};
+        return {
+          id: inv.id, saleId: inv.sale_id, invoiceNo: inv.invoice_no,
+          status: inv.status, paidDate: inv.paid_date,
+          lines: inv.lines || [], totals,
+          ...(extras && typeof extras === 'object' ? extras : {}),
+        };
+      }),
 
       payables: inSeason(rows.payables, season.id).map((p) => ({
         id: p.id, kind: p.kind,

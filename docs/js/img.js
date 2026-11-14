@@ -26,7 +26,7 @@ export function compressAndStampImage(file, { maxWidth = 1280, quality = 0.72, t
         const when = takenAt instanceof Date && !Number.isNaN(takenAt.getTime()) ? takenAt : new Date();
         const stamp = when.toLocaleString('en-AU', {
           day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-        });
+        }).replace(/\//g, '-');
         const fontSize = Math.max(14, Math.round(w * 0.032));
         const pad = Math.max(6, Math.round(fontSize * 0.4));
         ctx.font = `600 ${fontSize}px sans-serif`;

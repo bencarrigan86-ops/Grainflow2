@@ -1,23 +1,23 @@
-import { db } from '../storage.js?v=230';
+import { db } from '../storage.js?v=234';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=230';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=230';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=230';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=230';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=230';
-import { renderRelatedMovements } from './movements.js?v=230';
-import { openInvoiceListSheet } from './invoice.js?v=230';
-import { openContractDocSheet } from './contract.js?v=230';
-import { wireJumps } from '../jump.js?v=230';
-import { openPayablesSheet } from './payables.js?v=230';
-import { summarise as summarisePayables } from '../payables.js?v=230';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=230';
-import { summarise as summariseOrders } from '../orders.js?v=230';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=230';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=230';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=230';
-import { standardFor } from '../grades.js?v=230';
+} from '../documents.js?v=234';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=234';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=234';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=234';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=234';
+import { renderRelatedMovements } from './movements.js?v=234';
+import { openInvoiceListSheet } from './invoice.js?v=234';
+import { openContractDocSheet } from './contract.js?v=234';
+import { wireJumps } from '../jump.js?v=234';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=234';
+import { summarise as summariseOrders } from '../orders.js?v=234';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=234';
+import { deliveries, moneyPosition } from '../outstanding.js?v=234';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=234';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=234';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=234';
+import { standardFor } from '../grades.js?v=234';
 
 let unsub = null;
 
@@ -32,9 +32,11 @@ function paint(root) {
   const rollup = salesByCommodity(commodities, sales, movements).filter((r) => r.contractCount > 0);
   const groups = groupSalesByCommodity(commodities, sales, movements);
   // what is owed, for the Payables button
-  const payablesSum = summarisePayables(db.getPayables(), todayLocal());
   // and what buyers are waiting on, for the Orders button
   const ordersSum = summariseOrders(db.getOrders(), movements, todayLocal());
+  // grain still to deliver, and money in and out, for the buttons under it
+  const deliverySum = deliveries(sales, movements, db.getOrders(), todayLocal());
+  const moneySum = moneyPosition(db.get().invoices, sales, db.getPayables(), todayLocal());
   const salesTotals = rollup.reduce((acc, r) => ({
     tons: acc.tons + r.tons,
     tonsDue: acc.tonsDue + Math.max(0, r.tonsDue),
@@ -61,7 +63,8 @@ function paint(root) {
     </div>
     <div class="view">
       ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-orders" style="margin-bottom:12px">Orders${ordersSum.open.count ? ` &middot; ${num(ordersSum.open.left, 0)} t to deliver${ordersSum.overdue.count ? ` (${ordersSum.overdue.count} overdue)` : ordersSum.soon.count ? ` (${ordersSum.soon.count} due soon)` : ''}` : ''}</button>` : ''}
-      ${['owner', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-payables" style="margin-bottom:12px">Payables${payablesSum.unpaid.count ? ` &middot; ${money(payablesSum.unpaid.total, 0)} unpaid${payablesSum.overdue.count ? ` (${money(payablesSum.overdue.total, 0)} overdue)` : ''}` : ''}</button>` : ''}
+      ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-deliveries" style="margin-bottom:12px">Deliveries to go${deliverySum.total.count ? ` &middot; ${num(deliverySum.total.due, 0)} t${deliverySum.ended.count ? ` (${deliverySum.ended.count} past end)` : deliverySum.soon.count ? ` (${deliverySum.soon.count} ending soon)` : ''}` : ''}</button>` : ''}
+      ${['owner', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-money" style="margin-bottom:12px">Receivables &amp; payables${moneySum.owedToYou.outstanding.count || moneySum.youOwe.outstanding.count ? ` &middot; ${money(moneySum.owedToYou.outstanding.total, 0)} in, ${money(moneySum.youOwe.outstanding.total, 0)} out${moneySum.owedToYou.overdue.count || moneySum.youOwe.overdue.count ? ' (overdue)' : ''}` : ''}</button>` : ''}
       ${rollup.length === 0 ? '' : `
       <div class="card report">
         <h2><span class="dot report"></span>By commodity</h2>
@@ -108,8 +111,9 @@ function paint(root) {
     el.addEventListener('click', () => openSaleSheet(sales.find((s) => s.id === el.dataset.editSale)));
   });
   root.querySelector('#add-sale').addEventListener('click', () => openSaleSheet(null));
-  root.querySelector('#open-payables')?.addEventListener('click', () => openPayablesSheet());
   root.querySelector('#open-orders')?.addEventListener('click', () => openOrdersSheet());
+  root.querySelector('#open-deliveries')?.addEventListener('click', () => openDeliveriesSheet());
+  root.querySelector('#open-money')?.addEventListener('click', () => openMoneySheet());
   root.querySelector('#empty-add')?.addEventListener('click', () => openSaleSheet(null));
   root.querySelector('#carry-contracts')?.addEventListener('click', () => openCarrySheet(prevLabel));
 }
@@ -399,6 +403,10 @@ function openSaleSheet(existing) {
         ${field({ label: 'Brokerage ($/t)', id: 'brokerageRate', type: 'number', step: '0.01', value: existing?.brokerageRate || '', placeholder: '0', hint: 'On tonnes delivered. Bills go in Payables.' })}
       </div>
       ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
+      ${field({ label: 'Freight is paid by', id: 'freightPaidBy', type: 'select', value: existing?.freightPaidBy === 'buyer' ? 'buyer' : 'we', options: [
+        { value: 'we', label: 'We pay the carrier (a bill in Payables)' },
+        { value: 'buyer', label: 'Buyer deducts it from the invoice' },
+      ], hint: 'Decides whether freight is taken off the grain invoice.' })}
       ${field({ label: 'Comments', id: 'notes', type: 'textarea', rows: 2, value: commentsText, placeholder: 'Anything worth knowing about this contract' })}
 
       <details class="fold" ${openTerms ? 'open' : ''}>
@@ -641,7 +649,7 @@ function openSaleSheet(existing) {
     };
     const COPY_FIELDS = [
       'location', 'paymentTermsDays', 'paymentTermsBasis', 'weightsToGovern', 'broker', 'brokeragePaidBy',
-      'freight', 'brokerageRate', 'deliveryTerms', 'contractType', 'pricingPoint', 'buyerContact', 'tradeRules', 'buyerAbn', 'buyerAddress',
+      'freight', 'freightPaidBy', 'brokerageRate', 'deliveryTerms', 'contractType', 'pricingPoint', 'buyerContact', 'tradeRules', 'buyerAbn', 'buyerAddress',
     ];
     const isBlank = (el) => el.value === '' || el.value === '0';
     const offerCopy = () => {
@@ -831,6 +839,7 @@ function openSaleSheet(existing) {
         broker: getVal(root, 'broker')?.trim(),
         brokerRef: getVal(root, 'brokerRef')?.trim(),
         brokeragePaidBy: getVal(root, 'brokeragePaidBy'),
+        freightPaidBy: getVal(root, 'freightPaidBy') === 'buyer' ? 'buyer' : 'we',
         paymentTermsDays: getNum(root, 'paymentTermsDays'),
         paymentTermsBasis: getVal(root, 'paymentTermsBasis'),
         carryRate: getNum(root, 'carryRate'),

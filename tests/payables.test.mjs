@@ -209,8 +209,9 @@ check('a change to one is tracked as its own kind of edit', () => {
   assert.match(dirty, /payable: 'payables'/);
   assert.match(read('docs/js/storage.js'), /touch\('payable'/);
 });
-check('the Sales tab opens Payables, the contract has a brokerage rate, and Position takes the bills off profit', () => {
-  assert.match(read('docs/js/views/sales.js'), /id="open-payables"/);
+check('the Sales tab opens Receivables & payables, the contract has a brokerage rate, and Position takes the bills off profit', () => {
+  assert.match(read('docs/js/views/sales.js'), /id="open-money"/);
+  assert.match(read('docs/js/views/outstanding.js'), /renderPayables\(bills/);
   assert.match(read('docs/js/views/sales.js'), /brokerageRate: getNum\(root, 'brokerageRate'\)/);
   assert.match(read('docs/js/views/position.js'), /payablesCost\(sales, movements, db\.getPayables\(\)\)/);
 });

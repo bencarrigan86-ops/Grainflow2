@@ -213,7 +213,8 @@ check('the Sales tab opens Orders, and a load into a contract can pick one', () 
 });
 check('a movement says which order it was against, an order lists its loads, a contract lists its orders', () => {
   assert.match(read('docs/js/views/movements.js'), /order #\$\{order\.orderNo\}/);
-  assert.match(read('docs/js/views/orders.js'), /Loads against this order/);
+  assert.match(read('docs/js/views/orders.js'), /Related movements/);
+  assert.match(read('docs/js/views/orders.js'), /Balance to go/);
   assert.match(read('docs/js/views/sales.js'), /renderContractOrders\(root\.querySelector\('#contract-orders'\)/);
 });
 check('choosing an order at the top of a movement fills in the contract, commodity and grade', () => {

@@ -4,12 +4,12 @@
 // carting it and the buyer's own order number. Everything else about the sale is the contract's and is shown from it.
 // Loads are matched to an order on the movement. The arithmetic is in orders.js.
 
-import { db } from '../storage.js?v=230';
-import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=230';
-import { num, esc, shortDate, todayLocal } from '../fmt.js?v=230';
-import { movementTonsToSale } from '../derived.js?v=230';
-import { movementRow, openMovementSheet } from './movements.js?v=230';
-import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=230';
+import { db } from '../storage.js?v=234';
+import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=234';
+import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=234';
+import { movementTonsToSale } from '../derived.js?v=234';
+import { movementRow, openMovementSheet } from './movements.js?v=234';
+import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=234';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | filled | closed | all
@@ -53,7 +53,7 @@ export function openOrdersSheet() {
         ${shown.length === 0 ? `<div class="empty" style="padding:10px 0">${orders.length ? 'No orders match.' : 'No orders yet. Add one when a buyer sends you an order against a contract.'}</div>` : shown.map((o) => {
           const st = stateOf(o);
           const s = sales.find((x) => x.id === o.saleId);
-          const win = windowText(o, shortDate);
+          const win = windowText(o, tightDate);
           return `
           <div class="list-item stack" data-edit-order="${esc(o.id)}">
             <div class="li-top"><div class="main">${esc(s ? contractLabel(s, commodities) : 'Unknown contract')}</div><div class="main">${num(st.left, 0)} t left</div></div>
@@ -89,7 +89,7 @@ export function renderContractOrders(container, saleId) {
       return `
       <div class="list-item stack" data-edit-order="${esc(o.id)}">
         <div class="li-top"><div class="main">${esc(orderTitle(o))}</div><div class="main">${num(st.left, 0)} t left</div></div>
-        <div class="li-foot"><span class="meta">${[windowText(o, shortDate), o.freightCompany].filter(Boolean).map(esc).join(' · ') || 'No window set'}</span>
+        <div class="li-foot"><span class="meta">${[windowText(o, tightDate), o.freightCompany].filter(Boolean).map(esc).join(' · ') || 'No window set'}</span>
           <span class="badges"><span class="badge ${BADGE[st.state]}">${STATE_LABEL[st.state]}</span></span></div>
       </div>`;
     }).join('')}
@@ -117,6 +117,7 @@ export function openOrderSheet(existing, defaults = {}) {
       ${field({ label: 'Contract', id: 'o-sale', type: 'select', value: src.saleId ?? '',
         options: [{ value: '', label: contracts.length ? 'Choose the contract' : 'No contracts yet. Add one in Sales' }, ...contracts.map((s) => ({ value: s.id, label: contractLabel(s, commodities) }))] })}
       <div id="o-contract" class="hint" style="margin:-4px 0 12px"></div>
+      ${existing ? '<div id="o-progress" style="margin:0 0 12px"></div>' : ''}
       <div class="grid-2">
         ${field({ label: 'Tonnes ordered', id: 'o-tons', type: 'number', step: '0.01', value: src.tons ?? '' })}
         ${field({ label: "Buyer's order no.", id: 'o-no', value: src.orderNo })}
@@ -136,9 +137,7 @@ export function openOrderSheet(existing, defaults = {}) {
         </div>
         <div class="hint">Close an order the buyer cancelled or took less than they ordered. It fills by itself once all the tonnes are delivered.</div>
       </div>
-      <div id="o-progress" class="hint"></div>
-      <div class="subhead">Loads against this order</div>
-      <div id="o-loads"></div>
+      <div id="o-loads" class="card" style="margin:12px 0"></div>
       <button class="btn ghost-danger" id="o-del" style="margin-top:8px">Delete order</button>` : ''}
       <div class="save-bar solo"><button class="btn" id="save">Save</button></div>`;
 
@@ -149,7 +148,7 @@ export function openOrderSheet(existing, defaults = {}) {
       if (!s) { infoEl.innerHTML = ''; return; }
       const c = commodities.find((cc) => cc.id === s.commodityId);
       const delivered = movementTonsToSale(s.id, movements);
-      const window = windowText({ deliverFrom: s.deliveryStart, deliverBy: s.deliveryEnd }, shortDate);
+      const window = windowText({ deliverFrom: s.deliveryStart, deliverBy: s.deliveryEnd }, tightDate);
       const grade = s.gradeOptions?.length ? `${s.gradeOptions.length} grades (multigrade)` : s.grade;
       const lines = [
         [c?.name, s.buyer].filter(Boolean).join(' · '),
@@ -166,14 +165,21 @@ export function openOrderSheet(existing, defaults = {}) {
     if (existing) {
       const progressEl = root.querySelector('#o-progress');
       const st = orderState(existing, movements, today);
-      progressEl.textContent = `${num(st.delivered, 1)} t delivered against this order, ${num(st.left, 1)} t left. Loads are put against an order on the movement.`;
+      progressEl.innerHTML = `
+        <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="stat"><div class="n">${num(st.ordered, 0)} t</div><div class="l">Ordered</div></div>
+          <div class="stat"><div class="n">${num(st.delivered, 1)} t</div><div class="l">Delivered</div></div>
+          <div class="stat"><div class="n" ${st.state === 'overdue' ? 'style="color:var(--danger)"' : ''}>${num(st.left, 1)} t</div><div class="l">Balance to go${st.over ? ` (${num(st.over, 1)} t over)` : ''}</div></div>
+        </div>
+        <div class="gauge" role="img" aria-label="${Math.round(st.pct * 100)} percent delivered"><i style="width:${st.pct * 100}%"></i></div>
+        <div class="meta" style="margin-top:4px"><span class="badge ${BADGE[st.state]}">${esc(STATE_LABEL[st.state])}</span></div>`;
       // the loads put against it, newest first; tapping one opens it
       const { fields, storages } = db.get();
       const against = movements.filter((m) => m.orderId === existing.id).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
       const loadsEl = root.querySelector('#o-loads');
-      loadsEl.innerHTML = against.length
+      loadsEl.innerHTML = `<h2>Related movements</h2>${against.length
         ? against.map((m) => movementRow(m, { fields, storages, sales, commodities, orders })).join('')
-        : '<div class="empty" style="padding:6px 0">No loads against it yet. On a movement going to this contract, choose it under "Fills order".</div>';
+        : '<div class="empty">No loads against it yet. On a movement going to this contract, choose it under "Fills order".</div>'}`;
       loadsEl.querySelectorAll('[data-edit-movement]').forEach((el) => el.addEventListener('click', () => openMovementSheet(against.find((m) => m.id === el.dataset.editMovement))));
       let status = existing.status || 'open';
       root.querySelector('#o-status').addEventListener('click', (e) => {

@@ -18,18 +18,17 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=230';
-import { openSheet } from '../ui.js?v=230';
-import { esc, num, money } from '../fmt.js?v=230';
+import { db } from '../storage.js?v=234';
+import { openSheet } from '../ui.js?v=234';
+import { esc, num, money } from '../fmt.js?v=234';
 
 const DASH = '—';
 
-/** A date as a document should write it: 1 Aug 2026, not 2026-08-01. */
+/** A date as a document should write it: 01-08-2026, not 2026-08-01. */
 function longDate(iso) {
   if (!iso) return '';
-  const d = new Date(`${iso}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return String(iso);
-  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : String(iso);
 }
 
 /**

@@ -1,7 +1,7 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=230';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=230';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=234';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=234';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -104,13 +104,19 @@ export function saleEconomics(sale, movements = []) {
 
 export const GST_RATE = 0.10;
 
+/** True when the buyer deducts the freight from the grain invoice. When we pay the carrier (the default) it does not. */
+export const freightOnInvoice = (sale) => sale?.freightPaidBy === 'buyer';
+
 /**
  * Invoice line items for a chosen set of movements (the loads the user
  * picked to invoice), plus an optional manual line. One row per movement,
- * all at the sale's contract rate.
+ * all at the sale's contract rate. Each line also carries its freight: the contract's $/t unless `freightRates`
+ * (movement id -> $/t) gives that load its own.
  */
-export function invoiceLineItems(sale, movements) {
+export function invoiceLineItems(sale, movements, freightRates = {}) {
   const price = Number(sale.price) || 0;
+  // freight comes off the grain invoice only when the buyer deducts it; if we pay the carrier it is a bill instead
+  const contractFreight = freightOnInvoice(sale) ? Number(sale.freight) || 0 : 0;
   const premium = Number(sale.premiumDiscount) || 0;
   const rate = price + premium;
   return (movements || [])
@@ -118,10 +124,17 @@ export function invoiceLineItems(sale, movements) {
       const t = toTonsForEndpoint(m, 'sale', sale.id);
       // each load at its own grade's rate, when the contract lists several
       const loadRate = rate + gradeRateFor(sale, m) + oilRateFor(sale, m);
+      const own = freightRates[m.id];
+      const freightRate = !freightOnInvoice(sale) ? 0
+        : own === undefined || own === null || own === '' || !Number.isFinite(Number(own)) ? contractFreight : Number(own);
       return {
         date: m.date, rego: m.truckRego || '—', tons: t, movementId: m.id,
         grade: m.grade || '',
+        ticketNo: m.ticketNo ? String(m.ticketNo) : '',
+        // the contract price, and what the contract premium and this load's grade or oil adjust it by
+        basePrice: price, adjust: loadRate - price,
         rate: loadRate, subtotal: t * loadRate,
+        freightRate, freight: t * freightRate,
       };
     })
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
@@ -133,12 +146,13 @@ export function invoiceLineItems(sale, movements) {
  * as a percentage of the ex-GST commodity value.
  */
 export function invoiceTotals(sale, lines) {
-  const freight = Number(sale.freight) || 0;
+  const freight = freightOnInvoice(sale) ? Number(sale.freight) || 0 : 0;
   const totalTons = lines.reduce((s, l) => s + l.tons, 0);
   const subtotalExGST = lines.reduce((s, l) => s + l.subtotal, 0);
   const leviesPct = Number(sale.leviesPct) || 0;
   const levies = subtotalExGST * leviesPct;
-  const freightTotal = freight * totalTons;
+  // each load carries its own freight rate; a line without one (an older invoice, a manual line) takes the contract's
+  const freightTotal = lines.reduce((s, l) => s + (l.freight != null ? Number(l.freight) || 0 : freight * (Number(l.tons) || 0)), 0);
   const gst = subtotalExGST * GST_RATE;
   const totalPayable = subtotalExGST + gst - levies - freightTotal;
   return { totalTons, subtotalExGST, levies, freightTotal, gst, totalPayable };

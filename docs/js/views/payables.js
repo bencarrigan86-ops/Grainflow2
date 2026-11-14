@@ -4,12 +4,12 @@
 // what is unpaid and overdue, and the brokerage that has run up on contracts but has not been billed yet. Each
 // bill is recorded in a form of its own. The arithmetic is in payables.js.
 
-import { db } from '../storage.js?v=230';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=230';
-import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=230';
+import { db } from '../storage.js?v=234';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=234';
+import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=234';
 import {
   KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed,
-} from '../payables.js?v=230';
+} from '../payables.js?v=234';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'unpaid';   // unpaid | paid | all
@@ -23,9 +23,25 @@ const contractLabel = (s, commodities) => {
   return [c?.name, s.buyer, s.contractNo ? `#${s.contractNo}` : null].filter(Boolean).join(' · ') || 'Contract';
 };
 
-/** The Payables screen. */
+// Where saving or deleting a bill goes back to: the Payables screen, unless the combined Receivables & payables
+// screen opened the bill and asked to be returned to.
+let returnTo = null;
+export function returnToAfterBill(fn) { returnTo = fn || null; }
+const backToList = () => (returnTo || openPayablesSheet)();
+
+/** The Payables screen on its own. */
 export function openPayablesSheet() {
-  openSheet('Payables', (root) => {
+  returnTo = null;
+  openSheet('Payables', (root) => renderPayables(root));
+}
+
+/**
+ * Draws the bills into `root` and keeps them up to date as the person filters and edits. Used on its own by
+ * openPayablesSheet and as one side of the Receivables & payables screen, which shows its own totals
+ * (`opts.stats = false`).
+ */
+export function renderPayables(root, opts = {}) {
+  {
     const draw = () => {
       const { sales, movements, storages, commodities } = db.get();
       const payables = db.getPayables();
@@ -50,10 +66,10 @@ export function openPayablesSheet() {
       };
 
       root.innerHTML = `
-        <div class="stat-grid">
+        ${opts.stats === false ? '' : `<div class="stat-grid">
           <div class="stat"><div class="n">${money(sum.unpaid.total, 0)}</div><div class="l">Unpaid${sum.unpaid.count ? ` (${sum.unpaid.count})` : ''}</div></div>
           <div class="stat"><div class="n" ${sum.overdue.count ? 'style="color:var(--danger)"' : ''}>${money(sum.overdue.total, 0)}</div><div class="l">Overdue${sum.overdue.count ? ` (${sum.overdue.count})` : ''}</div></div>
-        </div>
+        </div>`}
 
         ${unbilled.length ? `
         <div class="subhead">Brokerage not yet billed</div>
@@ -101,10 +117,10 @@ export function openPayablesSheet() {
       }));
     };
     draw();
-  });
+  }
 }
 
-/** One bill: add it, or change it. `defaults` pre-fills a new one. */
+/**One bill: add it, or change it. `defaults` pre-fills a new one. */
 export function openBillSheet(existing, defaults = {}) {
   const { sales, storages, commodities } = db.get();
   const payables = db.getPayables();
@@ -190,7 +206,7 @@ export function openBillSheet(existing, defaults = {}) {
 
     if (existing) {
       root.querySelector('#b-del').addEventListener('click', () => {
-        confirmDelete('Delete this bill?', () => { db.deletePayable(existing.id); openPayablesSheet(); });
+        confirmDelete('Delete this bill?', () => { db.deletePayable(existing.id); backToList(); });
       });
     }
 
@@ -217,7 +233,7 @@ export function openBillSheet(existing, defaults = {}) {
         notes: getVal(root, 'b-notes')?.trim(),
       });
       toast('Saved');
-      openPayablesSheet();
+      backToList();
     });
   });
 }

@@ -1,11 +1,11 @@
-import { db } from '../storage.js?v=230';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=230';
-import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=230';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=230';
-import { describeMerge } from '../merge.js?v=230';
-import { renderRelatedMovements } from './movements.js?v=230';
-import { canSeeYield } from '../nav.js?v=230';
-import { wireJumps } from '../jump.js?v=230';
+import { db } from '../storage.js?v=234';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=234';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=234';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=234';
+import { describeMerge } from '../merge.js?v=234';
+import { renderRelatedMovements } from './movements.js?v=234';
+import { canSeeYield } from '../nav.js?v=234';
+import { wireJumps } from '../jump.js?v=234';
 
 let unsub = null;
 
@@ -224,7 +224,7 @@ function openFieldSheet(existing) {
         appListEl.innerHTML = applications.map((a) => `
           <div class="list-item" style="padding:8px 4px">
             <div>
-              <div class="main">${esc(a.date || 'No date')}${a.appliedBy ? ' &middot; ' + esc(a.appliedBy) : ''}</div>
+              <div class="main">${esc(shortDate(a.date) || 'No date')}${a.appliedBy ? ' &middot; ' + esc(a.appliedBy) : ''}</div>
               <div class="meta">${esc(a.machine || '—')} &middot; ${num(a.rateKgHa, 0)} kg/ha</div>
               ${a.comment ? `<div class="meta">${esc(a.comment)}</div>` : ''}
             </div>

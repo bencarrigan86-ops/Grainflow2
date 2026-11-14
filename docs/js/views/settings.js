@@ -1,26 +1,27 @@
-import { db } from '../storage.js?v=230';
-import { getTheme, setTheme } from '../theme.js?v=230';
-import { num, money, esc, todayLocal } from '../fmt.js?v=230';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=230';
-import { openLoadImportSheet } from './importloads.js?v=230';
-import { APP_VERSION } from '../version.js?v=230';
-import { exportRowsAsCSV } from '../csv.js?v=230';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=230';
-import { endpointLabel } from './movements.js?v=230';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=230';
-import { layersForStorage } from '../outload.js?v=230';
-import { holdings, totalHeld } from '../offfarm.js?v=230';
-import { kindLabel, billTotal } from '../payables.js?v=230';
-import { orderState, STATE_LABEL } from '../orders.js?v=230';
-import { fieldHarvest } from '../harvest.js?v=230';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=230';
+import { db } from '../storage.js?v=234';
+import { getTheme, setTheme } from '../theme.js?v=234';
+import { num, money, esc, todayLocal } from '../fmt.js?v=234';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=234';
+import { openLoadImportSheet } from './importloads.js?v=234';
+import { openDeletedSheet } from './deleted.js?v=234';
+import { APP_VERSION } from '../version.js?v=234';
+import { exportRowsAsCSV } from '../csv.js?v=234';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=234';
+import { endpointLabel } from './movements.js?v=234';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=234';
+import { layersForStorage } from '../outload.js?v=234';
+import { holdings, totalHeld } from '../offfarm.js?v=234';
+import { kindLabel, billTotal } from '../payables.js?v=234';
+import { orderState, STATE_LABEL } from '../orders.js?v=234';
+import { fieldHarvest } from '../harvest.js?v=234';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=234';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=230';
+} from '../invites.js?v=234';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=230';
+} from '../auth.js?v=234';
 
 let unsub = null;
 
@@ -144,6 +145,7 @@ function paint(root) {
         </div>
         <button class="btn secondary small" id="export-csv" style="margin-top:8px">Export CSV (Excel)&hellip;</button>
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-loads" style="margin-top:8px">Import truck loads (CSV)&hellip;</button>` : ''}
+        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="open-deleted" style="margin-top:8px">Recently deleted&hellip;</button>` : ''}
         <button class="btn danger small" id="reset" style="margin-top:10px">Reset all data</button>
         <input type="file" id="import-file" accept="application/json" style="display:none" />
       </div>
@@ -274,6 +276,7 @@ function paint(root) {
   });
   root.querySelector('#export-csv').addEventListener('click', () => openExportCsvSheet());
   root.querySelector('#import-loads')?.addEventListener('click', () => openLoadImportSheet());
+  root.querySelector('#open-deleted')?.addEventListener('click', () => openDeletedSheet());
   const importFile = root.querySelector('#import-file');
   root.querySelector('#import').addEventListener('click', () => importFile.click());
   importFile.addEventListener('change', async () => {

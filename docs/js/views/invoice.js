@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=230';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint } from '../derived.js?v=230';
-import { num, money, esc } from '../fmt.js?v=230';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=230';
+import { db } from '../storage.js?v=234';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice } from '../derived.js?v=234';
+import { num, money, esc, dmy } from '../fmt.js?v=234';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=234';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -35,7 +35,7 @@ function invoiceRow(inv) {
     <div class="list-item" data-view-invoice="${inv.id}">
       <div>
         <div class="main">Invoice #${inv.invoiceNo}</div>
-        <div class="meta">${esc(inv.issueDate)} &middot; ${loadCount} item${loadCount === 1 ? '' : 's'}</div>
+        <div class="meta">${esc(dmy(inv.issueDate))} &middot; ${loadCount} item${loadCount === 1 ? '' : 's'}</div>
       </div>
       <div class="right">
         <div class="main">${money(inv.totalPayable, 2)}</div>
@@ -59,6 +59,8 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
   const available = allForSale.filter((m) => !usedByOthers.has(m.id));
   const alreadyCount = allForSale.length - available.length;
   const existingMovementIds = new Set((existingInvoice?.lines || []).map((l) => l.movementId).filter(Boolean));
+  // the freight $/t each load had when this invoice was made (older invoices have none: they take the contract's)
+  const existingLineFreight = new Map((existingInvoice?.lines || []).filter((l) => l.movementId && l.freightRate != null).map((l) => [l.movementId, l.freightRate]));
   const existingManual = (existingInvoice?.lines || []).find((l) => l.isManual);
   const existingCustoms = (existingInvoice?.lines || []).filter((l) => l.isCustom);
 
@@ -70,9 +72,13 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
           <div style="display:flex;align-items:center;gap:10px">
             <input type="checkbox" class="ld-check" data-mid="${m.id}" ${existingInvoice ? (existingMovementIds.has(m.id) ? 'checked' : '') : 'checked'} style="width:18px;height:18px" />
             <div>
-              <div class="main">${esc(m.date || 'No date')}${m.truckRego ? ` &middot; ${esc(m.truckRego)}` : ''}</div>
+              <div class="main">${esc(dmy(m.date) || 'No date')}${m.truckRego ? ` &middot; ${esc(m.truckRego)}` : ''}</div>
               <div class="meta">${num(toTonsForEndpoint(m, 'sale', sale.id), 2)} t</div>
             </div>
+            ${freightOnInvoice(sale) ? `<div style="margin-left:auto;flex:none;width:88px">
+              <input type="number" inputmode="decimal" step="0.01" class="ld-freight" style="width:100%;min-width:0;box-sizing:border-box;padding:8px 6px" data-mid="${m.id}" value="${existingLineFreight.has(m.id) ? existingLineFreight.get(m.id) : (Number(sale.freight) || 0)}" aria-label="Freight $/t for this load" />
+              <div class="meta" style="text-align:right">freight $/t</div>
+            </div>` : ''}
           </div>
         </label>
       `).join('')}
@@ -102,16 +108,19 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
 
     root.querySelectorAll('.ld-check').forEach((el) => el.addEventListener('change', recomputeTotals));
     root.querySelector('#manual-tons').addEventListener('input', recomputeTotals);
+    root.querySelectorAll('.ld-freight').forEach((el) => el.addEventListener('input', recomputeTotals));
     ['t-subtotal', 't-freight', 't-levies', 't-gst'].forEach((id) => root.querySelector(`#${id}`).addEventListener('input', recomputeFinalTotal));
 
     function buildLines() {
       const checkedIds = Array.from(root.querySelectorAll('.ld-check:checked')).map((el) => el.dataset.mid);
       const selectedMovements = available.filter((m) => checkedIds.includes(m.id));
-      const lines = invoiceLineItems(sale, selectedMovements);
-      const rate = (Number(sale.price) || 0) + (Number(sale.premiumDiscount) || 0);
+      const freightRates = {};
+      root.querySelectorAll('.ld-freight').forEach((el) => { freightRates[el.dataset.mid] = el.value; });
+      const lines = invoiceLineItems(sale, selectedMovements, freightRates);
+      const rate =(Number(sale.price) || 0) + (Number(sale.premiumDiscount) || 0);
       const manualTons = getNum(root, 'manual-tons');
       if (manualTons > 0) {
-        lines.push({ date: sale.date, rego: '—', tons: manualTons, movementId: null, rate, subtotal: manualTons * rate, isManual: true });
+        lines.push({ date: sale.date, rego: '—', tons: manualTons, movementId: null, basePrice: Number(sale.price) || 0, adjust: Number(sale.premiumDiscount) || 0, rate, subtotal: manualTons * rate, freightRate: freightOnInvoice(sale) ? Number(sale.freight) || 0 : 0, freight: freightOnInvoice(sale) ? manualTons * (Number(sale.freight) || 0) : 0, isManual: true });
       }
       readCustomItems(customContainer).forEach((item) => {
         if (item.amount === 0) return;
@@ -159,13 +168,18 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
       const gst = getNum(root, 't-gst');
       const totalPayable = subtotalExGST + gst - levies - freightTotal;
 
+      const business = db.getBusinessDetails();
+      const today = new Date().toISOString().slice(0, 10);
+      const dueDate = new Date(Date.now() + (Number(business.paymentTermsDays) || 0) * 86400000).toISOString().slice(0, 10);
       if (existingInvoice) {
-        db.updateInvoice(existingInvoice.id, { lines, totalTons, subtotalExGST, freightTotal, levies, gst, totalPayable });
+        // an invoice that lost its dates (see mapping.js) gets them back when it is worked out again
+        db.updateInvoice(existingInvoice.id, {
+          lines, totalTons, subtotalExGST, freightTotal, levies, gst, totalPayable,
+          ...(existingInvoice.issueDate ? {} : { issueDate: today }),
+          ...(existingInvoice.dueDate ? {} : { dueDate }),
+        });
         openInvoiceDocSheet(sale, db.getInvoicesForSale(sale.id).find((i) => i.id === existingInvoice.id));
       } else {
-        const business = db.getBusinessDetails();
-        const today = new Date().toISOString().slice(0, 10);
-        const dueDate = new Date(Date.now() + (Number(business.paymentTermsDays) || 0) * 86400000).toISOString().slice(0, 10);
         const invoice = db.createInvoice({ saleId: sale.id, issueDate: today, dueDate, lines, totalTons, subtotalExGST, freightTotal, levies, gst, totalPayable });
         openInvoiceDocSheet(sale, invoice);
       }
@@ -198,13 +212,15 @@ function readCustomItems(container) {
 }
 
 function invoiceDocHTML(sale, invoice, business, commodity) {
+  // loads with freight taken off go in a section of their own below the grain, not in the grain table
+  const freightLines = invoice.lines.filter((l) => l.movementId && Number(l.freight) > 0);
   return `
     <div class="invoice-doc">
       <h2 class="title">TAX INVOICE</h2>
       <div class="invoice-meta">
         <span>Invoice #${invoice.invoiceNo}</span>
-        <span>Invoice date: <strong>${esc(invoice.issueDate)}</strong></span>
-        <span>Payment due: <strong>${esc(invoice.dueDate)}</strong></span>
+        <span>Invoice date: <strong>${esc(dmy(invoice.issueDate))}</strong></span>
+        <span>Payment due: <strong>${esc(dmy(invoice.dueDate))}</strong></span>
         ${sale.contractNo ? `<span>Contract: <strong>${esc(sale.contractNo)}</strong></span>` : ''}
       </div>
       <div class="invoice-parties">
@@ -228,25 +244,54 @@ function invoiceDocHTML(sale, invoice, business, commodity) {
       <div class="line" style="margin-bottom:10px"><strong>Commodity:</strong> ${esc(commodity?.name || '—')}${sale.grade ? ` (${esc(sale.grade)})` : ''}${sale.location ? ` &middot; ${esc(sale.location)}` : ''}</div>
       <div class="table-scroll">
         <table>
-          <thead><tr><th>Date</th><th>Rego / item</th><th>Tonnes</th><th>Rate</th><th>Subtotal</th></tr></thead>
+          <thead><tr>
+            <th>Date</th><th>Ticket</th><th>Rego / item</th><th>Grade</th><th>Tonnes</th><th>Base $/t</th><th>Prem / disc $/t</th><th>Rate</th><th>Subtotal</th>
+          </tr></thead>
           <tbody>
             ${invoice.lines.map((l) => `
               <tr>
-                <td>${esc(l.date || '—')}</td>
+                <td>${esc(dmy(l.date) || '—')}</td>
+                <td>${esc(l.ticketNo || '—')}</td>
                 <td>${esc(l.description || l.rego || '—')}</td>
+                <td>${esc(l.grade || '—')}</td>
                 <td>${l.tons != null ? num(l.tons, 2) : '—'}</td>
+                <td>${l.basePrice != null ? money(l.basePrice, 2) : '—'}</td>
+                <td>${l.adjust != null ? `${l.adjust > 0 ? '+' : ''}${money(l.adjust, 2)}` : '—'}</td>
                 <td>${l.rate != null ? money(l.rate, 2) : '—'}</td>
                 <td>${money(l.subtotal, 2)}</td>
               </tr>`).join('')}
           </tbody>
           <tfoot><tr>
-            <td colspan="2">Total</td>
+            <td colspan="4">Total</td>
             <td>${num(invoice.totalTons, 2)}</td>
-            <td></td>
+            <td colspan="3"></td>
             <td>${money(invoice.subtotalExGST, 2)}</td>
           </tr></tfoot>
         </table>
       </div>
+      ${freightLines.length ? `
+      <h3 style="margin:14px 0 6px">Freight deducted</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Date</th><th>Rego</th><th>Tonnes</th><th>Freight $/t</th><th>Amount</th></tr></thead>
+          <tbody>
+            ${freightLines.map((l) => `
+              <tr>
+                <td>${esc(dmy(l.date) || '—')}</td>
+                <td>${esc(l.rego || '—')}</td>
+                <td>${num(l.tons, 2)}</td>
+                <td>${money(l.freightRate, 2)}</td>
+                <td>${money(l.freight, 2)}</td>
+              </tr>`).join('')}
+          </tbody>
+          <tfoot><tr>
+            <td colspan="2">Total freight</td>
+            <td>${num(freightLines.reduce((s, l) => s + (Number(l.tons) || 0), 0), 2)}</td>
+            <td></td>
+            <td>${money(freightLines.reduce((s, l) => s + (Number(l.freight) || 0), 0), 2)}</td>
+          </tr></tfoot>
+        </table>
+      </div>` : ''}
       <div class="invoice-totals">
         <div class="row"><span class="label">Subtotal (Ex GST)</span><span class="value">${money(invoice.subtotalExGST, 2)}</span></div>
         ${invoice.freightTotal > 0 ? `<div class="row"><span class="label">Freight</span><span class="value">-${money(invoice.freightTotal, 2)}</span></div>` : ''}

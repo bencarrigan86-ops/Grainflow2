@@ -10,7 +10,7 @@
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { movementTonsToSale } from './derived.js?v=230';
+import { movementTonsToSale } from './derived.js?v=234';
 
 export const STATUSES = ['open', 'closed'];
 
@@ -23,7 +23,7 @@ const num = (v) => {
 };
 const round3 = (n) => Math.round(n * 1000) / 1000;
 // Whole days from one 'YYYY-MM-DD' to another; null if either is not a date.
-function daysBetween(from, to) {
+export function daysBetween(from, to) {
   const a = Date.parse(`${String(from || '').slice(0, 10)}T00:00:00Z`);
   const b = Date.parse(`${String(to || '').slice(0, 10)}T00:00:00Z`);
   return Number.isFinite(a) && Number.isFinite(b) ? Math.round((b - a) / 86400000) : null;
