@@ -1,14 +1,15 @@
-import { db } from '../storage.js?v=228';
-import { movementsForEndpoint } from '../derived.js?v=228';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=228';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=228';
-import { compressAndStampImage } from '../img.js?v=228';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=228';
-import { specText } from '../outload.js?v=228';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=228';
-import { pickableSilos } from '../silopick.js?v=228';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=228';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=228';
+import { db } from '../storage.js?v=229';
+import { movementsForEndpoint } from '../derived.js?v=229';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=229';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=229';
+import { compressAndStampImage } from '../img.js?v=229';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=229';
+import { specText } from '../outload.js?v=229';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=229';
+import { pickableSilos } from '../silopick.js?v=229';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=229';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=229';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=229';
 
 let unsub = null;
 
@@ -232,7 +233,9 @@ export function movementRow(m, ctx) {
   const toBreakdown = tos.length > 1
     ? tos.map((t) => `To ${endpointLabel(t.type, t.id, ctx)}: ${num(t.tons, 2)} t`).join(', ')
     : null;
-  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
+  // the order it was delivered against, if any
+  const order = m.orderId ? (ctx.orders || db.getOrders()).find((o) => o.id === m.orderId) : null;
+  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', order ? (order.orderNo ? `order #${order.orderNo}` : 'against an order') : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
   return `
     <div class="list-item stack" data-edit-movement="${m.id}">
       <div class="li-top">
@@ -457,6 +460,7 @@ function openGinningSheet() {
  */
 export function openMovementSheet(existing, template) {
   const { fields, storages, sales, commodities, movements } = db.get();
+  const orders = db.getOrders();
   const src = existing || template;
   const existingFroms = src?.froms?.length ? src.froms : [{ type: '', id: '', tons: '' }];
   const existingSiloTos = (src?.tos || []).filter((t) => t.type === 'silo');
@@ -625,6 +629,9 @@ export function openMovementSheet(existing, template) {
       gradeCtl.refresh();
     });
 
+    // the order this load is against (see orders.js), if any; `orderTouched` once the person has chosen
+    let orderChoice = existing?.orderId ?? null;
+    let orderTouched = false;
     let toKind = existingSaleTo ? 'sale' : 'silo';
     const toBody = root.querySelector('#to-body');
     function renderToBody() {
@@ -642,15 +649,42 @@ export function openMovementSheet(existing, template) {
             <label>Contract</label>
             <select id="to-sale-select">${opts}</select>
             ${ctx.saleOpts().length <= 1 ? `<div class="hint">No contracts for this commodity — add one in Sales, or widen the commodity above.</div>` : ''}
-          </div>`;
+          </div>
+          <div id="order-wrap"></div>`;
         const saleSelectEl = toBody.querySelector('#to-sale-select');
+        // The orders open against the chosen contract, to say which one this load fills. Nothing shows when it has none.
+        const orderWrap = toBody.querySelector('#order-wrap');
+        const drawOrders = () => {
+          const saleId = String(saleSelectEl.value || '').replace(/^sale:/, '');
+          const list = saleId ? ordersForLoad(saleId, orders, movements, todayLocal(), orderChoice) : [];
+          if (!list.length) { orderWrap.innerHTML = ''; return; }
+          // a new load with just one order open against the contract is put against it, unless that was said no to
+          if (!orderTouched && orderChoice === null && !existing && list.length === 1) orderChoice = list[0].id;
+          if (orderChoice && !list.some((o) => o.id === orderChoice)) orderChoice = null;
+          orderWrap.innerHTML = `
+            <div class="field" style="margin-top:10px;margin-bottom:0">
+              <label>Fills order</label>
+              <select id="to-order-select">
+                <option value="">Not against an order</option>
+                ${list.map((o) => {
+                  const st = orderState(o, movements, todayLocal());
+                  const label = [orderTitle(o), windowText(o, shortDate), `${num(st.left, 0)} t left`, st.state === 'overdue' ? 'overdue' : '', o.freightCompany].filter(Boolean).join(' · ');
+                  return `<option value="${esc(o.id)}" ${o.id === orderChoice ? 'selected' : ''}>${esc(label)}</option>`;
+                }).join('')}
+              </select>
+            </div>`;
+          orderWrap.querySelector('#to-order-select').addEventListener('change', (e) => { orderChoice = e.target.value || null; orderTouched = true; });
+        };
+        saleSelectEl.addEventListener('change', drawOrders);
         const refreshSale = () => {
           const keep = saleSelectEl.value;
           saleSelectEl.innerHTML = ctx.saleOpts()
             .map((o) => `<option value="${o.value}" ${String(o.value) === keep ? 'selected' : ''}>${o.label}</option>`).join('');
+          drawOrders();
         };
         refreshSale.ownedByToBody = true;
         ctx.refreshers.push(refreshSale);
+        drawOrders();
       } else {
         toBody.innerHTML = `
           <div id="to-rows"></div>
@@ -789,6 +823,8 @@ export function openMovementSheet(existing, template) {
         // the commodity of the load, when one is chosen: holdings off-farm are kept by commodity and grade
         ...(ctx.commodityId ? { commodityId: ctx.commodityId } : {}),
         externalTicketNo: getVal(root, 'extTicket')?.trim() || '',
+        // the order it fills; only a load going to a contract can be against one
+        orderId: toKind === 'sale' ? (getVal(root, 'to-order-select') || null) : null,
         truckRego: getVal(root, 'truckRego')?.trim(),
         driver: getVal(root, 'driver')?.trim(),
         grossWeight: getVal(root, 'gross') ? getNum(root, 'gross') : null,

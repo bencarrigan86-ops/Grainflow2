@@ -1,21 +1,23 @@
-import { db } from '../storage.js?v=228';
+import { db } from '../storage.js?v=229';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=228';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=228';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=228';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=228';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=228';
-import { renderRelatedMovements } from './movements.js?v=228';
-import { openInvoiceListSheet } from './invoice.js?v=228';
-import { openContractDocSheet } from './contract.js?v=228';
-import { wireJumps } from '../jump.js?v=228';
-import { openPayablesSheet } from './payables.js?v=228';
-import { summarise as summarisePayables } from '../payables.js?v=228';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=228';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=228';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=228';
-import { standardFor } from '../grades.js?v=228';
+} from '../documents.js?v=229';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=229';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=229';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=229';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=229';
+import { renderRelatedMovements } from './movements.js?v=229';
+import { openInvoiceListSheet } from './invoice.js?v=229';
+import { openContractDocSheet } from './contract.js?v=229';
+import { wireJumps } from '../jump.js?v=229';
+import { openPayablesSheet } from './payables.js?v=229';
+import { summarise as summarisePayables } from '../payables.js?v=229';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=229';
+import { summarise as summariseOrders } from '../orders.js?v=229';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=229';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=229';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=229';
+import { standardFor } from '../grades.js?v=229';
 
 let unsub = null;
 
@@ -31,6 +33,8 @@ function paint(root) {
   const groups = groupSalesByCommodity(commodities, sales, movements);
   // what is owed, for the Payables button
   const payablesSum = summarisePayables(db.getPayables(), todayLocal());
+  // and what buyers are waiting on, for the Orders button
+  const ordersSum = summariseOrders(db.getOrders(), movements, todayLocal());
   const salesTotals = rollup.reduce((acc, r) => ({
     tons: acc.tons + r.tons,
     tonsDue: acc.tonsDue + Math.max(0, r.tonsDue),
@@ -56,6 +60,7 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-orders" style="margin-bottom:12px">Orders${ordersSum.open.count ? ` &middot; ${num(ordersSum.open.left, 0)} t to deliver${ordersSum.overdue.count ? ` (${ordersSum.overdue.count} overdue)` : ordersSum.soon.count ? ` (${ordersSum.soon.count} due soon)` : ''}` : ''}</button>` : ''}
       ${['owner', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-payables" style="margin-bottom:12px">Payables${payablesSum.unpaid.count ? ` &middot; ${money(payablesSum.unpaid.total, 0)} unpaid${payablesSum.overdue.count ? ` (${money(payablesSum.overdue.total, 0)} overdue)` : ''}` : ''}</button>` : ''}
       ${rollup.length === 0 ? '' : `
       <div class="card report">
@@ -104,6 +109,7 @@ function paint(root) {
   });
   root.querySelector('#add-sale').addEventListener('click', () => openSaleSheet(null));
   root.querySelector('#open-payables')?.addEventListener('click', () => openPayablesSheet());
+  root.querySelector('#open-orders')?.addEventListener('click', () => openOrdersSheet());
   root.querySelector('#empty-add')?.addEventListener('click', () => openSaleSheet(null));
   root.querySelector('#carry-contracts')?.addEventListener('click', () => openCarrySheet(prevLabel));
 }
@@ -486,6 +492,7 @@ function openSaleSheet(existing) {
         <div class="field hint" style="margin-top:14px">Save the sale first, then you can
           attach the buyer's contract and the broker's note to it.</div>
       `}
+      ${existing ? `<div id="contract-orders" style="margin:12px 0"></div>` : ''}
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       ${existing ? `<button class="btn secondary" id="view-invoice" style="margin-top:12px">${invoiceButtonLabel(existing)}</button>` : ''}
       ${existing ? `<button class="btn secondary" id="view-contract" style="margin-top:8px">Confirmation of sale (PDF)&hellip;</button>` : ''}
@@ -495,6 +502,7 @@ function openSaleSheet(existing) {
         <button class="btn" id="save">Save</button>
       </div>
     `;
+    if (existing) renderContractOrders(root.querySelector('#contract-orders'), existing.id);
     if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'sale', existing.id);
     const invoiceBtn = root.querySelector('#view-invoice');
     if (invoiceBtn) invoiceBtn.addEventListener('click', () => openInvoiceListSheet(existing));

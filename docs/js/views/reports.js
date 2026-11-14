@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=228';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=228';
-import { num, tons, esc } from '../fmt.js?v=228';
-import { field, getVal, getNum } from '../ui.js?v=228';
-import { canSeeYield } from '../nav.js?v=228';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=228';
-import { harvestReport, siloSpace, pctText } from '../harvest.js?v=228';
+import { db } from '../storage.js?v=229';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=229';
+import { num, tons, esc } from '../fmt.js?v=229';
+import { field, getVal, getNum } from '../ui.js?v=229';
+import { canSeeYield } from '../nav.js?v=229';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=229';
+import { harvestReport, siloSpace, pctText } from '../harvest.js?v=229';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -469,8 +469,7 @@ function paintHarvest(root) {
     </div>
 
     <div class="card report">
-      ${fold('room', `<div><h2><span class="dot report"></span>Room in the silos</h2><div class="sub">${t1(space.totalRoom)} t room left · ${margin >= 0 ? `${t1(margin)} t to spare` : `short by ${t1(-margin)} t`}</div></div>`, `
-      <div class="row"><label class="label" for="min-room">Leave out silos with less room than (t)</label><span class="value"><input id="min-room" type="number" inputmode="decimal" min="0" step="1" value="${minRoom}" style="width:80px;text-align:right" /></span></div>
+      ${fold('room', `<div><h2><span class="dot report"></span>Room in the silos</h2><div class="sub">${t1(space.totalRoom)} t room left · ${margin >= 0 ? `${t1(margin)} t to spare` : `short by ${t1(-margin)} t`}${minRoom > 0 ? ` · silos under ${t1(minRoom)} t left out` : ''}</div></div>`, `
       <div class="row"><span class="label">In silos already holding a commodity</span><span class="value">${t1(space.totalRoom - space.emptyRoom)} t</span></div>
       <div class="row"><span class="label">In empty silos (${space.emptyCount}), for any grain</span><span class="value">${t1(space.emptyRoom)} t</span></div>
       <div class="row"><span class="label"><strong>Room left</strong></span><span class="value"><strong>${t1(space.totalRoom)} t</strong></span></div>
@@ -485,6 +484,7 @@ function paintHarvest(root) {
       ${space.notCounted.length ? `<div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Not counted: ${space.notCounted.map(esc).join('; ')}. Set the capacity or commodity on the Storage tab to include them.</div>` : ''}
       ${space.tooSmall.count ? `<div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">${space.tooSmall.count} silo${space.tooSmall.count === 1 ? '' : 's'} with under ${t1(minRoom)} t of room left out (${t1(space.tooSmall.room)} t between them).</div>` : ''}
       <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Third-party storage is not counted. An empty silo can take any grain, so it is counted once, here, and not under each commodity.</div>`)}
+      <div class="row" style="margin-top:8px"><label class="label" for="min-room">Leave out silos with less room than (t)</label><span class="value"><input id="min-room" type="number" inputmode="decimal" min="0" step="1" value="${minRoom}" style="width:80px;text-align:right" /></span></div>
     </div>
 
     ${groups.map((g) => {

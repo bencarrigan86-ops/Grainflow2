@@ -18,22 +18,22 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=228';
+import { hydrate } from './hydrate.js?v=229';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=228';
-import { chooseBootState, resolveLegacy } from './boot.js?v=228';
-import { isLegacyDirty } from './dirty.js?v=228';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=228';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=228';
-import { settleLegs, dedupeLegs } from './legs.js?v=228';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=228';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=228';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=228';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=228';
-import { schedulePush, pushOnReconnect } from './sync.js?v=228';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=228';
+} from './local.js?v=229';
+import { chooseBootState, resolveLegacy } from './boot.js?v=229';
+import { isLegacyDirty } from './dirty.js?v=229';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=229';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=229';
+import { settleLegs, dedupeLegs } from './legs.js?v=229';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=229';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=229';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=229';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=229';
+import { schedulePush, pushOnReconnect } from './sync.js?v=229';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=229';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -65,7 +65,7 @@ function defaultOverheads() {
 function defaultYear() {
   return {
     commodities: defaultCommodities(), fields: [], sales: [], storages: [],
-    movements: [], overheads: defaultOverheads(), invoices: [], payables: [],
+    movements: [], overheads: defaultOverheads(), invoices: [], payables: [], orders: [],
   };
 }
 
@@ -149,6 +149,8 @@ function markOil(rec) {
   if (rec.oilPct !== null && rec.oilPct !== undefined && rec.oilPct !== '' && Number.isFinite(Number(rec.oilPct))) rec.__hasOil = true;
   // the same for a ticket's own number from the receiving site
   if (rec.externalTicketNo) rec.__hasExtTicket = true;
+  // and the order it was delivered against, so taking a load off an order reaches the server
+  if (rec.orderId) rec.__hasOrderId = true;
 }
 
 /** What this device owes the server, not counting pre-tracking markers (which
@@ -558,7 +560,7 @@ export const db = {
 
     data.years[label] = {
       commodities, fields, storages, sales: [], movements: [],
-      overheads: defaultOverheads(), invoices: [], payables: [],
+      overheads: defaultOverheads(), invoices: [], payables: [], orders: [],
     };
     data.currentYear = label;
     touch('year', label);
@@ -579,6 +581,7 @@ export const db = {
     y.movements?.forEach((m) => tombstone('movements', m.id));
     y.invoices?.forEach((i) => tombstone('invoices', i.id));
     y.payables?.forEach((p) => tombstone('payables', p.id));
+    y.orders?.forEach((o) => tombstone('orders', o.id));
     tombstone('overheads', y.__overheadsId);
     tombstone('seasons', y.__seasonId);
 
@@ -743,7 +746,13 @@ export const db = {
     const s = current().sales.find((x) => x.id === id);
     tombstone('sales', id);
     tombstone('sale_terms', s?.__termsId);
-    current().sales = current().sales.filter((x) => x.id !== id);
+    // the contract's orders go with it, and loads that were against them are no longer against anything
+    const c = current();
+    const gone = new Set((c.orders || []).filter((o) => o.saleId === id).map((o) => o.id));
+    gone.forEach((oid) => tombstone('orders', oid));
+    c.orders = (c.orders || []).filter((o) => !gone.has(o.id));
+    for (const m of c.movements || []) if (m.orderId && gone.has(m.orderId)) { m.orderId = null; touch('movement', m.id); }
+    c.sales = c.sales.filter((x) => x.id !== id);
     persist();
   },
 
@@ -923,6 +932,36 @@ export const db = {
     tombstone('payables', id);
     const c = current();
     c.payables = (c.payables || []).filter((p) => p.id !== id);
+    persist();
+  },
+
+  // --- orders: a buyer's request for grain against a contract ---
+  getOrders() { return current().orders || []; },
+  upsertOrder(order) {
+    const c = current();
+    c.orders = c.orders || [];
+    if (order.id) {
+      const idx = c.orders.findIndex((o) => o.id === order.id);
+      if (idx >= 0) c.orders[idx] = { ...c.orders[idx], ...order };
+      touch('order', order.id);
+    } else {
+      const id = uid();
+      c.orders.push({ status: 'open', ...order, id });
+      touch('order', id);
+      persist();
+      return id;
+    }
+    persist();
+    return order.id;
+  },
+  deleteOrder(id) {
+    tombstone('orders', id);
+    const c = current();
+    c.orders = (c.orders || []).filter((o) => o.id !== id);
+    // loads that were against it are no longer against anything
+    for (const m of c.movements || []) {
+      if (m.orderId === id) { m.orderId = null; touch('movement', m.id); }
+    }
     persist();
   },
 

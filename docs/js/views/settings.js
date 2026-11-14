@@ -1,25 +1,26 @@
-import { db } from '../storage.js?v=228';
-import { getTheme, setTheme } from '../theme.js?v=228';
-import { num, money, esc } from '../fmt.js?v=228';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=228';
-import { openLoadImportSheet } from './importloads.js?v=228';
-import { APP_VERSION } from '../version.js?v=228';
-import { exportRowsAsCSV } from '../csv.js?v=228';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=228';
-import { endpointLabel } from './movements.js?v=228';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=228';
-import { layersForStorage } from '../outload.js?v=228';
-import { holdings, totalHeld } from '../offfarm.js?v=228';
-import { kindLabel, billTotal } from '../payables.js?v=228';
-import { fieldHarvest } from '../harvest.js?v=228';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=228';
+import { db } from '../storage.js?v=229';
+import { getTheme, setTheme } from '../theme.js?v=229';
+import { num, money, esc, todayLocal } from '../fmt.js?v=229';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=229';
+import { openLoadImportSheet } from './importloads.js?v=229';
+import { APP_VERSION } from '../version.js?v=229';
+import { exportRowsAsCSV } from '../csv.js?v=229';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=229';
+import { endpointLabel } from './movements.js?v=229';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=229';
+import { layersForStorage } from '../outload.js?v=229';
+import { holdings, totalHeld } from '../offfarm.js?v=229';
+import { kindLabel, billTotal } from '../payables.js?v=229';
+import { orderState, STATE_LABEL } from '../orders.js?v=229';
+import { fieldHarvest } from '../harvest.js?v=229';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=229';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=228';
+} from '../invites.js?v=229';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=228';
+} from '../auth.js?v=229';
 
 let unsub = null;
 
@@ -812,7 +813,8 @@ function openExportCsvSheet() {
       <button class="btn secondary" id="exp-movements" style="margin-bottom:8px">Movements</button>
       <button class="btn secondary" id="exp-storage" style="margin-bottom:8px">Storage (silos &amp; bunkers)</button>
       <button class="btn secondary" id="exp-invoices" style="margin-bottom:8px">Invoices</button>
-      <button class="btn secondary" id="exp-payables">Payables (bills owed)</button>
+      <button class="btn secondary" id="exp-payables" style="margin-bottom:8px">Payables (bills owed)</button>
+      <button class="btn secondary" id="exp-orders">Orders</button>
     `;
 
     root.querySelector('#exp-fields').addEventListener('click', () => exportFieldsCSV(year, stamp));
@@ -821,6 +823,7 @@ function openExportCsvSheet() {
     root.querySelector('#exp-storage').addEventListener('click', () => exportStorageCSV(year, stamp));
     root.querySelector('#exp-invoices').addEventListener('click', () => exportInvoicesCSV(year, stamp));
     root.querySelector('#exp-payables').addEventListener('click', () => exportPayablesCSV(year, stamp));
+    root.querySelector('#exp-orders').addEventListener('click', () => exportOrdersCSV(year, stamp));
   });
 }
 
@@ -904,6 +907,7 @@ function exportMovementsCSV(year, stamp) {
   exportRowsAsCSV(`grainflow-movements-${year}-${stamp}.csv`, movements, [
     { label: 'Ticket No', get: (m) => m.ticketNo ?? '' },
     { label: 'Their ticket no.', get: (m) => m.externalTicketNo ?? '' },
+    { label: "Buyer's order no.", get: (m) => (m.orderId ? (db.getOrders().find((o) => o.id === m.orderId)?.orderNo ?? '') : '') },
     { label: 'Date', get: (m) => m.date ?? '' },
     { label: 'From', get: (m) => endpointsLabel(m.froms, data) },
     { label: 'To', get: (m) => endpointsLabel(m.tos, data) },
@@ -962,6 +966,26 @@ function exportPayablesCSV(year, stamp) {
     { label: 'Status', get: (p) => (p.status === 'paid' ? 'Paid' : 'Unpaid') },
     { label: 'Paid date', get: (p) => p.paidDate ?? '' },
     { label: 'Comments', get: (p) => p.notes ?? '' },
+  ]);
+}
+
+function exportOrdersCSV(year, stamp) {
+  const { commodities, sales, movements } = db.get();
+  const today = todayLocal();
+  const saleOf = (o) => sales.find((x) => x.id === o.saleId);
+  exportRowsAsCSV(`grainflow-orders-${year}-${stamp}.csv`, db.getOrders(), [
+    { label: 'Buyer', get: (o) => saleOf(o)?.buyer ?? '' },
+    { label: 'Commodity', get: (o) => commodityName(commodities, saleOf(o)?.commodityId) },
+    { label: 'Contract no.', get: (o) => saleOf(o)?.contractNo ?? '' },
+    { label: "Buyer's order no.", get: (o) => o.orderNo ?? '' },
+    { label: 'Deliver from', get: (o) => o.deliverFrom ?? '' },
+    { label: 'Deliver by', get: (o) => o.deliverBy ?? '' },
+    { label: 'Tonnes ordered', get: (o) => num(o.tons, 2) },
+    { label: 'Tonnes delivered', get: (o) => num(orderState(o, movements, today).delivered, 2) },
+    { label: 'Tonnes left', get: (o) => num(orderState(o, movements, today).left, 2) },
+    { label: 'Freight company', get: (o) => o.freightCompany ?? '' },
+    { label: 'Status', get: (o) => STATE_LABEL[orderState(o, movements, today).state] },
+    { label: 'Comments', get: (o) => o.notes ?? '' },
   ]);
 }
 

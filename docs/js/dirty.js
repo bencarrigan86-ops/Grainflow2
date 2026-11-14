@@ -28,6 +28,7 @@
 //   movement   movements, movement_legs, movement_photos
 //   invoice    invoices
 //   payable    payables
+//   order      orders
 //   overheads  overheads                       (id = season label)
 //   season     the season row itself           (id = season label)
 //   year       everything in one season        (id = season label)
@@ -35,14 +36,14 @@
 //   all        everything                      (an import, a brand new farm)
 
 export const KINDS = [
-  'commodity', 'field', 'storage', 'sale', 'movement', 'invoice', 'payable',
+  'commodity', 'field', 'storage', 'sale', 'movement', 'invoice', 'payable', 'order',
   'overheads', 'season', 'year', 'business', 'all',
 ];
 
 const TABLES = [
   'farms', 'seasons', 'commodities', 'fields', 'field_agronomy', 'storages',
   'sales', 'sale_terms', 'sale_documents', 'movements', 'movement_legs',
-  'movement_photos', 'invoices', 'overheads', 'payables',
+  'movement_photos', 'invoices', 'overheads', 'payables', 'orders',
 ];
 
 // child table -> [column holding the parent's id, parent table]
@@ -56,7 +57,7 @@ const CHILD_OF = {
 
 const OWN_TABLE = {
   commodity: 'commodities', field: 'fields', storage: 'storages', sale: 'sales',
-  movement: 'movements', invoice: 'invoices', payable: 'payables',
+  movement: 'movements', invoice: 'invoices', payable: 'payables', order: 'orders',
 };
 
 /**
@@ -93,7 +94,7 @@ export function selectDirtyRows(rows, state, dirty) {
       const sid = seasonIdOfLabel(d.id);
       if (!sid) continue;
       want.seasons.add(sid);
-      for (const t of ['commodities', 'fields', 'storages', 'sales', 'movements', 'invoices', 'overheads', 'payables']) {
+      for (const t of ['commodities', 'fields', 'storages', 'sales', 'movements', 'invoices', 'overheads', 'payables', 'orders']) {
         (rows[t] || []).filter((r) => r.season_id === sid).forEach((r) => want[t].add(r.id));
       }
       continue;
@@ -117,7 +118,7 @@ export function selectDirtyRows(rows, state, dirty) {
   // file exists to prevent.
   const seasonRows = rows.seasons || [];
   const referenced = new Set();
-  for (const t of ['commodities', 'fields', 'storages', 'sales', 'movements', 'invoices', 'overheads', 'payables']) {
+  for (const t of ['commodities', 'fields', 'storages', 'sales', 'movements', 'invoices', 'overheads', 'payables', 'orders']) {
     out[t].forEach((r) => referenced.add(r.season_id));
   }
   for (const s of seasonRows) {

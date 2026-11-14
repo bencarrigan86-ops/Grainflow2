@@ -15,12 +15,12 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=228';
-import { stateToRows } from './mapping.js?v=228';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=228';
-import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=228';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=228';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=228';
+import { supabase } from './supabase.js?v=229';
+import { stateToRows } from './mapping.js?v=229';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=229';
+import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=229';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=229';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=229';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -33,6 +33,7 @@ import { reconcileTickets, plainOf } from './ticketmerge.js?v=228';
 const ORDER = [
   'seasons', 'commodities', 'fields', 'field_agronomy',
   'storages', 'sales', 'sale_terms', 'sale_documents',
+  'orders',                                   // before movements: a load can name its order
   'movements', 'movement_legs', 'movement_photos',
   'invoices', 'overheads', 'payables',
 ];
@@ -46,9 +47,9 @@ const ORDER = [
 const WRITABLE = {
   owner: ORDER,
   manager: ['seasons', 'commodities', 'fields', 'field_agronomy', 'storages',
-            'sale_documents',
+            'sale_documents', 'orders',
             'movements', 'movement_legs', 'movement_photos'],
-  bookkeeper: ['sales', 'sale_terms', 'sale_documents', 'invoices', 'overheads', 'payables'],
+  bookkeeper: ['sales', 'sale_terms', 'sale_documents', 'orders', 'invoices', 'overheads', 'payables'],
   farm_worker: ['fields', 'field_agronomy', 'movements', 'movement_legs', 'movement_photos'],
   driver: ['movements', 'movement_legs', 'movement_photos'],
 };
