@@ -18,22 +18,22 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=226';
+import { hydrate } from './hydrate.js?v=228';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=226';
-import { chooseBootState, resolveLegacy } from './boot.js?v=226';
-import { isLegacyDirty } from './dirty.js?v=226';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=226';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=226';
-import { settleLegs, dedupeLegs } from './legs.js?v=226';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=226';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=226';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=226';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=226';
-import { schedulePush, pushOnReconnect } from './sync.js?v=226';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=226';
+} from './local.js?v=228';
+import { chooseBootState, resolveLegacy } from './boot.js?v=228';
+import { isLegacyDirty } from './dirty.js?v=228';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=228';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=228';
+import { settleLegs, dedupeLegs } from './legs.js?v=228';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=228';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=228';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=228';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=228';
+import { schedulePush, pushOnReconnect } from './sync.js?v=228';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=228';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -627,12 +627,13 @@ export const db = {
       if (idx >= 0) {
         const merged = { ...c.fields[idx], ...field };
         if (merged.harvestDone) merged.__hasHarvestDone = true;   // keeps un-ticking it reaching the server
+        if (merged.harvestHaLeft != null) merged.__hasHarvestHaLeft = true;   // and so does clearing the hectares left
         c.fields[idx] = merged;
       }
       touch('field', field.id);
     } else {
       const id = uid();
-      c.fields.push({ ...field, id, ...(field.harvestDone ? { __hasHarvestDone: true } : {}) });
+      c.fields.push({ ...field, id, ...(field.harvestDone ? { __hasHarvestDone: true } : {}), ...(field.harvestHaLeft != null ? { __hasHarvestHaLeft: true } : {}) });
       touch('field', id);
       persist();
       return id;

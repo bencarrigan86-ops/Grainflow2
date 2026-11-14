@@ -4,11 +4,13 @@
 // expected to give: its estimate (area x estimated yield) less what is in, until the field is marked finished, when
 // there is nothing more to come whatever the estimate said. A field that has already given more than its estimate
 // has nothing more expected from it by the estimate, but it is not called finished until someone says so.
+// A part-harvested field can be given the hectares still to cut: what is to come is then those hectares at the field's
+// estimated yield, on top of what is already in, whatever the estimate for the whole field said.
 //
 // Pure apart from the two sums it borrows from derived.js.
 
-import { estimateFieldTons, movementTonsFromField, storageLedgerStock } from './derived.js?v=226';
-import { isTransit } from './transit.js?v=226';
+import { estimateFieldTons, movementTonsFromField, storageLedgerStock } from './derived.js?v=228';
+import { isTransit } from './transit.js?v=228';
 
 /**
  * One field.
@@ -24,12 +26,16 @@ export function fieldHarvest(field, movements) {
   const estimateT = estimateFieldTons(field || {});
   const inT = movementTonsFromField(field?.id, movements);
   const done = !!field?.harvestDone;
-  const toComeT = done ? 0 : Math.max(0, estimateT - inT);
-  const expectedT = done ? inT : Math.max(estimateT, inT);
+  // Hectares still to harvest, when the paddock is part done and someone has said how much is left. Blank means not said.
+  const left = field?.harvestHaLeft;
+  const haLeft = !done && left != null && left !== '' && Number.isFinite(Number(left)) ? Math.min(areaHa, Math.max(0, Number(left))) : null;
+  const toComeT = done ? 0 : haLeft !== null ? haLeft * (Number(field?.yieldTHa) || 0) : Math.max(0, estimateT - inT);
+  const expectedT = done ? inT : haLeft !== null ? inT + toComeT : Math.max(estimateT, inT);
   const pct = done ? 1 : (expectedT > 0 ? Math.min(1, inT / expectedT) : 0);
   return {
-    areaHa, estimateT, inT, toComeT, expectedT, pct, done,
-    ahead: !done && inT > estimateT && estimateT > 0,
+    areaHa, estimateT, inT, toComeT, expectedT, pct, done, haLeft,
+    doneHa: done ? areaHa : haLeft !== null ? areaHa - haLeft : 0,
+    ahead: !done && haLeft === null && inT > estimateT && estimateT > 0,
     yieldSoFar: areaHa > 0 ? inT / areaHa : 0,
   };
 }
@@ -39,7 +45,7 @@ function totalsOf(rows) {
   const t = rows.reduce((a, r) => ({
     fields: a.fields + 1,
     areaHa: a.areaHa + r.areaHa,
-    doneHa: a.doneHa + (r.done ? r.areaHa : 0),
+    doneHa: a.doneHa + r.doneHa,
     estimateT: a.estimateT + r.estimateT,
     inT: a.inT + r.inT,
     toComeT: a.toComeT + r.toComeT,
@@ -88,17 +94,20 @@ const EMPTY_T = 0.05;
  *   emptyRoom: number, emptyCount: number,                       room in empty silos, for any grain
  *   totalRoom: number,                                           everything the farm has free
  *   silos: {id, name, commodityId, capacity, stock, room, empty, pct}[]   each silo counted, most room first
- *   notCounted: string[]                                         silos left out, and why, so they can be fixed
+ *   tooSmall: {count, room}                                      silos with less than `minRoom` t free, left out of all of the above
+ *   notCounted: string[]                                       silos left out, and why, so they can be fixed
  * }}
  */
-export function siloSpace(storages, movements) {
-  const out = { byCommodity: new Map(), emptyRoom: 0, emptyCount: 0, totalRoom: 0, notCounted: [], silos: [] };
+export function siloSpace(storages, movements, { minRoom = 0 } = {}) {
+  const out = { byCommodity: new Map(), emptyRoom: 0, emptyCount: 0, totalRoom: 0, notCounted: [], silos: [], tooSmall: { count: 0, room: 0 } };
   for (const s of storages || []) {
     if (s.offFarm || isTransit(s) || s.kind === 'tally') continue;
     const capacity = Number(s.capacityTons) || 0;
     if (!(capacity > 0)) { out.notCounted.push(`${s.name} (no capacity set)`); continue; }
     const stock = Math.max(0, storageLedgerStock(s, movements));
     const room = Math.max(0, capacity - stock);
+    // a silo with only a little room left is not worth sending a load to, so it is not counted or listed
+    if (minRoom > 0 && room < minRoom) { out.tooSmall.count += 1; out.tooSmall.room += room; continue; }
     const empty = stock <= EMPTY_T;
     if (s.commodityId || empty) {
       out.silos.push({ id: s.id, name: s.name, commodityId: s.commodityId || null, capacity, stock, room, empty, pct: Math.min(1, stock / capacity) });

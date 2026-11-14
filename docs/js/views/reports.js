@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=226';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=226';
-import { num, tons, esc } from '../fmt.js?v=226';
-import { field, getVal, getNum } from '../ui.js?v=226';
-import { canSeeYield } from '../nav.js?v=226';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=226';
-import { harvestReport, siloSpace, pctText } from '../harvest.js?v=226';
+import { db } from '../storage.js?v=228';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=228';
+import { num, tons, esc } from '../fmt.js?v=228';
+import { field, getVal, getNum } from '../ui.js?v=228';
+import { canSeeYield } from '../nav.js?v=228';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=228';
+import { harvestReport, siloSpace, pctText } from '../harvest.js?v=228';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -420,6 +420,18 @@ function seedTable(g) {
 // Which folding sections of the harvest report are open, kept while the app is open. Open until closed.
 const harvestOpen = new Map();
 
+// Silos with less room than this are left out of the harvest report: not worth sending a load to. Kept on this device.
+const MIN_ROOM_KEY = 'grainflow.harvest.minRoom';
+const DEFAULT_MIN_ROOM = 20;
+function loadMinRoom() {
+  try {
+    const raw = localStorage.getItem(MIN_ROOM_KEY);
+    const n = raw === null ? NaN : Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : DEFAULT_MIN_ROOM;
+  } catch { return DEFAULT_MIN_ROOM; }
+}
+function saveMinRoom(n) { try { localStorage.setItem(MIN_ROOM_KEY, String(n)); } catch { /* the setting just does not stick */ } }
+
 /**
  * Harvest progress: what is in against what is still to come, by commodity and field, and the room left in the silos
  * to take it. "In" is the tonnes carted off the field; "to come" is its estimate less that, until the field is marked
@@ -428,7 +440,8 @@ const harvestOpen = new Map();
 function paintHarvest(root) {
   const { commodities, fields, storages, movements } = db.get();
   const { groups, farm } = harvestReport(commodities, fields, movements);
-  const space = siloSpace(storages, movements);
+  const minRoom = loadMinRoom();
+  const space = siloSpace(storages, movements, { minRoom });
   const body = root.querySelector('#reports-body');
   const t1 = (n) => num(n, 0);
   const margin = space.totalRoom - farm.toComeT;
@@ -456,7 +469,8 @@ function paintHarvest(root) {
     </div>
 
     <div class="card report">
-      <h2><span class="dot report"></span>Room in the silos</h2>
+      ${fold('room', `<div><h2><span class="dot report"></span>Room in the silos</h2><div class="sub">${t1(space.totalRoom)} t room left · ${margin >= 0 ? `${t1(margin)} t to spare` : `short by ${t1(-margin)} t`}</div></div>`, `
+      <div class="row"><label class="label" for="min-room">Leave out silos with less room than (t)</label><span class="value"><input id="min-room" type="number" inputmode="decimal" min="0" step="1" value="${minRoom}" style="width:80px;text-align:right" /></span></div>
       <div class="row"><span class="label">In silos already holding a commodity</span><span class="value">${t1(space.totalRoom - space.emptyRoom)} t</span></div>
       <div class="row"><span class="label">In empty silos (${space.emptyCount}), for any grain</span><span class="value">${t1(space.emptyRoom)} t</span></div>
       <div class="row"><span class="label"><strong>Room left</strong></span><span class="value"><strong>${t1(space.totalRoom)} t</strong></span></div>
@@ -469,7 +483,8 @@ function paintHarvest(root) {
           <div class="gauge" role="img" aria-label="${Math.round(s.pct * 100)} percent full"><i style="width:${s.pct * 100}%"></i></div>
         </div>`).join('')) : ''}
       ${space.notCounted.length ? `<div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Not counted: ${space.notCounted.map(esc).join('; ')}. Set the capacity or commodity on the Storage tab to include them.</div>` : ''}
-      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Third-party storage is not counted. An empty silo can take any grain, so it is counted once, here, and not under each commodity.</div>
+      ${space.tooSmall.count ? `<div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">${space.tooSmall.count} silo${space.tooSmall.count === 1 ? '' : 's'} with under ${t1(minRoom)} t of room left out (${t1(space.tooSmall.room)} t between them).</div>` : ''}
+      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Third-party storage is not counted. An empty silo can take any grain, so it is counted once, here, and not under each commodity.</div>`)}
     </div>
 
     ${groups.map((g) => {
@@ -484,7 +499,7 @@ function paintHarvest(root) {
             <thead><tr><th>Field</th><th>Est t</th><th>In t</th><th>To come</th><th>Done</th></tr></thead>
             <tbody>
               ${g.rows.map((r) => `<tr>
-                <td>${r.done ? '&#10003;&nbsp;' : ''}${esc(r.field.name)}</td>
+                <td>${r.done ? '&#10003;&nbsp;' : ''}${esc(r.field.name)}${r.haLeft !== null ? `<div class="meta">${t1(r.haLeft)} ha to cut</div>` : ''}</td>
                 <td>${t1(r.estimateT)}</td>
                 <td>${t1(r.inT)}</td>
                 <td>${t1(r.toComeT)}</td>
@@ -500,6 +515,12 @@ function paintHarvest(root) {
         ${g.id ? `<div class="row"><span class="label">Room in its silos (${own ? own.silos : 0})</span><span class="value">${t1(own ? own.room : 0)} t</span></div>` : ''}`)}
       </div>`;
     }).join('')}`;
+
+  body.querySelector('#min-room')?.addEventListener('change', (e) => {
+    const n = Number(e.target.value);
+    saveMinRoom(Number.isFinite(n) && n >= 0 ? n : DEFAULT_MIN_ROOM);
+    paintHarvest(root);
+  });
 
   // remember which sections were opened or closed, so a repaint does not undo it
   body.querySelectorAll('details[data-fold]').forEach((d) => d.addEventListener('toggle', () => harvestOpen.set(d.dataset.fold, d.open)));

@@ -1,25 +1,25 @@
-import { db } from '../storage.js?v=226';
-import { getTheme, setTheme } from '../theme.js?v=226';
-import { num, money, esc } from '../fmt.js?v=226';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=226';
-import { openLoadImportSheet } from './importloads.js?v=226';
-import { APP_VERSION } from '../version.js?v=226';
-import { exportRowsAsCSV } from '../csv.js?v=226';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=226';
-import { endpointLabel } from './movements.js?v=226';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=226';
-import { layersForStorage } from '../outload.js?v=226';
-import { holdings, totalHeld } from '../offfarm.js?v=226';
-import { kindLabel, billTotal } from '../payables.js?v=226';
-import { fieldHarvest } from '../harvest.js?v=226';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=226';
+import { db } from '../storage.js?v=228';
+import { getTheme, setTheme } from '../theme.js?v=228';
+import { num, money, esc } from '../fmt.js?v=228';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=228';
+import { openLoadImportSheet } from './importloads.js?v=228';
+import { APP_VERSION } from '../version.js?v=228';
+import { exportRowsAsCSV } from '../csv.js?v=228';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=228';
+import { endpointLabel } from './movements.js?v=228';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=228';
+import { layersForStorage } from '../outload.js?v=228';
+import { holdings, totalHeld } from '../offfarm.js?v=228';
+import { kindLabel, billTotal } from '../payables.js?v=228';
+import { fieldHarvest } from '../harvest.js?v=228';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=228';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=226';
+} from '../invites.js?v=228';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=226';
+} from '../auth.js?v=228';
 
 let unsub = null;
 
@@ -844,6 +844,7 @@ function exportFieldsCSV(year, stamp) {
     { label: 'Harvested so far (t)', get: (f) => num(fieldHarvest(f, movements).inT, 2) },
     { label: 'Still to come (t)', get: (f) => num(fieldHarvest(f, movements).toComeT, 2) },
     { label: 'Harvest finished', get: (f) => (f.harvestDone ? 'Yes' : 'No') },
+    { label: 'Hectares still to harvest', get: (f) => (f.harvestHaLeft != null && !f.harvestDone ? num(f.harvestHaLeft, 2) : '') },
     { label: 'Comments', get: (f) => f.notes ?? '' },
   ]);
 }

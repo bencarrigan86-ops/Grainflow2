@@ -131,3 +131,7 @@ grant execute on function soft_delete_row(text, uuid) to authenticated;
 -- Harvest finished: whether all of a paddock is in (optional; stored only once it is set)
 alter table fields
   add column if not exists harvest_done boolean;
+
+-- Hectares still to harvest on a part-harvested paddock (optional; stored only once it is set)
+alter table fields
+  add column if not exists harvest_ha_left numeric;

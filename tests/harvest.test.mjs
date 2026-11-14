@@ -60,6 +60,43 @@ check('the yield so far', () => {
   assert.equal(fieldHarvest(f('f1', 'North', 'w', 100, 4), [carted('m1', 'f1', 350)]).yieldSoFar, 3.5);
 });
 
+console.log('\n=== part harvested: hectares still to cut ===');
+
+check('500 t in and 20 ha still to cut: to come is those hectares at the estimated yield, on top of what is in', () => {
+  const h = fieldHarvest(f('f1', 'North', 'w', 100, 4, { harvestHaLeft: 20 }), [carted('m1', 'f1', 500)]);
+  assert.equal(h.inT, 500);
+  assert.equal(h.toComeT, 80);
+  assert.equal(h.expectedT, 580);
+  assert.equal(h.haLeft, 20);
+  assert.equal(h.doneHa, 80);
+  assert.equal(h.ahead, false, 'over the whole-field estimate does not matter once the hectares left are said');
+  assert.ok(Math.abs(h.pct - 500 / 580) < 1e-9);
+});
+check('blank means not said: the estimate less the tickets, as before', () => {
+  for (const blank of [undefined, null, '']) {
+    const h = fieldHarvest(f('f1', 'North', 'w', 100, 4, { harvestHaLeft: blank }), [carted('m1', 'f1', 150)]);
+    assert.equal(h.toComeT, 250);
+    assert.equal(h.haLeft, null);
+    assert.equal(h.doneHa, 0);
+  }
+});
+check('none left to cut is a number, not blank: nothing more to come, though not marked finished', () => {
+  const h = fieldHarvest(f('f1', 'North', 'w', 100, 4, { harvestHaLeft: 0 }), [carted('m1', 'f1', 300)]);
+  assert.equal(h.toComeT, 0);
+  assert.equal(h.doneHa, 100);
+  assert.equal(h.done, false);
+});
+check('finished wins over hectares left; more left than the paddock has is capped at its area', () => {
+  assert.equal(fieldHarvest(f('f1', 'N', 'w', 100, 4, { harvestDone: true, harvestHaLeft: 20 }), []).toComeT, 0);
+  assert.equal(fieldHarvest(f('f1', 'N', 'w', 100, 4, { harvestHaLeft: 500 }), []).toComeT, 400);
+});
+check('hectares part cut count in the commodity total of hectares done', () => {
+  const r = harvestReport([wheat], [f('a', 'A', 'w', 100, 4, { harvestHaLeft: 20 }), f('b', 'B', 'w', 50, 4, { harvestDone: true })], []);
+  assert.equal(r.groups[0].totals.doneHa, 130);
+  assert.equal(r.groups[0].totals.toGoHa, 20);
+  assert.equal(r.groups[0].totals.doneFields, 1);
+});
+
 console.log('\n=== the report ===');
 
 const fields = [
@@ -148,6 +185,21 @@ check('each silo is listed with its room, most room first', () => {
   assert.equal(s1.pct, 0.6);
   for (let i = 1; i < sp.silos.length; i++) assert.ok(sp.silos[i - 1].room >= sp.silos[i].room);
 });
+check('silos with less room than the minimum are left out of the list and the totals, and said so', () => {
+  const small = [silo('a', 'A', 500, 'w', 495), silo('b', 'B', 500, 'w', 300), silo('c', 'C', 100, null, 0)];
+  const all = siloSpace(small, []);
+  assert.equal(all.totalRoom, 5 + 200 + 100);
+  const sp = siloSpace(small, [], { minRoom: 20 });
+  assert.deepEqual(sp.silos.map((s) => s.name), ['B', 'C']);
+  assert.equal(sp.totalRoom, 300);
+  assert.equal(sp.byCommodity.get('w').silos, 1);
+  assert.deepEqual(sp.tooSmall, { count: 1, room: 5 });
+});
+check('exactly the minimum is kept; a full silo goes with any minimum above nothing', () => {
+  const sp = siloSpace([silo('a', 'A', 100, 'w', 80), silo('b', 'B', 100, 'w', 100)], [], { minRoom: 20 });
+  assert.deepEqual(sp.silos.map((s) => s.name), ['A']);
+  assert.equal(sp.tooSmall.count, 1);
+});
 check('silos not counted are not in the list', () => {
   const sp = siloSpace([silo('a', 'Silo A', 0, 'w'), silo('b', 'Silo B', 300, null, 80)], []);
   assert.equal(sp.silos.length, 0);
@@ -177,6 +229,14 @@ check('having been marked finished and then un-ticked still sends false, so the 
   assert.equal(row.harvest_done, false);
 });
 
+check('hectares left goes to the server and comes back; blank sends nothing; clearing it sends null', () => {
+  const rows = stateToRows(stateOf({ harvestHaLeft: 20 }), FARM);
+  assert.equal(rows.fields[0].harvest_ha_left, 20);
+  assert.equal(rowsToState(rows).years[2026].fields[0].harvestHaLeft, 20);
+  assert.ok(!('harvest_ha_left' in stateToRows(stateOf({}), FARM).fields[0]));
+  assert.equal(stateToRows(stateOf({ harvestHaLeft: null, __hasHarvestHaLeft: true }), FARM).fields[0].harvest_ha_left, null);
+});
+
 console.log('\n=== wired in ===');
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -192,6 +252,8 @@ check('the paddock form has the finished box', () => {
 });
 check('the database column is in the paste-in file', () => {
   assert.match(read('supabase/paste-into-sql-editor.sql'), /harvest_done boolean/);
+  assert.match(read('supabase/paste-into-sql-editor.sql'), /harvest_ha_left numeric/);
+  assert.match(read('docs/js/views/production.js'), /id: 'harvestHaLeft'/);
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }

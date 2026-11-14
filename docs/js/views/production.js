@@ -1,11 +1,11 @@
-import { db } from '../storage.js?v=226';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=226';
-import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=226';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=226';
-import { describeMerge } from '../merge.js?v=226';
-import { renderRelatedMovements } from './movements.js?v=226';
-import { canSeeYield } from '../nav.js?v=226';
-import { wireJumps } from '../jump.js?v=226';
+import { db } from '../storage.js?v=228';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=228';
+import { num, tons, ha, esc, todayLocal } from '../fmt.js?v=228';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=228';
+import { describeMerge } from '../merge.js?v=228';
+import { renderRelatedMovements } from './movements.js?v=228';
+import { canSeeYield } from '../nav.js?v=228';
+import { wireJumps } from '../jump.js?v=228';
 
 let unsub = null;
 
@@ -85,7 +85,7 @@ function fieldRow(f, movements, showYield = true) {
     <div class="list-item" data-edit-field="${f.id}">
       <div>
         <div class="main">${esc(f.name)}</div>
-        <div class="meta">${ha(f.areaHa, 0)}${f.harvestDone ? ' · <span class="badge pos">Harvested</span>' : ''}${showYield ? ` · <span class="badge ${isActual ? 'pos' : 'neg'}">${isActual ? 'Actual' : 'Estimate'}</span>` : ''}</div>
+        <div class="meta">${ha(f.areaHa, 0)}${f.harvestDone ? ' · <span class="badge pos">Harvested</span>' : (f.harvestHaLeft != null ? ` · <span class="badge neg">${ha(f.harvestHaLeft, 0)} to cut</span>` : '')}${showYield ? ` · <span class="badge ${isActual ? 'pos' : 'neg'}">${isActual ? 'Actual' : 'Estimate'}</span>` : ''}</div>
         ${showYield && !isActual && actualTons > 0 ? `<div class="actual-flag">Harvest tickets: ${num(actualTons, 0)} t · ${num(actualYieldTHa, 2)} t/ha. Switch to Actual</div>` : ''}
       </div>
       ${showYield ? `<div class="right">
@@ -109,6 +109,7 @@ function openFieldSheet(existing) {
       ${field({ label: 'Area (ha)', id: 'area', type: 'number', step: '0.01', value: existing?.areaHa })}
       ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
       ${field({ label: 'Harvest finished', id: 'harvestDone', type: 'select', value: existing?.harvestDone ? 'yes' : 'no', options: [{ value: 'no', label: 'No, still harvesting' }, { value: 'yes', label: 'Yes, all of it is in' }], hint: 'Shows in the harvest report. A finished paddock has nothing left to come, whatever its estimate said.' })}
+      ${field({ label: 'Hectares still to harvest', id: 'harvestHaLeft', type: 'number', step: '0.01', value: existing?.harvestHaLeft ?? '', placeholder: 'Blank: estimate less the tickets', hint: 'For a paddock part cut. The harvest report counts these hectares at the yield estimate below, on top of the tonnes already in. Leave blank to use the whole paddock\'s estimate less the tickets.' })}
       <div class="yield-only" ${showYield ? '' : 'hidden'}>
       ${field({ label: 'Yield estimate (t/ha)', id: 'yield', type: 'number', step: '0.01', value: existing ? existing.yieldTHa : (initialCommodity?.defaultYieldTHa || ''), hint: 'For production &amp; sales. Pre-filled from the commodity default below — type in this box to override it for this field.' })}
       <div class="row"><span class="label">Commodity's default yield estimate</span><span class="value" id="commodity-yield-preview">— t/ha</span></div>
@@ -402,6 +403,7 @@ function openFieldSheet(existing) {
         areaHa: getNum(root, 'area'),
         commodityId: getVal(root, 'commodity'),
         harvestDone: getVal(root, 'harvestDone') === 'yes',
+        harvestHaLeft: String(getVal(root, 'harvestHaLeft') ?? '').trim() === '' ? null : getNum(root, 'harvestHaLeft'),
         yieldTHa: getNum(root, 'yield'),
         yieldMode,
         ureaRequiredKgHa: getNum(root, 'ureaReq'),

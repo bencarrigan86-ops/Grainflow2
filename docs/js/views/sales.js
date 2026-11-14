@@ -1,21 +1,21 @@
-import { db } from '../storage.js?v=226';
+import { db } from '../storage.js?v=228';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=226';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=226';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=226';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=226';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=226';
-import { renderRelatedMovements } from './movements.js?v=226';
-import { openInvoiceListSheet } from './invoice.js?v=226';
-import { openContractDocSheet } from './contract.js?v=226';
-import { wireJumps } from '../jump.js?v=226';
-import { openPayablesSheet } from './payables.js?v=226';
-import { summarise as summarisePayables } from '../payables.js?v=226';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=226';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=226';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=226';
-import { standardFor } from '../grades.js?v=226';
+} from '../documents.js?v=228';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=228';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=228';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=228';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=228';
+import { renderRelatedMovements } from './movements.js?v=228';
+import { openInvoiceListSheet } from './invoice.js?v=228';
+import { openContractDocSheet } from './contract.js?v=228';
+import { wireJumps } from '../jump.js?v=228';
+import { openPayablesSheet } from './payables.js?v=228';
+import { summarise as summarisePayables } from '../payables.js?v=228';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=228';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=228';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=228';
+import { standardFor } from '../grades.js?v=228';
 
 let unsub = null;
 
