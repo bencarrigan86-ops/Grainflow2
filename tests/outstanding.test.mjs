@@ -325,7 +325,7 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 check('Sales has buttons for both reports, for the roles that may see them', () => {
   const src = read('docs/js/views/sales.js');
   assert.match(src, /\['owner', 'manager', 'bookkeeper'\]\.includes\(db\.getRole\(\)\) \? `<button type="button" class="btn secondary" id="open-deliveries"/);
-  assert.match(src, /\['owner', 'bookkeeper'\]\.includes\(db\.getRole\(\)\) \? `<button type="button" class="btn secondary" id="open-money"/);
+  assert.match(src, /\['owner', 'manager', 'bookkeeper'\]\.includes\(db\.getRole\(\)\) \? `<button type="button" class="btn secondary" id="open-money"/);
   assert.match(src, /openDeliveriesSheet\(\)/);
   assert.match(src, /openMoneySheet\(\)/);
 });

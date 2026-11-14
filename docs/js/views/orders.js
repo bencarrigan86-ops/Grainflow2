@@ -4,15 +4,16 @@
 // carting it and the buyer's own order number. Everything else about the sale is the contract's and is shown from it.
 // Loads are matched to an order on the movement. The arithmetic is in orders.js.
 
-import { db } from '../storage.js?v=237';
-import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=237';
-import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=237';
-import { movementTonsToSale } from '../derived.js?v=237';
-import { movementRow, openMovementSheet } from './movements.js?v=237';
-import { openVendorDecSheet } from './vendordec.js?v=237';
-import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=237';
-import { freightTitle, freightState, rateText } from '../freight.js?v=237';
-import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=237';
+import { db } from '../storage.js?v=238';
+import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=238';
+import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=238';
+import { movementTonsToSale } from '../derived.js?v=238';
+import { movementRow, openMovementSheet } from './movements.js?v=238';
+import { openVendorDecSheet } from './vendordec.js?v=238';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=238';
+import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=238';
+import { freightTitle, freightState, rateText } from '../freight.js?v=238';
+import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=238';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | filled | closed | all
@@ -145,8 +146,16 @@ export function openOrderSheet(existing, defaults = {}) {
       <div id="o-loads" class="card" style="margin:12px 0"></div>
       <div id="o-fos" class="card" style="margin:12px 0"></div>
       <button type="button" class="btn secondary" id="o-vendordec" style="margin-bottom:8px">Vendor declaration&hellip;</button>
-      <button class="btn ghost-danger" id="o-del" style="margin-top:8px">Delete order</button>` : ''}
+      ` : ''}
+      ${attachmentsHtml('order', src.documents || [], { sub: "The buyer's order and anything else that came with it" })}
+      ${existing ? '<button class="btn ghost-danger" id="o-del" style="margin-top:8px">Delete order</button>' : ''}
       <div class="save-bar solo"><button class="btn" id="save">Save</button></div>`;
+    // a new order has no id yet, so one is minted up front and the files wait here until Save
+    const recId = existing?.id || crypto.randomUUID();
+    const att = wireAttachments(root, {
+      parentType: 'order', parentId: recId, docs: existing?.documents || [],
+      persist: existing ? (documents) => db.upsertOrder({ id: existing.id, documents }) : undefined,
+    });
 
     // What the contract says, shown here so the order does not repeat it
     const infoEl = root.querySelector('#o-contract');
@@ -223,7 +232,8 @@ export function openOrderSheet(existing, defaults = {}) {
       const by = getVal(root, 'o-by');
       if (from && by && by < from) { root.querySelector('#o-by').focus(); toast('Deliver by is before deliver from'); return; }
       db.upsertOrder({
-        id: existing?.id,
+        id: recId,
+        documents: att.docs(),
         saleId,
         orderNo: getVal(root, 'o-no')?.trim(),
         tons,

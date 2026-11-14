@@ -53,7 +53,20 @@ function inOrder(movements) {
  * front of a bunker. 'first' is first in, first out: from the back of a bunker, which can be opened at both ends.
  * Only a bunker can be emptied from the back.
  */
-export const outloadEndOf = (storage) => (storage?.kind === 'bunker' && storage?.outloadEnd === 'first' ? 'first' : 'last');
+/**
+ * Is this storage a bunker (or shed)? Saved as one, or: it was saved as a silo but is measured by width and length
+ * rather than a radius, or it is called a bunker or a shed. Storages added before the kind mattered were often saved
+ * as silos whatever they were, and the picture and the end of outloading have to follow what the thing is.
+ */
+export function looksLikeBunker(storage) {
+  if (!storage || storage.kind === 'tally') return false;
+  if (storage.kind === 'bunker') return true;
+  if (Number(storage.radius) > 0) return false;
+  if (Number(storage.width) > 0 && Number(storage.length) > 0) return true;
+  return /\b(bunker|shed)s?\b/i.test(String(storage.name || ''));
+}
+
+export const outloadEndOf = (storage) => (looksLikeBunker(storage) && storage?.outloadEnd === 'first' ? 'first' : 'last');
 
 /** Samples (bands) with the first `tons` tonnes taken off the front of them, as when the back of a bunker is emptied. */
 export function dropFromBands(bands, tons) {

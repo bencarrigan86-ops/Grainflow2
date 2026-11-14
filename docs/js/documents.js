@@ -17,7 +17,7 @@
 // nothing, and the failure it would hide — an upload that silently never
 // happened — is worse than being told to try again.
 
-import { supabase } from './supabase.js?v=237';
+import { supabase } from './supabase.js?v=238';
 
 const BUCKET = 'sale-documents';
 const SIGNED_URL_TTL = 60 * 60;
@@ -32,8 +32,28 @@ export const DOCUMENT_KINDS = [
   { value: 'other', label: 'Other' },
 ];
 
+/** What a file attached to an order, an invoice or a bill can be. */
+export const RECORD_DOCUMENT_KINDS = {
+  order: [
+    { value: 'order', label: "Buyer's order" },
+    { value: 'other', label: 'Other' },
+  ],
+  invoice: [
+    { value: 'invoice', label: 'Invoice copy' },
+    { value: 'remittance', label: 'Remittance advice' },
+    { value: 'proof_of_delivery', label: 'Proof of delivery' },
+    { value: 'other', label: 'Other' },
+  ],
+  payable: [
+    { value: 'bill', label: "Supplier's bill" },
+    { value: 'receipt', label: 'Receipt or proof of payment' },
+    { value: 'other', label: 'Other' },
+  ],
+};
+
 export function kindLabel(kind) {
-  return DOCUMENT_KINDS.find((k) => k.value === kind)?.label ?? 'Document';
+  const all = [...DOCUMENT_KINDS, ...Object.values(RECORD_DOCUMENT_KINDS).flat()];
+  return all.find((k) => k.value === kind)?.label ?? 'Document';
 }
 
 const ALLOWED = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'];
@@ -68,11 +88,23 @@ export function checkFile(file) {
  * 672392.pdf" is how the grower knows which one it is.
  */
 export async function uploadSaleDocument(file, { farmId, saleId }) {
+  return putDocument(file, farmId, saleId);
+}
+
+/**
+ * Upload a file attached to an order, an invoice or a bill. Same bucket and rules as a sale's documents; the
+ * record's kind and id sit in the path after the farm, so a file can be traced back to what it belongs to.
+ */
+export async function uploadRecordDocument(file, { farmId, parentType, parentId }) {
+  return putDocument(file, farmId, `${parentType}/${parentId}`);
+}
+
+async function putDocument(file, farmId, folder) {
   const problem = checkFile(file);
   if (problem) throw new Error(problem);
 
   const ext = (file.name?.match(/\.([A-Za-z0-9]+)$/)?.[1] || 'pdf').toLowerCase();
-  const path = `${farmId}/${saleId}/${crypto.randomUUID()}.${ext}`;
+  const path = `${farmId}/${folder}/${crypto.randomUUID()}.${ext}`;
 
   const { error } = await supabase.storage
     .from(BUCKET)

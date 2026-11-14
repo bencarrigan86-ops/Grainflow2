@@ -200,9 +200,11 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 check('the push sends them, only for the roles that may write them', () => {
   const sync = read('docs/js/sync.js');
-  assert.match(sync, /'invoices', 'overheads', 'payables',\n\];/);
+  assert.match(sync, /'invoices', 'overheads', 'payables',\n  'record_documents',[^\n]*\n\];/);
   assert.match(sync, /bookkeeper: \[[^\]]*'payables'/);
-  assert.ok(!/manager: \[[^\]]*'payables'/.test(sync), 'a manager cannot see what the farm owes');
+  assert.match(sync, /manager: \[[^\]]*'payables'/, 'a manager sees and records what the farm owes');
+  assert.match(sync, /manager: \[[^\]]*'invoices'/);
+  assert.ok(!/farm_worker: \[[^\]]*'payables'/.test(sync) && !/driver: \[[^\]]*'payables'/.test(sync), 'workers and drivers still do not');
 });
 check('a change to one is tracked as its own kind of edit', () => {
   const dirty = read('docs/js/dirty.js');

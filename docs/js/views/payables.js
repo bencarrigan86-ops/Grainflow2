@@ -4,13 +4,14 @@
 // what is unpaid and overdue, and the brokerage that has run up on contracts but has not been billed yet. Each
 // bill is recorded in a form of its own. The arithmetic is in payables.js.
 
-import { db } from '../storage.js?v=237';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=237';
-import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=237';
+import { db } from '../storage.js?v=238';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=238';
+import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=238';
 import {
   KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed,
-} from '../payables.js?v=237';
-import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=237';
+} from '../payables.js?v=238';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=238';
+import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=238';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'unpaid';   // unpaid | paid | all
@@ -196,8 +197,15 @@ export function openBillSheet(existing, defaults = {}) {
       </div>
       <div id="b-paid-wrap" ${src.status === 'paid' ? '' : 'hidden'}>${field({ label: 'Paid on', id: 'b-paid', type: 'date', value: src.paidDate || today })}</div>
       ${field({ label: 'Comments', id: 'b-notes', type: 'textarea', value: src.notes })}
+      ${attachmentsHtml('payable', src.documents || [], { sub: "The supplier's bill, a receipt, anything that backs it up" })}
       ${existing ? '<button class="btn ghost-danger" id="b-del" style="margin-top:8px">Delete bill</button>' : ''}
       <div class="save-bar solo"><button class="btn" id="save">Save</button></div>`;
+    // a new bill has no id yet, so one is minted up front and the files wait here until Save
+    const recId = existing?.id || crypto.randomUUID();
+    const att = wireAttachments(root, {
+      parentType: 'payable', parentId: recId, docs: existing?.documents || [],
+      persist: existing ? (documents) => db.upsertPayable({ id: existing.id, documents }) : undefined,
+    });
 
     const amountEl = root.querySelector('#b-amount');
     const gstEl = root.querySelector('#b-gst');
@@ -245,7 +253,8 @@ export function openBillSheet(existing, defaults = {}) {
       const tons = getVal(root, 'b-tons');
       const rate = getVal(root, 'b-rate');
       db.upsertPayable({
-        id: existing?.id,
+        id: recId,
+        documents: att.docs(),
         kind: getVal(root, 'b-kind'),
         supplier: getVal(root, 'b-supplier')?.trim(),
         reference: getVal(root, 'b-ref')?.trim(),

@@ -51,20 +51,25 @@ export function siloResult({ radius, height, coneAngle = 0, angleOfRepose, testW
  * @param {number} p.length meters (along the pile, at the base)
  * @param {number} p.angleDeg peak angle (grain angle of repose), degrees
  * @param {number} p.testWeight tonnes / m3
+ * @param {number} [p.wallHeight] meters. Bunkers and sheds can have walls: the grain is held straight up to the top of
+ *   them, and the peaked pile sits on top. No walls (the default) is the open pile described above.
  */
-export function bunkerResult({ width, length, angleDeg, testWeight }) {
+export function bunkerResult({ width, length, angleDeg, testWeight, wallHeight = 0 }) {
   const w = Number(width) || 0;
   const l = Number(length) || 0;
   const a = (Number(angleDeg) || 0) * D2R;
-  const height = (w / 2) * Math.tan(a);
+  const wall = Math.max(0, Number(wallHeight) || 0);
+  const peak = (w / 2) * Math.tan(a);
+  const height = wall + peak;                  // from the floor to the top of the pile
   // An empty bunker holds nothing. The formula below is for a pile at least as
   // long as it is wide (a straight middle between two half-cone ends); a bunker
   // with width entered and no filled length yet came out negative, as did a short
   // heap. Neither is a negative amount of grain, so the result stops at zero.
-  if (w <= 0 || l <= 0) return { height, volume: 0, tons: 0 };
-  const volume = Math.max(0, 0.25 * Math.tan(a) * w * w * ((l - w) + (Math.PI / 6) * w));
+  if (w <= 0 || l <= 0) return { height, wallHeight: wall, volume: 0, tons: 0 };
+  const pile = Math.max(0, 0.25 * Math.tan(a) * w * w * ((l - w) + (Math.PI / 6) * w));
+  const volume = pile + w * l * wall;          // the block between the walls, then the pile on top of it
   const tons = volume * (Number(testWeight) || 0);
-  return { height, volume, tons };
+  return { height, wallHeight: wall, volume, tons };
 }
 
 /**

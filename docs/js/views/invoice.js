@@ -1,7 +1,8 @@
-import { db } from '../storage.js?v=237';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice } from '../derived.js?v=237';
-import { num, money, esc, dmy } from '../fmt.js?v=237';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=237';
+import { db } from '../storage.js?v=238';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice } from '../derived.js?v=238';
+import { num, money, esc, dmy } from '../fmt.js?v=238';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=238';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=238';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -322,9 +323,14 @@ function openInvoiceDocSheet(sale, invoice) {
         <button class="btn secondary" id="edit-invoice">Edit</button>
       </div>
       ${invoiceDocHTML(sale, invoice, business, commodity)}
+      ${attachmentsHtml('invoice', invoice.documents || [], { sub: 'A copy of the invoice, the remittance, proof of delivery' })}
       <button class="btn" id="print-invoice" style="margin-top:14px">Print / Save as PDF</button>
       <button class="btn danger" id="delete-invoice" style="margin-top:8px">Delete invoice</button>
     `;
+    wireAttachments(root, {
+      parentType: 'invoice', parentId: invoice.id, docs: invoice.documents || [],
+      persist: (documents) => db.updateInvoice(invoice.id, { documents }),
+    });
     root.querySelector('#toggle-paid').addEventListener('click', () => {
       db.setInvoiceStatus(invoice.id, isPaid ? 'outstanding' : 'paid');
       const refreshed = db.getInvoicesForSale(sale.id).find((i) => i.id === invoice.id);

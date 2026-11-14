@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=237';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=237';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=237';
-import { isTransit } from '../transit.js?v=237';
-import { isOffFarm } from '../offfarm.js?v=237';
-import { paintOffFarmCard } from './offfarm.js?v=237';
-import { gradesFor, allGradeCodes } from '../grades.js?v=237';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=237';
-import { hasStorageQuality } from '../mapping.js?v=237';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=237';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=237';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=237';
-import { renderRelatedMovements } from './movements.js?v=237';
-import { openSiloSetupSheet } from './silosetup.js?v=237';
-import { commodityFills } from '../commodityfill.js?v=237';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf } from '../outload.js?v=237';
+import { db } from '../storage.js?v=238';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=238';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=238';
+import { isTransit } from '../transit.js?v=238';
+import { isOffFarm } from '../offfarm.js?v=238';
+import { paintOffFarmCard } from './offfarm.js?v=238';
+import { gradesFor, allGradeCodes } from '../grades.js?v=238';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=238';
+import { hasStorageQuality } from '../mapping.js?v=238';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=238';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=238';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=238';
+import { renderRelatedMovements } from './movements.js?v=238';
+import { openSiloSetupSheet } from './silosetup.js?v=238';
+import { commodityFills } from '../commodityfill.js?v=238';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker } from '../outload.js?v=238';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=237';
+} from '../silolayers.js?v=238';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -279,7 +279,7 @@ function paintCalculator(root) {
     <div class="card">
       <div class="segmented" id="quick-kind">
         <button data-kind="silo" class="${quickKind === 'silo' ? 'active' : ''}">Silo</button>
-        <button data-kind="bunker" class="${quickKind === 'bunker' ? 'active' : ''}">Bunker</button>
+        <button data-kind="bunker" class="${quickKind === 'bunker' ? 'active' : ''}">Bunker / shed</button>
       </div>
       <div id="quick-form" style="margin-top:12px"></div>
       <div id="quick-result"></div>
@@ -362,6 +362,7 @@ function buildQuickForm(root, commodities) {
         ${field({ label: 'Width (m)', id: 'q-width', type: 'number', step: '0.01' })}
         ${field({ label: 'Length (m)', id: 'q-length', type: 'number', step: '0.01' })}
       </div>
+      ${field({ label: 'Wall height (m, optional)', id: 'q-wall', type: 'number', step: '0.01', hint: 'Bunkers and sheds can have walls: the grain is held straight up to the top of them, with the peak on top' })}
       <div class="grid-2">
         ${field({ label: 'Peak angle (°)', id: 'q-angle', type: 'number', step: '1', hint: 'Grain angle of repose' })}
         ${field({ label: 'Test weight (t/m³)', id: 'q-tw', type: 'number', step: '0.01' })}
@@ -384,6 +385,7 @@ function buildQuickForm(root, commodities) {
         length: getNum(formEl, 'q-length'),
         angleDeg: getNum(formEl, 'q-angle'),
         testWeight: getNum(formEl, 'q-tw'),
+        wallHeight: getNum(formEl, 'q-wall'),
       });
       const t = bunkerTarpRequirement({
         width: getNum(formEl, 'q-width'),
@@ -393,7 +395,7 @@ function buildQuickForm(root, commodities) {
       });
       resultEl.innerHTML = quickResultHTML(r.tons, [
         ['Volume', `${num(r.volume, 1)} m³`],
-        ['Peak height', `${num(r.height, 2)} m`],
+        ['Height to the peak', `${num(r.height, 2)} m`],
       ]) + tarpResultHTML(t);
     }
     recompute();
@@ -491,7 +493,7 @@ function computeStorageTons(s, commodities) {
   const angleOfRepose = s.angleOfRepose ?? c?.angleOfRepose ?? 0;
   const testWeight = s.testWeight ?? c?.testWeight ?? 0;
   if (s.kind === 'bunker') {
-    return bunkerResult({ width: s.width, length: s.length, angleDeg: angleOfRepose, testWeight });
+    return bunkerResult({ width: s.width, length: s.length, angleDeg: angleOfRepose, testWeight, wallHeight: s.wallHeight });
   }
   return siloResult({
     radius: s.radius, height: s.currentHeight, coneAngle: s.coneAngle,
@@ -559,7 +561,7 @@ function qualityLine(s) {
 }
 
 function kindLabel(kind) {
-  if (kind === 'bunker') return 'Bunker';
+  if (kind === 'bunker') return 'Bunker / shed';
   if (kind === 'tally') return 'Tally';
   return 'Silo';
 }
@@ -616,7 +618,7 @@ function storageRow(s, commodities, movements) {
   return `
     <div class="list-item storage-row" data-edit-storage="${s.id}">
       <div>
-        <div class="main">${esc(s.name)} <span class="badge muted">${kindLabel(s.kind)}</span></div>
+        <div class="main">${esc(s.name)} <span class="badge muted">${kindLabel(looksLikeBunker(s) ? 'bunker' : s.kind)}</span></div>
         <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(s.capacityTons, 0)} t` : ''}</div>
         ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
         ${noteLine(s) ? `<div class="meta" style="font-style:italic">${noteLine(s)}</div>` : ''}
@@ -672,7 +674,8 @@ function bandRowHtml(r = {}) {
  * planner. The loads that went in are layers of their own; a sample band replaces what the
  * loads say for the grain it covers.
  */
-function contentsFold(existing, grades) {
+function contentsFold(existing, grades, kind = existing?.kind) {
+  const isBunker = kind === 'bunker';
   const rows = Array.isArray(existing?.gradeBands) ? existing.gradeBands : [];
   // What is in it, said on the closed header itself, so the section tells you something before it is opened.
   const held = existing ? layersForStorage(existing, db.get().movements).layers : [];
@@ -688,7 +691,7 @@ function contentsFold(existing, grades) {
     <details class="fold feature" id="contents-fold" ${rows.length ? 'open' : ''}>
       <summary><div class="feature-head"><h2>Grade summary &amp; Outload predictor</h2>
         <div class="sub">${heldLine}</div>${heldBar}</div></summary>
-      ${existing?.kind === 'bunker' ? `
+      ${isBunker ? `
       <div class="field" style="margin:8px 0 0">
         <label>Outload starts from</label>
         <div class="segmented" id="lay-end">
@@ -701,7 +704,7 @@ function contentsFold(existing, grades) {
       <div id="lay-bulk" class="lay-bulk"></div>
       <div class="subhead" style="margin-top:10px" id="lay-stack-head"></div>
       <div id="op-stack"></div>
-      <div class="subhead">Grade and specs by tonnes <span class="meta">(from the ${existing?.kind === 'bunker' ? 'back' : 'bottom'})</span></div>
+      <div class="subhead">Grade and specs by tonnes <span class="meta">(from the ${isBunker ? 'back' : 'bottom'})</span></div>
       <div class="field hint" style="margin-bottom:8px">Running samples? Say what each stretch of the silo is &mdash; the first 800 t is APH1 at 11.5% protein, the next
         600 t is AUH2 &mdash; whichever loads it came from. This replaces what the individual loads say for that grain. Grain that arrives after the date
         below, or beyond the last stretch, keeps its own grade. Trucks take from the top, so lower stretches stay as they are.</div>
@@ -734,7 +737,9 @@ function readLayerRows(root) {
   }));
 }
 
-function buildContents(root, existing) {
+function buildContents(root, existing, kind = existing?.kind) {
+  // the kind as the form shows it now: a storage being added can be switched to a bunker before it is saved
+  const isBunker = kind === 'bunker';
   const stackEl = root.querySelector('#op-stack');
   if (!stackEl) return;
   const resultEl = root.querySelector('#op-result');
@@ -752,7 +757,8 @@ function buildContents(root, existing) {
     openingStock: Number(root.querySelector('#s-opening')?.value) || 0,
     gradeBands: cleanBands(readLayerRows(root)),
     gradeBandsDate: root.querySelector('#lay-asof')?.value || '',
-    ...(existing?.kind === 'bunker' ? { outloadEnd: outEnd } : {}),
+    kind,
+    ...(isBunker ? { outloadEnd: outEnd } : {}),
   });
 
   const layerLabel = (l) => {
@@ -773,8 +779,8 @@ function buildContents(root, existing) {
     const total = layers.reduce((a, l) => a + l.tons, 0);
 
     root.querySelector('#lay-picture').innerHTML = `
-      <div class="silo-pic${existing?.kind === 'bunker' ? ' stack' : ''}">
-        <div>${storageSvg(existing?.kind, layers, capacity, { outloadEnd: outEnd })}</div>
+      <div class="silo-pic${isBunker ? ' stack' : ''}">
+        <div>${storageSvg(isBunker ? 'bunker' : existing?.kind, layers, capacity, { outloadEnd: outEnd })}</div>
         <div class="silo-legend">
           <div class="main">${num(total, 1)} t${capacity ? ` <span class="meta">of ${num(capacity, 0)} t</span>` : ''}</div>
           ${visibleMix(mix).length ? visibleMix(mix).map((g) => `<div class="legend-row"><i style="background:${g.color}"></i><span>${esc(g.grade)}</span><span class="meta">${num(g.tons, 1)} t · ${Math.round(g.pct * 100)}%</span></div>`).join('')
@@ -784,7 +790,7 @@ function buildContents(root, existing) {
 
     // the grain that comes out first is listed first
     const top = outEnd === 'first' ? [...layers] : [...layers].reverse();
-    root.querySelector('#lay-stack-head').textContent = existing?.kind === 'bunker'
+    root.querySelector('#lay-stack-head').textContent = isBunker
       ? `In it now, ${outEnd === 'first' ? 'back' : 'front'} (start of outload) first`
       : 'In it now, top first';
     stackEl.innerHTML = top.length
@@ -814,7 +820,7 @@ function buildContents(root, existing) {
       const t = Number(row.querySelector('.lay-tons').value) || 0;
       const to = from + (t > 0 ? t : 0);
       const tag = row.querySelector('.lay-tag');
-      tag.textContent = t > 0 ? `${num(from, 0)}\u2013${num(to, 0)} t from the ${existing?.kind === 'bunker' ? 'back' : 'bottom'}${from >= contents - 1e-6 ? ` \u2014 more than is in the ${existing?.kind === 'bunker' ? 'bunker' : 'silo'}, ignored` : ''}` : '';
+      tag.textContent = t > 0 ? `${num(from, 0)}\u2013${num(to, 0)} t from the ${isBunker ? 'back' : 'bottom'}${from >= contents - 1e-6 ? ` \u2014 more than is in the ${isBunker ? 'bunker' : 'silo'}, ignored` : ''}` : '';
       from = to;
       row.querySelector('.lay-up').disabled = i === 0;
       row.querySelector('.lay-down').disabled = i === rows.length - 1;
@@ -1050,7 +1056,8 @@ function openStorageSheet(existing) {
     root.querySelector('#s-commodity')?.addEventListener('change', () => gradeCtl.refresh());
   };
   const fixedMovementNet = existing ? movementNetForStorage(existing.id, movements) : 0;
-  let kind = existing?.kind || 'silo';
+  // a storage saved as a silo that is measured like a bunker, or called one, is shown as one (it can be changed below)
+  let kind = existing ? (looksLikeBunker(existing) ? 'bunker' : (existing.kind || 'silo')) : 'silo';
 
   const body = openSheet(existing ? 'Edit storage' : 'Add storage', (root) => {
     build();
@@ -1058,19 +1065,18 @@ function openStorageSheet(existing) {
     function build() {
       if (kind === 'tally') { buildTally(); return; }
       root.innerHTML = `
-        ${!existing ? `
         <div class="segmented" id="s-kind">
           <button data-kind="silo" class="${kind === 'silo' ? 'active' : ''}">Silo</button>
-          <button data-kind="bunker" class="${kind === 'bunker' ? 'active' : ''}">Bunker</button>
-          <button data-kind="tally" class="${kind === 'tally' ? 'active' : ''}">Tally</button>
-        </div>` : ''}
+          <button data-kind="bunker" class="${kind === 'bunker' ? 'active' : ''}">Bunker / shed</button>
+          ${!existing ? `<button data-kind="tally" class="${kind === 'tally' ? 'active' : ''}">Tally</button>` : ''}
+        </div>
         ${field({ label: 'Name', id: 's-name', value: existing?.name, placeholder: existing?.kind === 'bunker' || kind === 'bunker' ? 'e.g. Bunker 1' : 'e.g. Silo 12 (155t)' })}
         ${field({ label: 'Commodity currently stored', id: 's-commodity', type: 'select', value: existing?.commodityId, options: commodityOptions(commodities) })}
         ${field({ label: 'Opening / current stock (t)', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
         ${qualityFold(existing, commodities.find((c) => c.id === existing?.commodityId))}
         ${notesField(existing)}
-        ${contentsFold(existing, gradesInUse)}
+        ${contentsFold(existing, gradesInUse, kind)}
         <details class="fold feature" id="measure-fold" ${existing ? '' : 'open'}>
           <summary><div class="feature-head"><h2>Measure &amp; dimensions</h2>
             <div class="sub" id="measure-sub">&nbsp;</div></div></summary>
@@ -1089,6 +1095,7 @@ function openStorageSheet(existing) {
           </div>
           <hr class="sep" />
           ${field({ label: 'Current filled length (m)', id: 's-length', type: 'number', step: '0.01', value: existing?.length, hint: 'How much of the bunker currently has grain in it' })}
+          ${field({ label: 'Wall height (m, optional)', id: 's-wall', type: 'number', step: '0.01', value: existing?.wallHeight || '', hint: 'Bunkers and sheds can have walls: the grain is held straight up to the top of them, with the peak on top. Leave blank if it has none' })}
         `}
         ${field({ label: 'Angle of repose override (°, optional)', id: 's-angle', type: 'number', step: '1', value: existing?.angleOfRepose, hint: 'Leave blank to use the commodity default' })}
         ${field({ label: 'Test weight override (t/m³, optional)', id: 's-tw', type: 'number', step: '0.01', value: existing?.testWeight, hint: 'Leave blank to use the commodity default' })}
@@ -1115,7 +1122,7 @@ function openStorageSheet(existing) {
         <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
       `;
       if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id);
-      buildContents(root, existing);
+      buildContents(root, existing, kind);
       wireMeasureSummary(root);
 
       const kindSel = root.querySelector('#s-kind');
@@ -1158,7 +1165,7 @@ function openStorageSheet(existing) {
         const angleOfRepose = angleOverride ? parseFloat(angleOverride) : (c?.angleOfRepose ?? 0);
         const testWeight = twOverride ? parseFloat(twOverride) : (c?.testWeight ?? 0);
         const r = kind === 'bunker'
-          ? bunkerResult({ width: getNum(root, 's-width'), length: getNum(root, 's-length'), angleDeg: angleOfRepose, testWeight })
+          ? bunkerResult({ width: getNum(root, 's-width'), length: getNum(root, 's-length'), angleDeg: angleOfRepose, testWeight, wallHeight: getNum(root, 's-wall') })
           : siloResult({ radius: getNum(root, 's-radius'), height: getNum(root, 's-height'), coneAngle: getNum(root, 's-cone'), angleOfRepose, testWeight, fillState });
         preview.textContent = `${num(r.tons, 1)} t`;
         if (kind === 'bunker' && tarpWidthEl) {
@@ -1203,6 +1210,7 @@ function openStorageSheet(existing) {
           payload.width = getNum(root, 's-width');
           payload.length = getNum(root, 's-length');
           payload.tarpOverhangM = getNum(root, 's-overhang');
+          payload.wallHeight = getNum(root, 's-wall') || null;
         }
         db.upsertStorage(payload);
         closeSheet(); toast('Saved');
@@ -1227,7 +1235,7 @@ function openStorageSheet(existing) {
         ${!existing ? `
         <div class="segmented" id="s-kind">
           <button data-kind="silo" class="${kind === 'silo' ? 'active' : ''}">Silo</button>
-          <button data-kind="bunker" class="${kind === 'bunker' ? 'active' : ''}">Bunker</button>
+          <button data-kind="bunker" class="${kind === 'bunker' ? 'active' : ''}">Bunker / shed</button>
           <button data-kind="tally" class="${kind === 'tally' ? 'active' : ''}">Tally</button>
         </div>` : ''}
         ${field({ label: 'Name', id: 's-name', value: existing?.name, placeholder: 'e.g. SR1 round bales' })}

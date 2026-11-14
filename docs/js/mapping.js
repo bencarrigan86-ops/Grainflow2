@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=237';
-import { cleanOffFarm } from './offfarm.js?v=237';
+import { cleanGradeOptions } from './gradeprice.js?v=238';
+import { cleanOffFarm } from './offfarm.js?v=238';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -181,6 +181,17 @@ function bandsFromRow(row) {
  * out, from the back). Sent only once it has been set, like the other optional columns, and a setting that has
  * existed keeps its column so switching it back reaches the server.
  */
+/** The files attached to an order, an invoice or a bill. Only the path travels in the row; a document with no path is an upload that did not finish. */
+function recordDocRows(farmId, parentType, rec) {
+  return (rec.documents || []).filter((d) => d?.id && d.storagePath).map((d) => ({
+    id: d.id, farm_id: farmId, parent_type: parentType, parent_id: rec.id,
+    kind: d.kind || 'other',
+    file_name: d.fileName ? d.fileName : null,
+    storage_path: d.storagePath,
+    byte_size: d.byteSize ?? null,
+    uploaded_at: d.uploadedAt || new Date().toISOString(),
+  }));
+}
 function outloadEndColumns(st) {
   if (st.outloadEnd !== 'first' && !st.__hasOutloadEnd) return {};
   return { outload_end: st.outloadEnd === 'first' ? 'first' : 'last' };
@@ -205,7 +216,7 @@ export function stateToRows(state, farmId) {
   const out = {
     farms: [], seasons: [], commodities: [], fields: [], field_agronomy: [],
     storages: [], sales: [], sale_terms: [], movements: [], movement_legs: [],
-    movement_photos: [], invoices: [], overheads: [], sale_documents: [], payables: [], orders: [], freight_orders: [],
+    movement_photos: [], invoices: [], overheads: [], sale_documents: [], payables: [], orders: [], freight_orders: [], record_documents: [],
   };
 
   const b = state.businessDetails || {};
@@ -304,6 +315,7 @@ export function stateToRows(state, farmId) {
         angle_of_repose: orNull(st.angleOfRepose),
         test_weight: orNull(st.testWeight),
         tarp_overhang_m: orNull(st.tarpOverhangM),
+        ...((Number(st.wallHeight) > 0 || st.__hasWallHeight) ? { wall_height_m: Number(st.wallHeight) > 0 ? Number(st.wallHeight) : null } : {}),
         current_height: n(st.currentHeight),
         fill_state: st.fillState || 'peak',
         opening_stock: n(st.openingStock),
@@ -466,6 +478,7 @@ export function stateToRows(state, farmId) {
         // one key. Without this an invoice came back from the server with no amount and no due date.
         totals: { ...(inv.totals || {}), ...invoiceExtras(inv) },
       });
+      out.record_documents.push(...recordDocRows(farmId, 'invoice', inv));
     }
 
     // Bills the farm owes: brokerage, freight, storage and the rest.
@@ -484,6 +497,7 @@ export function stateToRows(state, farmId) {
         // The freight order a carrier's bill is for (optional: only sent once a bill has one).
         ...((p.freightOrderId || p.__hasFreightOrderId) ? { freight_order_id: orNull(p.freightOrderId) } : {}),
       });
+      out.record_documents.push(...recordDocRows(farmId, 'payable', p));
     }
 
     // Orders: a buyer asks for grain against a contract. The contract carries the detail; the order is the tonnes,
@@ -499,6 +513,7 @@ export function stateToRows(state, farmId) {
         status: o.status || 'open',
         notes: orNull(o.notes),
       });
+      out.record_documents.push(...recordDocRows(farmId, 'order', o));
     }
 
     // Freight orders: a job for a carrier, linked to the buyer's order and contract.
@@ -557,6 +572,20 @@ export function rowsToState(rows) {
     if (!docsBySale.has(d.sale_id)) docsBySale.set(d.sale_id, []);
     docsBySale.get(d.sale_id).push(d);
   }
+
+  // Files attached to an order, an invoice or a bill, by what they belong to.
+  const recDocs = new Map();
+  for (const d of rows.record_documents || []) {
+    if (!recDocs.has(d.parent_id)) recDocs.set(d.parent_id, []);
+    recDocs.get(d.parent_id).push(d);
+  }
+  const docsOf = (id) => {
+    const list = (recDocs.get(id) || []).map((d) => ({
+      id: d.id, kind: d.kind || 'other', fileName: d.file_name ?? '',
+      storagePath: d.storage_path, byteSize: d.byte_size ?? 0, uploadedAt: d.uploaded_at ?? '',
+    }));
+    return list.length ? { documents: list } : {};
+  };
 
   const legsByMovement = new Map();
   for (const leg of rows.movement_legs || []) {
@@ -622,6 +651,7 @@ export function rowsToState(rows) {
         capacityTons: st.capacity_tons,
         angleOfRepose: st.angle_of_repose, testWeight: st.test_weight,
         tarpOverhangM: st.tarp_overhang_m,
+        ...(st.wall_height_m != null ? { wallHeight: n(st.wall_height_m), __hasWallHeight: true } : {}),
         currentHeight: n(st.current_height),
         fillState: st.fill_state,
         openingStock: n(st.opening_stock),
@@ -697,6 +727,7 @@ export function rowsToState(rows) {
           status: inv.status, paidDate: inv.paid_date,
           lines: inv.lines || [], totals,
           ...(extras && typeof extras === 'object' ? extras : {}),
+          ...docsOf(inv.id),
         };
       }),
 
@@ -709,6 +740,7 @@ export function rowsToState(rows) {
         tons: p.tons == null ? '' : n(p.tons), rate: p.rate == null ? '' : n(p.rate),
         status: p.status, paidDate: p.paid_date ?? '', notes: p.notes ?? '',
         ...(p.freight_order_id ? { freightOrderId: p.freight_order_id, __hasFreightOrderId: true } : {}),
+        ...docsOf(p.id),
       })),
 
       orders: inSeason(rows.orders || [], season.id).map((o) => ({
@@ -717,6 +749,7 @@ export function rowsToState(rows) {
         deliverFrom: o.deliver_from ?? '', deliverBy: o.deliver_by ?? '',
         freightCompany: o.freight_company ?? '',
         status: o.status || 'open', notes: o.notes ?? '',
+        ...docsOf(o.id),
       })),
 
       freightOrders: inSeason(rows.freight_orders || [], season.id).map((f) => ({

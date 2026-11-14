@@ -18,22 +18,22 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=237';
+import { hydrate } from './hydrate.js?v=238';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=237';
-import { chooseBootState, resolveLegacy } from './boot.js?v=237';
-import { isLegacyDirty } from './dirty.js?v=237';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=237';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=237';
-import { settleLegs, dedupeLegs } from './legs.js?v=237';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=237';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=237';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=237';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=237';
-import { schedulePush, pushOnReconnect } from './sync.js?v=237';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=237';
+} from './local.js?v=238';
+import { chooseBootState, resolveLegacy } from './boot.js?v=238';
+import { isLegacyDirty } from './dirty.js?v=238';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=238';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=238';
+import { settleLegs, dedupeLegs } from './legs.js?v=238';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=238';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=238';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=238';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=238';
+import { schedulePush, pushOnReconnect } from './sync.js?v=238';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=238';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -555,6 +555,7 @@ export const db = {
       radius: s.radius, coneAngle: s.coneAngle, width: s.width,
       capacityTons: s.capacityTons, angleOfRepose: s.angleOfRepose,
       testWeight: s.testWeight, tarpOverhangM: s.tarpOverhangM,
+      ...(Number(s.wallHeight) > 0 ? { wallHeight: s.wallHeight, __hasWallHeight: true } : {}),
       currentHeight: 0, length: 0, fillState: 'peak', openingStock: 0,
       // grain held by a third party is still held when the season turns: what it holds now is what it opens with
       ...(isOffFarm(s) ? { offFarm: carryOffFarm(s, src.movements, { fields: src.fields, storages: src.storages, sales: src.sales }, idMap), __hasOffFarm: true } : {}),
@@ -779,6 +780,7 @@ export const db = {
         if (hasStorageNote(merged)) merged.__hasNotes = true;
         if (hasGradeBands(merged)) merged.__hasBands = true;
         if (merged.outloadEnd) merged.__hasOutloadEnd = true;
+        if (Number(merged.wallHeight) > 0) merged.__hasWallHeight = true;     // so clearing it later reaches the server
         if (merged.offFarm) merged.__hasOffFarm = true;
         c.storages[idx] = merged;
       }
@@ -791,6 +793,7 @@ export const db = {
       if (hasStorageNote(made)) made.__hasNotes = true;
       if (hasGradeBands(made)) made.__hasBands = true;
       if (made.outloadEnd) made.__hasOutloadEnd = true;
+      if (Number(made.wallHeight) > 0) made.__hasWallHeight = true;
       if (made.offFarm) made.__hasOffFarm = true;
       c.storages.push(made);
       touch('storage', id);
@@ -916,6 +919,11 @@ export const db = {
     touch('invoice', id);
     persist();
   },
+  /** A file taken off a contract, an order, an invoice or a bill: the row goes, so it does not come back on refresh. */
+  deleteDocument(table, id) {
+    if (table !== 'sale_documents' && table !== 'record_documents') return;
+    tombstone(table, id);
+  },
   deleteInvoice(id) {
     tombstone('invoices', id);
     current().invoices = current().invoices.filter((inv) => inv.id !== id);
@@ -931,6 +939,7 @@ export const db = {
     if (bill.id) {
       const idx = c.payables.findIndex((p) => p.id === bill.id);
       if (idx >= 0) c.payables[idx] = { ...c.payables[idx], ...bill };
+      else c.payables.push({ status: 'unpaid', ...bill });          // a new bill whose id was minted up front, so a file could be attached first
       touch('payable', bill.id);
     } else {
       const id = uid();
@@ -957,6 +966,7 @@ export const db = {
     if (order.id) {
       const idx = c.orders.findIndex((o) => o.id === order.id);
       if (idx >= 0) c.orders[idx] = { ...c.orders[idx], ...order };
+      else c.orders.push({ status: 'open', ...order });             // a new order whose id was minted up front, so a file could be attached first
       touch('order', order.id);
     } else {
       const id = uid();

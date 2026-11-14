@@ -1,24 +1,24 @@
-import { db } from '../storage.js?v=237';
+import { db } from '../storage.js?v=238';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=237';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=237';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=237';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=237';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=237';
-import { renderRelatedMovements } from './movements.js?v=237';
-import { openInvoiceListSheet } from './invoice.js?v=237';
-import { openContractDocSheet } from './contract.js?v=237';
-import { wireJumps } from '../jump.js?v=237';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=237';
-import { openVendorDecSheet } from './vendordec.js?v=237';
-import { summarise as summariseOrders } from '../orders.js?v=237';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=237';
-import { deliveries, moneyPosition } from '../outstanding.js?v=237';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=237';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=237';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=237';
-import { standardFor } from '../grades.js?v=237';
+} from '../documents.js?v=238';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=238';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=238';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=238';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=238';
+import { renderRelatedMovements } from './movements.js?v=238';
+import { openInvoiceListSheet } from './invoice.js?v=238';
+import { openContractDocSheet } from './contract.js?v=238';
+import { wireJumps } from '../jump.js?v=238';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=238';
+import { openVendorDecSheet } from './vendordec.js?v=238';
+import { summarise as summariseOrders } from '../orders.js?v=238';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=238';
+import { deliveries, moneyPosition } from '../outstanding.js?v=238';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=238';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=238';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=238';
+import { standardFor } from '../grades.js?v=238';
 
 let unsub = null;
 
@@ -65,7 +65,7 @@ function paint(root) {
     <div class="view">
       ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-orders" style="margin-bottom:12px">Orders${ordersSum.open.count ? ` &middot; ${num(ordersSum.open.left, 0)} t to deliver${ordersSum.overdue.count ? ` (${ordersSum.overdue.count} overdue)` : ordersSum.soon.count ? ` (${ordersSum.soon.count} due soon)` : ''}` : ''}</button>` : ''}
       ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-deliveries" style="margin-bottom:12px">Deliveries to go${deliverySum.total.count ? ` &middot; ${num(deliverySum.total.due, 0)} t${deliverySum.ended.count ? ` (${deliverySum.ended.count} past end)` : deliverySum.soon.count ? ` (${deliverySum.soon.count} ending soon)` : ''}` : ''}</button>` : ''}
-      ${['owner', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-money" style="margin-bottom:12px">Receivables &amp; payables${moneySum.owedToYou.outstanding.count || moneySum.youOwe.outstanding.count ? ` &middot; ${money(moneySum.owedToYou.outstanding.total, 0)} in, ${money(moneySum.youOwe.outstanding.total, 0)} out${moneySum.owedToYou.overdue.count || moneySum.youOwe.overdue.count ? ' (overdue)' : ''}` : ''}</button>` : ''}
+      ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<button type="button" class="btn secondary" id="open-money" style="margin-bottom:12px">Receivables &amp; payables${moneySum.owedToYou.outstanding.count || moneySum.youOwe.outstanding.count ? ` &middot; ${money(moneySum.owedToYou.outstanding.total, 0)} in, ${money(moneySum.youOwe.outstanding.total, 0)} out${moneySum.owedToYou.overdue.count || moneySum.youOwe.overdue.count ? ' (overdue)' : ''}` : ''}</button>` : ''}
       ${rollup.length === 0 ? '' : `
       <div class="card report">
         <h2><span class="dot report"></span>By commodity</h2>
@@ -765,6 +765,7 @@ function openSaleSheet(existing) {
           confirmDelete(`Remove ${d?.fileName || 'this document'} from the sale? The file is deleted for good.`, async () => {
             documents = documents.filter((x) => x.id !== d.id);
             renderDocuments();
+            db.deleteDocument('sale_documents', d.id);          // the row too, or it comes back on the next refresh
             saveDocuments();
             await removeSaleDocument(d?.storagePath);
           });

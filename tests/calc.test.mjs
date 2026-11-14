@@ -11,7 +11,7 @@
 // farm. Nothing looked broken — it was just a number that was never zero.
 
 import assert from 'node:assert';
-import { siloResult, bunkerResult } from '../docs/js/calc.js';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../docs/js/calc.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -83,6 +83,33 @@ check('a bunker with grain in it is unchanged', () => {
   // 0.25 * tan27 * 20^2 * ((40-20) + pi/6 * 20) * 0.68, worked by hand
   const expected = 0.25 * Math.tan(27 * Math.PI / 180) * 400 * (20 + (Math.PI / 6) * 20) * 0.68;
   assert.ok(Math.abs(t - expected) < 1e-9);
+});
+
+console.log('\n=== bunkers and sheds with walls ===');
+
+check('a 1 m wall adds a rectangular block of width x length x 1 m under the pile', () => {
+  const open = bunkerResult({ width: 20, length: 40, angleDeg: 27, testWeight: 0.68 });
+  const walled = bunkerResult({ width: 20, length: 40, angleDeg: 27, testWeight: 0.68, wallHeight: 1 });
+  assert.ok(Math.abs(walled.volume - open.volume - 20 * 40 * 1) < 1e-9, 'the block is 20 x 40 x 1 = 800 m3');
+  assert.ok(Math.abs(walled.tons - open.tons - 800 * 0.68) < 1e-9);
+});
+check('the height to the peak includes the walls', () => {
+  const open = bunkerResult({ width: 20, length: 40, angleDeg: 27, testWeight: 0.68 });
+  assert.ok(Math.abs(bunkerResult({ width: 20, length: 40, angleDeg: 27, testWeight: 0.68, wallHeight: 1.5 }).height - (open.height + 1.5)) < 1e-9);
+});
+check('no wall, blank, zero or nonsense leaves the open pile exactly as it was', () => {
+  const open = bunkerResult({ width: 20, length: 40, angleDeg: 27, testWeight: 0.68 });
+  for (const wallHeight of [undefined, null, '', 0, -2, 'x']) {
+    assert.deepEqual(bunkerResult({ width: 20, length: 40, angleDeg: 27, testWeight: 0.68, wallHeight }).tons, open.tons, String(wallHeight));
+  }
+});
+check('an empty walled bunker is still empty', () => {
+  assert.equal(bunkerResult({ width: 20, length: 0, angleDeg: 27, testWeight: 0.68, wallHeight: 1 }).tons, 0);
+});
+check('walls change the volume only: the tarp is the same as before', () => {
+  const a = bunkerTarpRequirement({ width: 20, length: 40, angleDeg: 27 });
+  const b = bunkerTarpRequirement({ width: 20, length: 40, angleDeg: 27, wallHeight: 1 });
+  assert.deepEqual(b, a);
 });
 
 console.log('');

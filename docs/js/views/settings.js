@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=237';
-import { getTheme, setTheme } from '../theme.js?v=237';
-import { num, money, esc, todayLocal } from '../fmt.js?v=237';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=237';
-import { openLoadImportSheet } from './importloads.js?v=237';
-import { openDeletedSheet } from './deleted.js?v=237';
-import { APP_VERSION } from '../version.js?v=237';
-import { exportRowsAsCSV } from '../csv.js?v=237';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=237';
-import { endpointLabel } from './movements.js?v=237';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=237';
-import { layersForStorage } from '../outload.js?v=237';
-import { holdings, totalHeld } from '../offfarm.js?v=237';
-import { kindLabel, billTotal } from '../payables.js?v=237';
-import { orderState, STATE_LABEL } from '../orders.js?v=237';
-import { fieldHarvest } from '../harvest.js?v=237';
-import { openMySignatureSheet } from './signaturepad.js?v=237';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=237';
+import { db } from '../storage.js?v=238';
+import { getTheme, setTheme } from '../theme.js?v=238';
+import { num, money, esc, todayLocal } from '../fmt.js?v=238';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=238';
+import { openLoadImportSheet } from './importloads.js?v=238';
+import { openDeletedSheet } from './deleted.js?v=238';
+import { APP_VERSION } from '../version.js?v=238';
+import { exportRowsAsCSV } from '../csv.js?v=238';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=238';
+import { endpointLabel } from './movements.js?v=238';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=238';
+import { layersForStorage } from '../outload.js?v=238';
+import { holdings, totalHeld } from '../offfarm.js?v=238';
+import { kindLabel, billTotal } from '../payables.js?v=238';
+import { orderState, STATE_LABEL } from '../orders.js?v=238';
+import { fieldHarvest } from '../harvest.js?v=238';
+import { openMySignatureSheet } from './signaturepad.js?v=238';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=238';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=237';
+} from '../invites.js?v=238';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=237';
+} from '../auth.js?v=238';
 
 let unsub = null;
 
@@ -939,7 +939,7 @@ function exportStorageCSV(year, stamp) {
   const { commodities, storages, movements } = data;
   exportRowsAsCSV(`grainflow-storage-${year}-${stamp}.csv`, storages, [
     { label: 'Name', get: (s) => s.name },
-    { label: 'Kind', get: (s) => (s.offFarm ? 'Off-farm' : s.kind === 'bunker' ? 'Bunker' : 'Silo') },
+    { label: 'Kind', get: (s) => (s.offFarm ? 'Off-farm' : s.kind === 'bunker' ? 'Bunker / shed' : 'Silo') },
     { label: 'Commodity', get: (s) => commodityName(commodities, s.commodityId) },
     { label: 'Opening stock (t)', get: (s) => s.openingStock ?? '' },
     // an off-farm location is held by grade: its tracked stock is what it holds, all grades

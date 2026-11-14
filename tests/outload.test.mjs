@@ -16,7 +16,7 @@
 // so the top of the silo is ticket 3, then 2, then 1, then the opening stock.
 
 import assert from 'node:assert';
-import { layersForStorage, takeFromEnd, dropFromBands, outloadEndOf, takeFromTop, summarise, predictOutload, predictPlan, specOf, SPECS } from '../docs/js/outload.js';
+import { layersForStorage, takeFromEnd, dropFromBands, outloadEndOf, looksLikeBunker, takeFromTop, summarise, predictOutload, predictPlan, specOf, SPECS } from '../docs/js/outload.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -234,6 +234,20 @@ check('only a bunker can be emptied from the back; a silo stays last in, first o
 check('a load that arrives after one went out lands at the front either way', () => {
   const { layers } = layersForStorage(BACK, [inLoad(1, '2026-11-05', 100, { grade: 'A' }), outLoad(2, '2026-11-06', 40), inLoad(3, '2026-11-07', 50, { grade: 'B' })]);
   assert.deepEqual([gradesOf(layers), tonsOf(layers)], [['A', 'B'], [60, 50]]);
+});
+check('a storage saved as a silo is still a bunker if it is measured like one or called one', () => {
+  assert.equal(looksLikeBunker({ kind: 'bunker' }), true);
+  assert.equal(looksLikeBunker({ kind: 'silo', name: 'Bunker 3' }), true);
+  assert.equal(looksLikeBunker({ kind: 'silo', name: 'Machinery Shed' }), true);
+  assert.equal(looksLikeBunker({ kind: 'silo', name: 'North', width: 20, length: 60 }), true);
+  assert.equal(looksLikeBunker({ kind: 'silo', name: 'Silo 12 (155t)', radius: 3.2 }), false);
+  assert.equal(looksLikeBunker({ kind: 'silo', name: 'Bunker-like silo', radius: 3.2 }), false, 'a radius means a silo');
+  assert.equal(looksLikeBunker({ kind: 'tally', name: 'Bunker tally' }), false);
+  assert.equal(looksLikeBunker({ kind: 'silo', name: 'Silo 1' }), false);
+  assert.equal(looksLikeBunker(null), false);
+  // so its end switch works too
+  assert.equal(outloadEndOf({ kind: 'silo', name: 'Bunker 3', outloadEnd: 'first' }), 'first');
+  assert.equal(outloadEndOf({ kind: 'silo', name: 'Silo 3', outloadEnd: 'first' }), 'last');
 });
 check('what is asked for beyond what is in it is still reported as a shortfall', () => {
   const r = layersForStorage(BACK, [inLoad(1, '2026-11-05', 10), outLoad(2, '2026-11-06', 25)]);

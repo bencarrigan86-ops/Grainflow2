@@ -28,7 +28,7 @@
 //   movement   movements, movement_legs, movement_photos
 //   invoice    invoices
 //   payable    payables
-//   order      orders
+//   order      orders, record_documents (files attached to it)
 //   freightorder  freight_orders
 //   overheads  overheads                       (id = season label)
 //   season     the season row itself           (id = season label)
@@ -44,7 +44,7 @@ export const KINDS = [
 const TABLES = [
   'farms', 'seasons', 'commodities', 'fields', 'field_agronomy', 'storages',
   'sales', 'sale_terms', 'sale_documents', 'movements', 'movement_legs',
-  'movement_photos', 'invoices', 'overheads', 'payables', 'orders', 'freight_orders',
+  'movement_photos', 'invoices', 'overheads', 'payables', 'orders', 'freight_orders', 'record_documents',
 ];
 
 // child table -> [column holding the parent's id, parent table]
@@ -108,6 +108,11 @@ export function selectDirtyRows(rows, state, dirty) {
   for (const [child, [col, parent]] of Object.entries(CHILD_OF)) {
     (rows[child] || []).filter((r) => want[parent].has(r[col])).forEach((r) => want[child].add(r.id));
   }
+  // Files attached to an order, an invoice or a bill name their parent by id alone (no foreign key), so they
+  // travel with whichever of the three is owed.
+  (rows.record_documents || [])
+    .filter((r) => want.orders.has(r.parent_id) || want.invoices.has(r.parent_id) || want.payables.has(r.parent_id))
+    .forEach((r) => want.record_documents.add(r.id));
 
   for (const t of TABLES) out[t] = (rows[t] || []).filter((r) => want[t].has(r.id));
 
