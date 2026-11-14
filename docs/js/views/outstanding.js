@@ -4,14 +4,15 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=240';
-import { openSheet } from '../ui.js?v=240';
-import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=240';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=240';
-import { windowText } from '../orders.js?v=240';
-import { openOrderSheet } from './orders.js?v=240';
-import { openInvoiceListSheet } from './invoice.js?v=240';
-import { renderPayables, returnToAfterBill } from './payables.js?v=240';
+import { db } from '../storage.js?v=241';
+import { openSheet } from '../ui.js?v=241';
+import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=241';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=241';
+import { windowText } from '../orders.js?v=241';
+import { openOrderSheet } from './orders.js?v=241';
+import { openInvoiceListSheet } from './invoice.js?v=241';
+import { renderPayables, returnToAfterBill } from './payables.js?v=241';
+import { openXeroSheet } from './xero.js?v=241';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -148,11 +149,13 @@ export function openMoneySheet() {
             <div class="meta">Invoice #${esc(r.invoice.invoiceNo ?? '')}${r.invoice.issueDate ? ` · issued ${esc(shortDate(r.invoice.issueDate))}` : ''}</div>
             <div class="li-foot"><span class="meta">${r.dueDate ? `Due ${esc(shortDate(r.dueDate))}` : 'No due date'}</span><span class="badges"><span class="badge ${badge}">${esc(dueText(r.daysOver))}</span></span></div>
           </div>`;
-        }).join('')}`}`;
+        }).join('')}`}
+        ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? '<button type="button" class="btn secondary" id="open-xero" style="margin-top:14px">Export for Xero</button>' : ''}`;
 
       root.querySelector('#money-side').addEventListener('click', (e) => { const b = e.target.closest('[data-side]'); if (b) { moneySide = b.dataset.side; draw(); } });
       root.querySelectorAll('[data-invoice-sale]').forEach((el) => el.addEventListener('click', () => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.invoiceSale))));
       root.querySelectorAll('[data-open-invoices]').forEach((el) => el.addEventListener('click', () => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.openInvoices))));
+      root.querySelector('#open-xero')?.addEventListener('click', () => openXeroSheet());
       const bills = root.querySelector('#money-bills');
       if (bills) renderPayables(bills, { stats: false });
     };
