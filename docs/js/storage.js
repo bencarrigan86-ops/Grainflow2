@@ -18,22 +18,22 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=242';
+import { hydrate } from './hydrate.js?v=243';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=242';
-import { chooseBootState, resolveLegacy } from './boot.js?v=242';
-import { isLegacyDirty } from './dirty.js?v=242';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=242';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=242';
-import { settleLegs, dedupeLegs } from './legs.js?v=242';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=242';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=242';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=242';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=242';
-import { schedulePush, pushOnReconnect } from './sync.js?v=242';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=242';
+} from './local.js?v=243';
+import { chooseBootState, resolveLegacy } from './boot.js?v=243';
+import { isLegacyDirty } from './dirty.js?v=243';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=243';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=243';
+import { settleLegs, dedupeLegs } from './legs.js?v=243';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=243';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=243';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=243';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=243';
+import { schedulePush, pushOnReconnect } from './sync.js?v=243';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=243';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -548,6 +548,8 @@ export const db = {
       id: uid(), name: f.name, areaHa: f.areaHa, commodityId: mapCommodity(f.commodityId),
       yieldTHa: 0, yieldMode: 'estimate', ureaRequiredKgHa: 0, ureaAppliedKgHa: 0,
       seedVariety: '', seedRateKgHa: 0,
+      // the paddock's outline on the farm map goes with it into the new season
+      ...(f.boundary ? { boundary: f.boundary, __hasBoundary: true } : {}),
     }));
 
     const storages = src.storages.filter((s) => !isTransit(s)).map((s) => ({
@@ -633,6 +635,7 @@ export const db = {
       const idx = c.fields.findIndex((f) => f.id === field.id);
       if (idx >= 0) {
         const merged = { ...c.fields[idx], ...field };
+        if (merged.boundary) merged.__hasBoundary = true;
         if (merged.harvestDone) merged.__hasHarvestDone = true;   // keeps un-ticking it reaching the server
         if (merged.harvestHaLeft != null) merged.__hasHarvestHaLeft = true;   // and so does clearing the hectares left
         c.fields[idx] = merged;
@@ -647,6 +650,35 @@ export const db = {
     }
     persist();
     return field.id;
+  },
+  /**
+   * Saves the outlines from a farm map import in one go. `matched` gives each existing paddock its outline (and its area from
+   * the map, when one is given); `added` makes new paddocks from outlines that matched none.
+   */
+  applyFieldBoundaries({ matched = [], added = [] } = {}) {
+    const c = current();
+    for (const m of matched) {
+      const idx = c.fields.findIndex((f) => f.id === m.id);
+      if (idx < 0) continue;
+      c.fields[idx] = { ...c.fields[idx], boundary: m.boundary, __hasBoundary: true, ...(m.areaHa > 0 ? { areaHa: m.areaHa } : {}) };
+      touch('field', m.id);
+    }
+    for (const a of added) {
+      const id = uid();
+      c.fields.push({ id, name: a.name, areaHa: a.areaHa || 0, commodityId: null, yieldTHa: 0, yieldMode: 'estimate', ureaRequiredKgHa: 0, ureaAppliedKgHa: 0, seedVariety: '', seedRateKgHa: 0, boundary: a.boundary, __hasBoundary: true });
+      touch('field', id);
+    }
+    persist();
+  },
+  /** Takes the farm map off every paddock. */
+  clearFieldBoundaries() {
+    const c = current();
+    c.fields = c.fields.map((f) => {
+      if (!f.boundary) return f;
+      touch('field', f.id);
+      return { ...f, boundary: null, __hasBoundary: true };
+    });
+    persist();
   },
   /**
    * Combine two paddocks into one: the kept paddock takes the name and the

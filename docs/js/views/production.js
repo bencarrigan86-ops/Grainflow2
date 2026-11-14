@@ -1,11 +1,12 @@
-import { db } from '../storage.js?v=242';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=242';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=242';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=242';
-import { describeMerge } from '../merge.js?v=242';
-import { renderRelatedMovements } from './movements.js?v=242';
-import { canSeeYield } from '../nav.js?v=242';
-import { wireJumps } from '../jump.js?v=242';
+import { db } from '../storage.js?v=243';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=243';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=243';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=243';
+import { describeMerge } from '../merge.js?v=243';
+import { renderRelatedMovements } from './movements.js?v=243';
+import { canSeeYield } from '../nav.js?v=243';
+import { wireJumps } from '../jump.js?v=243';
+import { openMapSheet } from './farmmap.js?v=243';
 
 let unsub = null;
 
@@ -31,6 +32,7 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      ${fields.length ? `<button type="button" class="btn secondary" id="open-map" style="margin-bottom:12px">Farm map${fields.some((f) => f.boundary) ? ` &middot; ${fields.filter((f) => f.boundary).length} of ${fields.length} paddocks mapped` : ' &middot; add your paddock outlines'}</button>` : ''}
       ${rollup.length === 0 ? '' : `
       <div class="card report">
         <h2><span class="dot report"></span>By commodity</h2>
@@ -72,6 +74,7 @@ function paint(root) {
     el.addEventListener('click', () => openFieldSheet(fields.find((f) => f.id === el.dataset.editField)));
   });
   root.querySelector('#add-field').addEventListener('click', () => openFieldSheet(null));
+  root.querySelector('#open-map')?.addEventListener('click', () => openMapSheet({ onOpenField: openFieldSheet }));
   root.querySelector('#empty-add-field')?.addEventListener('click', () => openFieldSheet(null));
 }
 
@@ -96,7 +99,7 @@ function fieldRow(f, movements, showYield = true) {
   `;
 }
 
-function openFieldSheet(existing) {
+export function openFieldSheet(existing) {
   const showYield = canSeeYield(db.getRole());
   const { commodities, movements } = db.get();
   const commodityOptions = commodities.map((c) => ({ value: c.id, label: c.name }));

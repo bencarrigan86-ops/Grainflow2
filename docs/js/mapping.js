@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=242';
-import { cleanOffFarm } from './offfarm.js?v=242';
+import { cleanGradeOptions } from './gradeprice.js?v=243';
+import { cleanOffFarm } from './offfarm.js?v=243';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -284,6 +284,8 @@ export function stateToRows(state, farmId) {
         ...((f.harvestDone || f.__hasHarvestDone) ? { harvest_done: !!f.harvestDone } : {}),
         // Hectares still to harvest on a part-harvested paddock. Optional the same way; clearing it sends null.
         ...((f.harvestHaLeft != null || f.__hasHarvestHaLeft) ? { harvest_ha_left: f.harvestHaLeft == null ? null : n(f.harvestHaLeft) } : {}),
+        // The outline on the farm map. Optional the same way; removing the map sends null.
+        ...((f.boundary || f.__hasBoundary) ? { boundary: f.boundary || null } : {}),
       });
       // The agronomy half. Always written, even when empty — a missing row and
       // a zeroed row are different things, and the app expects the fields to
@@ -633,6 +635,7 @@ export function rowsToState(rows) {
           commodityId: f.commodity_id,
           ...(f.harvest_done != null ? { harvestDone: !!f.harvest_done, __hasHarvestDone: true } : {}),
           ...(f.harvest_ha_left != null ? { harvestHaLeft: n(f.harvest_ha_left), __hasHarvestHaLeft: true } : {}),
+          ...(f.boundary != null ? { boundary: f.boundary, __hasBoundary: true } : {}),
           __agronomyId: a.id,
           yieldTHa: n(a.yield_t_ha),
           yieldMode: a.yield_mode || 'estimate',
