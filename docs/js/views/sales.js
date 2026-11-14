@@ -1,23 +1,24 @@
-import { db } from '../storage.js?v=234';
+import { db } from '../storage.js?v=235';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=234';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=234';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=234';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=234';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=234';
-import { renderRelatedMovements } from './movements.js?v=234';
-import { openInvoiceListSheet } from './invoice.js?v=234';
-import { openContractDocSheet } from './contract.js?v=234';
-import { wireJumps } from '../jump.js?v=234';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=234';
-import { summarise as summariseOrders } from '../orders.js?v=234';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=234';
-import { deliveries, moneyPosition } from '../outstanding.js?v=234';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=234';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=234';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=234';
-import { standardFor } from '../grades.js?v=234';
+} from '../documents.js?v=235';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=235';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=235';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=235';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=235';
+import { renderRelatedMovements } from './movements.js?v=235';
+import { openInvoiceListSheet } from './invoice.js?v=235';
+import { openContractDocSheet } from './contract.js?v=235';
+import { wireJumps } from '../jump.js?v=235';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=235';
+import { openVendorDecSheet } from './vendordec.js?v=235';
+import { summarise as summariseOrders } from '../orders.js?v=235';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=235';
+import { deliveries, moneyPosition } from '../outstanding.js?v=235';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=235';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=235';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=235';
+import { standardFor } from '../grades.js?v=235';
 
 let unsub = null;
 
@@ -349,8 +350,9 @@ function openSaleSheet(existing) {
       <div class="subhead">Deal</div>
       <div class="grid-2">
         ${field({ label: 'Date', id: 'date', type: 'date', value: existing?.date ?? todayLocal() })}
-        ${field({ label: 'Contract no.', id: 'contractNo', value: existing?.contractNo })}
+        ${field({ label: "Buyer's contract no.", id: 'contractNo', value: existing?.contractNo })}
       </div>
+      ${field({ label: 'Our contract no.', id: 'ourRef', value: existing?.ourRef, hint: 'Your own number for this contract, if you keep one. It goes on the vendor declaration.' })}
       ${field({ label: 'Buyer', id: 'buyer', value: existing?.buyer, placeholder: 'e.g. CBH, Cargill', list: 'dl-buyers' })}
       <div class="copy-last" id="copy-last"></div>
 
@@ -504,6 +506,7 @@ function openSaleSheet(existing) {
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       ${existing ? `<button class="btn secondary" id="view-invoice" style="margin-top:12px">${invoiceButtonLabel(existing)}</button>` : ''}
       ${existing ? `<button class="btn secondary" id="view-contract" style="margin-top:8px">Confirmation of sale (PDF)&hellip;</button>` : ''}
+      ${existing ? `<button class="btn secondary" id="make-vendordec" style="margin-top:8px">Vendor declaration&hellip;</button>` : ''}
       ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:8px">Delete sale</button>` : ''}
       <div class="save-bar">
         <div class="total"><div class="l">Contract value</div><div class="v" id="total-preview">—</div></div>
@@ -514,6 +517,7 @@ function openSaleSheet(existing) {
     if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'sale', existing.id);
     const invoiceBtn = root.querySelector('#view-invoice');
     if (invoiceBtn) invoiceBtn.addEventListener('click', () => openInvoiceListSheet(existing));
+    root.querySelector('#make-vendordec')?.addEventListener('click', () => openVendorDecSheet({ saleId: existing.id }));
     const contractBtn = root.querySelector('#view-contract');
     // Reads the saved sale rather than the form, so the document can never show
     // a figure that has not been saved yet.
@@ -814,6 +818,7 @@ function openSaleSheet(existing) {
         brokerageRate: getNum(root, 'brokerageRate'),
         buyer: getVal(root, 'buyer')?.trim(),
         contractNo: getVal(root, 'contractNo')?.trim(),
+        ourRef: getVal(root, 'ourRef')?.trim(),
         location: getVal(root, 'location')?.trim(),
         deliveryStart: getVal(root, 'deliveryStart'),
         deliveryEnd: getVal(root, 'deliveryEnd'),

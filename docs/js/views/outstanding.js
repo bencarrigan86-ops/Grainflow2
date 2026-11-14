@@ -4,14 +4,14 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=234';
-import { openSheet } from '../ui.js?v=234';
-import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=234';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=234';
-import { windowText } from '../orders.js?v=234';
-import { openOrderSheet } from './orders.js?v=234';
-import { openInvoiceListSheet } from './invoice.js?v=234';
-import { renderPayables, returnToAfterBill } from './payables.js?v=234';
+import { db } from '../storage.js?v=235';
+import { openSheet } from '../ui.js?v=235';
+import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=235';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=235';
+import { windowText } from '../orders.js?v=235';
+import { openOrderSheet } from './orders.js?v=235';
+import { openInvoiceListSheet } from './invoice.js?v=235';
+import { renderPayables, returnToAfterBill } from './payables.js?v=235';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);

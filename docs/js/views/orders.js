@@ -4,12 +4,13 @@
 // carting it and the buyer's own order number. Everything else about the sale is the contract's and is shown from it.
 // Loads are matched to an order on the movement. The arithmetic is in orders.js.
 
-import { db } from '../storage.js?v=234';
-import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=234';
-import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=234';
-import { movementTonsToSale } from '../derived.js?v=234';
-import { movementRow, openMovementSheet } from './movements.js?v=234';
-import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=234';
+import { db } from '../storage.js?v=235';
+import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=235';
+import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=235';
+import { movementTonsToSale } from '../derived.js?v=235';
+import { movementRow, openMovementSheet } from './movements.js?v=235';
+import { openVendorDecSheet } from './vendordec.js?v=235';
+import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=235';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | filled | closed | all
@@ -138,6 +139,7 @@ export function openOrderSheet(existing, defaults = {}) {
         <div class="hint">Close an order the buyer cancelled or took less than they ordered. It fills by itself once all the tonnes are delivered.</div>
       </div>
       <div id="o-loads" class="card" style="margin:12px 0"></div>
+      <button type="button" class="btn secondary" id="o-vendordec" style="margin-bottom:8px">Vendor declaration&hellip;</button>
       <button class="btn ghost-danger" id="o-del" style="margin-top:8px">Delete order</button>` : ''}
       <div class="save-bar solo"><button class="btn" id="save">Save</button></div>`;
 
@@ -188,6 +190,7 @@ export function openOrderSheet(existing, defaults = {}) {
         status = b.dataset.status;
         root.querySelectorAll('#o-status button').forEach((x) => x.classList.toggle('active', x === b));
       });
+      root.querySelector('#o-vendordec').addEventListener('click', () => openVendorDecSheet({ orderId: existing.id }));
       root.querySelector('#o-del').addEventListener('click', () => {
         confirmDelete('Delete this order? Loads delivered against it stay, but are no longer against an order.', () => { db.deleteOrder(existing.id); openOrdersSheet(); });
       });

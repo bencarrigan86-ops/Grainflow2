@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=234';
-import { cleanOffFarm } from './offfarm.js?v=234';
+import { cleanGradeOptions } from './gradeprice.js?v=235';
+import { cleanOffFarm } from './offfarm.js?v=235';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -210,6 +210,9 @@ export function stateToRows(state, farmId) {
     payment_terms_days: b.paymentTermsDays ?? 14,
     bank_name: orNull(b.bankName), account_name: orNull(b.accountName),
     bsb: orNull(b.bsb), account_number: orNull(b.accountNumber),
+    // The quality assurance program named on a vendor declaration. Optional like the other later columns: sent once
+    // it has been filled in, and kept after that so clearing it reaches the server.
+    ...((b.qaProgram || b.qaNumber || b.__hasQa) ? { qa_program: orNull(b.qaProgram), qa_number: orNull(b.qaNumber) } : {}),
   });
 
   for (const [label, year] of Object.entries(state.years || {})) {
@@ -328,6 +331,8 @@ export function stateToRows(state, farmId) {
         weights_to_govern: orNull(sale.weightsToGovern),
         delivery_terms: orNull(sale.deliveryTerms),
         buyer_contact: orNull(sale.buyerContact),
+        // The farm's own number for the contract, beside the buyer's (contract_no). Optional like the other later columns.
+        ...((sale.ourRef || sale.__hasOurRef) ? { our_ref: orNull(sale.ourRef) } : {}),
       });
       out.sale_terms.push({
         id: sale.__termsId || uid(), farm_id: farmId, sale_id: sale.id,
@@ -625,6 +630,7 @@ export function rowsToState(rows) {
           weightsToGovern: sale.weights_to_govern ?? '',
           deliveryTerms: sale.delivery_terms ?? '',
           buyerContact: sale.buyer_contact ?? '',
+          ...(sale.our_ref != null ? { ourRef: sale.our_ref, __hasOurRef: true } : {}),
           broker: t.broker ?? '',
           brokerRef: t.broker_ref ?? '',
           brokeragePaidBy: t.brokerage_paid_by ?? '',
@@ -710,6 +716,7 @@ export function rowsToState(rows) {
       paymentTermsDays: farm.payment_terms_days ?? 14,
       bankName: farm.bank_name ?? '', accountName: farm.account_name ?? '',
       bsb: farm.bsb ?? '', accountNumber: farm.account_number ?? '',
+      ...((farm.qa_program != null || farm.qa_number != null) ? { qaProgram: farm.qa_program ?? '', qaNumber: farm.qa_number ?? '', __hasQa: true } : {}),
     },
   };
 }

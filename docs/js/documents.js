@@ -17,7 +17,7 @@
 // nothing, and the failure it would hide — an upload that silently never
 // happened — is worse than being told to try again.
 
-import { supabase } from './supabase.js?v=234';
+import { supabase } from './supabase.js?v=235';
 
 const BUCKET = 'sale-documents';
 const SIGNED_URL_TTL = 60 * 60;
@@ -27,6 +27,7 @@ const MAX_BYTES = 20 * 1024 * 1024;
 export const DOCUMENT_KINDS = [
   { value: 'contract', label: "Buyer's contract" },
   { value: 'broker_note', label: "Broker's note" },
+  { value: 'vendor_dec', label: 'Vendor declaration (sent)' },
   { value: 'other', label: 'Other' },
 ];
 

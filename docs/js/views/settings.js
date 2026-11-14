@@ -1,27 +1,28 @@
-import { db } from '../storage.js?v=234';
-import { getTheme, setTheme } from '../theme.js?v=234';
-import { num, money, esc, todayLocal } from '../fmt.js?v=234';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=234';
-import { openLoadImportSheet } from './importloads.js?v=234';
-import { openDeletedSheet } from './deleted.js?v=234';
-import { APP_VERSION } from '../version.js?v=234';
-import { exportRowsAsCSV } from '../csv.js?v=234';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=234';
-import { endpointLabel } from './movements.js?v=234';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=234';
-import { layersForStorage } from '../outload.js?v=234';
-import { holdings, totalHeld } from '../offfarm.js?v=234';
-import { kindLabel, billTotal } from '../payables.js?v=234';
-import { orderState, STATE_LABEL } from '../orders.js?v=234';
-import { fieldHarvest } from '../harvest.js?v=234';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=234';
+import { db } from '../storage.js?v=235';
+import { getTheme, setTheme } from '../theme.js?v=235';
+import { num, money, esc, todayLocal } from '../fmt.js?v=235';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=235';
+import { openLoadImportSheet } from './importloads.js?v=235';
+import { openDeletedSheet } from './deleted.js?v=235';
+import { APP_VERSION } from '../version.js?v=235';
+import { exportRowsAsCSV } from '../csv.js?v=235';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=235';
+import { endpointLabel } from './movements.js?v=235';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=235';
+import { layersForStorage } from '../outload.js?v=235';
+import { holdings, totalHeld } from '../offfarm.js?v=235';
+import { kindLabel, billTotal } from '../payables.js?v=235';
+import { orderState, STATE_LABEL } from '../orders.js?v=235';
+import { fieldHarvest } from '../harvest.js?v=235';
+import { openMySignatureSheet } from './signaturepad.js?v=235';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=235';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=234';
+} from '../invites.js?v=235';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=234';
+} from '../auth.js?v=235';
 
 let unsub = null;
 
@@ -94,6 +95,12 @@ function paint(root) {
         ${field({ label: 'Other ($)', id: 'oh-other', type: 'number', step: '1', value: overheads.other })}
         <button class="btn" id="save-overheads">Save overheads</button>
         </details>
+      </div>
+
+      <div class="card">
+        <h2>My signature</h2>
+        <div class="hint" style="margin-bottom:8px">Draw your signature once. It signs the documents you choose to sign, such as a vendor declaration. Only you can see or use it.</div>
+        <button class="btn secondary" id="open-my-signature">My signature&hellip;</button>
       </div>
 
       <div class="card">
@@ -277,6 +284,7 @@ function paint(root) {
   root.querySelector('#export-csv').addEventListener('click', () => openExportCsvSheet());
   root.querySelector('#import-loads')?.addEventListener('click', () => openLoadImportSheet());
   root.querySelector('#open-deleted')?.addEventListener('click', () => openDeletedSheet());
+  root.querySelector('#open-my-signature')?.addEventListener('click', () => openMySignatureSheet());
   const importFile = root.querySelector('#import-file');
   root.querySelector('#import').addEventListener('click', () => importFile.click());
   importFile.addEventListener('change', async () => {
