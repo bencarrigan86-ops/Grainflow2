@@ -5,8 +5,8 @@
 // contract's Documents list and follows its permissions. Needs signal: the send does not wait for it, and the
 // caller says so if the copy could not be filed.
 
-import { db } from './storage.js?v=235';
-import { uploadSaleDocument } from './documents.js?v=235';
+import { db } from './storage.js?v=236';
+import { uploadSaleDocument } from './documents.js?v=236';
 
 /**
  * Files `bytes` (a PDF) with the contract. Resolves to the document that was added, or throws a sentence a person

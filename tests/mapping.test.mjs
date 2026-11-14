@@ -23,7 +23,7 @@ const state = {
   },
   years: {
     '2025': {
-      commodities: [], fields: [], storages: [], sales: [], movements: [], invoices: [], payables: [], orders: [],
+      commodities: [], fields: [], storages: [], sales: [], movements: [], invoices: [], payables: [], orders: [], freightOrders: [],
       overheads: { finance: 0, equipmentRepayments: 0, depreciation: 0, wages: 0,
                    drawings: 0, admin: 0, energy: 0, insurance: 0,
                    repairsMaintenance: 0, other: 0 },
@@ -126,6 +126,11 @@ const state = {
       orders: [
         { id: u(), saleId: sale1, orderNo: 'PO-9', tons: 120, deliverFrom: '2026-02-01', deliverBy: '2026-02-20',
           freightCompany: 'Ace Haulage', status: 'open', notes: '' },
+      ],
+      freightOrders: [
+        { id: u(), saleId: sale1, orderId: null, freightNo: 'FO-001', carrier: 'Ace Haulage', carrierEmail: 'dispatch@ace.example.com',
+          tons: 120, rate: 0.12, rateBasis: 'per_tkm', distanceKm: 240, pickup: 'Gate 2', deliverTo: 'Newbridge silo',
+          loadFrom: '2026-02-01', loadBy: '2026-02-20', status: 'open', notes: 'Side tipper' },
       ],
       overheads: { finance: 50000, equipmentRepayments: 30000, depreciation: 40000,
                    wages: 180000, drawings: 90000, admin: 12000, energy: 22000,

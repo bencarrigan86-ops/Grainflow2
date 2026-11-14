@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=235';
-import { cleanOffFarm } from './offfarm.js?v=235';
+import { cleanGradeOptions } from './gradeprice.js?v=236';
+import { cleanOffFarm } from './offfarm.js?v=236';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -105,6 +105,7 @@ export function movementFromRow(m, legs = [], photo = null) {
     ...(m.source_ref ? { sourceRef: m.source_ref } : {}),
     ...(m.external_ticket_no != null ? { externalTicketNo: m.external_ticket_no, __hasExtTicket: true } : {}),
     ...(m.order_id ? { orderId: m.order_id, __hasOrderId: true } : {}),
+    ...(m.freight_order_id ? { freightOrderId: m.freight_order_id, __hasFreightOrderId: true } : {}),
     ...loadQuality.fromRow(m),
     ...(m.updated_at ? { __rev: m.updated_at } : {}),
     froms: legs.filter((l) => l.direction === 'from').map(toLeg),
@@ -191,7 +192,7 @@ export function stateToRows(state, farmId) {
   const out = {
     farms: [], seasons: [], commodities: [], fields: [], field_agronomy: [],
     storages: [], sales: [], sale_terms: [], movements: [], movement_legs: [],
-    movement_photos: [], invoices: [], overheads: [], sale_documents: [], payables: [], orders: [],
+    movement_photos: [], invoices: [], overheads: [], sale_documents: [], payables: [], orders: [], freight_orders: [],
   };
 
   const b = state.businessDetails || {};
@@ -398,6 +399,8 @@ export function stateToRows(state, farmId) {
         ...((m.externalTicketNo || m.__hasExtTicket) ? { external_ticket_no: orNull(m.externalTicketNo) } : {}),
         // The order this load was delivered against. Optional the same way: left out until a load has one.
         ...((m.orderId || m.__hasOrderId) ? { order_id: orNull(m.orderId) } : {}),
+        // The freight order it was carted on, optional in the same way.
+        ...((m.freightOrderId || m.__hasFreightOrderId) ? { freight_order_id: orNull(m.freightOrderId) } : {}),
         status: m.status || 'open',
         truck_rego: orNull(m.truckRego), driver_name: orNull(m.driver),
         gross_weight: orNull(m.grossWeight), tare_weight: orNull(m.tareWeight),
@@ -464,6 +467,8 @@ export function stateToRows(state, farmId) {
         rate: p.rate === '' || p.rate == null ? null : n(p.rate),
         status: p.status || 'unpaid', paid_date: orNull(p.paidDate),
         notes: orNull(p.notes),
+        // The freight order a carrier's bill is for (optional: only sent once a bill has one).
+        ...((p.freightOrderId || p.__hasFreightOrderId) ? { freight_order_id: orNull(p.freightOrderId) } : {}),
       });
     }
 
@@ -479,6 +484,22 @@ export function stateToRows(state, farmId) {
         freight_company: orNull(o.freightCompany),
         status: o.status || 'open',
         notes: orNull(o.notes),
+      });
+    }
+
+    // Freight orders: a job for a carrier, linked to the buyer's order and contract.
+    for (const f of year.freightOrders || []) {
+      out.freight_orders.push({
+        id: f.id, farm_id: farmId, season_id: seasonId,
+        sale_id: orNull(f.saleId), order_id: orNull(f.orderId),
+        freight_no: orNull(f.freightNo),
+        carrier: orNull(f.carrier), carrier_email: orNull(f.carrierEmail),
+        tons: n(f.tons), rate: n(f.rate), rate_basis: f.rateBasis === 'per_tkm' ? 'per_tkm' : 'per_t',
+        distance_km: f.distanceKm === '' || f.distanceKm == null ? null : n(f.distanceKm),
+        pickup: orNull(f.pickup), deliver_to: orNull(f.deliverTo),
+        load_from: orNull(f.loadFrom), load_by: orNull(f.loadBy),
+        status: f.status || 'open',
+        notes: orNull(f.notes),
       });
     }
 
@@ -672,6 +693,7 @@ export function rowsToState(rows) {
         saleId: p.sale_id, storageId: p.storage_id,
         tons: p.tons == null ? '' : n(p.tons), rate: p.rate == null ? '' : n(p.rate),
         status: p.status, paidDate: p.paid_date ?? '', notes: p.notes ?? '',
+        ...(p.freight_order_id ? { freightOrderId: p.freight_order_id, __hasFreightOrderId: true } : {}),
       })),
 
       orders: inSeason(rows.orders || [], season.id).map((o) => ({
@@ -680,6 +702,17 @@ export function rowsToState(rows) {
         deliverFrom: o.deliver_from ?? '', deliverBy: o.deliver_by ?? '',
         freightCompany: o.freight_company ?? '',
         status: o.status || 'open', notes: o.notes ?? '',
+      })),
+
+      freightOrders: inSeason(rows.freight_orders || [], season.id).map((f) => ({
+        id: f.id, saleId: f.sale_id, orderId: f.order_id,
+        freightNo: f.freight_no ?? '',
+        carrier: f.carrier ?? '', carrierEmail: f.carrier_email ?? '',
+        tons: n(f.tons), rate: n(f.rate), rateBasis: f.rate_basis === 'per_tkm' ? 'per_tkm' : 'per_t',
+        distanceKm: f.distance_km == null ? '' : n(f.distance_km),
+        pickup: f.pickup ?? '', deliverTo: f.deliver_to ?? '',
+        loadFrom: f.load_from ?? '', loadBy: f.load_by ?? '',
+        status: f.status || 'open', notes: f.notes ?? '',
       })),
 
       overheads: (() => {

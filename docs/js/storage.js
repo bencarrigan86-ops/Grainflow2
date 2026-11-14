@@ -18,22 +18,22 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=235';
+import { hydrate } from './hydrate.js?v=236';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=235';
-import { chooseBootState, resolveLegacy } from './boot.js?v=235';
-import { isLegacyDirty } from './dirty.js?v=235';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=235';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=235';
-import { settleLegs, dedupeLegs } from './legs.js?v=235';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=235';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=235';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=235';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=235';
-import { schedulePush, pushOnReconnect } from './sync.js?v=235';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=235';
+} from './local.js?v=236';
+import { chooseBootState, resolveLegacy } from './boot.js?v=236';
+import { isLegacyDirty } from './dirty.js?v=236';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=236';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=236';
+import { settleLegs, dedupeLegs } from './legs.js?v=236';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=236';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=236';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=236';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=236';
+import { schedulePush, pushOnReconnect } from './sync.js?v=236';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=236';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -65,7 +65,7 @@ function defaultOverheads() {
 function defaultYear() {
   return {
     commodities: defaultCommodities(), fields: [], sales: [], storages: [],
-    movements: [], overheads: defaultOverheads(), invoices: [], payables: [], orders: [],
+    movements: [], overheads: defaultOverheads(), invoices: [], payables: [], orders: [], freightOrders: [],
   };
 }
 
@@ -151,6 +151,8 @@ function markOil(rec) {
   if (rec.externalTicketNo) rec.__hasExtTicket = true;
   // and the order it was delivered against, so taking a load off an order reaches the server
   if (rec.orderId) rec.__hasOrderId = true;
+  // and the freight order it was carted on (a carrier's bill carries the same flag)
+  if (rec.freightOrderId) rec.__hasFreightOrderId = true;
 }
 
 /** What this device owes the server, not counting pre-tracking markers (which
@@ -560,7 +562,7 @@ export const db = {
 
     data.years[label] = {
       commodities, fields, storages, sales: [], movements: [],
-      overheads: defaultOverheads(), invoices: [], payables: [], orders: [],
+      overheads: defaultOverheads(), invoices: [], payables: [], orders: [], freightOrders: [],
     };
     data.currentYear = label;
     touch('year', label);
@@ -582,6 +584,7 @@ export const db = {
     y.invoices?.forEach((i) => tombstone('invoices', i.id));
     y.payables?.forEach((p) => tombstone('payables', p.id));
     y.orders?.forEach((o) => tombstone('orders', o.id));
+    y.freightOrders?.forEach((f) => tombstone('freight_orders', f.id));
     tombstone('overheads', y.__overheadsId);
     tombstone('seasons', y.__seasonId);
 
@@ -754,6 +757,12 @@ export const db = {
     gone.forEach((oid) => tombstone('orders', oid));
     c.orders = (c.orders || []).filter((o) => !gone.has(o.id));
     for (const m of c.movements || []) if (m.orderId && gone.has(m.orderId)) { m.orderId = null; touch('movement', m.id); }
+    // and so are its freight orders; loads and bills that named them are left, naming nothing
+    const goneFreight = new Set((c.freightOrders || []).filter((f) => f.saleId === id).map((f) => f.id));
+    goneFreight.forEach((fid) => tombstone('freight_orders', fid));
+    c.freightOrders = (c.freightOrders || []).filter((f) => !goneFreight.has(f.id));
+    for (const m of c.movements || []) if (m.freightOrderId && goneFreight.has(m.freightOrderId)) { m.freightOrderId = null; touch('movement', m.id); }
+    for (const p of c.payables || []) if (p.freightOrderId && goneFreight.has(p.freightOrderId)) { p.freightOrderId = null; touch('payable', p.id); }
     c.sales = c.sales.filter((x) => x.id !== id);
     persist();
   },
@@ -916,6 +925,7 @@ export const db = {
   upsertPayable(bill) {
     const c = current();
     c.payables = c.payables || [];
+    if (bill.freightOrderId) bill = { ...bill, __hasFreightOrderId: true };   // so taking it off a freight order later reaches the server
     if (bill.id) {
       const idx = c.payables.findIndex((p) => p.id === bill.id);
       if (idx >= 0) c.payables[idx] = { ...c.payables[idx], ...bill };
@@ -964,6 +974,36 @@ export const db = {
     for (const m of c.movements || []) {
       if (m.orderId === id) { m.orderId = null; touch('movement', m.id); }
     }
+    for (const f of c.freightOrders || []) if (f.orderId === id) { f.orderId = null; touch('freightorder', f.id); }
+    persist();
+  },
+
+  // --- freight orders: a job given to a carrier, linked to the buyer's order and contract ---
+  getFreightOrders() { return current().freightOrders || []; },
+  upsertFreightOrder(fo) {
+    const c = current();
+    c.freightOrders = c.freightOrders || [];
+    if (fo.id) {
+      const idx = c.freightOrders.findIndex((f) => f.id === fo.id);
+      if (idx >= 0) c.freightOrders[idx] = { ...c.freightOrders[idx], ...fo };
+      touch('freightorder', fo.id);
+    } else {
+      const id = uid();
+      c.freightOrders.push({ status: 'open', ...fo, id });
+      touch('freightorder', id);
+      persist();
+      return id;
+    }
+    persist();
+    return fo.id;
+  },
+  deleteFreightOrder(id) {
+    tombstone('freight_orders', id);
+    const c = current();
+    c.freightOrders = (c.freightOrders || []).filter((f) => f.id !== id);
+    // loads carted on it, and bills for it, are left, naming nothing
+    for (const m of c.movements || []) if (m.freightOrderId === id) { m.freightOrderId = null; touch('movement', m.id); }
+    for (const p of c.payables || []) if (p.freightOrderId === id) { p.freightOrderId = null; touch('payable', p.id); }
     persist();
   },
 

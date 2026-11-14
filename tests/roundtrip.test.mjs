@@ -103,7 +103,7 @@ function markerFor(key, ids) {
   if (key === 'tos') return [{ type: 'silo', id: ids.storage, tons: 11.5 }];
   if (key === 'ureaApplications') return [{ date: '2026-06-01', kgHa: 90 }];
   if (key === 'date' || key.endsWith('Date')) return '2026-06-01';
-  if (key === 'orderId') return uuid();
+  if (key === 'orderId' || key === 'freightOrderId') return uuid();
   if (key === 'harvestDone') return true;
   if (key === 'harvestHaLeft') return 7.25;
   if (key === 'freightPaidBy') return 'buyer';

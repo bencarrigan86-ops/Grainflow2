@@ -4,13 +4,15 @@
 // carting it and the buyer's own order number. Everything else about the sale is the contract's and is shown from it.
 // Loads are matched to an order on the movement. The arithmetic is in orders.js.
 
-import { db } from '../storage.js?v=235';
-import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=235';
-import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=235';
-import { movementTonsToSale } from '../derived.js?v=235';
-import { movementRow, openMovementSheet } from './movements.js?v=235';
-import { openVendorDecSheet } from './vendordec.js?v=235';
-import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=235';
+import { db } from '../storage.js?v=236';
+import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=236';
+import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=236';
+import { movementTonsToSale } from '../derived.js?v=236';
+import { movementRow, openMovementSheet } from './movements.js?v=236';
+import { openVendorDecSheet } from './vendordec.js?v=236';
+import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=236';
+import { freightTitle, freightState, rateText } from '../freight.js?v=236';
+import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=236';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | filled | closed | all
@@ -65,11 +67,13 @@ export function openOrdersSheet() {
               <span class="badges"><span class="badge ${BADGE[st.state]}">${STATE_LABEL[st.state]}</span></span></div>
           </div>`;
         }).join('')}
-        <button type="button" class="btn" id="add-order" style="margin-top:10px">+ Add an order</button>`;
+        <button type="button" class="btn" id="add-order" style="margin-top:10px">+ Add an order</button>
+        <button type="button" class="btn secondary" id="open-freight" style="margin-top:8px">Freight orders${db.getFreightOrders().filter((f) => freightState(f, movements).active).length ? ` &middot; ${db.getFreightOrders().filter((f) => freightState(f, movements).active).length} open` : ''}</button>`;
 
       root.querySelector('#ord-status').addEventListener('click', (e) => { const b = e.target.closest('[data-status]'); if (b) { filterStatus = b.dataset.status; draw(); } });
       root.querySelectorAll('[data-edit-order]').forEach((el) => el.addEventListener('click', () => openOrderSheet(orders.find((o) => o.id === el.dataset.editOrder))));
       root.querySelector('#add-order').addEventListener('click', () => openOrderSheet(null));
+      root.querySelector('#open-freight').addEventListener('click', () => openFreightOrdersSheet());
     };
     draw();
   });
@@ -139,6 +143,7 @@ export function openOrderSheet(existing, defaults = {}) {
         <div class="hint">Close an order the buyer cancelled or took less than they ordered. It fills by itself once all the tonnes are delivered.</div>
       </div>
       <div id="o-loads" class="card" style="margin:12px 0"></div>
+      <div id="o-fos" class="card" style="margin:12px 0"></div>
       <button type="button" class="btn secondary" id="o-vendordec" style="margin-bottom:8px">Vendor declaration&hellip;</button>
       <button class="btn ghost-danger" id="o-del" style="margin-top:8px">Delete order</button>` : ''}
       <div class="save-bar solo"><button class="btn" id="save">Save</button></div>`;
@@ -183,6 +188,16 @@ export function openOrderSheet(existing, defaults = {}) {
         ? against.map((m) => movementRow(m, { fields, storages, sales, commodities, orders })).join('')
         : '<div class="empty">No loads against it yet. On a movement going to this contract, choose it under "Fills order".</div>'}`;
       loadsEl.querySelectorAll('[data-edit-movement]').forEach((el) => el.addEventListener('click', () => openMovementSheet(against.find((m) => m.id === el.dataset.editMovement))));
+      // the freight orders made from it, with a way to make another
+      const fosEl = root.querySelector('#o-fos');
+      const mine = db.getFreightOrders().filter((f) => f.orderId === existing.id);
+      fosEl.innerHTML = `<h2>Freight orders</h2>${mine.length ? mine.map((f) => {
+        const fst = freightState(f, movements);
+        return `<div class="list-item stack" data-edit-fo="${esc(f.id)}"><div class="li-top"><div class="main">${esc(freightTitle(f))}</div><div class="main">${num(fst.left, 0)} t left</div></div><div class="meta">${esc(rateText(f))}</div></div>`;
+      }).join('') : '<div class="empty">No freight order for this order yet.</div>'}
+        <button type="button" class="btn secondary small" id="o-make-fo" style="margin-top:8px;width:auto">+ Make a freight order</button>`;
+      fosEl.querySelectorAll('[data-edit-fo]').forEach((el) => el.addEventListener('click', () => openFreightOrderSheet(mine.find((f) => f.id === el.dataset.editFo))));
+      fosEl.querySelector('#o-make-fo').addEventListener('click', () => openFreightOrderSheet(null, { orderId: existing.id }));
       let status = existing.status || 'open';
       root.querySelector('#o-status').addEventListener('click', (e) => {
         const b = e.target.closest('[data-status]');

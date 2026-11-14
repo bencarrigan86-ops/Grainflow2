@@ -1,15 +1,16 @@
-import { db } from '../storage.js?v=235';
-import { movementsForEndpoint } from '../derived.js?v=235';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=235';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=235';
-import { compressAndStampImage } from '../img.js?v=235';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=235';
-import { specText } from '../outload.js?v=235';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=235';
-import { pickableSilos } from '../silopick.js?v=235';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=235';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=235';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=235';
+import { db } from '../storage.js?v=236';
+import { movementsForEndpoint } from '../derived.js?v=236';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=236';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=236';
+import { compressAndStampImage } from '../img.js?v=236';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=236';
+import { specText } from '../outload.js?v=236';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=236';
+import { pickableSilos } from '../silopick.js?v=236';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=236';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=236';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=236';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=236';
 
 let unsub = null;
 
@@ -653,6 +654,9 @@ export function openMovementSheet(existing, template) {
     // the order this load is against (see orders.js), if any; `orderTouched` once the person has chosen
     let orderChoice = existing?.orderId ?? null;
     let orderTouched = false;
+    // the freight order this load is carted on (see freight.js); `freightTouched` once the person has chosen
+    let freightChoice = existing?.freightOrderId ?? null;
+    let freightTouched = false;
     let toKind = existingSaleTo ? 'sale' : 'silo';
 
     // What the chosen order says, under the box at the top: who is carting it, where it goes, by when.
@@ -706,11 +710,34 @@ export function openMovementSheet(existing, template) {
             <select id="to-sale-select">${opts}</select>
             ${ctx.saleOpts().length <= 1 ? `<div class="hint">No contracts for this commodity — add one in Sales, or widen the commodity above.</div>` : ''}
           </div>
-          <div id="order-wrap"></div>`;
+          <div id="order-wrap"></div>
+          <div id="freight-wrap"></div>`;
         const saleSelectEl = toBody.querySelector('#to-sale-select');
         // The orders open against the chosen contract, to say which one this load fills. Nothing shows when it has none.
         const orderWrap = toBody.querySelector('#order-wrap');
+        const freightWrap = toBody.querySelector('#freight-wrap');
+        // The freight orders open for this contract, to say which truck job this load is on. Nothing shows when it has none.
+        const drawFreight = () => {
+          const saleId = String(saleSelectEl.value || '').replace(/^sale:/, '');
+          const list = saleId ? freightOrdersForLoad(saleId, orderChoice, db.getFreightOrders(), movements, freightChoice) : [];
+          if (!list.length) { freightWrap.innerHTML = ''; return; }
+          if (!freightTouched && freightChoice === null && !existing && list.length === 1) freightChoice = list[0].id;
+          if (freightChoice && !list.some((f) => f.id === freightChoice)) freightChoice = null;
+          freightWrap.innerHTML = `
+            <div class="field" style="margin-top:10px;margin-bottom:0">
+              <label>Carted on</label>
+              <select id="to-freight-select">
+                <option value="">Not on a freight order</option>
+                ${list.map((f) => `<option value="${esc(f.id)}" ${f.id === freightChoice ? 'selected' : ''}>${esc([freightTitle(f), `${num(freightState(f, movements).left, 0)} t left`].join(' · '))}</option>`).join('')}
+              </select>
+            </div>`;
+          freightWrap.querySelector('#to-freight-select').addEventListener('change', (e) => { freightChoice = e.target.value || null; freightTouched = true; });
+        };
         const drawOrders = () => {
+          drawOrdersBody();
+          drawFreight();
+        };
+        const drawOrdersBody = () => {
           const saleId = String(saleSelectEl.value || '').replace(/^sale:/, '');
           const list = saleId ? ordersForLoad(saleId, orders, movements, todayLocal(), orderChoice) : [];
           if (!list.length) { orderWrap.innerHTML = ''; return; }
@@ -729,7 +756,7 @@ export function openMovementSheet(existing, template) {
                 }).join('')}
               </select>
             </div>`;
-          orderWrap.querySelector('#to-order-select').addEventListener('change', (e) => { orderChoice = e.target.value || null; orderTouched = true; showOrderNote(); });
+          orderWrap.querySelector('#to-order-select').addEventListener('change', (e) => { orderChoice = e.target.value || null; orderTouched = true; showOrderNote(); drawFreight(); });
           showOrderNote();
         };
         saleSelectEl.addEventListener('change', drawOrders);
@@ -882,6 +909,8 @@ export function openMovementSheet(existing, template) {
         externalTicketNo: getVal(root, 'extTicket')?.trim() || '',
         // the order it fills; only a load going to a contract can be against one
         orderId: toKind === 'sale' ? (getVal(root, 'to-order-select') || null) : null,
+        // the freight order it is carted on; kept as it was when this person cannot see freight orders (no select)
+        freightOrderId: toKind === 'sale' ? (root.querySelector('#to-freight-select') ? (getVal(root, 'to-freight-select') || null) : (existing?.freightOrderId || null)) : null,
         truckRego: getVal(root, 'truckRego')?.trim(),
         driver: getVal(root, 'driver')?.trim(),
         grossWeight: getVal(root, 'gross') ? getNum(root, 'gross') : null,

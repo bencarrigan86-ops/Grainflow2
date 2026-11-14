@@ -4,12 +4,13 @@
 // what is unpaid and overdue, and the brokerage that has run up on contracts but has not been billed yet. Each
 // bill is recorded in a form of its own. The arithmetic is in payables.js.
 
-import { db } from '../storage.js?v=235';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=235';
-import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=235';
+import { db } from '../storage.js?v=236';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=236';
+import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=236';
 import {
   KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed,
-} from '../payables.js?v=235';
+} from '../payables.js?v=236';
+import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=236';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'unpaid';   // unpaid | paid | all
@@ -51,6 +52,11 @@ export function renderPayables(root, opts = {}) {
         .map((s) => ({ s, o: brokerageOwed(s, movements, payables) }))
         .filter((x) => x.o.unbilled > 0.005);
       const unbilledTotal = round2(unbilled.reduce((a, x) => a + x.o.unbilled, 0));
+      // freight carted on a freight order and not yet billed by the carrier: owed, before the invoice arrives
+      const freightUnbilled = db.getFreightOrders()
+        .map((f) => ({ f, o: freightOwed(f, movements, payables) }))
+        .filter((x) => x.o.unbilled > 0.005);
+      const freightUnbilledTotal = round2(freightUnbilled.reduce((a, x) => a + x.o.unbilled, 0));
 
       const shown = payables
         .filter((p) => filterStatus === 'all' || (filterStatus === 'paid' ? p.status === 'paid' : p.status !== 'paid'))
@@ -83,6 +89,21 @@ export function renderPayables(root, opts = {}) {
           </div>`).join('')}
         <div class="row" style="margin:4px 0 8px"><span class="label">Not yet billed, all contracts</span><span class="value">${money(unbilledTotal, 0)}</span></div>` : ''}
 
+        ${freightUnbilled.length ? `
+        <div class="subhead">Freight not yet billed</div>
+        <div class="hint" style="margin-bottom:6px">Carted on freight orders, at each order's rate. Record the carrier's bill when it arrives.</div>
+        ${freightUnbilled.map(({ f, o }) => {
+          const s = sales.find((x) => x.id === f.saleId);
+          return `
+          <div class="list-item stack">
+            <div class="li-top"><div class="main">${esc(freightTitle(f))}</div><div class="main">${money(o.unbilled, 0)}</div></div>
+            <div class="meta">${num(o.tons, 1)} t carted · ${esc(rateText(f))}${o.billed ? ` · ${money(o.billed, 0)} billed already` : ''}</div>
+            <div class="li-foot"><span class="meta">${s ? esc(contractLabel(s, commodities)) : ''}</span>
+              <button type="button" class="btn secondary small" data-bill-freight="${esc(f.id)}" style="width:auto">Record bill</button></div>
+          </div>`;
+        }).join('')}
+        <div class="row" style="margin:4px 0 8px"><span class="label">Freight not yet billed</span><span class="value">${money(freightUnbilledTotal, 0)}</span></div>` : ''}
+
         <div class="subhead">Bills</div>
         <div class="segmented" id="pay-status" style="margin-bottom:8px">
           ${[['unpaid', 'Unpaid'], ['paid', 'Paid'], ['all', 'All']].map(([k, l]) => `<button data-status="${k}" class="${filterStatus === k ? 'active' : ''}">${l}</button>`).join('')}
@@ -108,6 +129,14 @@ export function renderPayables(root, opts = {}) {
       root.querySelectorAll('.chips [data-kind]').forEach((b) => b.addEventListener('click', () => { filterKind = b.dataset.kind; draw(); }));
       root.querySelectorAll('[data-edit-bill]').forEach((el) => el.addEventListener('click', () => openBillSheet(payables.find((p) => p.id === el.dataset.editBill))));
       root.querySelector('#add-bill').addEventListener('click', () => openBillSheet(null));
+      root.querySelectorAll('[data-bill-freight]').forEach((b) => b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const f = db.getFreightOrders().find((x) => x.id === b.dataset.billFreight);
+        const o = freightOwed(f, movements, payables);
+        const per = perTonne(f);
+        // the unbilled part: tonnes and rate, so the bill adds up to what is owed
+        openBillSheet(null, { kind: 'freight', supplier: f.carrier, saleId: f.saleId, freightOrderId: f.id, rate: per || '', tons: per > 0 ? round3(o.unbilled / per) : '', amount: o.unbilled });
+      }));
       root.querySelectorAll('[data-bill-for]').forEach((b) => b.addEventListener('click', (e) => {
         e.stopPropagation();
         const s = sales.find((x) => x.id === b.dataset.billFor);
@@ -231,6 +260,7 @@ export function openBillSheet(existing, defaults = {}) {
         status,
         paidDate: status === 'paid' ? (getVal(root, 'b-paid') || today) : '',
         notes: getVal(root, 'b-notes')?.trim(),
+        ...(src.freightOrderId ? { freightOrderId: src.freightOrderId } : {}),
       });
       toast('Saved');
       backToList();
