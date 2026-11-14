@@ -5,7 +5,7 @@
 // each load. Running samples say what a stretch of it is, by tonnes from the bottom.
 import assert from 'node:assert/strict';
 import {
-  gradeMix, dominantGrade, hasGrades, mixText, gradeColor, cleanBands, layersTotal, siloSvg, NO_GRADE,
+  gradeMix, dominantGrade, hasGrades, mixText, gradeColor, cleanBands, layersTotal, siloSvg, bunkerSvg, storageSvg, NO_GRADE,
 } from '../docs/js/silolayers.js';
 import { layersForStorage, predictPlan, predictOutload, applyBands } from '../docs/js/outload.js';
 
@@ -156,6 +156,50 @@ check('the grain stops short of the top when the silo is not full', () => {
 });
 check('an empty silo draws without error', () => {
   assert.ok(siloSvg([], 500).includes('Empty silo'));
+});
+
+check('a bunker is drawn lying down: a slice for each layer, back to front, with the outload start marked', () => {
+  const svg = bunkerSvg([{ tons: 500, spec: { grade: 'APH1' } }, { tons: 300, spec: { grade: 'AUH2' } }], 1000);
+  assert.ok(svg.startsWith('<svg'));
+  assert.ok(svg.includes('APH1 500 t') && svg.includes('AUH2 300 t'));
+  assert.ok(svg.includes('START: outload from here') && svg.includes('Back, filled first'));
+  assert.match(svg, /Outloading starts at the front end/);
+  const slices = [...svg.matchAll(/<rect x="([\d.]+)" y="26" width="([\d.]+)" height="58" fill="#/g)].map((m) => [Number(m[1]), Number(m[2])]);
+  assert.equal(slices.length, 2);
+  assert.ok(slices[0][0] < slices[1][0], 'the first load is at the back (left), the latest nearer the front');
+  assert.ok(Math.abs(slices[0][1] / slices[1][1] - 500 / 300) < 0.01, 'each as long as its tonnes');
+});
+check('a bunker leaves the front empty when it is not full, and an empty one draws without error', () => {
+  const lengths = (svg) => [...svg.matchAll(/<rect x="[\d.]+" y="26" width="([\d.]+)"/g)].map((m) => Number(m[1]));
+  const half = lengths(bunkerSvg([{ tons: 500, spec: { grade: 'A' } }], 1000))[0];
+  const full = lengths(bunkerSvg([{ tons: 1000, spec: { grade: 'A' } }], 1000))[0];
+  assert.ok(Math.abs(half * 2 - full) < 0.5, `${half} vs ${full}`);
+  assert.ok(bunkerSvg([], 500).includes('Empty bunker'));
+});
+check('the bunker is a sloped-end heap seen from the side, with the shoulders rounded', () => {
+  const svg = bunkerSvg([{ tons: 100, spec: { grade: 'A' } }], 200);
+  assert.ok(!svg.includes('<polygon'), 'no straight-sided polygon');
+  assert.ok(svg.includes('M14 84 L37.4 48.1 Q44 38 56 38 L244 38 Q256 38 262.6 48.1 L286 84 Z'), 'sloping ends, a long flat top and rounded shoulders');
+});
+check('the start of outload moves to the back when the bunker is emptied from the back', () => {
+  const layers = [{ tons: 100, spec: { grade: 'A' } }];
+  const front = bunkerSvg(layers, 200);
+  const back = bunkerSvg(layers, 200, { outloadEnd: 'first' });
+  assert.match(front, /Outloading starts at the front end/);
+  assert.match(back, /Outloading starts at the back end/);
+  const startText = (svg, x) => new RegExp(`<text x="${x}"[^>]*>START`).test(svg);
+  assert.ok(startText(front, 286) && !startText(front, 14));
+  assert.ok(startText(back, 14) && !startText(back, 286));
+  assert.ok(back.includes('Front, filled last') && front.includes('Back, filled first'));
+  // the arrow stands over the start end
+  assert.ok(front.includes('M256 8 L256 30') && back.includes('M44 8 L44 30'), 'the arrow comes down onto the front (right) or the back (left) end');
+});
+check('the storage picks its picture by kind', () => {
+  const layers = [{ tons: 100, spec: { grade: 'A' } }];
+  assert.ok(storageSvg('bunker', layers, 200).includes('START'));
+  assert.ok(storageSvg('bunker', layers, 200, { outloadEnd: 'first' }).includes('starts at the back'));
+  assert.ok(!storageSvg('silo', layers, 200).includes('START'));
+  assert.ok(!storageSvg(undefined, layers, 200).includes('START'));
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }

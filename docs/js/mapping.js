@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=236';
-import { cleanOffFarm } from './offfarm.js?v=236';
+import { cleanGradeOptions } from './gradeprice.js?v=237';
+import { cleanOffFarm } from './offfarm.js?v=237';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -176,6 +176,19 @@ function bandsFromRow(row) {
     : {};
 }
 
+/**
+ * Which end of a bunker is emptied first: 'last' (last in, first out; the default) or 'first' (first in, first
+ * out, from the back). Sent only once it has been set, like the other optional columns, and a setting that has
+ * existed keeps its column so switching it back reaches the server.
+ */
+function outloadEndColumns(st) {
+  if (st.outloadEnd !== 'first' && !st.__hasOutloadEnd) return {};
+  return { outload_end: st.outloadEnd === 'first' ? 'first' : 'last' };
+}
+function outloadEndFromRow(row) {
+  return row.outload_end === 'first' || row.outload_end === 'last' ? { outloadEnd: row.outload_end, __hasOutloadEnd: true } : {};
+}
+
 function noteColumns(st) {
   if (!hasStorageNote(st) && !st.__hasNotes) return {};
   return { notes: orNull(String(st.notes ?? '').trim()) };
@@ -298,6 +311,7 @@ export function stateToRows(state, farmId) {
         ...qualityColumns(st),
         ...noteColumns(st),
         ...bandColumns(st),
+        ...outloadEndColumns(st),
         // A location held by a third party, with who runs it and what it held at the start of the season by grade.
         // Optional like the other later columns: only locations that are off-farm send it.
         ...((st.offFarm || st.__hasOffFarm) ? { off_farm: st.offFarm ? cleanOffFarm(st.offFarm) : null } : {}),
@@ -615,6 +629,7 @@ export function rowsToState(rows) {
         ...qualityFromRow(st),
         ...noteFromRow(st),
         ...bandsFromRow(st),
+        ...outloadEndFromRow(st),
         ...(st.off_farm ? { offFarm: cleanOffFarm(st.off_farm), __hasOffFarm: true } : {}),
       })),
 

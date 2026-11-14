@@ -49,6 +49,28 @@ function inOrder(movements) {
 }
 
 /**
+ * Which end of a storage is emptied first: 'last' (the default) is last in, first out: from the top of a silo, or the
+ * front of a bunker. 'first' is first in, first out: from the back of a bunker, which can be opened at both ends.
+ * Only a bunker can be emptied from the back.
+ */
+export const outloadEndOf = (storage) => (storage?.kind === 'bunker' && storage?.outloadEnd === 'first' ? 'first' : 'last');
+
+/** Samples (bands) with the first `tons` tonnes taken off the front of them, as when the back of a bunker is emptied. */
+export function dropFromBands(bands, tons) {
+  const list = Array.isArray(bands) ? bands : [];
+  let drop = Math.max(0, num(tons));
+  if (drop <= EPS) return list;
+  const out = [];
+  for (const b of list) {
+    const t = num(b.tons);
+    if (drop >= t - EPS) { drop -= Math.min(drop, t); continue; }
+    out.push(drop > EPS ? { ...b, tons: t - drop } : b);
+    drop = 0;
+  }
+  return out;
+}
+
+/**
  * Replay a storage's history into the layers it holds now.
  *
  * @param {object} storage   its openingStock and its own quality describe the grain
@@ -61,6 +83,9 @@ function inOrder(movements) {
  */
 export function layersForStorage(storage, movements) {
   const layers = [];
+  const fromBack = outloadEndOf(storage) === 'first';
+  const asOf = String(storage.gradeBandsDate || '');
+  let takenAfterSample = 0;       // tonnes taken off the back since the samples were taken (back-end outloading only)
   const opening = num(storage.openingStock);
   if (opening > 0) layers.push({ tons: opening, source: 'opening', spec: specOf(storage) });
 
@@ -70,13 +95,16 @@ export function layersForStorage(storage, movements) {
     const into = (m.tos || []).filter((l) => l.type === 'silo' && l.id === storage.id).reduce((a, l) => a + num(l.tons), 0);
 
     // Out first: grain that leaves comes off what was already there, never off the load that is arriving.
+    // Last in, first out takes off the top; a storage that is emptied from its back end takes the oldest first.
     let remaining = out;
     while (remaining > EPS && layers.length) {
-      const top = layers[layers.length - 1];
-      const take = Math.min(top.tons, remaining);
-      top.tons -= take;
+      const at = fromBack ? 0 : layers.length - 1;
+      const layer = layers[at];
+      const take = Math.min(layer.tons, remaining);
+      layer.tons -= take;
       remaining -= take;
-      if (top.tons <= EPS) layers.pop();
+      if (fromBack && asOf && String(m.date ?? '') > asOf) takenAfterSample += take;
+      if (layer.tons <= EPS) layers.splice(at, 1);
     }
     shortfall += Math.max(0, remaining);
 
@@ -85,7 +113,8 @@ export function layersForStorage(storage, movements) {
     }
   }
   return {
-    layers: applyBands(layers.filter((l) => l.tons > EPS), storage.gradeBands, storage.gradeBandsDate),
+    // Samples are by tonnes from the back: grain taken off the back since they were taken moves them along.
+    layers: applyBands(layers.filter((l) => l.tons > EPS), dropFromBands(storage.gradeBands, takenAfterSample), storage.gradeBandsDate),
     shortfall,
   };
 }
@@ -147,16 +176,25 @@ export function applyBands(layers, bands, asOf = '') {
  * @returns {{ taken: {layer: object, tons: number}[], remaining: object[], short: number }}
  */
 export function takeFromTop(layers, tons) {
+  return takeFromEnd(layers, tons, 'last');
+}
+
+/**
+ * Take `tons` off one end of a stack of layers (listed bottom or back first): the top, last in first out, for 'last';
+ * the bottom, first in first out, for 'first'. Does not change the layers it is given.
+ */
+export function takeFromEnd(layers, tons, end = 'last') {
   const remaining = layers.map((l) => ({ ...l }));
   const taken = [];
   let want = Math.max(0, num(tons));
   while (want > EPS && remaining.length) {
-    const top = remaining[remaining.length - 1];
-    const take = Math.min(top.tons, want);
-    taken.push({ layer: { ...top }, tons: take });
-    top.tons -= take;
+    const at = end === 'first' ? 0 : remaining.length - 1;
+    const layer = remaining[at];
+    const take = Math.min(layer.tons, want);
+    taken.push({ layer: { ...layer }, tons: take });
+    layer.tons -= take;
     want -= take;
-    if (top.tons <= EPS) remaining.pop();
+    if (layer.tons <= EPS) remaining.splice(at, 1);
   }
   return { taken, remaining, short: want > EPS ? want : 0 };
 }
@@ -198,8 +236,8 @@ export function summarise(taken) {
 }
 
 /** One outload: the next `tons` out of the silo. */
-export function predictOutload(layers, tons) {
-  const { taken, remaining, short } = takeFromTop(layers, tons);
+export function predictOutload(layers, tons, end = 'last') {
+  const { taken, remaining, short } = takeFromEnd(layers, tons, end);
   return { tons: num(tons), short, remaining, segments: taken, ...summarise(taken) };
 }
 
@@ -207,14 +245,14 @@ export function predictOutload(layers, tons) {
  * A plan of trucks: `total` tonnes in loads of `truckTons`, the last one smaller
  * if it does not divide. Each truck is predicted from what the one before left.
  */
-export function predictPlan(layers, total, truckTons) {
+export function predictPlan(layers, total, truckTons, end = 'last') {
   const size = Math.max(0.1, num(truckTons));
   const trucks = [];
   let left = Math.max(0, num(total));
   let stack = layers;
   while (left > EPS && stack.length && trucks.length < 200) {
     const t = Math.min(size, left);
-    const p = predictOutload(stack, t);
+    const p = predictOutload(stack, t, end);
     if (p.total <= EPS) break;
     trucks.push(p);
     stack = p.remaining;

@@ -16,7 +16,7 @@
 // so the top of the silo is ticket 3, then 2, then 1, then the opening stock.
 
 import assert from 'node:assert';
-import { layersForStorage, takeFromTop, summarise, predictOutload, predictPlan, specOf, SPECS } from '../docs/js/outload.js';
+import { layersForStorage, takeFromEnd, dropFromBands, outloadEndOf, takeFromTop, summarise, predictOutload, predictPlan, specOf, SPECS } from '../docs/js/outload.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -205,6 +205,59 @@ check('blank is null, a number is a number, text is trimmed', () => {
 check('every measurement the screen shows is one the summary computes', () => {
   const p = predictOutload(NOW, 36);
   for (const { key } of SPECS) assert.ok(key in p.specs, key);
+});
+
+console.log('\n=== a bunker emptied from the back ===');
+
+const BUNKER = { id: 's1', kind: 'bunker', openingStock: 0 };
+const BACK = { ...BUNKER, outloadEnd: 'first' };
+const IN3 = [inLoad(1, '2026-11-05', 100, { grade: 'A' }), inLoad(2, '2026-11-06', 100, { grade: 'B' }), inLoad(3, '2026-11-07', 100, { grade: 'C' })];
+const gradesOf = (layers) => layers.map((l) => l.spec.grade);
+
+check('last in, first out is the default: the latest grain is taken first', () => {
+  assert.equal(outloadEndOf(BUNKER), 'last');
+  assert.equal(outloadEndOf({ ...BUNKER, outloadEnd: 'last' }), 'last');
+  const { layers } = layersForStorage(BUNKER, [...IN3, outLoad(4, '2026-11-08', 150)]);
+  assert.deepEqual([gradesOf(layers), tonsOf(layers)], [['A', 'B'], [100, 50]]);
+});
+check('emptied from the back, the oldest grain goes first', () => {
+  assert.equal(outloadEndOf(BACK), 'first');
+  const { layers } = layersForStorage(BACK, [...IN3, outLoad(4, '2026-11-08', 150)]);
+  assert.deepEqual([gradesOf(layers), tonsOf(layers)], [['B', 'C'], [50, 100]]);
+});
+check('only a bunker can be emptied from the back; a silo stays last in, first out', () => {
+  assert.equal(outloadEndOf({ id: 's1', kind: 'silo', outloadEnd: 'first' }), 'last');
+  assert.equal(outloadEndOf(null), 'last');
+  const { layers } = layersForStorage({ id: 's1', kind: 'silo', outloadEnd: 'first', openingStock: 0 }, [...IN3, outLoad(4, '2026-11-08', 150)]);
+  assert.deepEqual(gradesOf(layers), ['A', 'B']);
+});
+check('a load that arrives after one went out lands at the front either way', () => {
+  const { layers } = layersForStorage(BACK, [inLoad(1, '2026-11-05', 100, { grade: 'A' }), outLoad(2, '2026-11-06', 40), inLoad(3, '2026-11-07', 50, { grade: 'B' })]);
+  assert.deepEqual([gradesOf(layers), tonsOf(layers)], [['A', 'B'], [60, 50]]);
+});
+check('what is asked for beyond what is in it is still reported as a shortfall', () => {
+  const r = layersForStorage(BACK, [inLoad(1, '2026-11-05', 10), outLoad(2, '2026-11-06', 25)]);
+  assert.deepEqual([r.layers, r.shortfall], [[], 15]);
+});
+check('the planner takes trucks from the chosen end', () => {
+  const stack = layersForStorage(BUNKER, IN3).layers;
+  assert.deepEqual(predictPlan(stack, 150, 100).trucks.map((t) => t.grades.map((g) => g.grade)), [['C'], ['B']]);
+  assert.deepEqual(predictPlan(stack, 150, 100, 'first').trucks.map((t) => t.grades[0].grade), ['A', 'B']);
+  assert.deepEqual(predictOutload(stack, 120, 'first').grades.map((g) => g.grade), ['A', 'B']);
+  assert.deepEqual(takeFromEnd(stack, 120, 'first').remaining.map((l) => l.tons), [80, 100]);
+  assert.deepEqual(takeFromTop(stack, 120).remaining.map((l) => l.tons), [100, 80]);
+});
+check('samples by tonnes from the back move along when the back is emptied after they were taken', () => {
+  assert.deepEqual(dropFromBands([{ tons: 100, grade: 'A' }, { tons: 200, grade: 'B' }], 0), [{ tons: 100, grade: 'A' }, { tons: 200, grade: 'B' }]);
+  assert.deepEqual(dropFromBands([{ tons: 100, grade: 'A' }, { tons: 200, grade: 'B' }], 150), [{ tons: 150, grade: 'B' }]);
+  assert.deepEqual(dropFromBands([{ tons: 100, grade: 'A' }], 100), []);
+  const bunker = { ...BACK, openingStock: 300, gradeBands: [{ tons: 100, grade: 'SA' }, { tons: 200, grade: 'SB' }], gradeBandsDate: '2026-11-01' };
+  // 150 t taken off the back after the samples: the first stretch and half of the second are gone
+  const after = layersForStorage(bunker, [outLoad(2, '2026-11-10', 150)]).layers;
+  assert.deepEqual([gradesOf(after), tonsOf(after)], [['SB'], [150]]);
+  // taken before the samples were taken: they already describe what was left
+  const before = layersForStorage(bunker, [outLoad(2, '2026-10-20', 100)]).layers;
+  assert.deepEqual(gradesOf(before), ['SA', 'SB']);
 });
 
 console.log('');

@@ -274,6 +274,20 @@ check('empty 2025 season survives', () => {
 check('business details survive', () =>
   assert.deepEqual(back1.businessDetails, state.businessDetails));
 check('currentYear preserved', () => assert.equal(back1.currentYear, '2026'));
+check('which end of a bunker is emptied first: not sent until set, sent when set, switching back still reaches the server', () => {
+  const rowsFor = (patch) => {
+    const s = JSON.parse(JSON.stringify(state));
+    s.years['2026'].storages = s.years['2026'].storages.map((x) => (x.id === s2 ? { ...x, ...patch } : x));
+    return stateToRows(s);
+  };
+  const bunker = (r) => r.storages.find((x) => x.name === 'Bunker A');
+  assert.ok(!('outload_end' in bunker(rowsFor({}))), 'a database without the column is untouched until it is used');
+  const back = rowsFor({ outloadEnd: 'first' });
+  assert.equal(bunker(back).outload_end, 'first');
+  assert.equal(bunker(rowsFor({ outloadEnd: 'last', __hasOutloadEnd: true })).outload_end, 'last');
+  const read = rowsToState(back).years['2026'].storages.find((x) => x.name === 'Bunker A');
+  assert.equal(read.outloadEnd, 'first');
+});
 
 console.log(`\n${fails === 0 ? 'ALL PASS' : fails + ' FAILURES'}`);
 process.exit(fails ? 1 : 0);

@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=236';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=236';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=236';
-import { isTransit } from '../transit.js?v=236';
-import { isOffFarm } from '../offfarm.js?v=236';
-import { paintOffFarmCard } from './offfarm.js?v=236';
-import { gradesFor, allGradeCodes } from '../grades.js?v=236';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=236';
-import { hasStorageQuality } from '../mapping.js?v=236';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=236';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=236';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=236';
-import { renderRelatedMovements } from './movements.js?v=236';
-import { openSiloSetupSheet } from './silosetup.js?v=236';
-import { commodityFills } from '../commodityfill.js?v=236';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS } from '../outload.js?v=236';
+import { db } from '../storage.js?v=237';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=237';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=237';
+import { isTransit } from '../transit.js?v=237';
+import { isOffFarm } from '../offfarm.js?v=237';
+import { paintOffFarmCard } from './offfarm.js?v=237';
+import { gradesFor, allGradeCodes } from '../grades.js?v=237';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=237';
+import { hasStorageQuality } from '../mapping.js?v=237';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=237';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=237';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=237';
+import { renderRelatedMovements } from './movements.js?v=237';
+import { openSiloSetupSheet } from './silosetup.js?v=237';
+import { commodityFills } from '../commodityfill.js?v=237';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf } from '../outload.js?v=237';
 import {
-  gradeMix, visibleMix, dominantGrade, hasGrades, mixText, siloSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=236';
+  gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
+} from '../silolayers.js?v=237';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -688,11 +688,20 @@ function contentsFold(existing, grades) {
     <details class="fold feature" id="contents-fold" ${rows.length ? 'open' : ''}>
       <summary><div class="feature-head"><h2>Grade summary &amp; Outload predictor</h2>
         <div class="sub">${heldLine}</div>${heldBar}</div></summary>
+      ${existing?.kind === 'bunker' ? `
+      <div class="field" style="margin:8px 0 0">
+        <label>Outload starts from</label>
+        <div class="segmented" id="lay-end">
+          <button type="button" data-end="last" class="${outloadEndOf(existing) === 'last' ? 'active' : ''}">Front (last in, first out)</button>
+          <button type="button" data-end="first" class="${outloadEndOf(existing) === 'first' ? 'active' : ''}">Back (first in, first out)</button>
+        </div>
+        <div class="hint">Switch it if this bunker is emptied from the back, or opened at both ends. The picture and the predictor follow it.</div>
+      </div>` : ''}
       <div id="lay-picture"></div>
       <div id="lay-bulk" class="lay-bulk"></div>
-      <div class="subhead" style="margin-top:10px">In it now, top first</div>
+      <div class="subhead" style="margin-top:10px" id="lay-stack-head"></div>
       <div id="op-stack"></div>
-      <div class="subhead">Grade and specs by tonnes <span class="meta">(from the bottom)</span></div>
+      <div class="subhead">Grade and specs by tonnes <span class="meta">(from the ${existing?.kind === 'bunker' ? 'back' : 'bottom'})</span></div>
       <div class="field hint" style="margin-bottom:8px">Running samples? Say what each stretch of the silo is &mdash; the first 800 t is APH1 at 11.5% protein, the next
         600 t is AUH2 &mdash; whichever loads it came from. This replaces what the individual loads say for that grain. Grain that arrives after the date
         below, or beyond the last stretch, keeps its own grade. Trucks take from the top, so lower stretches stay as they are.</div>
@@ -733,6 +742,8 @@ function buildContents(root, existing) {
   let layers = [];
   let ungradedIds = [];
   let contents = 0;
+  // which end of a bunker is emptied first (see outload.js); a silo is always last in, first out
+  let outEnd = outloadEndOf(existing);
 
   // The storage as the form describes it right now, so the picture follows the typing.
   const live = () => ({
@@ -741,6 +752,7 @@ function buildContents(root, existing) {
     openingStock: Number(root.querySelector('#s-opening')?.value) || 0,
     gradeBands: cleanBands(readLayerRows(root)),
     gradeBandsDate: root.querySelector('#lay-asof')?.value || '',
+    ...(existing?.kind === 'bunker' ? { outloadEnd: outEnd } : {}),
   });
 
   const layerLabel = (l) => {
@@ -761,8 +773,8 @@ function buildContents(root, existing) {
     const total = layers.reduce((a, l) => a + l.tons, 0);
 
     root.querySelector('#lay-picture').innerHTML = `
-      <div class="silo-pic">
-        <div>${siloSvg(layers, capacity)}</div>
+      <div class="silo-pic${existing?.kind === 'bunker' ? ' stack' : ''}">
+        <div>${storageSvg(existing?.kind, layers, capacity, { outloadEnd: outEnd })}</div>
         <div class="silo-legend">
           <div class="main">${num(total, 1)} t${capacity ? ` <span class="meta">of ${num(capacity, 0)} t</span>` : ''}</div>
           ${visibleMix(mix).length ? visibleMix(mix).map((g) => `<div class="legend-row"><i style="background:${g.color}"></i><span>${esc(g.grade)}</span><span class="meta">${num(g.tons, 1)} t · ${Math.round(g.pct * 100)}%</span></div>`).join('')
@@ -770,11 +782,15 @@ function buildContents(root, existing) {
         </div>
       </div>`;
 
-    const top = [...layers].reverse();
+    // the grain that comes out first is listed first
+    const top = outEnd === 'first' ? [...layers] : [...layers].reverse();
+    root.querySelector('#lay-stack-head').textContent = existing?.kind === 'bunker'
+      ? `In it now, ${outEnd === 'first' ? 'back' : 'front'} (start of outload) first`
+      : 'In it now, top first';
     stackEl.innerHTML = top.length
       ? top.slice(0, 14).map((l) => `<div class="row" style="align-items:flex-start"><span class="label"><i class="sw" style="background:${gradeMix([l])[0].color}"></i>${layerLabel(l)}
           <div class="meta">${esc(specText(l.spec)) || 'no grade or quality recorded'}</div></span><span class="value">${num(l.tons, 1)} t${l.source === 'load' && l.id && !l.banded ? `<div><button type="button" class="btn secondary small le-open" data-load="${esc(l.id)}" style="min-height:30px;padding:4px 12px;margin-top:4px">Grade</button></div>` : ''}</span></div>`).join('')
-        + (top.length > 14 ? `<div class="field hint">…and ${top.length - 14} older layers underneath.</div>` : '')
+        + (top.length > 14 ? `<div class="field hint">…and ${top.length - 14} more behind.</div>` : '')
       : '<div class="field hint">Nothing in this storage on the books.</div>';
     if (result.shortfall > 0.05) {
       stackEl.innerHTML += `<div class="field hint" style="color:var(--danger)">${num(result.shortfall, 1)} t has been loaded out that no load or opening stock accounts for, so what is shown may be off.</div>`;
@@ -798,7 +814,7 @@ function buildContents(root, existing) {
       const t = Number(row.querySelector('.lay-tons').value) || 0;
       const to = from + (t > 0 ? t : 0);
       const tag = row.querySelector('.lay-tag');
-      tag.textContent = t > 0 ? `${num(from, 0)}\u2013${num(to, 0)} t from the bottom${from >= contents - 1e-6 ? ' \u2014 more than is in the silo, ignored' : ''}` : '';
+      tag.textContent = t > 0 ? `${num(from, 0)}\u2013${num(to, 0)} t from the ${existing?.kind === 'bunker' ? 'back' : 'bottom'}${from >= contents - 1e-6 ? ` \u2014 more than is in the ${existing?.kind === 'bunker' ? 'bunker' : 'silo'}, ignored` : ''}` : '';
       from = to;
       row.querySelector('.lay-up').disabled = i === 0;
       row.querySelector('.lay-down').disabled = i === rows.length - 1;
@@ -832,12 +848,12 @@ function buildContents(root, existing) {
     const total = Number(root.querySelector('#op-total').value) || 0;
     const size = Number(root.querySelector('#op-truck').value) || 36;
     if (!(total > 0)) { resultEl.innerHTML = ''; return; }
-    const plan = predictPlan(layers, total, size);
+    const plan = predictPlan(layers, total, size, outEnd);
     // The figure for the whole outload — tonne-weighted across every truck — before the
     // trucks one by one. Without it, 90 t in 36 t trucks shows three averages and never the
     // one for the 90 t.
     const wholeCard = plan.trucks.length > 1
-      ? truckCard(predictOutload(layers, total), `Whole outload · ${num(total - plan.short, 1)} t`, true) + '<div class="subhead">By truck</div>'
+      ? truckCard(predictOutload(layers, total, outEnd), `Whole outload · ${num(total - plan.short, 1)} t`, true) + '<div class="subhead">By truck</div>'
       : '';
     resultEl.innerHTML = wholeCard + plan.trucks.map((pl, i) => truckCard(pl, `Truck ${i + 1} · ${num(pl.total, 1)} t`)).join('')
       + (plan.short > 0.05 ? `<div class="field hint" style="color:var(--danger)">Only ${num(total - plan.short, 1)} t is in the storage; ${num(plan.short, 1)} t of that outload has nothing to come from.</div>` : '');
@@ -895,6 +911,14 @@ function buildContents(root, existing) {
     redraw();
   });
 
+  root.querySelector('#lay-end')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-end]');
+    if (!b || b.dataset.end === outEnd) return;
+    outEnd = b.dataset.end;
+    root.querySelectorAll('#lay-end button').forEach((x) => x.classList.toggle('active', x === b));
+    redraw();
+    drawPlan();
+  });
   rowsEl.addEventListener('input', redraw);
   rowsEl.addEventListener('click', (e) => {
     const row = e.target.closest('[data-lay]');
@@ -1165,6 +1189,8 @@ function openStorageSheet(existing) {
           testWeight: twOverride ? parseFloat(twOverride) : null,
           gradeBands: cleanBands(readLayerRows(root)),
           gradeBandsDate: root.querySelector('#lay-asof')?.value || todayLocal(),
+          // only a bunker has an end to choose, and it is sent once chosen (or once it has been set before)
+          ...(kind === 'bunker' && (existing?.outloadEnd || existing?.__hasOutloadEnd || (root.querySelector('#lay-end .active')?.dataset.end === 'first')) ? { outloadEnd: root.querySelector('#lay-end .active')?.dataset.end || existing?.outloadEnd || 'last' } : {}),
           ...readQuality(root, gradeCtl),
           notes: getVal(root, 's-notes')?.trim() || '',
         };
