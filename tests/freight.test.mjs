@@ -35,6 +35,21 @@ check('a rate per tonne per km is multiplied by the distance', () => {
   assert.equal(rateText(k), '$0.120 per tonne per km x 240 km = $28.80 per tonne');
   assert.match(rateText(fo({ rate: 0.12, rateBasis: 'per_tkm', distanceKm: '' })), /distance not set/);
 });
+check('a flat rate plus so much per tonne per km: $15/t + $0.10/t/km x 300 km is $45/t', () => {
+  const k = fo({ rate: 0.1, rateBasis: 'flat_tkm', flatRate: 15, distanceKm: 300 });
+  assert.equal(perTonne(k), 45);
+  assert.equal(rateText(k), '$15.00 flat plus $0.100 per tonne per km x 300 km = $45.00 per tonne');
+  assert.equal(estimatedTotal({ ...k, tons: 100 }), 4500);
+  assert.match(rateText({ ...k, distanceKm: '' }), /distance not set/);
+  assert.deepEqual(freightProblems({ ...k, carrier: 'Ace', tons: 10 }), []);
+  assert.ok(freightProblems({ ...k, carrier: 'Ace', tons: 10, distanceKm: '' }).includes('The distance in km'));
+  assert.ok(freightProblems({ ...k, carrier: 'Ace', tons: 10, flatRate: '', rate: '' }).includes('The rate'));
+});
+check('the sheet offers the flat rate and the paste file widens the rate basis', () => {
+  assert.ok(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs/js/views/freightorders.js'), 'utf8').includes('fo-flat'));
+  const sql = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'supabase/paste-into-sql-editor.sql'), 'utf8');
+  assert.ok(sql.includes('add column if not exists flat_rate numeric(12,4)') && sql.includes("'flat_tkm'"));
+});
 check('the job is estimated at its rate over its tonnes', () => {
   assert.equal(estimatedTotal(fo()), 9250);
 });
@@ -139,13 +154,22 @@ const baseState = (extra) => ({
 });
 
 check('a freight order is stored, and comes back the same', () => {
-  const f = { id: '22222222-2222-2222-2222-222222222222', saleId: null, orderId: null, freightNo: 'FO-001', carrier: 'Ace', carrierEmail: 'a@b.example', tons: 120, rate: 0.12, rateBasis: 'per_tkm', distanceKm: 240, pickup: 'Gate 2', deliverTo: 'Silo', loadFrom: '2026-02-01', loadBy: '2026-02-20', status: 'open', notes: 'x' };
+  const f = { id: '22222222-2222-2222-2222-222222222222', saleId: null, orderId: null, freightNo: 'FO-001', carrier: 'Ace', carrierEmail: 'a@b.example', tons: 120, rate: 0.12, rateBasis: 'per_tkm', flatRate: '', distanceKm: 240, pickup: 'Gate 2', deliverTo: 'Silo', loadFrom: '2026-02-01', loadBy: '2026-02-20', status: 'open', notes: 'x' };
   const rows = stateToRows(baseState({ freightOrders: [f] }), FARM);
   assert.equal(rows.freight_orders.length, 1);
   assert.equal(rows.freight_orders[0].rate_basis, 'per_tkm');
   assert.equal(rows.freight_orders[0].distance_km, 240);
   const back = rowsToState(rows).years[2026].freightOrders[0];
   assert.deepEqual({ ...back }, f);
+});
+check('a flat rate and a per km rate are stored, come back the same, and are only sent for that basis', () => {
+  const f = { id: '22222222-2222-2222-2222-222222222222', saleId: null, orderId: null, freightNo: 'FO-002', carrier: 'Ace', carrierEmail: '', tons: 120, rate: 0.1, rateBasis: 'flat_tkm', flatRate: 15, distanceKm: 300, pickup: '', deliverTo: '', loadFrom: '', loadBy: '', status: 'open', notes: '' };
+  const rows = stateToRows(baseState({ freightOrders: [f] }), FARM);
+  assert.equal(rows.freight_orders[0].rate_basis, 'flat_tkm');
+  assert.equal(rows.freight_orders[0].flat_rate, 15);
+  assert.deepEqual({ ...rowsToState(rows).years[2026].freightOrders[0] }, f);
+  const plain = stateToRows(baseState({ freightOrders: [{ ...f, rateBasis: 'per_t', flatRate: '' }] }), FARM);
+  assert.ok(!('flat_rate' in plain.freight_orders[0]), 'not sent for other freight orders');
 });
 check('a load and a bill carry their freight order only once they have one, and clearing it reaches the server', () => {
   const FID = '33333333-3333-3333-3333-333333333333';

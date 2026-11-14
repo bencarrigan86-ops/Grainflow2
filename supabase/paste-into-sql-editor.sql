@@ -696,3 +696,18 @@ alter table storages
   drop constraint if exists storages_wall_height_check;
 alter table storages
   add constraint storages_wall_height_check check (wall_height_m is null or wall_height_m >= 0);
+
+-- ==== property identification code (build 240) ====
+-- The property identification code (PIC) named on the national vendor declaration, kept with the business details.
+alter table farms
+  add column if not exists pic text;
+
+-- ==== freight: flat rate plus per km (build 240) ====
+-- Freight orders can be a flat $/t plus so much per tonne per km (eg $15/t + $0.10/t/km x 300 km = $45/t).
+-- flat_rate is the flat $/t; rate stays the per-km rate. Optional: only freight orders on that basis have a flat rate.
+alter table freight_orders
+  add column if not exists flat_rate numeric(12,4);
+alter table freight_orders
+  drop constraint if exists freight_orders_rate_basis_check;
+alter table freight_orders
+  add constraint freight_orders_rate_basis_check check (rate_basis in ('per_t', 'per_tkm', 'flat_tkm'));

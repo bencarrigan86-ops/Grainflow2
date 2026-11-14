@@ -11,9 +11,9 @@
 // hydration has to produce a working state object with those parts simply
 // absent. Throwing there would mean the app only runs for owners.
 
-import { supabase } from './supabase.js?v=239';
-import { rowsToState } from './mapping.js?v=239';
-import { stampBase } from './ticketmerge.js?v=239';
+import { supabase } from './supabase.js?v=240';
+import { rowsToState } from './mapping.js?v=240';
+import { stampBase } from './ticketmerge.js?v=240';
 
 // Scoped by farm_id; the child tables hang off their parents. Everything a push writes has to be read back
 // here too (tests/hydrate.test.mjs checks it): movement_photos was missing, so photos were uploaded and then

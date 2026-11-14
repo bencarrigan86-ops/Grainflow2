@@ -129,7 +129,7 @@ const state = {
       ],
       freightOrders: [
         { id: u(), saleId: sale1, orderId: null, freightNo: 'FO-001', carrier: 'Ace Haulage', carrierEmail: 'dispatch@ace.example.com',
-          tons: 120, rate: 0.12, rateBasis: 'per_tkm', distanceKm: 240, pickup: 'Gate 2', deliverTo: 'Newbridge silo',
+          tons: 120, rate: 0.12, rateBasis: 'per_tkm', flatRate: '', distanceKm: 240, pickup: 'Gate 2', deliverTo: 'Newbridge silo',
           loadFrom: '2026-02-01', loadBy: '2026-02-20', status: 'open', notes: 'Side tipper' },
       ],
       overheads: { finance: 50000, equipmentRepayments: 30000, depreciation: 40000,

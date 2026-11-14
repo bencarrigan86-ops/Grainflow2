@@ -5,18 +5,18 @@
 // It goes to the carrier as a PDF (shared or emailed) and a copy is filed with the contract. Loads then name the
 // freight order they travel on, and the carrier's bill is recorded against it. The arithmetic is in freight.js.
 
-import { db } from '../storage.js?v=239';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=239';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=239';
-import { orderTitle } from '../orders.js?v=239';
+import { db } from '../storage.js?v=240';
+import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=240';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=240';
+import { orderTitle } from '../orders.js?v=240';
 import {
   BASES, STATE_LABEL, freightState, freightOwed, freightTitle, freightDefaults, freightProblems,
   perTonne, rateText, estimatedTotal, windowText, freightOrderPdf,
-} from '../freight.js?v=239';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=239';
-import { fileSentCopy } from '../sentcopy.js?v=239';
-import { movementRow, openMovementSheet } from './movements.js?v=239';
-import { openBillSheet, returnToAfterBill } from './payables.js?v=239';
+} from '../freight.js?v=240';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=240';
+import { fileSentCopy } from '../sentcopy.js?v=240';
+import { movementRow, openMovementSheet } from './movements.js?v=240';
+import { openBillSheet, returnToAfterBill } from './payables.js?v=240';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | closed | all
@@ -144,9 +144,10 @@ export function openFreightOrderSheet(existing, start = {}) {
         <div class="segmented" id="fo-basis" style="margin-bottom:10px">
           ${BASES.map((b) => `<button data-basis="${b.key}" class="${d.rateBasis === b.key ? 'active' : ''}">${esc(b.label)}</button>`).join('')}
         </div>
+        ${d.rateBasis === 'flat_tkm' ? field({ label: 'Flat rate ($/t)', id: 'fo-flat', type: 'number', step: '0.01', value: d.flatRate ?? '' }) : ''}
         <div class="grid-2">
-          ${field({ label: d.rateBasis === 'per_tkm' ? 'Rate ($/t/km)' : 'Rate ($/t)', id: 'fo-rate', type: 'number', step: '0.0001', value: d.rate ?? '' })}
-          ${d.rateBasis === 'per_tkm' ? field({ label: 'Distance (km)', id: 'fo-km', type: 'number', step: '0.1', value: d.distanceKm ?? '' }) : '<div></div>'}
+          ${field({ label: d.rateBasis === 'per_t' ? 'Rate ($/t)' : 'Rate ($/t/km)', id: 'fo-rate', type: 'number', step: '0.0001', value: d.rate ?? '' })}
+          ${d.rateBasis !== 'per_t' ? field({ label: 'Distance (km)', id: 'fo-km', type: 'number', step: '0.1', value: d.distanceKm ?? '' }) : '<div></div>'}
         </div>
         <div class="row"><span class="label">Works out at</span><span class="value" id="fo-calc">-</span></div>
 
@@ -208,6 +209,7 @@ export function openFreightOrderSheet(existing, start = {}) {
         carrier: val('fo-carrier').trim(),
         carrierEmail: val('fo-email').trim(),
         rate: val('fo-rate') === '' ? '' : getNum(root, 'fo-rate'),
+        flatRate: root.querySelector('#fo-flat') ? (val('fo-flat') === '' ? '' : getNum(root, 'fo-flat')) : d.flatRate,
         distanceKm: root.querySelector('#fo-km') ? (val('fo-km') === '' ? '' : getNum(root, 'fo-km')) : d.distanceKm,
         pickup: val('fo-pickup').trim(),
         deliverTo: val('fo-deliver').trim(),
@@ -228,7 +230,7 @@ export function openFreightOrderSheet(existing, start = {}) {
       root.querySelector('#fo-sale').addEventListener('change', () => {
         collect();
         const sale = sales.find((s) => s.id === getVal(root, 'fo-sale'));
-        if (!existing) { const fresh = make(sale, null); d = { ...fresh, freightNo: d.freightNo || fresh.freightNo, carrier: d.carrier || fresh.carrier, carrierEmail: d.carrierEmail || fresh.carrierEmail, rateBasis: d.rateBasis, rate: d.rate || fresh.rate, distanceKm: d.distanceKm, pickup: d.pickup, notes: d.notes }; }
+        if (!existing) { const fresh = make(sale, null); d = { ...fresh, freightNo: d.freightNo || fresh.freightNo, carrier: d.carrier || fresh.carrier, carrierEmail: d.carrierEmail || fresh.carrierEmail, rateBasis: d.rateBasis, rate: d.rate || fresh.rate, flatRate: d.flatRate, distanceKm: d.distanceKm, pickup: d.pickup, notes: d.notes }; }
         else { d.saleId = sale.id; d.orderId = ''; }
         paint();
       });
@@ -249,7 +251,7 @@ export function openFreightOrderSheet(existing, start = {}) {
         const email = carrierEmails[getVal(root, 'fo-carrier').trim().toLowerCase()];
         if (email && !getVal(root, 'fo-email')) root.querySelector('#fo-email').value = email;
       });
-      ['fo-tons', 'fo-rate', 'fo-km'].forEach((id) => root.querySelector(`#${id}`)?.addEventListener('input', calc));
+      ['fo-tons', 'fo-rate', 'fo-km', 'fo-flat'].forEach((id) => root.querySelector(`#${id}`)?.addEventListener('input', calc));
       root.querySelector('#fo-state')?.addEventListener('click', (e) => {
         const b = e.target.closest('[data-state]');
         if (!b) return;

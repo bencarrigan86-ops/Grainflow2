@@ -1,7 +1,8 @@
-import { db } from '../storage.js?v=239';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=239';
-import { num, tons, money, pct, esc } from '../fmt.js?v=239';
-import { payablesCost } from '../payables.js?v=239';
+import { db } from '../storage.js?v=240';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=240';
+import { num, tons, money, pct, esc } from '../fmt.js?v=240';
+import { payablesCost } from '../payables.js?v=240';
+import { openEofySheet } from './eofy.js?v=240';
 
 let unsub = null;
 
@@ -28,6 +29,7 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      <button class="btn secondary" id="open-eofy" style="margin-bottom:12px">End of year snapshot</button>
       <div class="stat-grid">
         <div class="stat">
           <div class="n">${tons(totals.productionTons, 0)}</div>
@@ -54,6 +56,7 @@ function paint(root) {
       ${rows.length > 0 ? farmSummaryCard(totals, overheads, pl, cost) : ''}
     </div>
   `;
+  root.querySelector('#open-eofy').addEventListener('click', openEofySheet);
 }
 
 function farmSummaryCard(totals, overheads, pl, cost) {

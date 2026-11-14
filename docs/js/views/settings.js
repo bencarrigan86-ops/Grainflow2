@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=239';
-import { getTheme, setTheme } from '../theme.js?v=239';
-import { num, money, esc, todayLocal } from '../fmt.js?v=239';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=239';
-import { openLoadImportSheet } from './importloads.js?v=239';
-import { openDeletedSheet } from './deleted.js?v=239';
-import { APP_VERSION } from '../version.js?v=239';
-import { exportRowsAsCSV } from '../csv.js?v=239';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=239';
-import { endpointLabel } from './movements.js?v=239';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=239';
-import { layersForStorage } from '../outload.js?v=239';
-import { holdings, totalHeld } from '../offfarm.js?v=239';
-import { kindLabel, billTotal } from '../payables.js?v=239';
-import { orderState, STATE_LABEL } from '../orders.js?v=239';
-import { fieldHarvest } from '../harvest.js?v=239';
-import { openMySignatureSheet } from './signaturepad.js?v=239';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=239';
+import { db } from '../storage.js?v=240';
+import { getTheme, setTheme } from '../theme.js?v=240';
+import { num, money, esc, todayLocal } from '../fmt.js?v=240';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=240';
+import { openLoadImportSheet } from './importloads.js?v=240';
+import { openDeletedSheet } from './deleted.js?v=240';
+import { APP_VERSION } from '../version.js?v=240';
+import { exportRowsAsCSV } from '../csv.js?v=240';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=240';
+import { endpointLabel } from './movements.js?v=240';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=240';
+import { layersForStorage } from '../outload.js?v=240';
+import { holdings, totalHeld } from '../offfarm.js?v=240';
+import { kindLabel, billTotal } from '../payables.js?v=240';
+import { orderState, STATE_LABEL } from '../orders.js?v=240';
+import { fieldHarvest } from '../harvest.js?v=240';
+import { openMySignatureSheet } from './signaturepad.js?v=240';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=240';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=239';
+} from '../invites.js?v=240';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=239';
+} from '../auth.js?v=240';
 
 let unsub = null;
 
@@ -114,6 +114,7 @@ function paint(root) {
           ${field({ label: 'ABN', id: 'bd-abn', value: business.abn })}
           ${field({ label: 'NGR', id: 'bd-ngr', value: business.ngr })}
         </div>
+        ${field({ label: 'PIC (property identification code)', id: 'bd-pic', value: business.pic, hint: 'Named on the national vendor declaration.' })}
         ${field({ label: 'Contact name', id: 'bd-contact', value: business.contactName })}
         <div class="grid-2">
           ${field({ label: 'Phone', id: 'bd-phone', type: 'tel', value: business.phone })}
@@ -246,6 +247,7 @@ function paint(root) {
       entityName: getVal(root, 'bd-entity')?.trim(),
       abn: getVal(root, 'bd-abn')?.trim(),
       ngr: getVal(root, 'bd-ngr')?.trim(),
+      pic: getVal(root, 'bd-pic')?.trim(),
       contactName: getVal(root, 'bd-contact')?.trim(),
       phone: getVal(root, 'bd-phone')?.trim(),
       email: getVal(root, 'bd-email')?.trim(),

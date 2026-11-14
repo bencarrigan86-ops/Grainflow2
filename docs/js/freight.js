@@ -5,18 +5,19 @@
 // knows what has been carted, what that costs at the agreed rate, and what has not been billed yet (which Payables
 // shows as owed, before the carrier's invoice arrives).
 //
-// The rate is $/t, or $/t/km with a distance. Only the rate is money; nothing about the grain's price is on the
+// The rate is $/t, or $/t/km with a distance, or a flat $/t plus $/t/km with a distance. Only the rate is money; nothing about the grain's price is on the
 // carrier's paperwork.
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { Pdf, wrapText } from './pdf.js?v=239';
-import { dmy } from './fmt.js?v=239';
-import { movementTonsToSale } from './derived.js?v=239';
+import { Pdf, wrapText } from './pdf.js?v=240';
+import { dmy } from './fmt.js?v=240';
+import { movementTonsToSale } from './derived.js?v=240';
 
 export const BASES = [
   { key: 'per_t', label: '$ per tonne' },
   { key: 'per_tkm', label: '$ per tonne per km' },
+  { key: 'flat_tkm', label: '$/t flat + per km' },
 ];
 
 const clean = (v) => String(v ?? '').trim();
@@ -26,10 +27,16 @@ const round3 = (n) => Math.round(n * 1000) / 1000;
 const money = (n, dp = 2) => `$${num(n).toLocaleString('en-AU', { minimumFractionDigits: dp, maximumFractionDigits: dp })}`;
 
 /** What one tonne costs to cart: the rate, or the rate times the distance when it is per tonne per km. */
-export const perTonne = (fo) => round2(fo?.rateBasis === 'per_tkm' ? num(fo.rate) * num(fo.distanceKm) : num(fo?.rate));
+export const perTonne = (fo) => round2(fo?.rateBasis === 'per_tkm' ? num(fo.rate) * num(fo.distanceKm)
+  : fo?.rateBasis === 'flat_tkm' ? num(fo.flatRate) + num(fo.rate) * num(fo.distanceKm)
+    : num(fo?.rate));
 
 /** The rate in words: "$18.50 per tonne", or "$0.12 per tonne per km x 240 km = $28.80 per tonne". */
 export function rateText(fo) {
+  if (fo?.rateBasis === 'flat_tkm') {
+    const km = num(fo.distanceKm);
+    return `${money(fo.flatRate)} flat plus ${money(fo.rate, num(fo.rate) < 1 ? 3 : 2)} per tonne per km${km ? ` x ${km} km = ${money(perTonne(fo))} per tonne` : ' (distance not set)'}`;
+  }
   if (fo?.rateBasis === 'per_tkm') {
     const km = num(fo.distanceKm);
     return `${money(fo.rate, num(fo.rate) < 1 ? 3 : 2)} per tonne per km${km ? ` x ${km} km = ${money(perTonne(fo))} per tonne` : ' (distance not set)'}`;
@@ -114,6 +121,7 @@ export function freightDefaults({ sale, order = null, freightOrders = [], carrie
     tons: order ? num(order.tons) : num(sale?.tons),
     rate: num(sale?.freight) || '',
     rateBasis: 'per_t',
+    flatRate: '',
     distanceKm: '',
     pickup: '',
     deliverTo: clean(sale?.location),
@@ -129,8 +137,8 @@ export function freightProblems(fo) {
   const out = [];
   if (!clean(fo?.carrier)) out.push('Who is carting it');
   if (!(num(fo?.tons) > 0)) out.push('The tonnes');
-  if (!(num(fo?.rate) > 0)) out.push('The rate');
-  if (fo?.rateBasis === 'per_tkm' && !(num(fo?.distanceKm) > 0)) out.push('The distance in km');
+  if (fo?.rateBasis === 'flat_tkm' ? !(num(fo?.flatRate) > 0 || num(fo?.rate) > 0) : !(num(fo?.rate) > 0)) out.push('The rate');
+  if ((fo?.rateBasis === 'per_tkm' || fo?.rateBasis === 'flat_tkm') && !(num(fo?.distanceKm) > 0)) out.push('The distance in km');
   if (fo?.loadFrom && fo?.loadBy && fo.loadBy < fo.loadFrom) out.push('Load by is before load from');
   return out;
 }

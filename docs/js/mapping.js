@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=239';
-import { cleanOffFarm } from './offfarm.js?v=239';
+import { cleanGradeOptions } from './gradeprice.js?v=240';
+import { cleanOffFarm } from './offfarm.js?v=240';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -238,6 +238,8 @@ export function stateToRows(state, farmId) {
     // The quality assurance program named on a vendor declaration. Optional like the other later columns: sent once
     // it has been filled in, and kept after that so clearing it reaches the server.
     ...((b.qaProgram || b.qaNumber || b.__hasQa) ? { qa_program: orNull(b.qaProgram), qa_number: orNull(b.qaNumber) } : {}),
+    // The property identification code (PIC), the same way.
+    ...((b.pic || b.__hasPic) ? { pic: orNull(b.pic) } : {}),
   });
 
   for (const [label, year] of Object.entries(state.years || {})) {
@@ -523,7 +525,9 @@ export function stateToRows(state, farmId) {
         sale_id: orNull(f.saleId), order_id: orNull(f.orderId),
         freight_no: orNull(f.freightNo),
         carrier: orNull(f.carrier), carrier_email: orNull(f.carrierEmail),
-        tons: n(f.tons), rate: n(f.rate), rate_basis: f.rateBasis === 'per_tkm' ? 'per_tkm' : 'per_t',
+        tons: n(f.tons), rate: n(f.rate), rate_basis: f.rateBasis === 'per_tkm' || f.rateBasis === 'flat_tkm' ? f.rateBasis : 'per_t',
+        // the flat part is sent only for a freight order that has one, so the others save before the column exists
+        ...(f.rateBasis === 'flat_tkm' || Number(f.flatRate) > 0 ? { flat_rate: f.flatRate === '' || f.flatRate == null ? null : n(f.flatRate) } : {}),
         distance_km: f.distanceKm === '' || f.distanceKm == null ? null : n(f.distanceKm),
         pickup: orNull(f.pickup), deliver_to: orNull(f.deliverTo),
         load_from: orNull(f.loadFrom), load_by: orNull(f.loadBy),
@@ -756,7 +760,8 @@ export function rowsToState(rows) {
         id: f.id, saleId: f.sale_id, orderId: f.order_id,
         freightNo: f.freight_no ?? '',
         carrier: f.carrier ?? '', carrierEmail: f.carrier_email ?? '',
-        tons: n(f.tons), rate: n(f.rate), rateBasis: f.rate_basis === 'per_tkm' ? 'per_tkm' : 'per_t',
+        tons: n(f.tons), rate: n(f.rate), rateBasis: f.rate_basis === 'per_tkm' || f.rate_basis === 'flat_tkm' ? f.rate_basis : 'per_t',
+        flatRate: f.flat_rate == null ? '' : n(f.flat_rate),
         distanceKm: f.distance_km == null ? '' : n(f.distance_km),
         pickup: f.pickup ?? '', deliverTo: f.deliver_to ?? '',
         loadFrom: f.load_from ?? '', loadBy: f.load_by ?? '',
@@ -798,6 +803,7 @@ export function rowsToState(rows) {
       bankName: farm.bank_name ?? '', accountName: farm.account_name ?? '',
       bsb: farm.bsb ?? '', accountNumber: farm.account_number ?? '',
       ...((farm.qa_program != null || farm.qa_number != null) ? { qaProgram: farm.qa_program ?? '', qaNumber: farm.qa_number ?? '', __hasQa: true } : {}),
+      ...(farm.pic != null ? { pic: farm.pic, __hasPic: true } : {}),
     },
   };
 }

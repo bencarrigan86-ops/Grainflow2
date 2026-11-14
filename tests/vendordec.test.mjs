@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { Pdf, textWidth, wrapText } from '../docs/js/pdf.js';
 import {
   buildDeclaration, declarationPdf, declarationProblems, deliveryPeriodText, emailIn, phoneIn, varietiesFor, documentId,
+  LAYOUTS, CVD_SOURCES, CVD_GMO_OPTIONS, CVD_BYPRODUCT,
 } from '../docs/js/vendordec.js';
 import { safeFileName, mailtoLink } from '../docs/js/sharefile.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
@@ -250,6 +251,100 @@ check('it is stored on the farm row once it is filled in, and read back', () => 
   assert.equal(back.qaNumber, 'QA-1');
   const cleared = stateToRows(state({ qaProgram: '', qaNumber: '', __hasQa: true }), FARM).farms[0];
   assert.equal(cleared.qa_program, null, 'clearing it reaches the server');
+});
+
+console.log('\n=== the national CVD layout ===');
+
+const rd = (p) => readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', p), 'utf8');
+const cvdOf = (extra = {}, cvd = {}) => { const d = make(null, extra); d.layout = 'cvd'; d.cvd = { ...d.cvd, ...cvd }; return d; };
+const pdfText = (d) => latin1(declarationPdf(d));
+
+check('a declaration starts on the Grain Trade Australia layout, with the usual CVD answers for a farm silo', () => {
+  const d = make();
+  assert.equal(d.layout, 'gta');
+  assert.deepEqual(LAYOUTS.map((l) => l.value), ['gta', 'cvd']);
+  assert.equal(d.cvd.source, 'single_comingled');
+  assert.equal(d.cvd.ram, false);
+  assert.equal(d.cvd.whpYes, false);
+  assert.equal(d.cvd.byProduct, 'na');
+  assert.equal(d.vendor.pic, '');
+  assert.equal(d.buyer.ngr, '');
+});
+check('the PIC saved with the business goes onto the declaration', () => {
+  assert.equal(make(null, { business: { ...BUSINESS, pic: 'NSW1234' } }).vendor.pic, 'NSW1234');
+});
+check('the answer lists carry the wording of the form', () => {
+  assert.equal(CVD_SOURCES.length, 4);
+  assert.deepEqual(CVD_GMO_OPTIONS.map((o) => o.value), [1, 2, 3]);
+  assert.deepEqual(CVD_BYPRODUCT.map((o) => o.value), ['no', 'yes', 'na']);
+});
+check('on the CVD a withholding period answered yes needs the chemicals; the seed and fumigant ticks are not asked', () => {
+  const ok = cvdOf({}, {});
+  assert.deepEqual(declarationProblems({ ...ok, basis: 'declared', seedUntreated: false, notFumigated: false }), [], 'the GTA ticks do not apply');
+  const yes = cvdOf({}, { whpYes: true });
+  yes.chemicals = [];
+  assert.ok(declarationProblems(yes).some((p) => /withholding/i.test(p)));
+  yes.chemicals = [{ product: 'Roundup', rate: '2 L/ha', date: '2026-10-01', whp: '14 days' }];
+  assert.ok(!declarationProblems(yes).some((p) => /withholding/i.test(p)));
+  const gta = make();
+  gta.basis = 'declared'; gta.seedUntreated = false; gta.chemicals = [];
+  assert.ok(declarationProblems(gta).some((p) => /seed treatment/i.test(p)), 'the GTA layout still asks');
+});
+check('the CVD names the parts and questions of the national form, and the people and grain on it', () => {
+  const d = cvdOf({ business: { ...BUSINESS, pic: 'NSW1234' } }, { adjacentCrops: 'Canola' });
+  d.buyer.ngr = '7654321';
+  const s = pdfText(d);
+  for (const t of ['Commodity Vendor Declaration', 'VENDOR DETAILS', 'BUYER DETAILS', 'COMMODITY DETAILS', 'Part A - Product Integrity', 'Part B - Chemical Use', 'Part C - Declaration',
+    'Single Source, Comingled Storage', 'restricted animal materials', 'WHP/ ESI/ EAFI', 'NATA', 'NSW1234', '7654321', 'Wheat', 'Canola', 'TOTAL QUANTITY']) {
+    assert.ok(s.includes(t), 'missing: ' + t);
+  }
+  assert.ok(!s.includes('GRAIN COMMODITY VENDOR DECLARATION'), 'not the GTA title');
+});
+check('the withholding period table carries the chemicals with their WHP', () => {
+  const d = cvdOf({}, { whpYes: true });
+  d.chemicals = [{ product: 'Glyphosate 540', rate: '2 L/ha', date: '2026-10-01', whp: '14 days' }];
+  const s = pdfText(d);
+  assert.ok(s.includes('Glyphosate 540'));
+  assert.ok(s.includes('14 days'));
+  assert.ok(s.includes('01-10-2026'));
+  const none = cvdOf({}, { whpYes: false });
+  none.chemicals = [{ product: 'Glyphosate 540', rate: '', date: '', whp: '' }];
+  assert.ok(!pdfText(none).includes('Glyphosate 540'), 'not printed when the answer is no');
+});
+check('under a QA program the program is named and questions 6 to 9 are left blank', () => {
+  const d = cvdOf({ business: { ...BUSINESS, qaProgram: 'Graincorp QA', qaNumber: 'QA-9' } }, { adjacentCrops: 'Canola' });
+  assert.equal(d.basis, 'qa');
+  const s = pdfText(d);
+  assert.ok(s.includes('Graincorp QA') && s.includes('QA-9'));
+  assert.ok(!s.includes('Canola'), 'question 7 is skipped under a QA program');
+});
+check('the declaration is signed by name and date, and a long list of chemicals runs on to a second page', () => {
+  const d = cvdOf({}, { whpYes: true });
+  d.chemicals = Array.from({ length: 14 }, (_, i) => ({ product: 'Chem ' + i, rate: '1', date: '2026-10-01', whp: '7 days' }));
+  const s = pdfText(d);
+  assert.match(s, /\/Count [2-9]/);
+  assert.ok(s.includes('Chem 13'));
+  assert.ok(s.includes(d.signedBy || 'Ben Carrigan'));
+});
+check('which layout is asked for decides the form that is made', () => {
+  const a = pdfText(make());
+  const b = pdfText(cvdOf());
+  assert.ok(a.includes('GRAIN COMMODITY VENDOR DECLARATION'));
+  assert.ok(b.includes('Part A - Product Integrity') && !a.includes('Part A - Product Integrity'));
+});
+check('the PIC is saved with the business, like the QA program', () => {
+  const FARM = '11111111-1111-1111-1111-111111111111';
+  const state = (bd) => ({ currentYear: '2026', nextMovementNo: 1, businessDetails: bd, years: { 2026: { commodities: [], storages: [], fields: [], sales: [], movements: [], overheads: {}, invoices: [] } } });
+  assert.ok(!('pic' in stateToRows(state({}), FARM).farms[0]), 'not sent until it is set');
+  assert.equal(stateToRows(state({ pic: 'NSW1234' }), FARM).farms[0].pic, 'NSW1234');
+  assert.equal(rowsToState(stateToRows(state({ pic: 'NSW1234' }), FARM)).businessDetails.pic, 'NSW1234');
+  assert.equal(stateToRows(state({ pic: '', __hasPic: true }), FARM).farms[0].pic, null, 'clearing it reaches the server');
+});
+check('the sheet has the layout switch and the CVD questions, and the PIC column is in the paste-in file', () => {
+  const v = rd('docs/js/views/vendordec.js');
+  for (const t of ['id="vd-layout"', 'vd-cvd-source', 'vd-cvd-whp', 'vd-c-w-', 'vd-cvd-nata', 'rememberLayout']) assert.ok(v.includes(t), t);
+  assert.ok(rd('supabase/paste-into-sql-editor.sql').includes('add column if not exists pic text'));
+  assert.ok(rd('docs/js/views/settings.js').includes('bd-pic'));
 });
 
 console.log('\n=== wired in ===');
