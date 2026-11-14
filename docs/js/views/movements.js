@@ -1,16 +1,17 @@
-import { db } from '../storage.js?v=241';
-import { movementsForEndpoint } from '../derived.js?v=241';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=241';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=241';
-import { compressAndStampImage } from '../img.js?v=241';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=241';
-import { specText } from '../outload.js?v=241';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=241';
-import { pickableSilos } from '../silopick.js?v=241';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=241';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=241';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=241';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=241';
+import { db } from '../storage.js?v=242';
+import { movementsForEndpoint } from '../derived.js?v=242';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=242';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=242';
+import { compressAndStampImage } from '../img.js?v=242';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=242';
+import { specText } from '../outload.js?v=242';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=242';
+import { pickableSilos } from '../silopick.js?v=242';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=242';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=242';
+import { activeSales } from '../paidsales.js?v=242';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=242';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=242';
 
 let unsub = null;
 
@@ -27,7 +28,12 @@ let listFilter = { q: '', commodityId: '', toFinish: false };
 function ticketSearchText(m, ctx) {
   const ends = [...(m.froms || []).map((f) => endpointLabel(f.type, f.id, ctx)), ...(m.tos || []).map((t) => endpointLabel(t.type, t.id, ctx))];
   const c = ctx.commodities.find((cc) => cc.id === m.commodityId);
-  return [m.ticketNo, m.sourceRef, m.externalTicketNo, m.date, m.truckRego, m.driver, m.notes, c?.name, ...ends].filter(Boolean).join(' ').toLowerCase();
+  const linked = [...(m.tos || []), ...(m.froms || [])].filter((l) => l.type === 'sale').map((l) => ctx.sales.find((s) => s.id === l.id)).filter(Boolean);
+  const fo = m.freightOrderId ? (ctx.freightOrders || []).find((f) => f.id === m.freightOrderId) : null;
+  // a date is searchable as it is written on paperwork (05-11-2026) as well as stored (2026-11-05)
+  const written = /^(\d{4})-(\d{2})-(\d{2})/.exec(m.date || '');
+  return [m.ticketNo, m.sourceRef, m.externalTicketNo, m.date, written ? `${written[3]}-${written[2]}-${written[1]} ${written[3]}/${written[2]}/${written[1]}` : '', m.truckRego, m.driver, m.notes, m.grade, m.tons, c?.name,
+    ...linked.flatMap((s) => [s.buyer, s.contractNo, s.ourRef]), fo?.carrier, fo?.freightNo, ...ends].filter((x) => x !== undefined && x !== null && x !== '').join(' ').toLowerCase();
 }
 
 function dayHeading(iso) {
@@ -58,7 +64,7 @@ function paint(root) {
 
       ${movements.length > 0 ? `
       <div class="filterbar">
-        <input type="search" id="mv-q" placeholder="Search tickets, movement no., trucks, drivers, buyers" value="${esc(listFilter.q)}" aria-label="Search tickets" />
+        <input type="search" id="mv-q" placeholder="Search tickets, dates, trucks, drivers, buyers, contracts, grades" value="${esc(listFilter.q)}" aria-label="Search tickets" />
         ${inUse.length > 1 || finishCount > 0 ? `<div class="chips">
           <button type="button" class="chip ${listFilter.commodityId || listFilter.toFinish ? '' : 'active'}" data-chip="">All</button>
           ${finishCount > 0 ? `<button type="button" class="chip ${listFilter.toFinish ? 'active' : ''}" data-finish="1">To finish ${finishCount}</button>` : ''}
@@ -95,7 +101,7 @@ function paint(root) {
 /** The ticket list and its totals, repainted alone so the search box keeps focus. */
 function paintList(root) {
   const { fields, storages, sales, commodities, movements } = db.get();
-  const ctx = { fields, storages, sales, commodities, grouped: true };
+  const ctx = { fields, storages, sales, commodities, grouped: true, freightOrders: db.getFreightOrders() };
   const q = listFilter.q.trim().toLowerCase();
   const shown = movements
     .filter((m) => !listFilter.commodityId || m.commodityId === listFilter.commodityId)
@@ -169,8 +175,9 @@ function toSiloOptions(storages, commodityId, opts = {}) {
   return [base[0], { value: 'silo:__transit__', label: 'In transit (not yet allocated)' }, ...base.slice(1)];
 }
 
-function saleOptions(sales, commodities, commodityId) {
-  const list = commodityId ? sales.filter((s) => s.commodityId === commodityId) : sales;
+function saleOptions(sales, commodities, commodityId, keep = []) {
+  const open = activeSales(sales, keep);
+  const list = commodityId ? open.filter((s) => s.commodityId === commodityId) : open;
   const opts = list.map((s) => {
     const c = commodities.find((cc) => cc.id === s.commodityId);
     const label = [c?.name, s.buyer, s.contractNo ? `#${s.contractNo}` : null].filter(Boolean).join(' · ') || 'Sale';
@@ -487,6 +494,7 @@ export function openMovementSheet(existing, template) {
   // an off-farm location is offered to take grain out of only when it holds some of the commodity
   const offCtx = { fields, storages, sales };
   const holdsHere = (loc, commodityId) => holdsCommodity(loc, movements, offCtx, commodityId);
+  const keepSales = [...(src?.tos || [])].filter((l) => l.type === 'sale' && l.id).map((l) => l.id);
   const keepSilos = [...(src?.froms || []), ...(src?.tos || [])].filter((l) => l.type === 'silo' && l.id).map((l) => l.id);
   const ctx = {
     commodityId: inferCommodityId(),
@@ -496,7 +504,7 @@ export function openMovementSheet(existing, template) {
     siloOpts() { return siloOptions(storages, this.commodityId, { movements, keep: keepSilos, holds: holdsHere }); },
     toSiloOpts() { return toSiloOptions(storages, this.commodityId, { movements, keep: keepSilos, holds: holdsHere }); },
     isTransitId(id) { return isTransit(storages.find((x) => x.id === id)); },
-    saleOpts() { return saleOptions(sales, commodities, this.commodityId); },
+    saleOpts() { return saleOptions(sales, commodities, this.commodityId, keepSales); },
     refreshAll() { this.refreshers.forEach((fn) => fn()); },
   };
 

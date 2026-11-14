@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=241';
-import { cleanOffFarm } from './offfarm.js?v=241';
+import { cleanGradeOptions } from './gradeprice.js?v=242';
+import { cleanOffFarm } from './offfarm.js?v=242';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -362,6 +362,8 @@ export function stateToRows(state, farmId) {
         buyer_contact: orNull(sale.buyerContact),
         // The farm's own number for the contract, beside the buyer's (contract_no). Optional like the other later columns.
         ...((sale.ourRef || sale.__hasOurRef) ? { our_ref: orNull(sale.ourRef) } : {}),
+        // Marked paid and finished with. Sent once it has been marked, and kept after that so un-marking reaches the server.
+        ...((sale.paid || sale.__hasPaid) ? { is_paid: !!sale.paid } : {}),
       });
       out.sale_terms.push({
         id: sale.__termsId || uid(), farm_id: farmId, sale_id: sale.id,
@@ -701,6 +703,7 @@ export function rowsToState(rows) {
           deliveryTerms: sale.delivery_terms ?? '',
           buyerContact: sale.buyer_contact ?? '',
           ...(sale.our_ref != null ? { ourRef: sale.our_ref, __hasOurRef: true } : {}),
+          ...(sale.is_paid != null ? { paid: !!sale.is_paid, __hasPaid: true } : {}),
           broker: t.broker ?? '',
           brokerRef: t.broker_ref ?? '',
           brokeragePaidBy: t.brokerage_paid_by ?? '',

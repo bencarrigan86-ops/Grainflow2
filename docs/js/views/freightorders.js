@@ -5,18 +5,19 @@
 // It goes to the carrier as a PDF (shared or emailed) and a copy is filed with the contract. Loads then name the
 // freight order they travel on, and the carrier's bill is recorded against it. The arithmetic is in freight.js.
 
-import { db } from '../storage.js?v=241';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=241';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=241';
-import { orderTitle } from '../orders.js?v=241';
+import { db } from '../storage.js?v=242';
+import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=242';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=242';
+import { orderTitle } from '../orders.js?v=242';
+import { activeSales } from '../paidsales.js?v=242';
 import {
   BASES, STATE_LABEL, freightState, freightOwed, freightTitle, freightDefaults, freightProblems,
   perTonne, rateText, estimatedTotal, windowText, freightOrderPdf,
-} from '../freight.js?v=241';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=241';
-import { fileSentCopy } from '../sentcopy.js?v=241';
-import { movementRow, openMovementSheet } from './movements.js?v=241';
-import { openBillSheet, returnToAfterBill } from './payables.js?v=241';
+} from '../freight.js?v=242';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=242';
+import { fileSentCopy } from '../sentcopy.js?v=242';
+import { movementRow, openMovementSheet } from './movements.js?v=242';
+import { openBillSheet, returnToAfterBill } from './payables.js?v=242';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | closed | all
@@ -128,7 +129,7 @@ export function openFreightOrderSheet(existing, start = {}) {
       root.innerHTML = `
         <datalist id="dl-carriers">${carriers.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
         ${field({ label: 'Contract', id: 'fo-sale', type: 'select', value: d.saleId,
-          options: sales.map((s) => ({ value: s.id, label: contractLabel(s, commodities) })) })}
+          options: activeSales(sales, [d.saleId]).map((s) => ({ value: s.id, label: contractLabel(s, commodities) })) })}
         ${field({ label: 'Grain order (optional)', id: 'fo-order', type: 'select', value: d.orderId || '',
           options: [{ value: '', label: 'Not for one grain order' }, ...saleOrders.map((o) => ({ value: o.id, label: [orderTitle(o), o.freightCompany].filter(Boolean).join(' · ') }))],
           hint: 'Choosing one fills in its tonnes, window, carrier and where it is going.' })}

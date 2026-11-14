@@ -1,25 +1,26 @@
-import { db } from '../storage.js?v=241';
+import { db } from '../storage.js?v=242';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=241';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=241';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=241';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=241';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=241';
-import { renderRelatedMovements } from './movements.js?v=241';
-import { openInvoiceListSheet } from './invoice.js?v=241';
-import { openContractDocSheet } from './contract.js?v=241';
-import { wireJumps } from '../jump.js?v=241';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=241';
-import { renderContractFreight } from './freightorders.js?v=241';
-import { openVendorDecSheet } from './vendordec.js?v=241';
-import { summarise as summariseOrders } from '../orders.js?v=241';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=241';
-import { deliveries, moneyPosition } from '../outstanding.js?v=241';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=241';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=241';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=241';
-import { standardFor } from '../grades.js?v=241';
+} from '../documents.js?v=242';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=242';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=242';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=242';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=242';
+import { renderRelatedMovements } from './movements.js?v=242';
+import { openInvoiceListSheet } from './invoice.js?v=242';
+import { openContractDocSheet } from './contract.js?v=242';
+import { wireJumps } from '../jump.js?v=242';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=242';
+import { renderContractFreight } from './freightorders.js?v=242';
+import { activeSales, paidSales } from '../paidsales.js?v=242';
+import { openVendorDecSheet } from './vendordec.js?v=242';
+import { summarise as summariseOrders } from '../orders.js?v=242';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=242';
+import { deliveries, moneyPosition } from '../outstanding.js?v=242';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=242';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=242';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=242';
+import { standardFor } from '../grades.js?v=242';
 
 let unsub = null;
 
@@ -32,7 +33,8 @@ export function renderSales(root) {
 function paint(root) {
   const { commodities, sales, movements } = db.get();
   const rollup = salesByCommodity(commodities, sales, movements).filter((r) => r.contractCount > 0);
-  const groups = groupSalesByCommodity(commodities, sales, movements);
+  const groups = groupSalesByCommodity(commodities, activeSales(sales), movements);
+  const paidList = paidSales(sales);
   // what is owed, for the Payables button
   // and what buyers are waiting on, for the Orders button
   const ordersSum = summariseOrders(db.getOrders(), movements, todayLocal());
@@ -97,7 +99,8 @@ function paint(root) {
       <div class="card input">
         <h2><span class="dot input"></span>Contracts</h2>
         ${carryList.length ? `<button type="button" class="btn secondary small" id="carry-contracts" style="margin-bottom:10px">Bring in ${esc(prevLabel)} contracts&hellip; (${carryList.length})</button>` : ''}
-        ${groups.length === 0 ? `<div class="empty">No contracts yet.<br/><button class="btn" id="empty-add">Add your first sale</button></div>` : groups.map((g) => `
+        ${paidList.length ? `<button type="button" class="btn secondary small" id="open-paid" style="margin-bottom:10px">Paid contracts (${paidList.length})</button>` : ''}
+        ${groups.length === 0 ? (sales.length ? `<div class="empty">Every contract is marked paid.</div>` : `<div class="empty">No contracts yet.<br/><button class="btn" id="empty-add">Add your first sale</button></div>`) : groups.map((g) => `
           <div class="group-label" id="grp-${esc(g.id ?? 'none')}"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
           ${g.sales.map((s, i) => saleRow(s, movements, commodities, i)).join('')}
         `).join('')}
@@ -117,7 +120,20 @@ function paint(root) {
   root.querySelector('#open-deliveries')?.addEventListener('click', () => openDeliveriesSheet());
   root.querySelector('#open-money')?.addEventListener('click', () => openMoneySheet());
   root.querySelector('#empty-add')?.addEventListener('click', () => openSaleSheet(null));
+  root.querySelector('#open-paid')?.addEventListener('click', () => openPaidSheet());
   root.querySelector('#carry-contracts')?.addEventListener('click', () => openCarrySheet(prevLabel));
+}
+
+/** The contracts marked paid: out of the way on the main list, still here to open, check or put back. */
+function openPaidSheet() {
+  openSheet('Paid contracts', (root) => {
+    const { sales, commodities, movements } = db.get();
+    const list = paidSales(sales);
+    root.innerHTML = `
+      <div class="field hint" style="margin-bottom:10px">Contracts marked paid. They are left off the main list and the pick lists, and still count in the position. Open one and untick Paid to bring it back.</div>
+      ${list.length === 0 ? '<div class="empty">No paid contracts.</div>' : list.map((s, i) => saleRow(s, movements, commodities, i)).join('')}`;
+    root.querySelectorAll('[data-edit-sale]').forEach((el) => el.addEventListener('click', () => openSaleSheet(sales.find((s) => s.id === el.dataset.editSale))));
+  });
 }
 
 /**
@@ -354,6 +370,9 @@ function openSaleSheet(existing) {
         ${field({ label: "Buyer's contract no.", id: 'contractNo', value: existing?.contractNo })}
       </div>
       ${field({ label: 'Our contract no.', id: 'ourRef', value: existing?.ourRef, hint: 'Your own number for this contract, if you keep one. It goes on the vendor declaration.' })}
+      ${existing ? `<label class="list-item" style="cursor:pointer;margin-bottom:12px"><div style="display:flex;align-items:center;gap:10px">
+        <input type="checkbox" id="paid" ${existing.paid ? 'checked' : ''} style="width:18px;height:18px" />
+        <div><div class="main">Paid, and finished with</div><div class="meta">Moves it off the main list and the pick lists. It stays under Paid contracts.</div></div></div></label>` : ''}
       ${field({ label: 'Buyer', id: 'buyer', value: existing?.buyer, placeholder: 'e.g. CBH, Cargill', list: 'dl-buyers' })}
       <div class="copy-last" id="copy-last"></div>
 
@@ -823,6 +842,7 @@ function openSaleSheet(existing) {
         buyer: getVal(root, 'buyer')?.trim(),
         contractNo: getVal(root, 'contractNo')?.trim(),
         ourRef: getVal(root, 'ourRef')?.trim(),
+        paid: !!root.querySelector('#paid')?.checked,
         location: getVal(root, 'location')?.trim(),
         deliveryStart: getVal(root, 'deliveryStart'),
         deliveryEnd: getVal(root, 'deliveryEnd'),

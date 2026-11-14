@@ -4,16 +4,17 @@
 // carting it and the buyer's own order number. Everything else about the sale is the contract's and is shown from it.
 // Loads are matched to an order on the movement. The arithmetic is in orders.js.
 
-import { db } from '../storage.js?v=241';
-import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=241';
-import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=241';
-import { movementTonsToSale } from '../derived.js?v=241';
-import { movementRow, openMovementSheet } from './movements.js?v=241';
-import { openVendorDecSheet } from './vendordec.js?v=241';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=241';
-import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=241';
-import { freightTitle, freightState, rateText } from '../freight.js?v=241';
-import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=241';
+import { db } from '../storage.js?v=242';
+import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=242';
+import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=242';
+import { movementTonsToSale } from '../derived.js?v=242';
+import { activeSales } from '../paidsales.js?v=242';
+import { movementRow, openMovementSheet } from './movements.js?v=242';
+import { openVendorDecSheet } from './vendordec.js?v=242';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=242';
+import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=242';
+import { freightTitle, freightState, rateText } from '../freight.js?v=242';
+import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=242';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | filled | closed | all
@@ -115,7 +116,7 @@ export function openOrderSheet(existing, defaults = {}) {
     ...db.getPayables().filter((p) => p.kind === 'freight').map((p) => p.supplier),
   ].map((x) => String(x || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   // newest contracts last in the data, so list them as the Sales tab does: by buyer
-  const contracts = [...sales].sort((a, b) => contractLabel(a, commodities).localeCompare(contractLabel(b, commodities)));
+  const contracts = [...activeSales(sales, [src.saleId])].sort((a, b) => contractLabel(a, commodities).localeCompare(contractLabel(b, commodities)));
 
   openSheet(existing ? 'Edit grain order' : 'Add a grain order', (root) => {
     root.innerHTML = `

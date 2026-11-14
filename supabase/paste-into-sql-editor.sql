@@ -711,3 +711,9 @@ alter table freight_orders
   drop constraint if exists freight_orders_rate_basis_check;
 alter table freight_orders
   add constraint freight_orders_rate_basis_check check (rate_basis in ('per_t', 'per_tkm', 'flat_tkm'));
+
+-- ==== contracts marked paid (build 242) ====
+-- A contract that has been paid in full and is finished with: hidden from the main list and the pick lists, still kept.
+-- Optional: a contract never marked has no value.
+alter table sales
+  add column if not exists is_paid boolean;

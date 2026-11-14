@@ -4,14 +4,15 @@
 // what is unpaid and overdue, and the brokerage that has run up on contracts but has not been billed yet. Each
 // bill is recorded in a form of its own. The arithmetic is in payables.js.
 
-import { db } from '../storage.js?v=241';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=241';
-import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=241';
+import { db } from '../storage.js?v=242';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=242';
+import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=242';
 import {
   KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed,
-} from '../payables.js?v=241';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=241';
-import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=241';
+} from '../payables.js?v=242';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=242';
+import { activeSales } from '../paidsales.js?v=242';
+import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=242';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'unpaid';   // unpaid | paid | all
@@ -173,7 +174,7 @@ export function openBillSheet(existing, defaults = {}) {
         ${field({ label: 'Invoice date', id: 'b-date', type: 'date', value: src.invoiceDate ?? (existing ? '' : today) })}
       </div>
       ${field({ label: 'Due date', id: 'b-due', type: 'date', value: src.dueDate })}
-      ${field({ label: 'For a contract', id: 'b-sale', type: 'select', value: src.saleId ?? '', options: [{ value: '', label: 'Not for one contract' }, ...sales.map((s) => ({ value: s.id, label: contractLabel(s, commodities) }))],
+      ${field({ label: 'For a contract', id: 'b-sale', type: 'select', value: src.saleId ?? '', options: [{ value: '', label: 'Not for one contract' }, ...activeSales(sales, [src.saleId]).map((s) => ({ value: s.id, label: contractLabel(s, commodities) }))],
         hint: 'Brokerage and freight usually are. A freight bill on a contract replaces its Freight ($/t) estimate for those tonnes.' })}
       <div id="b-loc-wrap">
         ${field({ label: 'Storage location', id: 'b-loc', type: 'select', value: src.storageId ?? '', options: [{ value: '', label: 'Not for one location' }, ...locations.map((s) => ({ value: s.id, label: s.name }))] })}
