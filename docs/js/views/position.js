@@ -1,7 +1,7 @@
-import { db } from '../storage.js?v=229';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=229';
-import { num, tons, money, pct, esc } from '../fmt.js?v=229';
-import { payablesCost } from '../payables.js?v=229';
+import { db } from '../storage.js?v=230';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=230';
+import { num, tons, money, pct, esc } from '../fmt.js?v=230';
+import { payablesCost } from '../payables.js?v=230';
 
 let unsub = null;
 

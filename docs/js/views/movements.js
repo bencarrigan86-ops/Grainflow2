@@ -1,15 +1,15 @@
-import { db } from '../storage.js?v=229';
-import { movementsForEndpoint } from '../derived.js?v=229';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=229';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=229';
-import { compressAndStampImage } from '../img.js?v=229';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=229';
-import { specText } from '../outload.js?v=229';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=229';
-import { pickableSilos } from '../silopick.js?v=229';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=229';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=229';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=229';
+import { db } from '../storage.js?v=230';
+import { movementsForEndpoint } from '../derived.js?v=230';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=230';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=230';
+import { compressAndStampImage } from '../img.js?v=230';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=230';
+import { specText } from '../outload.js?v=230';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=230';
+import { pickableSilos } from '../silopick.js?v=230';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=230';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=230';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=230';
 
 let unsub = null;
 
@@ -499,11 +499,32 @@ export function openMovementSheet(existing, template) {
     refreshAll() { this.refreshers.forEach((fn) => fn()); },
   };
 
+  // Orders a load can be put against, from the top of the form: those still taking loads (and the one this load is
+  // already against), soonest deadline first. Choosing one fills in its contract, the commodity and the grade.
+  const saleOfOrder = (o) => sales.find((s) => s.id === o.saleId);
+  const orderOptionLabel = (o) => {
+    const s = saleOfOrder(o);
+    const c = commodities.find((cc) => cc.id === s?.commodityId);
+    return [c?.name, s?.buyer, orderTitle(o), windowText(o, shortDate), `${num(orderState(o, movements, todayLocal()).left, 0)} t left`].filter(Boolean).join(' · ');
+  };
+  const pickableOrders = orders
+    .filter((o) => saleOfOrder(o) && (o.id === existing?.orderId || orderState(o, movements, todayLocal()).active))
+    .sort((a, b) => String(a.deliverBy || '9999').localeCompare(String(b.deliverBy || '9999')));
+
   openSheet(existing ? `Edit movement #${existing.ticketNo ?? ''}` : 'Add movement', (root) => {
     root.innerHTML = `
       <datalist id="dl-regos">${distinctOf(movements, 'truckRego').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
       <datalist id="dl-drivers">${distinctOf(movements, 'driver').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
       ${field({ label: 'Date', id: 'date', type: 'date', value: existing ? existing.date : todayLocal() })}
+      ${pickableOrders.length ? `
+      <div class="field">
+        <label for="m-order">Delivering against an order</label>
+        <select id="m-order">
+          <option value="">No order</option>
+          ${pickableOrders.map((o) => `<option value="${esc(o.id)}" ${o.id === existing?.orderId ? 'selected' : ''}>${esc(orderOptionLabel(o))}</option>`).join('')}
+        </select>
+        <div class="hint" id="m-order-note">Choosing an order fills in its contract, the commodity and the grade.</div>
+      </div>` : ''}
       <div class="field">
         <label>Commodity</label>
         <select id="m-commodity">
@@ -633,6 +654,41 @@ export function openMovementSheet(existing, template) {
     let orderChoice = existing?.orderId ?? null;
     let orderTouched = false;
     let toKind = existingSaleTo ? 'sale' : 'silo';
+
+    // What the chosen order says, under the box at the top: who is carting it, where it goes, by when.
+    function showOrderNote() {
+      const top = root.querySelector('#m-order');
+      if (top) top.value = orderChoice || '';
+      const note = root.querySelector('#m-order-note');
+      if (!note) return;
+      const o = orders.find((x) => x.id === orderChoice);
+      if (!o) { note.textContent = 'Choosing an order fills in its contract, the commodity and the grade.'; return; }
+      const s = saleOfOrder(o);
+      note.textContent = [o.freightCompany ? `Freight: ${o.freightCompany}` : '', s?.location ? `Delivery: ${s.location}` : '', o.deliverBy ? `Deliver by ${shortDate(o.deliverBy)}` : '', o.notes || ''].filter(Boolean).join(' · ');
+    }
+    // Choosing an order at the top: the commodity, the contract it is against and the grade follow it.
+    function applyOrder(id) {
+      orderChoice = id || null;
+      orderTouched = true;
+      const o = orders.find((x) => x.id === id);
+      const s = o && saleOfOrder(o);
+      if (s) {
+        const commodityEl = root.querySelector('#m-commodity');
+        if (s.commodityId && commodityEl.value !== s.commodityId) { commodityEl.value = s.commodityId; commodityEl.dispatchEvent(new Event('change', { bubbles: true })); }
+        if (toKind !== 'sale') root.querySelector('#to-kind [data-kind="sale"]').click();
+        const saleEl = root.querySelector('#to-sale-select');
+        if (saleEl) { saleEl.value = `sale:${s.id}`; saleEl.dispatchEvent(new Event('change', { bubbles: true })); }
+        const gradeEl = root.querySelector('#lq-grade');
+        if (s.grade && gradeEl && !gradeCtl.read()) {
+          gradeEl.value = s.grade;
+          if (gradeEl.value !== s.grade) gradeEl.value = '';
+        }
+      } else {
+        root.querySelector('#to-sale-select')?.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      showOrderNote();
+    }
+    root.querySelector('#m-order')?.addEventListener('change', (e) => applyOrder(e.target.value));
     const toBody = root.querySelector('#to-body');
     function renderToBody() {
       // The To side is rebuilt wholesale when the kind flips, so discard any
@@ -673,7 +729,8 @@ export function openMovementSheet(existing, template) {
                 }).join('')}
               </select>
             </div>`;
-          orderWrap.querySelector('#to-order-select').addEventListener('change', (e) => { orderChoice = e.target.value || null; orderTouched = true; });
+          orderWrap.querySelector('#to-order-select').addEventListener('change', (e) => { orderChoice = e.target.value || null; orderTouched = true; showOrderNote(); });
+          showOrderNote();
         };
         saleSelectEl.addEventListener('change', drawOrders);
         const refreshSale = () => {

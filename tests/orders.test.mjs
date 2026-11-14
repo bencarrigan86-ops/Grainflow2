@@ -216,6 +216,13 @@ check('a movement says which order it was against, an order lists its loads, a c
   assert.match(read('docs/js/views/orders.js'), /Loads against this order/);
   assert.match(read('docs/js/views/sales.js'), /renderContractOrders\(root\.querySelector\('#contract-orders'\)/);
 });
+check('choosing an order at the top of a movement fills in the contract, commodity and grade', () => {
+  const src = read('docs/js/views/movements.js');
+  assert.match(src, /id="m-order"/);
+  assert.match(src, /function applyOrder\(id\)/);
+  assert.match(src, /saleEl\.value = `sale:\$\{s\.id\}`/);
+  assert.match(src, /s\.grade && gradeEl/);
+});
 check('deleting a contract takes its orders with it', () => {
   assert.match(read('docs/js/storage.js'), /gone\.forEach\(\(oid\) => tombstone\('orders', oid\)\)/);
 });
