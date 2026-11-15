@@ -25,6 +25,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ringsAreaHa, simplifyRing } from '../docs/js/farmmap.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -106,6 +107,65 @@ const fields = FIELDS.map(([id, name, areaHa, commodityId, yieldTHa], i) => {
     notes: '',
   };
 });
+
+// ---------------------------------------------------------------------------
+// The farm map. Every paddock gets an outline of exactly its area, laid out on
+// two invented properties so the Farms list and the farm names have something
+// to show. Rows of paddocks with a lane between them; each corner nudged so
+// they do not look drawn with a ruler. The place is made up too: open country
+// with nothing real near it.
+// ---------------------------------------------------------------------------
+
+const MAP_LAT = -33.6;
+const MAP_LON = 148.05;
+const M_LAT = 1 / 110574;                                        // degrees of latitude in a metre
+const M_LON = 1 / (111320 * Math.cos((MAP_LAT * Math.PI) / 180));
+const LANE = 26;                                                  // metres between paddocks
+
+// [property, x of its west edge in metres, rows of [paddock ids] with the row's depth in metres]
+const PROPERTIES = [
+  ['Home Farm', 0, [
+    [1250, ['fld-boundary', 'fld-long']],
+    [1100, ['fld-airstrip', 'fld-stony', 'fld-woolshed']],
+    [900, ['fld-homestead', 'fld-siloblock']],
+  ]],
+  ['River Flats', 4600, [
+    [1100, ['fld-river', 'fld-backcreek']],
+    [1000, ['fld-dam', 'fld-ironbark', 'fld-bore']],
+  ]],
+];
+
+// its own generator, so drawing the map does not move any number elsewhere in the sample farm
+let mapSeed = 77031;
+const mapRnd = () => { mapSeed = (mapSeed * 1103515245 + 12345) & 0x7fffffff; return mapSeed / 0x7fffffff; };
+
+function outlineOf(areaHa, x, y, w, h) {
+  const jig = () => (mapRnd() * 2 - 1) * 9;
+  const pts = [[x, y], [x + w * 0.5, y + jig() * 0.6], [x + w, y], [x + w, y + h], [x + w * 0.5, y + h + jig() * 0.6], [x, y + h]]
+    .map(([px, py]) => [px + jig(), py + jig()]);
+  const ring = [...pts, pts[0]].map(([px, py]) => [MAP_LON + px * M_LON, MAP_LAT - py * M_LAT]);   // y runs south
+  // scaled about its middle until it is exactly the paddock's area, so the map and the typed area agree
+  const cx = ring.reduce((s, p) => s + p[0], 0) / ring.length;
+  const cy = ring.reduce((s, p) => s + p[1], 0) / ring.length;
+  const k = Math.sqrt(areaHa / ringsAreaHa([ring]));
+  return simplifyRing(ring.map(([lon, lat]) => [cx + (lon - cx) * k, cy + (lat - cy) * k]));
+}
+
+for (const [property, x0, rows] of PROPERTIES) {
+  let y = 0;
+  for (const [depth, ids] of rows) {
+    let x = x0;
+    for (const id of ids) {
+      const f = fields.find((q) => q.id === id);
+      // the paddock itself is the row's depth less a lane, as wide as its area needs; the lane is then added for the next one
+      const width = (f.areaHa * 10000) / (depth - LANE);
+      f.boundary = [outlineOf(f.areaHa, x + LANE / 2, y + LANE / 2, width, depth - LANE)];
+      f.property = property;
+      x += width + LANE;
+    }
+    y += depth;
+  }
+}
 
 const tonsOf = (f) => round(f.areaHa * f.yieldTHa, 2);
 

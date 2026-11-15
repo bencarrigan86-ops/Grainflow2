@@ -4,17 +4,17 @@
 // carting it and the buyer's own order number. Everything else about the sale is the contract's and is shown from it.
 // Loads are matched to an order on the movement. The arithmetic is in orders.js.
 
-import { db } from '../storage.js?v=266';
-import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=266';
-import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=266';
-import { movementTonsToSale } from '../derived.js?v=266';
-import { activeSales } from '../paidsales.js?v=266';
-import { movementRow, openMovementSheet } from './movements.js?v=266';
-import { openVendorDecSheet } from './vendordec.js?v=266';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=266';
-import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=266';
-import { freightTitle, freightState, rateText } from '../freight.js?v=266';
-import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=266';
+import { db } from '../storage.js?v=267';
+import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=267';
+import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=267';
+import { movementTonsToSale } from '../derived.js?v=267';
+import { activeSales } from '../paidsales.js?v=267';
+import { movementRow, openMovementSheet } from './movements.js?v=267';
+import { openVendorDecSheet } from './vendordec.js?v=267';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=267';
+import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=267';
+import { freightTitle, freightState, rateText } from '../freight.js?v=267';
+import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=267';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | filled | closed | all

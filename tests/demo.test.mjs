@@ -23,6 +23,7 @@ import { readFileSync } from 'node:fs';
 import { prepareImport, isUuid, remapIds } from '../docs/js/import.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 import { sampleStateFor } from '../docs/js/demo.js';
+import { ringsAreaHa, matchBoundaries } from '../docs/js/farmmap.js';
 
 const raw = readFileSync(new URL('../docs/demo/seed.json', import.meta.url), 'utf8');
 const seed = JSON.parse(raw);
@@ -271,6 +272,43 @@ check('every screen has something on it', () => {
   assert.ok(Object.values(season.overheads).some((v) => v > 0), 'overheads are all zero');
   const states = new Set(season.storages.map((s) => s.fillState));
   assert.ok(states.size >= 2, 'every store is at the same fill state — one volume formula shown');
+});
+
+console.log('\n=== the farm map ===');
+
+check('every paddock has an outline of its own area, on a named farm', () => {
+  for (const f of season.fields) {
+    assert.ok(Array.isArray(f.boundary) && f.boundary[0]?.length >= 4, `${f.name} has no outline`);
+    const ha = ringsAreaHa(f.boundary);
+    assert.ok(Math.abs(ha - f.areaHa) / f.areaHa < 0.01, `${f.name}: outline is ${ha.toFixed(1)} ha, typed ${f.areaHa}`);
+    assert.ok(f.property, `${f.name} is on no farm`);
+  }
+  assert.ok(new Set(season.fields.map((f) => f.property)).size >= 2, 'one farm only: the Farms list has nothing to show');
+});
+check('the outlines are closed, and no two paddocks overlap', () => {
+  const boxes = season.fields.map((f) => {
+    const ring = f.boundary[0];
+    assert.deepEqual(ring[0], ring[ring.length - 1], `${f.name} is not closed`);
+    const xs = ring.map((p) => p[0]); const ys = ring.map((p) => p[1]);
+    return { name: f.name, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+  });
+  for (let i = 0; i < boxes.length; i += 1) for (let j = i + 1; j < boxes.length; j += 1) {
+    const a = boxes[i]; const b = boxes[j];
+    const apart = a.x1 < b.x0 || b.x1 < a.x0 || a.y1 < b.y0 || b.y1 < a.y0;
+    assert.ok(apart, `${a.name} and ${b.name} overlap`);
+  }
+});
+check('the outlines are matched to the paddocks by name the way the importer does', () => {
+  const feats = season.fields.map((f) => ({ name: f.name, rings: f.boundary }));
+  const { matched, unmatched } = matchBoundaries(feats, season.fields);
+  assert.equal(matched.length, season.fields.length);
+  assert.equal(unmatched.length, 0);
+});
+check('the outlines come back from the server with the paddocks', () => {
+  const rows = stateToRows(sampleStateFor(raw, 'Test Farm'), '99999999-9999-9999-9999-999999999999');
+  const back = rowsToState(rows).years;
+  const fields = Object.values(back)[0].fields;
+  assert.ok(fields.every((f) => f.boundary && f.property), 'an outline or farm was lost on the way');
 });
 
 console.log('');
