@@ -1,29 +1,30 @@
-import { db } from '../storage.js?v=272';
-import { getTheme, setTheme } from '../theme.js?v=272';
-import { num, money, esc, todayLocal } from '../fmt.js?v=272';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=272';
-import { openLoadImportSheet } from './importloads.js?v=272';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=272';
-import { openDeletedSheet } from './deleted.js?v=272';
-import { APP_VERSION } from '../version.js?v=272';
-import { exportRowsAsCSV } from '../csv.js?v=272';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=272';
-import { endpointLabel } from './movements.js?v=272';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=272';
-import { layersForStorage } from '../outload.js?v=272';
-import { holdings, totalHeld } from '../offfarm.js?v=272';
-import { kindLabel, billTotal } from '../payables.js?v=272';
-import { orderState, STATE_LABEL } from '../orders.js?v=272';
-import { fieldHarvest } from '../harvest.js?v=272';
-import { openMySignatureSheet } from './signaturepad.js?v=272';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=272';
+import { db } from '../storage.js?v=273';
+import { getTheme, setTheme } from '../theme.js?v=273';
+import { num, money, esc, todayLocal } from '../fmt.js?v=273';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=273';
+import { openLoadImportSheet } from './importloads.js?v=273';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=273';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=273';
+import { openDeletedSheet } from './deleted.js?v=273';
+import { APP_VERSION } from '../version.js?v=273';
+import { exportRowsAsCSV } from '../csv.js?v=273';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=273';
+import { endpointLabel } from './movements.js?v=273';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=273';
+import { layersForStorage } from '../outload.js?v=273';
+import { holdings, totalHeld } from '../offfarm.js?v=273';
+import { kindLabel, billTotal } from '../payables.js?v=273';
+import { orderState, STATE_LABEL } from '../orders.js?v=273';
+import { fieldHarvest } from '../harvest.js?v=273';
+import { openMySignatureSheet } from './signaturepad.js?v=273';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=273';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=272';
+} from '../invites.js?v=273';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=272';
+} from '../auth.js?v=273';
 
 let unsub = null;
 
@@ -156,6 +157,7 @@ function paint(root) {
       <div class="card">
         <h2>Data</h2>
         <div class="field hint" style="margin-bottom:8px">Your farm is kept on this device and synced to the server when you have signal. A backup is your own copy, in case.</div>
+        <div class="hint" id="last-backup" style="margin-bottom:8px">Last backup: ${backupAgeText(lastBackup())}</div>
         <div class="swipe-actions">
           <button class="btn secondary small" id="export">Export backup</button>
           <button class="btn secondary small" id="import">Import backup</button>
@@ -291,13 +293,9 @@ function paint(root) {
   }
 
   root.querySelector('#export').addEventListener('click', () => {
-    const blob = new Blob([db.exportJSON()], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `grainflow-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBackup(db.exportJSON());
+    const line = root.querySelector('#last-backup');
+    if (line) line.textContent = `Last backup: ${backupAgeText(lastBackup())}`;
   });
   root.querySelector('#export-csv').addEventListener('click', () => openExportCsvSheet());
   root.querySelector('#import-loads')?.addEventListener('click', () => openLoadImportSheet());

@@ -1,17 +1,26 @@
-import { db } from '../storage.js?v=272';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=272';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=272';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=272';
-import { describeMerge } from '../merge.js?v=272';
-import { renderRelatedMovements } from './movements.js?v=272';
-import { canSeeYield } from '../nav.js?v=272';
-import { wireJumps } from '../jump.js?v=272';
-import { openMapSheet } from './farmmap.js?v=272';
-import { openInputsSheet } from './inputs.js?v=272';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=272';
-import { stockLevels } from '../inputs.js?v=272';
+import { db } from '../storage.js?v=273';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=273';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=273';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=273';
+import { describeMerge } from '../merge.js?v=273';
+import { renderRelatedMovements } from './movements.js?v=273';
+import { canSeeYield } from '../nav.js?v=273';
+import { wireJumps } from '../jump.js?v=273';
+import { openMapSheet } from './farmmap.js?v=273';
+import { openInputsSheet } from './inputs.js?v=273';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=273';
+import { stockLevels } from '../inputs.js?v=273';
+import { fieldHistory, rotationText, repeatCrops } from '../fieldhistory.js?v=273';
+import { openRotationSheet } from './rotation.js?v=273';
 
 let unsub = null;
+
+/** A commodity's share of the farm's area: '38%', or '<1%' for a sliver. */
+const areaShare = (area, total) => {
+  if (!(total > 0) || !(area > 0)) return '0%';
+  const p = (area / total) * 100;
+  return p < 1 ? '<1%' : `${Math.round(p)}%`;
+};
 
 export function renderProduction(root) {
   if (unsub) unsub();
@@ -41,6 +50,7 @@ function paint(root) {
     </div>
     <div class="view">
       ${fields.length ? `<button type="button" class="btn secondary" id="open-map" style="margin-bottom:12px">Farm map${fields.some((f) => f.boundary) ? ` &middot; ${fields.filter((f) => f.boundary).length} of ${fields.length} paddocks mapped` : ' &middot; add your paddock outlines'}</button>` : ''}
+      ${fields.length && db.getYears().length > 1 ? '<button type="button" class="btn secondary" id="open-rotation" style="margin-bottom:12px">Rotation and yield history &middot; every paddock, every season</button>' : ''}
       ${canSeeInputs ? `<button type="button" class="btn secondary" id="open-inputs" style="margin-bottom:12px">Inputs and stock${inputProducts ? ` &middot; ${inputProducts} product${inputProducts === 1 ? '' : 's'} in stock` : ' &middot; seed, fertiliser, fuel, chemical'}</button>` : ''}
       ${sprayAllowed && fields.length ? `<button type="button" class="btn secondary" id="open-spray" style="margin-bottom:12px">Spray requests${sprayOpen ? ` &middot; ${sprayOpen} open` : ' &middot; send a job to a contractor'}</button>` : ''}
       ${rollup.length === 0 ? '' : `
@@ -48,18 +58,20 @@ function paint(root) {
         <h2><span class="dot report"></span>By commodity</h2>
         <div class="table-scroll">
           <table>
-            <thead><tr><th>Commodity</th><th>Area</th>${showYield ? '<th>Yield</th><th>Tons</th>' : ''}</tr></thead>
+            <thead><tr><th>Commodity</th><th>Area</th><th>% of area</th>${showYield ? '<th>Yield</th><th>Tons</th>' : ''}</tr></thead>
             <tbody>
               ${rollup.map((r) => `
                 <tr class="jump-row" data-jump="grp-${esc(r.commodity.id)}">
                   <td><button type="button" class="jump-link">${esc(r.commodity.name)}</button></td>
                   <td>${num(r.area, 0)}</td>
+                  <td>${areaShare(r.area, productionTotals.area)}</td>
                   ${showYield ? `<td>${num(r.yieldTHa, 2)}</td><td>${num(r.tons, 0)}</td>` : ''}
                 </tr>`).join('')}
             </tbody>
             <tfoot><tr>
               <td>Total</td>
               <td>${num(productionTotals.area, 0)}</td>
+              <td>${productionTotals.area > 0 ? '100%' : ''}</td>
               ${showYield ? `<td>${num(productionTotals.yieldTHa, 2)}</td><td>${num(productionTotals.tons, 0)}</td>` : ''}
             </tr></tfoot>
           </table>
@@ -85,6 +97,7 @@ function paint(root) {
   });
   root.querySelector('#add-field').addEventListener('click', () => openFieldSheet(null));
   root.querySelector('#open-inputs')?.addEventListener('click', () => openInputsSheet());
+  root.querySelector('#open-rotation')?.addEventListener('click', () => openRotationSheet());
   root.querySelector('#open-map')?.addEventListener('click', () => openMapSheet({
     onOpenField: openFieldSheet,
     onSpray: canSpray(db.getRole()) ? (ids) => openSprayFormSheet(null, { ids }) : undefined,
@@ -193,6 +206,7 @@ export function openFieldSheet(existing) {
       </details>
       <div style="height:12px"></div>
       ${field({ label: 'Notes', id: 'notes', type: 'textarea', value: existing?.notes })}
+      ${existing ? historyHtml(existing, showYield) : ''}
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       ${existing && ['owner', 'manager'].includes(db.getRole()) && db.get().fields.length > 1 ? `<button class="btn secondary" id="merge-field" style="margin-top:12px">Merge another paddock into this one&hellip;</button>` : ''}
       ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
@@ -502,4 +516,21 @@ function openMergeSheet(keep) {
       else notify('Those paddocks could not be merged.');
     });
   });
+}
+
+/** This paddock across the seasons it is in: crop, area, tonnes and yield, and the rotation in a line. */
+function historyHtml(existing, showYield) {
+  const years = Object.fromEntries(db.getYears().map((y) => [y, db.getYearData(y)]));
+  const rows = fieldHistory(existing.name, years);
+  if (rows.length < 2) return '';
+  const again = repeatCrops(rows);
+  return `
+    <details class="fold" style="margin:12px 0">
+      <summary><div><h2>History</h2><div class="sub">${esc(rotationText(rows))}</div></div></summary>
+      <div class="table-scroll"><table>
+        <thead><tr><th style="text-align:left">Season</th><th style="text-align:left">Crop</th><th>Ha</th>${showYield ? '<th>t/ha</th><th>Tons</th>' : ''}</tr></thead>
+        <tbody>${rows.map((r) => `<tr><td style="text-align:left">${esc(r.year)}</td><td style="text-align:left">${esc(r.crop || '–')}</td><td>${num(r.areaHa, 0)}</td>${showYield ? `<td>${num(r.yieldTHa, 2)}</td><td>${num(r.tons, 0)}${r.actual ? '' : ' <span class="meta">est</span>'}</td>` : ''}</tr>`).join('')}</tbody>
+      </table></div>
+      ${again.length ? `<div class="hint" style="margin-top:6px">${esc(rows.find((r) => r.year === again[0][1]).crop)} two seasons running: ${again.map(([a, b]) => `${esc(a)} and ${esc(b)}`).join('; ')}.</div>` : ''}
+    </details>`;
 }

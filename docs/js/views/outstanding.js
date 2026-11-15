@@ -4,15 +4,19 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=272';
-import { openSheet } from '../ui.js?v=272';
-import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=272';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=272';
-import { windowText } from '../orders.js?v=272';
-import { openOrderSheet } from './orders.js?v=272';
-import { openInvoiceListSheet } from './invoice.js?v=272';
-import { renderPayables, returnToAfterBill } from './payables.js?v=272';
-import { openXeroSheet } from './xero.js?v=272';
+import { db } from '../storage.js?v=273';
+import { openSheet } from '../ui.js?v=273';
+import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=273';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=273';
+import { windowText } from '../orders.js?v=273';
+import { openOrderSheet } from './orders.js?v=273';
+import { openInvoiceListSheet } from './invoice.js?v=273';
+import { renderPayables, returnToAfterBill } from './payables.js?v=273';
+import { openXeroSheet } from './xero.js?v=273';
+import { cashflow } from '../cashflow.js?v=273';
+import { buyerStatements, statementPdf } from '../statement.js?v=273';
+import { sharePdf } from '../sharefile.js?v=273';
+import { emailIn } from '../vendordec.js?v=273';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -23,7 +27,7 @@ const END_BADGE = { ended: 'neg', soon: 'warn', ok: 'pos', none: 'muted' };
 const END_WORD = { ended: 'Past end', soon: 'Ending soon', ok: 'In window', none: 'No end date' };
 
 // which side of the money the sheet shows, and the deliveries filter; kept while the app is open
-let moneySide = 'in';          // in | out
+let moneySide = 'in';          // in | out | month | buyer
 let deliveriesFilter = '';     // '' | ended | soon
 let deliveriesView = 'timeline'; // timeline | list
 
@@ -126,8 +130,10 @@ export function openMoneySheet() {
         <div class="segmented" id="money-side" style="margin:12px 0 10px">
           <button data-side="in" class="${moneySide === 'in' ? 'active' : ''}">Receivables</button>
           <button data-side="out" class="${moneySide === 'out' ? 'active' : ''}">Payables</button>
+          <button data-side="month" class="${moneySide === 'month' ? 'active' : ''}">By month</button>
+          <button data-side="buyer" class="${moneySide === 'buyer' ? 'active' : ''}">By buyer</button>
         </div>
-        ${moneySide === 'out' ? '<div id="money-bills"></div>' : `
+        ${moneySide === 'month' ? cashflowHtml(cashflow(invoices, sales, db.getPayables(), today)) : moneySide === 'buyer' ? buyersHtml(buyerStatements(invoices, sales, movements, today), commodities) : moneySide === 'out' ? '<div id="money-bills"></div>' : `
         <div class="subhead">Delivered, not yet invoiced</div>
         ${unb.rows.length === 0 ? '<div class="empty" style="padding:6px 0">Every delivery is on an invoice.</div>' : `
         <div class="hint" style="margin-bottom:6px">${num(unb.total.tons, 1)} t worth about ${money(unb.total.value, 0)} has gone to buyers with no invoice yet. Tap a contract to invoice it.</div>
@@ -156,9 +162,55 @@ export function openMoneySheet() {
       root.querySelectorAll('[data-invoice-sale]').forEach((el) => el.addEventListener('click', () => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.invoiceSale))));
       root.querySelectorAll('[data-open-invoices]').forEach((el) => el.addEventListener('click', () => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.openInvoices))));
       root.querySelector('#open-xero')?.addEventListener('click', () => openXeroSheet());
+      root.querySelectorAll('[data-statement]').forEach((b) => b.addEventListener('click', () => sendStatement(b.dataset.statement, { invoices, sales, movements, commodities, today })));
       const bills = root.querySelector('#money-bills');
       if (bills) renderPayables(bills, { stats: false });
     };
     draw();
+  });
+}
+
+/** The next months' money in and out, by the month each falls due, with a running balance. */
+function cashflowHtml(cf) {
+  const neg = (n) => (n < 0 ? 'style="color:var(--danger)"' : '');
+  return `
+    <div class="hint" style="margin-bottom:8px">Unpaid invoices coming in and unpaid bills going out, by the month each is due. Grain delivered but not yet invoiced is not in here, as it has no due date yet.</div>
+    <div class="table-scroll"><table>
+      <thead><tr><th style="text-align:left">When</th><th>In</th><th>Out</th><th>Running</th></tr></thead>
+      <tbody>${cf.rows.map((r) => `
+        <tr>
+          <td style="text-align:left;${r.key === 'overdue' ? 'color:var(--danger);font-weight:600' : ''}">${esc(r.label)}${r.inCount + r.outCount ? `<div class="meta" style="font-size:11px">${r.inCount ? `${r.inCount} invoice${r.inCount === 1 ? '' : 's'}` : ''}${r.inCount && r.outCount ? ', ' : ''}${r.outCount ? `${r.outCount} bill${r.outCount === 1 ? '' : 's'}` : ''}</div>` : ''}</td>
+          <td>${r.in ? money(r.in, 0) : '&ndash;'}</td>
+          <td>${r.out ? money(r.out, 0) : '&ndash;'}</td>
+          <td ${neg(r.balance)}>${money(r.balance, 0)}</td>
+        </tr>`).join('')}</tbody>
+      <tfoot><tr><td style="text-align:left">Total</td><td>${money(cf.totalIn, 0)}</td><td>${money(cf.totalOut, 0)}</td><td ${neg(cf.net)}>${money(cf.net, 0)}</td></tr></tfoot>
+    </table></div>`;
+}
+
+/** What each buyer owes: unpaid invoices plus grain not yet invoiced, with a statement to send. */
+function buyersHtml(list, commodities) {
+  if (!list.length) return '<div class="empty" style="padding:6px 0">No buyer owes you anything, and every delivery is on an invoice.</div>';
+  return `
+    <div class="hint" style="margin-bottom:8px">What each buyer owes: unpaid invoices, and grain delivered to them that is not on an invoice yet. Send a buyer their statement as a PDF.</div>
+    ${list.map((b) => `
+      <div class="list-item stack">
+        <div class="li-top"><div class="main">${esc(b.buyer)}</div><div class="main">${money(b.owing, 0)}</div></div>
+        <div class="meta">${b.unpaid.length ? `${b.unpaid.length} unpaid invoice${b.unpaid.length === 1 ? '' : 's'} · ${money(b.unpaidTotal, 0)}` : 'No unpaid invoices'}${b.notInvoicedValue ? ` · ${num(b.notInvoicedTons, 1)} t not invoiced, ${money(b.notInvoicedValue, 0)}` : ''}</div>
+        <div class="li-foot"><span class="badges">${b.overdueTotal ? `<span class="badge neg">${money(b.overdueTotal, 0)} overdue</span>` : '<span class="badge muted">None overdue</span>'}</span>
+          <button type="button" class="btn secondary small" data-statement="${esc(b.key)}">Send statement</button></div>
+      </div>`).join('')}`;
+}
+
+/** Makes the buyer's statement as a PDF and sends it on: the share sheet on a phone, a download and an email on a computer. */
+async function sendStatement(key, { invoices, sales, movements, commodities, today }) {
+  const st = buyerStatements(invoices, sales, movements, today).find((b) => b.key === key);
+  if (!st) return;
+  const biz = db.getBusinessDetails();
+  const bytes = statementPdf(st, { businessName: biz.entityName || biz.farmName || '', abn: biz.abn || '', today, contractName: (s) => contractLabel(s, commodities) });
+  const to = emailIn(sales.find((s) => String(s.buyer || '').trim().toLowerCase() === key && emailIn(s.buyerContact))?.buyerContact) || '';
+  await sharePdf(bytes, `Statement ${st.buyer} ${today}`, {
+    title: `Statement from ${biz.entityName || biz.farmName || 'us'}`, text: `Statement for ${st.buyer}, ${today}.`,
+    mail: { to, subject: `Statement for ${st.buyer} as at ${today}`, body: 'Please find our statement attached.' },
   });
 }

@@ -1,9 +1,29 @@
-import { db } from '../storage.js?v=272';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=272';
-import { num, tons, money, pct, esc } from '../fmt.js?v=272';
-import { payablesCost } from '../payables.js?v=272';
-import { openEofySheet } from './eofy.js?v=272';
-import { startProgress } from '../helpcontent.js?v=272';
+import { db } from '../storage.js?v=273';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=273';
+import { num, tons, money, pct, esc } from '../fmt.js?v=273';
+import { payablesCost } from '../payables.js?v=273';
+import { openEofySheet } from './eofy.js?v=273';
+import { startProgress } from '../helpcontent.js?v=273';
+import { attentionItems } from '../attention.js?v=273';
+import { lastBackup } from '../backup.js?v=273';
+import { todayLocal } from '../fmt.js?v=273';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=273';
+
+const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
+
+/** The things that need looking at today, a line each; empty when there is nothing. */
+function attentionCard() {
+  const { invoices, sales, movements } = db.get();
+  const items = attentionItems({ role: db.getRole(), today: todayLocal(), invoices, sales, movements, orders: db.getOrders(), payables: db.getPayables(), lastBackup: lastBackup() });
+  if (!items.length) return '';
+  return `<div class="card" id="attention-card">
+        <h2>Needs attention</h2>
+        ${items.map((i) => `<div class="list-item" data-attn="${esc(i.action)}" style="cursor:pointer">
+          <div style="display:flex;align-items:flex-start;gap:10px"><span aria-hidden="true" style="width:10px;height:10px;border-radius:50%;flex:none;margin-top:6px;background:${TONE[i.tone]}"></span>
+            <div><div class="main">${esc(i.title)}</div><div class="meta">${esc(i.detail)}</div></div></div>
+        </div>`).join('')}
+      </div>`;
+}
 
 let unsub = null;
 
@@ -51,6 +71,7 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      ${attentionCard()}
       ${startCard()}
       <button class="btn secondary" id="open-eofy" style="margin-bottom:12px">End of year snapshot</button>
       <div class="stat-grid">
@@ -81,6 +102,12 @@ function paint(root) {
   `;
   root.querySelector('#open-eofy').addEventListener('click', openEofySheet);
   root.querySelectorAll('[data-start-go]').forEach((el) => el.addEventListener('click', () => { location.hash = `#/${el.dataset.startGo}`; }));
+  root.querySelectorAll('[data-attn]').forEach((el) => el.addEventListener('click', () => {
+    const go = el.dataset.attn;
+    if (go === 'money') openMoneySheet();
+    else if (go === 'deliveries') openDeliveriesSheet();
+    else if (go === 'settings') location.hash = '#/settings';
+  }));
   root.querySelector('#start-help')?.addEventListener('click', () => { location.hash = '#/help'; });
   root.querySelector('#start-hide')?.addEventListener('click', () => { try { localStorage.setItem(START_HIDDEN, '1'); } catch { /* shown again next time */ } paint(root); });
 }
