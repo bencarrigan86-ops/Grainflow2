@@ -69,6 +69,17 @@ check('a missing heading, a row without tonnes or a price, and a date that canno
   assert.equal(r.rows[0].date, '');
   assert.match(r.warnings[0], /sometime/);
 });
+check('a day past the end of its month is not read as a date, and one already stored is sent as the last day of the month', () => {
+  const r = parsePastSales('Season,Commodity,Tonnes,Price,Buyer,Delivery to\n2020,Barley,10,300,Acme,31/11/2020');
+  assert.equal(r.rows[0].deliveryEnd, '');
+  assert.match(r.warnings[0], /31\/11\/2020/);
+  const sale = { id: 's1', date: '2020-02-30', deliveryStart: '2020-10-15', deliveryEnd: '2020-11-31', commodityId: 'c', tons: 10, price: 300 };
+  const state = { currentYear: '2020', years: { 2020: { __seasonId: 'sid', commodities: [], fields: [], sales: [sale] } } };
+  const row = stateToRows(state, '11111111-1111-4111-8111-111111111111').sales[0];
+  assert.equal(row.delivery_end, '2020-11-30');
+  assert.equal(row.sale_date, '2020-02-29');
+  assert.equal(row.delivery_start, '2020-10-15');
+});
 
 console.log('\n=== what each season would get ===');
 const seasons = [
