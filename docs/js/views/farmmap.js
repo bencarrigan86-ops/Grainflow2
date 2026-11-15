@@ -4,14 +4,14 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=254';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=254';
-import { esc, num, todayLocal, dmy } from '../fmt.js?v=254';
-import { sharePdf, safeFileName } from '../sharefile.js?v=254';
-import { buildFarmMapPdf } from '../spraypdf.js?v=254';
+import { db } from '../storage.js?v=256';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=256';
+import { esc, num, todayLocal, dmy } from '../fmt.js?v=256';
+import { sharePdf, safeFileName } from '../sharefile.js?v=256';
+import { buildFarmMapPdf } from '../spraypdf.js?v=256';
 import {
   readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx, farmLabelPx, commonLabelPx,
-} from '../farmmap.js?v=254';
+} from '../farmmap.js?v=256';
 
 const MAX_ZOOM = 40;
 const MIN_LABEL_PX = 6.5;    // the smallest writing a paddock's name is shown in, on screen
@@ -25,6 +25,10 @@ const readShow = () => {
 // which farms are switched off, remembered on this device
 const HIDDEN_KEY = 'grainflow.farmmap.hidden';
 const readHidden = () => { try { const h = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]'); return Array.isArray(h) ? h : []; } catch { return []; } };
+// whether the Farms list is open, remembered on this device (open until you fold it away)
+const FARMS_OPEN_KEY = 'grainflow.farmmap.farmsopen';
+const readFarmsOpen = () => { try { return localStorage.getItem(FARMS_OPEN_KEY) !== '0'; } catch { return true; } };
+const saveFarmsOpen = (open) => { try { localStorage.setItem(FARMS_OPEN_KEY, open ? '1' : '0'); } catch { /* not remembered */ } };
 const saveHidden = (list) => { try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(list)); } catch { /* not remembered */ } };
 const saveShow = (show) => { try { localStorage.setItem(SHOW_KEY, JSON.stringify(show)); } catch { /* private mode: it just is not remembered */ } };
 
@@ -50,6 +54,7 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
       const layout = mapLayout(mapped.map((f) => ({ id: f.id, name: f.name, farm: f.property, color: colourOf(f), rings: f.boundary })));
       const groups = farmGroups(layout.items, readHidden());
       const hasFarms = groups.some((g) => g.name !== NO_FARM);
+      const farmSummary = (showing = groups.filter((g) => !g.hidden).length) => `${groups.length} farm${groups.length === 1 ? '' : 's'}, ${showing === groups.length ? 'all showing' : `${showing} showing`}`;
       const vb = layout.viewBox;
       const unmapped = fields.filter((f) => !f.boundary?.length);
       const mappedHa = mapped.reduce((s, f) => s + (Number(f.areaHa) || 0), 0);
@@ -79,9 +84,10 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="fm-areas" style="width:18px;height:18px" /> Areas (ha)</label>
         </div>
         ${hasFarms ? `<div class="card" style="margin-top:12px">
-          <h2>Farms</h2>
+          <details class="fold" id="fm-farms" style="margin-top:0;border-top:none" ${readFarmsOpen() ? 'open' : ''}><summary><div><h2>Farms</h2><div class="sub" id="fm-farmsub">${farmSummary()}</div></div></summary>
           ${groups.map((g) => `<label class="row" style="cursor:pointer"><span class="label"><input type="checkbox" class="fm-farm" data-farm="${esc(g.name)}" ${g.hidden ? '' : 'checked'} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />${esc(g.name)}</span><span class="value">${g.paddocks} &middot; ${num(g.ha, 0)} ha</span></label>`).join('')}
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px"><input type="checkbox" id="fm-farmnames" style="width:18px;height:18px" /> Farm names on the map</label>
+          </details>
         </div>` : ''}
         <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0">
           ${inUse.map((c, i) => `<span class="meta"><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${PALETTE[i % PALETTE.length]};vertical-align:-1px"></span> ${esc(c.name)}</span>`).join('')}
@@ -91,7 +97,8 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
         ${pick ? '<button type="button" class="btn secondary" id="fm-pickcancel" style="margin-top:6px">Cancel</button>' : `
         ${onSpray ? '<button type="button" class="btn" id="fm-spray" style="margin-top:6px">Spray request from this map</button>' : ''}
         <button type="button" class="btn secondary" id="fm-pdf" style="margin-top:8px">Send this view as a PDF</button>
-        <div class="hint" style="margin-top:4px">The PDF shows what is on the map now: zoom to the area you want and switch off the farms you do not.</div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px"><input type="checkbox" id="fm-pdftotals" style="width:18px;height:18px" /> Paddock and hectare totals on the PDF</label>
+        <div class="hint" style="margin-top:4px">The PDF shows what is on the map now: zoom to the area you want, switch off the farms you do not, and the Names, Areas and Farm names ticks above decide what is written on it.</div>
         <button type="button" class="btn secondary" id="fm-update" style="margin-top:8px">Update from a file</button>
         <button type="button" class="btn ghost-danger" id="fm-clear" style="margin-top:8px">Remove the map</button>`}`;
 
@@ -112,12 +119,16 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
         onOpenField, onSpray,
         pick: { ids: [], onDone: (ids) => onSpray(ids), onCancel: () => openMapSheet({ onOpenField, onSpray }) },
       }));
+      const totalsBox = root.querySelector('#fm-pdftotals');
+      if (totalsBox) { totalsBox.checked = readShow().totals !== false; totalsBox.addEventListener('change', () => saveShow({ ...readShow(), totals: totalsBox.checked })); }
       root.querySelector('#fm-pdf')?.addEventListener('click', async (e) => {
         const btn = e.currentTarget; btn.disabled = true;
         try {
           const business = db.getBusinessDetails();
           const legend = [...inUse.map((c, i) => ({ name: c.name, color: PALETTE[i % PALETTE.length] })), ...(mapped.some((f) => colourOf(f) === NO_CROP) ? [{ name: 'No crop set', color: NO_CROP }] : [])];
+          const shown = readShow();
           const bytes = await buildFarmMapPdf(layout, {
+            showNames: shown.names, showAreas: shown.areas, showFarmNames: shown.farmNames !== false, showTotals: shown.totals !== false,
             title: 'Farm map', date: todayLocal(), legend, hiddenFarms: readHidden(), view: mapApi.getView(),
             subtitle: [business.entityName || business.farmName, db.getCurrentYear()].filter(Boolean).join('  ·  '),
           });
@@ -202,13 +213,15 @@ function wireMap(root, full, layout, open, { groups = [] } = {}) {
   };
   const nameBox = root.querySelector('#fm-names'); const areaBox = root.querySelector('#fm-areas');
   nameBox.checked = show.names; areaBox.checked = show.areas;
-  const ticked = () => { show.names = nameBox.checked; show.areas = areaBox.checked; saveShow(show); labels(); };
+  const ticked = () => { show.names = nameBox.checked; show.areas = areaBox.checked; saveShow({ ...readShow(), names: show.names, areas: show.areas }); labels(); };
   nameBox.addEventListener('change', ticked); areaBox.addEventListener('change', ticked);
   const farmNamesBox = root.querySelector('#fm-farmnames');
-  if (farmNamesBox) { farmNamesBox.checked = show.farmNames !== false; farmNamesBox.addEventListener('change', () => { show.farmNames = farmNamesBox.checked; saveShow(show); labels(); }); }
+  if (farmNamesBox) { farmNamesBox.checked = show.farmNames !== false; farmNamesBox.addEventListener('change', () => { show.farmNames = farmNamesBox.checked; saveShow({ ...readShow(), farmNames: show.farmNames }); labels(); }); }
+  root.querySelector('#fm-farms')?.addEventListener('toggle', (e) => saveFarmsOpen(e.currentTarget.open));
   root.querySelectorAll('.fm-farm').forEach((box) => box.addEventListener('change', () => {
     if (box.checked) hidden.delete(box.dataset.farm); else hidden.add(box.dataset.farm);
     saveHidden([...hidden]);
+    const sub = root.querySelector('#fm-farmsub'); if (sub) sub.textContent = `${groups.length} farm${groups.length === 1 ? '' : 's'}, ${groups.length - hidden.size === groups.length ? 'all showing' : `${groups.length - hidden.size} showing`}`;
     applyFarms(); fitToVisible(); fit();
   }));
   const zoomAt = (factor, cx = 0.5, cy = 0.5) => {         // cx, cy: where on the map to hold still, as a fraction of it

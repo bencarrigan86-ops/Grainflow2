@@ -272,5 +272,21 @@ await check('a name is written as large as its paddock allows: it grows as you z
   assert.ok(v.includes('common * 1.5, 22'), 'a farm name is never smaller than the paddock names');
 });
 
+await check('the map PDF follows the Names, Areas and Farm names ticks and has its own tick for the totals', () => {
+  const v = read('docs/js/views/farmmap.js'); const p = read('docs/js/spraypdf.js');
+  assert.ok(v.includes('id="fm-pdftotals"') && v.includes('totals: totalsBox.checked'));
+  assert.ok(v.includes('showNames: shown.names, showAreas: shown.areas, showFarmNames: shown.farmNames !== false, showTotals: shown.totals !== false'));
+  assert.ok(v.includes('saveShow({ ...readShow(), names: show.names, areas: show.areas })'), 'ticking Names must not lose the totals tick');
+  assert.ok(p.includes('showTotals = true') && p.includes('if (showTotals) text(page, A4.w - 40, 50'), 'totals are on unless switched off');
+  assert.ok(p.includes('if (names) text(page, l.x, l.y - 1') && p.includes('if (areas && l.size >= 6)') && p.includes('showFarmNames ? farmGroups'));
+});
+
+await check('the Farms list on the map sheet folds away, and stays as you left it', () => {
+  const v = read('docs/js/views/farmmap.js');
+  assert.ok(v.includes('<details class="fold" id="fm-farms"') && v.includes("readFarmsOpen() ? 'open' : ''"));
+  assert.ok(v.includes("saveFarmsOpen(e.currentTarget.open)") && v.includes("localStorage.getItem(FARMS_OPEN_KEY) !== '0'"), 'open until you fold it');
+  assert.ok(v.includes('id="fm-farmsub"') && v.includes('all showing'), 'the folded heading says how many farms are showing');
+});
+
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
 console.log('\nall passed');

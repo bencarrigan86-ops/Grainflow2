@@ -6,11 +6,11 @@
 
 import {
   AIRCAIR_LAYOUT, CHECKLIST, aircairOps, standardOps, sprayMapPlan, mapPageText, sprayRows, sprayTotals, plain, fitText, A4,
-} from './spray.js?v=254';
-import { wrapText } from './pdf.js?v=254';
-import { ASPECT, strokesInBox } from './signature.js?v=254';
-import { NO_FARM, farmGroups } from './farmmap.js?v=254';
-import { dmy } from './fmt.js?v=254';
+} from './spray.js?v=256';
+import { wrapText } from './pdf.js?v=256';
+import { ASPECT, strokesInBox } from './signature.js?v=256';
+import { NO_FARM, farmGroups } from './farmmap.js?v=256';
+import { dmy } from './fmt.js?v=256';
 
 const PDF_LIB = 'https://esm.sh/pdf-lib@1.17.1';
 const AIRCAIR_URL = './forms/aircair-spray-request.pdf';
@@ -188,7 +188,7 @@ async function addMapPage(doc, lib, job, layout, text) {
  * The map itself inside its frame: paddocks, their names, north and a scale bar. With `tint` every paddock is filled with
  * its own colour (the farm map); without it the paddocks to spray are red among grey ones (a spray request).
  */
-function drawMapBox(page, lib, plan, box, text, { tint = false } = {}) {
+function drawMapBox(page, lib, plan, box, text, { tint = false, names = true, areas = true } = {}) {
   const { rgb, pushGraphicsState, popGraphicsState, rectangle, clip, endPath } = lib;
   const H = A4.h;
   // frame and a light ground
@@ -214,9 +214,10 @@ function drawMapBox(page, lib, plan, box, text, { tint = false } = {}) {
   const black = rgb(0, 0, 0);
   for (const l of plan.labels) {
     if (l.selected) {
-      text(page, l.x, l.y - 1, fitText(l.name, 110, l.size, { bold: true, min: 4 }).text, { size: l.size, isBold: true, align: 'center', color: black });
-      if (l.size >= 6) text(page, l.x, l.y + l.size, `${plain(l.areaHa, 1)} ha`, { size: l.size * 0.85, align: 'center', color: black });
-    } else {
+      if (names) text(page, l.x, l.y - 1, fitText(l.name, 110, l.size, { bold: true, min: 4 }).text, { size: l.size, isBold: true, align: 'center', color: black });
+      // the area sits under the name, or alone when the names are off
+      if (areas && l.size >= 6) text(page, l.x, names ? l.y + l.size : l.y + l.size * 0.35, `${plain(l.areaHa, 1)} ha`, { size: l.size * 0.85, align: 'center', color: black });
+    } else if (names) {
       text(page, l.x, l.y + 2, fitText(l.name, 70, l.size, { min: 4 }).text, { size: l.size, align: 'center', color: rgb(0.4, 0.42, 0.4) });
     }
   }
@@ -244,7 +245,7 @@ function drawMapBox(page, lib, plan, box, text, { tint = false } = {}) {
  * area, the farms labelled, north and a scale. `legend` is [{name, color}], `hiddenFarms` the farms switched off.
  * @returns {Promise<Uint8Array>}
  */
-export async function buildFarmMapPdf(layout, { title = 'Farm map', subtitle = '', legend = [], hiddenFarms = [], date = '', view = null } = {}) {
+export async function buildFarmMapPdf(layout, { title = 'Farm map', subtitle = '', legend = [], hiddenFarms = [], date = '', view = null, showNames = true, showAreas = true, showFarmNames = true, showTotals = true } = {}) {
   const lib = await loadLib();
   const { PDFDocument, StandardFonts, rgb } = lib;
   const doc = await PDFDocument.create();
@@ -266,14 +267,14 @@ export async function buildFarmMapPdf(layout, { title = 'Farm map', subtitle = '
   const shown = items.filter(inside).length ? items.filter(inside) : (items.length ? items : layout.items);
   const ha = shown.reduce((s, i) => s + i.areaHa, 0);
   text(page, 40, 50, title.toUpperCase(), { size: 18, isBold: true });
-  text(page, A4.w - 40, 50, `${shown.length} paddock${shown.length === 1 ? '' : 's'}, ${plain(ha, 0)} ha`, { size: 11, isBold: true, align: 'right' });
+  if (showTotals) text(page, A4.w - 40, 50, `${shown.length} paddock${shown.length === 1 ? '' : 's'}, ${plain(ha, 0)} ha`, { size: 11, isBold: true, align: 'right' });
   if (subtitle) text(page, 40, 66, fitText(subtitle, A4.w - 80, 9.5).text, { size: 9.5, color: rgb(0.2, 0.2, 0.2) });
 
   const box = { x: 40, y: 80, w: A4.w - 80, h: 640 };
   const plan = sprayMapPlan({ items: shown, selectedIds: [], box, margin: 0.06, minSpanM: 600, named: true, view });
-  drawMapBox(page, lib, plan, box, text, { tint: true });
+  drawMapBox(page, lib, plan, box, text, { tint: true, names: showNames, areas: showAreas });
   // farm names, over the paddocks
-  for (const g of farmGroups(shown, [])) {
+  for (const g of showFarmNames ? farmGroups(shown, []) : []) {
     if (g.name === NO_FARM) continue;
     const x = box.x + (g.cx - plan.vx0) * plan.s; const y = box.y + (g.cy - plan.vy0) * plan.s;
     if (x < box.x || x > box.x + box.w || y < box.y || y > box.y + box.h) continue;
