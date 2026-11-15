@@ -4,10 +4,10 @@
 // each crop's yield by season), so what is exported is what is shown. A role that is not shown yields is not given them
 // here either: `showYield` false leaves out every tonnage and yield and the crop table. Pure: it builds text and bytes.
 
-import { toCSV } from './csv.js?v=280';
-import { Pdf, wrapText, textWidth } from './pdf.js?v=280';
-import { PALETTE } from './farmmap.js?v=280';
-import { cropYields } from './fieldhistory.js?v=280';
+import { toCSV } from './csv.js?v=281';
+import { Pdf, wrapText, textWidth } from './pdf.js?v=281';
+import { PALETTE } from './farmmap.js?v=281';
+import { cropYields } from './fieldhistory.js?v=281';
 
 const round = (n, dp = 2) => { const f = 10 ** dp; return Math.round((Number(n) || 0) * f) / f; };
 
@@ -107,7 +107,7 @@ export function rotationPdf(grid, { orientation = 'landscape', showYield = true,
   const PAGE = SIZES[o];
   const NAME_W = nameWidth(o);
   const pdf = new Pdf(PAGE);
-  const tint = (crop) => { const i = grid.crops.indexOf(crop); return i < 0 ? null : tintOf(PALETTE[i % PALETTE.length]); };
+  const tint = (crop) => { const i = (grid.allCrops || grid.crops).indexOf(crop); return i < 0 ? null : tintOf(PALETTE[i % PALETTE.length]); };
   const yields = areaSummary(grid);
   const SUM_H = showYield ? 26 : 18;
   const groups = seasonGroups(grid.seasons, seasonsPerPage(o));

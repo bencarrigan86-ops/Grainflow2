@@ -4,7 +4,7 @@
 // season it was in, the crop, the area, the tonnes (the actual loads once the paddock is on actual, otherwise the
 // estimate) and the yield. This is the rotation question: what went where, and how did it do. Pure.
 
-import { fieldTons } from './derived.js?v=280';
+import { fieldTons } from './derived.js?v=281';
 
 const key = (name) => String(name || '').trim().toLowerCase();
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -74,6 +74,25 @@ export function rotationGrid(years) {
   for (const r of rows) r.repeats = repeatCrops(seasons.filter((s) => r.cells[s]).map((s) => ({ year: s, crop: r.cells[s].crop })));
   const crops = [...new Set(rows.flatMap((r) => Object.values(r.cells).map((c) => c.crop)).filter(Boolean))].sort(natural);
   return { seasons, crops, rows };
+}
+
+/** The farms (property names) in the grid with how many paddocks each has; '' is paddocks with no farm name. */
+export function rotationFarms(grid) {
+  const counts = new Map();
+  for (const r of grid.rows) counts.set(r.property || '', (counts.get(r.property || '') || 0) + 1);
+  return [...counts].map(([name, paddocks]) => ({ name, paddocks })).sort((a, b) => natural(a.name, b.name));
+}
+
+/**
+ * The grid with some farms left out. `crops` is then only the crops still shown; `allCrops` keeps the full list so each
+ * crop keeps the same colour whichever farms are on.
+ */
+export function withoutFarms(grid, hidden) {
+  const off = hidden instanceof Set ? hidden : new Set(hidden || []);
+  const rows = grid.rows.filter((r) => !off.has(r.property || ''));
+  const allCrops = grid.allCrops || grid.crops;
+  const used = new Set(rows.flatMap((r) => Object.values(r.cells).map((c) => c.crop)));
+  return { ...grid, rows, allCrops, crops: allCrops.filter((c) => used.has(c)) };
 }
 
 /**

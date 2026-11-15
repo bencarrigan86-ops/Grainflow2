@@ -4,15 +4,15 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=280';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=280';
-import { esc, num, todayLocal, dmy } from '../fmt.js?v=280';
-import { sharePdf, safeFileName } from '../sharefile.js?v=280';
-import { APP_VERSION } from '../version.js?v=280';
-import { buildFarmMapPdf } from '../spraypdf.js?v=280';
+import { db } from '../storage.js?v=281';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=281';
+import { esc, num, todayLocal, dmy } from '../fmt.js?v=281';
+import { sharePdf, safeFileName } from '../sharefile.js?v=281';
+import { APP_VERSION } from '../version.js?v=281';
+import { buildFarmMapPdf } from '../spraypdf.js?v=281';
 import {
   readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx, farmLabelPx, commonLabelPx,
-} from '../farmmap.js?v=280';
+} from '../farmmap.js?v=281';
 
 const MAX_ZOOM = 40;
 const MIN_LABEL_PX = 6.5;    // the smallest writing a paddock's name is shown in, on screen
@@ -86,6 +86,7 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
         </div>
         ${hasFarms ? `<div class="card" style="margin-top:12px">
           <details class="fold" id="fm-farms" style="margin-top:0;border-top:none" ${readFarmsOpen() ? 'open' : ''}><summary><div><h2>Farms</h2><div class="sub" id="fm-farmsub">${farmSummary()}</div></div></summary>
+          <div style="display:flex;gap:8px;margin:8px 0"><button type="button" class="btn secondary" id="fm-all">Select all</button><button type="button" class="btn secondary" id="fm-none">Clear all</button></div>
           ${groups.map((g) => `<label class="row" style="cursor:pointer"><span class="label"><input type="checkbox" class="fm-farm" data-farm="${esc(g.name)}" ${g.hidden ? '' : 'checked'} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />${esc(g.name)}</span><span class="value">${g.paddocks} &middot; ${num(g.ha, 0)} ha</span></label>`).join('')}
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px"><input type="checkbox" id="fm-farmnames" style="width:18px;height:18px" /> Farm names on the map</label>
           </details>
@@ -219,12 +220,18 @@ function wireMap(root, full, layout, open, { groups = [] } = {}) {
   const farmNamesBox = root.querySelector('#fm-farmnames');
   if (farmNamesBox) { farmNamesBox.checked = show.farmNames !== false; farmNamesBox.addEventListener('change', () => { show.farmNames = farmNamesBox.checked; saveShow({ ...readShow(), farmNames: show.farmNames }); labels(); }); }
   root.querySelector('#fm-farms')?.addEventListener('toggle', (e) => saveFarmsOpen(e.currentTarget.open));
-  root.querySelectorAll('.fm-farm').forEach((box) => box.addEventListener('change', () => {
-    if (box.checked) hidden.delete(box.dataset.farm); else hidden.add(box.dataset.farm);
+  const farmsChanged = () => {
     saveHidden([...hidden]);
+    root.querySelectorAll('.fm-farm').forEach((b) => { b.checked = !hidden.has(b.dataset.farm); });
     const sub = root.querySelector('#fm-farmsub'); if (sub) sub.textContent = `${groups.length} farm${groups.length === 1 ? '' : 's'}, ${groups.length - hidden.size === groups.length ? 'all showing' : `${groups.length - hidden.size} showing`}`;
     applyFarms(); fitToVisible(); fit();
+  };
+  root.querySelectorAll('.fm-farm').forEach((box) => box.addEventListener('change', () => {
+    if (box.checked) hidden.delete(box.dataset.farm); else hidden.add(box.dataset.farm);
+    farmsChanged();
   }));
+  root.querySelector('#fm-all')?.addEventListener('click', () => { hidden.clear(); farmsChanged(); });
+  root.querySelector('#fm-none')?.addEventListener('click', () => { groups.forEach((g) => hidden.add(g.name)); farmsChanged(); });
   const zoomAt = (factor, cx = 0.5, cy = 0.5) => {         // cx, cy: where on the map to hold still, as a fraction of it
     const nx = v.x + v.w * cx; const ny = v.y + v.h * cy;
     v.w /= factor; v.h = v.w * (full.h / full.w);

@@ -1,16 +1,16 @@
 // Rotation and yield history: every paddock against every season, with the crop and its yield in each cell, and the
 // farm's yield for each crop by season underneath. Built from the seasons the farm already holds; nothing is entered here.
 
-import { db } from '../storage.js?v=280';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=280';
-import { openSheet, toast } from '../ui.js?v=280';
-import { canSeeYield } from '../nav.js?v=280';
-import { PALETTE } from '../farmmap.js?v=280';
-import { rotationGrid } from '../fieldhistory.js?v=280';
-import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=280';
-import { nowTime } from '../loadreport.js?v=280';
-import { downloadCSV } from '../csv.js?v=280';
-import { sharePdf, safeFileName } from '../sharefile.js?v=280';
+import { db } from '../storage.js?v=281';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=281';
+import { openSheet, toast } from '../ui.js?v=281';
+import { canSeeYield } from '../nav.js?v=281';
+import { PALETTE } from '../farmmap.js?v=281';
+import { rotationGrid, rotationFarms, withoutFarms } from '../fieldhistory.js?v=281';
+import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=281';
+import { nowTime } from '../loadreport.js?v=281';
+import { downloadCSV } from '../csv.js?v=281';
+import { sharePdf, safeFileName } from '../sharefile.js?v=281';
 
 const ORIENT_KEY = 'grainflow.rotation.orientation';
 const lastOrientation = () => { try { return orientationOf(localStorage.getItem(ORIENT_KEY)); } catch { return 'landscape'; } };
@@ -18,12 +18,20 @@ const rememberOrientation = (v) => { try { localStorage.setItem(ORIENT_KEY, v); 
 
 const haText = (v) => { const r = Math.round(v * 10) / 10; return num(r, Number.isInteger(r) ? 0 : 1); };
 
+// farms switched off on the report, remembered on this device (the same idea as the farm map's Farms list)
+const HIDDEN_KEY = 'grainflow.rotation.hidden';
+const readHidden = () => { try { const h = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]'); return Array.isArray(h) ? h : []; } catch { return []; } };
+const saveHidden = (list) => { try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(list)); } catch { /* not remembered */ } };
+
 export function openRotationSheet() {
   let orientation = lastOrientation();
   const showYield = canSeeYield(db.getRole());
   const years = Object.fromEntries(db.getYears().map((y) => [y, db.getYearData(y)]));
-  const grid = rotationGrid(years);
-  const tint = (crop) => { const i = grid.crops.indexOf(crop); return i < 0 ? '' : PALETTE[i % PALETTE.length]; };
+  const fullGrid = rotationGrid(years);
+  const farms = rotationFarms(fullGrid);
+  const hidden = new Set(readHidden().filter((n) => farms.some((f) => f.name === n)));
+  let grid = withoutFarms(fullGrid, hidden);
+  const tint = (crop) => { const i = grid.allCrops.indexOf(crop); return i < 0 ? '' : PALETTE[i % PALETTE.length]; };
   const cell = (c, repeat) => {
     if (!c) return '<td class="meta" style="text-align:center">&ndash;</td>';
     const col = tint(c.crop);
@@ -34,7 +42,8 @@ export function openRotationSheet() {
   const repeatIn = (row, season) => row.repeats.some(([, b]) => b === season);
 
   openSheet('Rotation and yield history', (root) => {
-    if (!grid.rows.length) { root.innerHTML = '<div class="empty">No paddocks yet.</div>'; return; }
+    if (!fullGrid.rows.length) { root.innerHTML = '<div class="empty">No paddocks yet.</div>'; return; }
+    const paintBody = () => {
     const yields = areaSummary(grid);
     let lastProperty = null;
     const hasFarms = grid.rows.some((x) => x.property);
@@ -53,7 +62,8 @@ export function openRotationSheet() {
       return `<td style="${y.total ? 'font-weight:700;' : ''}">${haText(b.areaHa)} ha${showYield && b.tons > 0 ? `<div class="meta" style="font-size:11px">${num(b.yieldTHa, 2)} t/ha</div>` : ''}</td>`;
     };
     const yieldBody = yields.map((y) => `<tr><td style="text-align:left;${y.total ? 'font-weight:700;' : ''}">${esc(y.crop)}</td>${grid.seasons.map((s) => yieldCell(y, s)).join('')}</tr>`).join('');
-    root.innerHTML = `
+    if (!grid.rows.length) { root.querySelector('#rot-body').innerHTML = '<div class="empty">No farms switched on. Tick a farm above.</div>'; return; }
+    root.querySelector('#rot-body').innerHTML = `
       <div class="hint" style="margin-bottom:8px">Each paddock in each season, found by its name. Colours are crops. ${showYield ? 'Yield is tonnes per hectare: the actual loads once a paddock is on actual, otherwise the estimate. ' : ''}An outlined cell is the same crop as the season before.</div>
       <div class="table-scroll"><table>
         <thead>${gridHead}</thead>
@@ -65,7 +75,15 @@ export function openRotationSheet() {
       <div class="table-scroll"><table>
         <thead>${yieldHead}</thead>
         <tbody>${yieldBody}</tbody>
-      </table></div>` : ''}
+      </table></div>` : ''}`;
+    };
+    const farmRow = (f) => `<label class="row" style="cursor:pointer"><span class="label"><input type="checkbox" class="rot-farm" data-farm="${esc(f.name)}" ${hidden.has(f.name) ? '' : 'checked'} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />${esc(f.name || 'No farm name')}</span><span class="value">${f.paddocks} paddock${f.paddocks === 1 ? '' : 's'}</span></label>`;
+    const farmsSub = () => `${farms.length} farms, ${hidden.size ? `${farms.length - hidden.size} showing` : 'all showing'}`;
+    root.innerHTML = `
+      ${farms.length > 1 ? `<div class="card" style="margin-bottom:10px"><h2>Farms</h2><div class="sub" id="rot-farmsub">${farmsSub()}</div>
+        <div style="display:flex;gap:8px;margin:8px 0"><button type="button" class="btn secondary" id="rot-all">Select all</button><button type="button" class="btn secondary" id="rot-none">Clear all</button></div>
+        ${farms.map(farmRow).join('')}</div>` : ''}
+      <div id="rot-body"></div>
       <div class="subhead" style="margin-top:14px">Save or send</div>
       <div class="segmented" id="rot-orient" style="margin-bottom:8px">
         ${ORIENTATIONS.map((x) => `<button data-orient="${x.value}" class="${x.value === orientation ? 'active' : ''}">${x.label}</button>`).join('')}
@@ -74,6 +92,17 @@ export function openRotationSheet() {
         <button type="button" class="btn secondary" id="rot-pdf">PDF to print or send</button>
         <button type="button" class="btn secondary" id="rot-csv">Excel (CSV)</button>
       </div>`;
+    paintBody();
+    const setHidden = () => {
+      saveHidden([...hidden]);
+      grid = withoutFarms(fullGrid, hidden);
+      root.querySelectorAll('.rot-farm').forEach((b) => { b.checked = !hidden.has(b.dataset.farm); });
+      const sub = root.querySelector('#rot-farmsub'); if (sub) sub.textContent = farmsSub();
+      paintBody();
+    };
+    root.querySelectorAll('.rot-farm').forEach((b) => b.addEventListener('change', () => { if (b.checked) hidden.delete(b.dataset.farm); else hidden.add(b.dataset.farm); setHidden(); }));
+    root.querySelector('#rot-all')?.addEventListener('click', () => { hidden.clear(); setHidden(); });
+    root.querySelector('#rot-none')?.addEventListener('click', () => { farms.forEach((f) => hidden.add(f.name)); setHidden(); });
     const stamp = todayLocal();
     const business = db.getBusinessDetails();
     root.querySelector('#rot-orient').addEventListener('click', (e) => {

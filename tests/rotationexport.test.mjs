@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { rotationGrid } from '../docs/js/fieldhistory.js';
+import { rotationGrid, rotationFarms, withoutFarms } from '../docs/js/fieldhistory.js';
 import { rotationCsv, rotationPdf, areaSummary, tintOf, seasonGroups, seasonsPerPage, orientationOf, ORIENTATIONS } from '../docs/js/rotationexport.js';
 
 let failures = 0;
@@ -74,6 +74,37 @@ check('the summary has each crop\'s hectares per season and an All crops row tha
 check('the screen shows hectares to every role, and yields only where allowed', () => {
   const v = read('docs/js/views/rotation.js');
   assert.ok(v.includes('areaSummary(grid)') && v.includes('Area by crop across the farm') && v.includes('showYield && b.tons > 0'));
+});
+
+console.log('\n=== farms on and off ===');
+const twoFarms = rotationGrid({
+  2025: season(['Wheat', 'Canola'], [field('East', 'c0', 100, { property: 'Aralu' }), field('West', 'c1', 50, { property: 'Back Creek' }), field('Odd', 'c0', 10, { property: '' })]),
+});
+check('the farms are listed with their paddock counts, and a paddock with no farm is its own entry', () => {
+  assert.deepEqual(rotationFarms(twoFarms), [{ name: '', paddocks: 1 }, { name: 'Aralu', paddocks: 1 }, { name: 'Back Creek', paddocks: 1 }]);
+});
+check('leaving a farm out drops its paddocks, its crops and its hectares, but the colours stay put', () => {
+  const g = withoutFarms(twoFarms, new Set(['Back Creek']));
+  assert.deepEqual(g.rows.map((r) => r.name), ['Odd', 'East']);
+  assert.deepEqual(g.crops, ['Wheat']);
+  assert.deepEqual(g.allCrops, ['Canola', 'Wheat']);
+  const all = areaSummary(g).at(-1);
+  assert.equal(all.bySeason[2025].areaHa, 110);
+  assert.ok(!areaSummary(g).some((r) => r.crop === 'Canola'));
+  assert.equal(withoutFarms(g, new Set(['Aralu'])).allCrops.join(), 'Canola,Wheat', 'still the full list after a second pass');
+  assert.deepEqual(areaSummary(withoutFarms(twoFarms, ['', 'Aralu', 'Back Creek'])), []);
+});
+check('the files follow the farms that are on, and a crop keeps its tint', () => {
+  const g = withoutFarms(twoFarms, new Set(['Aralu']));
+  const csv = rotationCsv(g, { showYield: false });
+  assert.ok(csv.includes('West') && !csv.includes('East'));
+  assert.ok(Buffer.from(rotationPdf(g, { showYield: false })).toString('latin1').includes('West'));
+});
+check('the sheet has the farm ticks with Select all and Clear all, and the map has the same buttons', () => {
+  const v = read('docs/js/views/rotation.js');
+  for (const t of ['rot-farm', 'id="rot-all"', 'id="rot-none"', 'grainflow.rotation.hidden', 'withoutFarms(fullGrid, hidden)']) assert.ok(v.includes(t), t);
+  const m = read('docs/js/views/farmmap.js');
+  for (const t of ['id="fm-all"', 'id="fm-none"', 'hidden.clear()']) assert.ok(m.includes(t), t);
 });
 
 console.log('\n=== the PDF ===');
