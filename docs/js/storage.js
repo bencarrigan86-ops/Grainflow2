@@ -18,22 +18,22 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=247';
+import { hydrate } from './hydrate.js?v=248';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=247';
-import { chooseBootState, resolveLegacy } from './boot.js?v=247';
-import { isLegacyDirty } from './dirty.js?v=247';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=247';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=247';
-import { settleLegs, dedupeLegs } from './legs.js?v=247';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=247';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=247';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=247';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=247';
-import { schedulePush, pushOnReconnect } from './sync.js?v=247';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=247';
+} from './local.js?v=248';
+import { chooseBootState, resolveLegacy } from './boot.js?v=248';
+import { isLegacyDirty } from './dirty.js?v=248';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=248';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=248';
+import { settleLegs, dedupeLegs } from './legs.js?v=248';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=248';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=248';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=248';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=248';
+import { schedulePush, pushOnReconnect } from './sync.js?v=248';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=248';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -65,7 +65,7 @@ function defaultOverheads() {
 function defaultYear() {
   return {
     commodities: defaultCommodities(), fields: [], sales: [], storages: [],
-    movements: [], overheads: defaultOverheads(), invoices: [], payables: [], orders: [], freightOrders: [], inputStock: [],
+    movements: [], overheads: defaultOverheads(), invoices: [], payables: [], orders: [], freightOrders: [], inputStock: [], sprayJobs: [],
   };
 }
 
@@ -566,7 +566,7 @@ export const db = {
 
     data.years[label] = {
       commodities, fields, storages, sales: [], movements: [],
-      overheads: defaultOverheads(), invoices: [], payables: [], orders: [], freightOrders: [], inputStock: [],   // stock is not carried: it is summed across every season
+      overheads: defaultOverheads(), invoices: [], payables: [], orders: [], freightOrders: [], inputStock: [], sprayJobs: [],   // stock is not carried: it is summed across every season
     };
     data.currentYear = label;
     touch('year', label);
@@ -590,6 +590,7 @@ export const db = {
     y.orders?.forEach((o) => tombstone('orders', o.id));
     y.freightOrders?.forEach((f) => tombstone('freight_orders', f.id));
     y.inputStock?.forEach((m) => tombstone('input_stock', m.id));
+    y.sprayJobs?.forEach((j) => tombstone('spray_jobs', j.id));
     tombstone('overheads', y.__overheadsId);
     tombstone('seasons', y.__seasonId);
 
@@ -1083,6 +1084,28 @@ export const db = {
       tombstone('input_stock', id);
       y.inputStock = y.inputStock.filter((x) => x.id !== id);
     }
+    persist();
+  },
+
+  // --- spray requests: a job for a spray contractor, with the paddocks to be sprayed (see spray.js) ---
+  getSprayJobs() { return current().sprayJobs || []; },
+  upsertSprayJob(job) {
+    const c = current();
+    c.sprayJobs = c.sprayJobs || [];
+    if (job.id) {
+      const idx = c.sprayJobs.findIndex((j) => j.id === job.id);
+      if (idx >= 0) { c.sprayJobs[idx] = { ...c.sprayJobs[idx], ...job }; touch('sprayjob', job.id); persist(); return job.id; }
+    }
+    const id = job.id || uid();
+    c.sprayJobs.push({ status: 'draft', ...job, id });
+    touch('sprayjob', id);
+    persist();
+    return id;
+  },
+  deleteSprayJob(id) {
+    tombstone('spray_jobs', id);
+    const c = current();
+    c.sprayJobs = (c.sprayJobs || []).filter((j) => j.id !== id);
     persist();
   },
 

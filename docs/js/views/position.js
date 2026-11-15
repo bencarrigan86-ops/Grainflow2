@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=247';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=247';
-import { num, tons, money, pct, esc } from '../fmt.js?v=247';
-import { payablesCost } from '../payables.js?v=247';
-import { openEofySheet } from './eofy.js?v=247';
+import { db } from '../storage.js?v=248';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=248';
+import { num, tons, money, pct, esc } from '../fmt.js?v=248';
+import { payablesCost } from '../payables.js?v=248';
+import { openEofySheet } from './eofy.js?v=248';
 
 let unsub = null;
 

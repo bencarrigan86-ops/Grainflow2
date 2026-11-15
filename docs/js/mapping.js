@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=247';
-import { cleanOffFarm } from './offfarm.js?v=247';
+import { cleanGradeOptions } from './gradeprice.js?v=248';
+import { cleanOffFarm } from './offfarm.js?v=248';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -216,7 +216,7 @@ export function stateToRows(state, farmId) {
   const out = {
     farms: [], seasons: [], commodities: [], fields: [], field_agronomy: [],
     storages: [], sales: [], sale_terms: [], movements: [], movement_legs: [],
-    movement_photos: [], invoices: [], overheads: [], sale_documents: [], payables: [], orders: [], freight_orders: [], input_stock: [], record_documents: [],
+    movement_photos: [], invoices: [], overheads: [], sale_documents: [], payables: [], orders: [], freight_orders: [], input_stock: [], spray_jobs: [], record_documents: [],
   };
 
   const b = state.businessDetails || {};
@@ -558,6 +558,19 @@ export function stateToRows(state, farmId) {
       });
     }
 
+    // Spray requests: the scalar columns for lists, and everything else on the form as one json document.
+    for (const j of year.sprayJobs || []) {
+      const { id, jobNo, contractor, contractorEmail, form, dateRequired, status, ...rest } = j;
+      out.spray_jobs.push({
+        id, farm_id: farmId, season_id: seasonId,
+        job_no: orNull(jobNo), contractor: orNull(contractor), contractor_email: orNull(contractorEmail),
+        form: form === 'aircair' ? 'aircair' : 'standard',
+        date_required: orNull(dateRequired),
+        status: status === 'sent' || status === 'done' ? status : 'draft',
+        body: JSON.parse(JSON.stringify(rest, (k, v) => (k.startsWith('__') ? undefined : v))),
+      });
+    }
+
     const oh = year.overheads || {};
     out.overheads.push({
       id: year.__overheadsId || uid(), farm_id: farmId, season_id: seasonId,
@@ -798,6 +811,12 @@ export function rowsToState(rows) {
         qty: n(m.qty), unitCost: m.unit_cost == null ? '' : n(m.unit_cost),
         date: m.move_date ?? '', supplier: m.supplier ?? '', reference: m.reference ?? '', notes: m.notes ?? '',
         ...(m.location ? { location: m.location, __hasLocation: true } : {}),
+      })),
+
+      sprayJobs: inSeason(rows.spray_jobs || [], season.id).map((r) => ({
+        ...(r.body && typeof r.body === 'object' ? r.body : {}),
+        id: r.id, jobNo: r.job_no ?? '', contractor: r.contractor ?? '', contractorEmail: r.contractor_email ?? '',
+        form: r.form === 'aircair' ? 'aircair' : 'standard', dateRequired: r.date_required ?? '', status: r.status || 'draft',
       })),
 
       overheads: (() => {

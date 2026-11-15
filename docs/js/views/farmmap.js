@@ -4,12 +4,14 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=247';
-import { openSheet, toast, notify, askConfirm } from '../ui.js?v=247';
-import { esc, num } from '../fmt.js?v=247';
+import { db } from '../storage.js?v=248';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=248';
+import { esc, num, todayLocal, dmy } from '../fmt.js?v=248';
+import { sharePdf, safeFileName } from '../sharefile.js?v=248';
+import { buildFarmMapPdf } from '../spraypdf.js?v=248';
 import {
   readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox,
-} from '../farmmap.js?v=247';
+} from '../farmmap.js?v=248';
 
 const MAX_ZOOM = 40;
 
@@ -24,9 +26,17 @@ const readHidden = () => { try { const h = JSON.parse(localStorage.getItem(HIDDE
 const saveHidden = (list) => { try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(list)); } catch { /* not remembered */ } };
 const saveShow = (show) => { try { localStorage.setItem(SHOW_KEY, JSON.stringify(show)); } catch { /* private mode: it just is not remembered */ } };
 
-/** @param {{onOpenField?: (field: object) => void}} [opts] */
-export function openMapSheet({ onOpenField } = {}) {
-  openSheet('Farm map', (root) => {
+/**
+ * @param {{
+ *   onOpenField?: (field: object) => void,
+ *   onSpray?: (ids: string[]) => void,                       // shows "Spray request": the paddocks are picked here first
+ *   pick?: { ids: string[], onDone: (ids: string[]) => void, onCancel?: () => void },   // tapping a paddock ticks it
+ * }} [opts]
+ */
+export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
+  const chosen = new Set(pick?.ids || []);
+  const RED = '#d8362b';
+  openSheet(pick ? 'Pick paddocks' : 'Farm map', (root) => {
     const draw = () => {
       const { fields, commodities } = db.get();
       const mapped = fields.filter((f) => f.boundary?.length);
@@ -42,11 +52,17 @@ export function openMapSheet({ onOpenField } = {}) {
       const unmapped = fields.filter((f) => !f.boundary?.length);
       const mappedHa = mapped.reduce((s, f) => s + (Number(f.areaHa) || 0), 0);
 
+      const haOf = (id) => Number(mapped.find((f) => f.id === id)?.areaHa) || 0;
+      const pickedText = () => {
+        const ids = [...chosen].filter((id) => mapped.some((f) => f.id === id));
+        return ids.length ? `${ids.length} paddock${ids.length === 1 ? '' : 's'} picked, ${num(ids.reduce((s, id) => s + haOf(id), 0), 1)} ha` : 'Tap the paddocks to spray';
+      };
       root.innerHTML = `
-        <div class="hint" style="margin-bottom:8px">${mapped.length} paddock${mapped.length === 1 ? '' : 's'} mapped${hasFarms ? ` on ${groups.filter((g) => g.name !== NO_FARM).length} farm${groups.filter((g) => g.name !== NO_FARM).length === 1 ? '' : 's'}` : ''}, ${num(mappedHa, 0)} ha. Tap one to open it. Pinch or use the buttons to zoom.</div>
+        ${pick ? `<div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px"><strong id="fm-picked">${pickedText()}</strong><button type="button" class="btn small" id="fm-pickdone" style="width:auto">Done</button></div>` : ''}
+        <div class="hint" style="margin-bottom:8px">${mapped.length} paddock${mapped.length === 1 ? '' : 's'} mapped${hasFarms ? ` on ${groups.filter((g) => g.name !== NO_FARM).length} farm${groups.filter((g) => g.name !== NO_FARM).length === 1 ? '' : 's'}` : ''}, ${num(mappedHa, 0)} ha. ${pick ? 'Tap a paddock to pick it, and again to take it off.' : 'Tap one to open it.'} Pinch or use the buttons to zoom.</div>
         <div id="fm-wrap" style="position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg);touch-action:none">
           <svg id="fm-svg" viewBox="0 0 ${vb.w} ${vb.h}" style="display:block;width:100%;height:auto;max-height:68vh" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of the paddocks">
-            ${layout.items.map((i) => `<path data-id="${esc(i.id)}" data-farm="${esc(i.farm || NO_FARM)}" d="${i.d}" fill="${i.color}" fill-opacity="0.55" fill-rule="evenodd" stroke="var(--text)" stroke-opacity="0.55" stroke-width="1" vector-effect="non-scaling-stroke" style="cursor:pointer"><title>${esc(i.name)}</title></path>`).join('')}
+            ${layout.items.map((i) => `<path data-id="${esc(i.id)}" data-farm="${esc(i.farm || NO_FARM)}" d="${i.d}" fill="${chosen.has(i.id) ? RED : i.color}" fill-opacity="${chosen.has(i.id) ? 0.85 : pick ? 0.3 : 0.55}" fill-rule="evenodd" stroke="var(--text)" stroke-opacity="0.55" stroke-width="1" vector-effect="non-scaling-stroke" style="cursor:pointer"><title>${esc(i.name)}</title></path>`).join('')}
             ${layout.items.map((i) => `<text data-label="${esc(i.id)}" data-farm="${esc(i.farm || NO_FARM)}" data-area="${Math.round(i.areaHa * 10000)}" x="${Math.round(i.cx)}" y="${Math.round(i.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="3" paint-order="stroke" pointer-events="none" style="font-weight:600"><tspan class="fm-n" x="${Math.round(i.cx)}">${esc(i.name)}</tspan><tspan class="fm-a" x="${Math.round(i.cx)}" dy="1.15em" style="font-weight:500">${num(Number(mapped.find((f) => f.id === i.id)?.areaHa) || i.areaHa, 1)} ha</tspan></text>`).join('')}
             ${hasFarms ? groups.filter((g) => g.name !== NO_FARM).map((g) => `<text data-farm-label="${esc(g.name)}" x="${Math.round(g.cx)}" y="${Math.round(g.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="4" paint-order="stroke" pointer-events="none" style="font-weight:800;letter-spacing:.05em;text-transform:uppercase">${esc(g.name)}</text>`).join('') : ''}
           </svg>
@@ -70,12 +86,47 @@ export function openMapSheet({ onOpenField } = {}) {
           ${mapped.some((f) => colourOf(f) === NO_CROP) ? `<span class="meta"><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${NO_CROP};vertical-align:-1px"></span> No crop set</span>` : ''}
         </div>
         ${unmapped.length ? `<div class="hint" style="margin-bottom:8px">Not on the map: ${unmapped.map((f) => esc(f.name)).join(', ')}.</div>` : ''}
-        <button type="button" class="btn secondary" id="fm-update" style="margin-top:6px">Update from a file</button>
-        <button type="button" class="btn ghost-danger" id="fm-clear" style="margin-top:8px">Remove the map</button>`;
+        ${pick ? '<button type="button" class="btn secondary" id="fm-pickcancel" style="margin-top:6px">Cancel</button>' : `
+        ${onSpray ? '<button type="button" class="btn" id="fm-spray" style="margin-top:6px">Spray request from this map</button>' : ''}
+        <button type="button" class="btn secondary" id="fm-pdf" style="margin-top:8px">Send the map as a PDF</button>
+        <button type="button" class="btn secondary" id="fm-update" style="margin-top:8px">Update from a file</button>
+        <button type="button" class="btn ghost-danger" id="fm-clear" style="margin-top:8px">Remove the map</button>`}`;
 
-      wireMap(root, vb, layout, (id) => { const f = fields.find((x) => x.id === id); if (f && onOpenField) onOpenField(f); }, { groups });
-      root.querySelector('#fm-update').addEventListener('click', () => importView(root, draw, true));
-      root.querySelector('#fm-clear').addEventListener('click', async () => {
+      const toggle = (id) => {
+        if (chosen.has(id)) chosen.delete(id); else chosen.add(id);
+        const el = root.querySelector(`path[data-id="${CSS.escape(id)}"]`);
+        const item = layout.items.find((i) => i.id === id);
+        if (el && item) { el.setAttribute('fill', chosen.has(id) ? RED : item.color); el.setAttribute('fill-opacity', chosen.has(id) ? 0.85 : 0.3); }
+        root.querySelector('#fm-picked').textContent = pickedText();
+      };
+      wireMap(root, vb, layout, (id) => {
+        if (pick) { toggle(id); return; }
+        const f = fields.find((x) => x.id === id); if (f && onOpenField) onOpenField(f);
+      }, { groups });
+      root.querySelector('#fm-pickdone')?.addEventListener('click', () => pick.onDone([...chosen].filter((id) => mapped.some((f) => f.id === id))));
+      root.querySelector('#fm-pickcancel')?.addEventListener('click', () => (pick.onCancel ? pick.onCancel() : closeSheet()));
+      root.querySelector('#fm-spray')?.addEventListener('click', () => openMapSheet({
+        onOpenField, onSpray,
+        pick: { ids: [], onDone: (ids) => onSpray(ids), onCancel: () => openMapSheet({ onOpenField, onSpray }) },
+      }));
+      root.querySelector('#fm-pdf')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget; btn.disabled = true;
+        try {
+          const business = db.getBusinessDetails();
+          const legend = [...inUse.map((c, i) => ({ name: c.name, color: PALETTE[i % PALETTE.length] })), ...(mapped.some((f) => colourOf(f) === NO_CROP) ? [{ name: 'No crop set', color: NO_CROP }] : [])];
+          const bytes = await buildFarmMapPdf(layout, {
+            title: 'Farm map', date: todayLocal(), legend, hiddenFarms: readHidden(),
+            subtitle: [business.entityName || business.farmName, db.getCurrentYear()].filter(Boolean).join('  ·  '),
+          });
+          const fileName = safeFileName(`Farm map ${dmy(todayLocal())}`);
+          const result = await sharePdf(bytes, fileName, { title: 'Farm map', text: `Farm map: ${mapped.length} paddocks, ${num(mappedHa, 0)} ha.` });
+          if (result !== 'cancelled') toast(result === 'shared' ? 'Sent' : 'Saved to this device');
+        } catch (err) {
+          notify(`The map could not be made into a PDF: ${err.message}`);
+        } finally { btn.disabled = false; }
+      });
+      root.querySelector('#fm-update')?.addEventListener('click', () => importView(root, draw, true));
+      root.querySelector('#fm-clear')?.addEventListener('click', async () => {
         if (!(await askConfirm('Remove the outlines from every paddock? The paddocks and their areas stay. You can import the file again.', { confirmLabel: 'Remove', danger: true }))) return;
         db.clearFieldBoundaries();
         toast('Map removed');

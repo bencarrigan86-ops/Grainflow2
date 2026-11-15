@@ -205,7 +205,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 await check('Production has the Farm map link, which opens the map with a way to open a paddock', () => {
   const p = read('docs/js/views/production.js');
-  for (const t of ['id="open-map"', 'openMapSheet({ onOpenField: openFieldSheet })', 'export function openFieldSheet']) assert.ok(p.includes(t), t);
+  for (const t of ['id="open-map"', 'openMapSheet({', 'onOpenField: openFieldSheet', 'export function openFieldSheet']) assert.ok(p.includes(t), t);
 });
 await check('the import replaces the typed area with the one from the outline, and can add unmatched paddocks', () => {
   const v = read('docs/js/views/farmmap.js');

@@ -23,7 +23,7 @@ const state = {
   },
   years: {
     '2025': {
-      commodities: [], fields: [], storages: [], sales: [], movements: [], invoices: [], payables: [], orders: [], freightOrders: [], inputStock: [],
+      commodities: [], fields: [], storages: [], sales: [], movements: [], invoices: [], payables: [], orders: [], freightOrders: [], inputStock: [], sprayJobs: [],
       overheads: { finance: 0, equipmentRepayments: 0, depreciation: 0, wages: 0,
                    drawings: 0, admin: 0, energy: 0, insurance: 0,
                    repairsMaintenance: 0, other: 0 },
@@ -131,6 +131,10 @@ const state = {
         { id: u(), saleId: sale1, orderId: null, freightNo: 'FO-001', carrier: 'Ace Haulage', carrierEmail: 'dispatch@ace.example.com',
           tons: 120, rate: 0.12, rateBasis: 'per_tkm', flatRate: '', distanceKm: 240, pickup: 'Gate 2', deliverTo: 'Newbridge silo',
           loadFrom: '2026-02-01', loadBy: '2026-02-20', status: 'open', notes: 'Side tipper' },
+      ],
+      sprayJobs: [
+        { id: u(), jobNo: 'SJ-001', contractor: 'Aircair', contractorEmail: 'goondiwindi@aircair.example.com', form: 'aircair', dateRequired: '2026-11-20', status: 'sent',
+          property: 'Aralu', crop: 'Sorghum', fieldIds: ['a', 'b'], chemicals: [{ name: 'Glyphosate 450', rate: 1.5, unit: 'L' }], waterRate: 30, checklist: { q1: 'yes', q4: 'no' } },
       ],
       inputStock: [
         { id: u(), kind: 'fert', product: 'Urea', unit: 't', type: 'buy', qty: 40, unitCost: 880, date: '2026-03-04', supplier: 'Elders', reference: 'INV-221', notes: '' },

@@ -1,14 +1,15 @@
-import { db } from '../storage.js?v=247';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=247';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=247';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=247';
-import { describeMerge } from '../merge.js?v=247';
-import { renderRelatedMovements } from './movements.js?v=247';
-import { canSeeYield } from '../nav.js?v=247';
-import { wireJumps } from '../jump.js?v=247';
-import { openMapSheet } from './farmmap.js?v=247';
-import { openInputsSheet } from './inputs.js?v=247';
-import { stockLevels } from '../inputs.js?v=247';
+import { db } from '../storage.js?v=248';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=248';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=248';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=248';
+import { describeMerge } from '../merge.js?v=248';
+import { renderRelatedMovements } from './movements.js?v=248';
+import { canSeeYield } from '../nav.js?v=248';
+import { wireJumps } from '../jump.js?v=248';
+import { openMapSheet } from './farmmap.js?v=248';
+import { openInputsSheet } from './inputs.js?v=248';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=248';
+import { stockLevels } from '../inputs.js?v=248';
 
 let unsub = null;
 
@@ -24,6 +25,8 @@ function paint(root) {
   // prices are money: the people who see the books see the stock
   const canSeeInputs = ['owner', 'manager', 'bookkeeper'].includes(db.getRole());
   const inputProducts = canSeeInputs ? stockLevels(db.getInputMoves()).length : 0;
+  const sprayAllowed = canSpray(db.getRole());
+  const sprayOpen = sprayAllowed ? db.getSprayJobs().filter((j) => j.status !== 'done').length : 0;
   const rollup = productionByCommodity(commodities, fields, movements).filter((r) => r.fieldCount > 0);
   const groups = groupFieldsByCommodity(commodities, fields, movements);
   const productionTotals = rollup.reduce((acc, r) => ({ area: acc.area + r.area, tons: acc.tons + r.tons }), { area: 0, tons: 0 });
@@ -39,6 +42,7 @@ function paint(root) {
     <div class="view">
       ${fields.length ? `<button type="button" class="btn secondary" id="open-map" style="margin-bottom:12px">Farm map${fields.some((f) => f.boundary) ? ` &middot; ${fields.filter((f) => f.boundary).length} of ${fields.length} paddocks mapped` : ' &middot; add your paddock outlines'}</button>` : ''}
       ${canSeeInputs ? `<button type="button" class="btn secondary" id="open-inputs" style="margin-bottom:12px">Inputs and stock${inputProducts ? ` &middot; ${inputProducts} product${inputProducts === 1 ? '' : 's'} in stock` : ' &middot; seed, fertiliser, fuel, chemical'}</button>` : ''}
+      ${sprayAllowed && fields.length ? `<button type="button" class="btn secondary" id="open-spray" style="margin-bottom:12px">Spray requests${sprayOpen ? ` &middot; ${sprayOpen} open` : ' &middot; send a job to a contractor'}</button>` : ''}
       ${rollup.length === 0 ? '' : `
       <div class="card report">
         <h2><span class="dot report"></span>By commodity</h2>
@@ -81,7 +85,11 @@ function paint(root) {
   });
   root.querySelector('#add-field').addEventListener('click', () => openFieldSheet(null));
   root.querySelector('#open-inputs')?.addEventListener('click', () => openInputsSheet());
-  root.querySelector('#open-map')?.addEventListener('click', () => openMapSheet({ onOpenField: openFieldSheet }));
+  root.querySelector('#open-map')?.addEventListener('click', () => openMapSheet({
+    onOpenField: openFieldSheet,
+    onSpray: canSpray(db.getRole()) ? (ids) => openSprayFormSheet(null, { ids }) : undefined,
+  }));
+  root.querySelector('#open-spray')?.addEventListener('click', () => openSprayJobsSheet());
   root.querySelector('#empty-add-field')?.addEventListener('click', () => openFieldSheet(null));
 }
 

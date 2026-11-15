@@ -31,6 +31,7 @@
 //   order      orders, record_documents (files attached to it)
 //   freightorder  freight_orders
 //   inputmove  input_stock
+//   sprayjob   spray_jobs
 //   overheads  overheads                       (id = season label)
 //   season     the season row itself           (id = season label)
 //   year       everything in one season        (id = season label)
@@ -38,14 +39,14 @@
 //   all        everything                      (an import, a brand new farm)
 
 export const KINDS = [
-  'commodity', 'field', 'storage', 'sale', 'movement', 'invoice', 'payable', 'order', 'freightorder', 'inputmove',
+  'commodity', 'field', 'storage', 'sale', 'movement', 'invoice', 'payable', 'order', 'freightorder', 'inputmove', 'sprayjob',
   'overheads', 'season', 'year', 'business', 'all',
 ];
 
 const TABLES = [
   'farms', 'seasons', 'commodities', 'fields', 'field_agronomy', 'storages',
   'sales', 'sale_terms', 'sale_documents', 'movements', 'movement_legs',
-  'movement_photos', 'invoices', 'overheads', 'payables', 'orders', 'freight_orders', 'input_stock', 'record_documents',
+  'movement_photos', 'invoices', 'overheads', 'payables', 'orders', 'freight_orders', 'input_stock', 'spray_jobs', 'record_documents',
 ];
 
 // child table -> [column holding the parent's id, parent table]
@@ -59,7 +60,7 @@ const CHILD_OF = {
 
 const OWN_TABLE = {
   commodity: 'commodities', field: 'fields', storage: 'storages', sale: 'sales',
-  movement: 'movements', invoice: 'invoices', payable: 'payables', order: 'orders', freightorder: 'freight_orders', inputmove: 'input_stock',
+  movement: 'movements', invoice: 'invoices', payable: 'payables', order: 'orders', freightorder: 'freight_orders', inputmove: 'input_stock', sprayjob: 'spray_jobs',
 };
 
 /**
@@ -96,7 +97,7 @@ export function selectDirtyRows(rows, state, dirty) {
       const sid = seasonIdOfLabel(d.id);
       if (!sid) continue;
       want.seasons.add(sid);
-      for (const t of ['commodities', 'fields', 'storages', 'sales', 'movements', 'invoices', 'overheads', 'payables', 'orders', 'freight_orders', 'input_stock']) {
+      for (const t of ['commodities', 'fields', 'storages', 'sales', 'movements', 'invoices', 'overheads', 'payables', 'orders', 'freight_orders', 'input_stock', 'spray_jobs']) {
         (rows[t] || []).filter((r) => r.season_id === sid).forEach((r) => want[t].add(r.id));
       }
       continue;
@@ -125,7 +126,7 @@ export function selectDirtyRows(rows, state, dirty) {
   // file exists to prevent.
   const seasonRows = rows.seasons || [];
   const referenced = new Set();
-  for (const t of ['commodities', 'fields', 'storages', 'sales', 'movements', 'invoices', 'overheads', 'payables', 'orders', 'freight_orders', 'input_stock']) {
+  for (const t of ['commodities', 'fields', 'storages', 'sales', 'movements', 'invoices', 'overheads', 'payables', 'orders', 'freight_orders', 'input_stock', 'spray_jobs']) {
     out[t].forEach((r) => referenced.add(r.season_id));
   }
   for (const s of seasonRows) {
