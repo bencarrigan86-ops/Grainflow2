@@ -18,23 +18,23 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=273';
+import { hydrate } from './hydrate.js?v=274';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=273';
-import { chooseBootState, resolveLegacy } from './boot.js?v=273';
-import { isLegacyDirty } from './dirty.js?v=273';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=273';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=273';
-import { settleLegs, dedupeLegs } from './legs.js?v=273';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=273';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=273';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=273';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=273';
-import { schedulePush, pushOnReconnect } from './sync.js?v=273';
-import { hasParts as hasAddressParts } from './address.js?v=273';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=273';
+} from './local.js?v=274';
+import { chooseBootState, resolveLegacy } from './boot.js?v=274';
+import { isLegacyDirty } from './dirty.js?v=274';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=274';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=274';
+import { settleLegs, dedupeLegs } from './legs.js?v=274';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=274';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=274';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=274';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=274';
+import { schedulePush, pushOnReconnect } from './sync.js?v=274';
+import { hasParts as hasAddressParts } from './address.js?v=274';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=274';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -735,13 +735,14 @@ export const db = {
         if (merged.freightPaidBy === 'buyer') merged.__hasFreightPaidBy = true;   // and a switch back to 'we' too
         if (merged.ourRef) merged.__hasOurRef = true;   // so clearing it reaches the server
         if (merged.paid) merged.__hasPaid = true;       // and so does marking it unpaid again
+        if (merged.deliveryPattern) merged.__hasDeliveryPattern = true;   // and clearing how it is delivered
         if (hasAddressParts(merged.buyerAddressParts)) merged.__hasBuyerAddressParts = true;   // and clearing the buyer's address parts
         c.sales[idx] = merged;
       }
       touch('sale', sale.id);
     } else {
       const id = uid();
-      c.sales.push({ ...sale, id, ...(Number(sale.brokerageRate) ? { __hasBrokerageRate: true } : {}), ...(sale.freightPaidBy === 'buyer' ? { __hasFreightPaidBy: true } : {}), ...(sale.ourRef ? { __hasOurRef: true } : {}), ...(sale.paid ? { __hasPaid: true } : {}), ...(hasAddressParts(sale.buyerAddressParts) ? { __hasBuyerAddressParts: true } : {}) });
+      c.sales.push({ ...sale, id, ...(Number(sale.brokerageRate) ? { __hasBrokerageRate: true } : {}), ...(sale.freightPaidBy === 'buyer' ? { __hasFreightPaidBy: true } : {}), ...(sale.ourRef ? { __hasOurRef: true } : {}), ...(sale.paid ? { __hasPaid: true } : {}), ...(sale.deliveryPattern ? { __hasDeliveryPattern: true } : {}), ...(hasAddressParts(sale.buyerAddressParts) ? { __hasBuyerAddressParts: true } : {}) });
       touch('sale', id);
     }
     persist();

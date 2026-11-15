@@ -27,9 +27,9 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=273';
-import { cleanOffFarm } from './offfarm.js?v=273';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=273';
+import { cleanGradeOptions } from './gradeprice.js?v=274';
+import { cleanOffFarm } from './offfarm.js?v=274';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=274';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -383,6 +383,8 @@ export function stateToRows(state, farmId) {
         ...((sale.ourRef || sale.__hasOurRef) ? { our_ref: orNull(sale.ourRef) } : {}),
         // Marked paid and finished with. Sent once it has been marked, and kept after that so un-marking reaches the server.
         ...((sale.paid || sale.__hasPaid) ? { is_paid: !!sale.paid } : {}),
+        // How the contract is delivered: 'call' (the buyer orders it) or 'even' (spread over the window). Optional like the other later columns.
+        ...((sale.deliveryPattern || sale.__hasDeliveryPattern) ? { delivery_pattern: sale.deliveryPattern === 'even' || sale.deliveryPattern === 'call' ? sale.deliveryPattern : null } : {}),
       });
       out.sale_terms.push({
         id: sale.__termsId || uid(), farm_id: farmId, sale_id: sale.id,
@@ -761,6 +763,7 @@ export function rowsToState(rows) {
           buyerContact: sale.buyer_contact ?? '',
           ...(sale.our_ref != null ? { ourRef: sale.our_ref, __hasOurRef: true } : {}),
           ...(sale.is_paid != null ? { paid: !!sale.is_paid, __hasPaid: true } : {}),
+          ...(sale.delivery_pattern != null ? { deliveryPattern: sale.delivery_pattern, __hasDeliveryPattern: true } : {}),
           broker: t.broker ?? '',
           brokerRef: t.broker_ref ?? '',
           brokeragePaidBy: t.brokerage_paid_by ?? '',

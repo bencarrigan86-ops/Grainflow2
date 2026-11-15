@@ -48,6 +48,10 @@ alter table farms
 alter table sale_terms
   add column if not exists buyer_address_parts jsonb;
 
+-- How a contract is delivered: 'call' (the buyer orders it) or 'even' (spread evenly over the window) (optional; stored only once it has been set)
+alter table sales
+  add column if not exists delivery_pattern text;
+
 -- The time a load was loaded or left, as 24 hour text such as 14:30 (optional; stored only when a time is recorded)
 alter table movements
   add column if not exists load_time text;

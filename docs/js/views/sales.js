@@ -1,27 +1,28 @@
-import { db } from '../storage.js?v=273';
+import { db } from '../storage.js?v=274';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=273';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=273';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=273';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=273';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=273';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=273';
-import { renderRelatedMovements } from './movements.js?v=273';
-import { openInvoiceListSheet } from './invoice.js?v=273';
-import { openContractDocSheet } from './contract.js?v=273';
-import { wireJumps } from '../jump.js?v=273';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=273';
-import { renderContractFreight } from './freightorders.js?v=273';
-import { activeSales, paidSales } from '../paidsales.js?v=273';
-import { openVendorDecSheet } from './vendordec.js?v=273';
-import { summarise as summariseOrders } from '../orders.js?v=273';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=273';
-import { deliveries, moneyPosition } from '../outstanding.js?v=273';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=273';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=273';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=273';
-import { standardFor } from '../grades.js?v=273';
+} from '../documents.js?v=274';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=274';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=274';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=274';
+import { PATTERNS } from '../deliveryplan.js?v=274';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=274';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=274';
+import { renderRelatedMovements } from './movements.js?v=274';
+import { openInvoiceListSheet } from './invoice.js?v=274';
+import { openContractDocSheet } from './contract.js?v=274';
+import { wireJumps } from '../jump.js?v=274';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=274';
+import { renderContractFreight } from './freightorders.js?v=274';
+import { activeSales, paidSales } from '../paidsales.js?v=274';
+import { openVendorDecSheet } from './vendordec.js?v=274';
+import { summarise as summariseOrders } from '../orders.js?v=274';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=274';
+import { deliveries, moneyPosition } from '../outstanding.js?v=274';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=274';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=274';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=274';
+import { standardFor } from '../grades.js?v=274';
 
 let unsub = null;
 
@@ -396,6 +397,7 @@ function openSaleSheet(existing) {
         ${field({ label: 'Delivery start', id: 'deliveryStart', type: 'date', value: existing?.deliveryStart })}
         ${field({ label: 'Delivery finish', id: 'deliveryEnd', type: 'date', value: existing?.deliveryEnd })}
       </div>
+      ${field({ label: 'How it is delivered', id: 'deliveryPattern', type: 'select', value: existing?.deliveryPattern ?? '', options: PATTERNS, hint: 'Spread evenly shows tonnes a week or a month on Deliveries to go and in the cash flow. If the buyer calls it, the grain orders give the dates.' })}
       ${field({ label: 'Weights to govern', id: 'weightsToGovern', type: 'select', value: existing?.weightsToGovern ?? '', options: [
         { value: '', label: '—' },
         { value: 'destination', label: 'Destination' },
@@ -852,6 +854,7 @@ function openSaleSheet(existing) {
         location: getVal(root, 'location')?.trim(),
         deliveryStart: getVal(root, 'deliveryStart'),
         deliveryEnd: getVal(root, 'deliveryEnd'),
+        deliveryPattern: getVal(root, 'deliveryPattern') || '',
         tons: getNum(root, 'tons'),
         tonsDelivered: getNum(root, 'tonsDelivered'),
         price: getNum(root, 'price'),

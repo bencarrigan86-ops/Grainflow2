@@ -110,6 +110,7 @@ function markerFor(key, ids) {
   // the joined line and its parts have to agree, or the parts are not trusted on the way back
   if (key === 'buyerAddress') return '12 Smith Rd, Wagin WA 6315';
   if (key === 'buyerAddressParts') return { line1: '12 Smith Rd', line2: '', town: 'Wagin', state: 'WA', postcode: '6315' };
+  if (key === 'deliveryPattern') return 'even';                // only 'call' and 'even' are stored
   if (key === 'gradeOptions') return [{ grade: 'APW1', adjust: 0 }, { grade: 'H2', adjust: 15 }, { grade: 'ASW1', adjust: -20 }];
   if (key === 'offFarm') return { operator: 'GrainCorp', opening: [{ commodityId: ids.commodity, grade: 'APH1', tons: 450 }] };
   if (key === 'gradeBands') return [{ tons: 500, grade: 'APH1' }, { tons: 250, grade: 'AUH2', proteinPct: 11.5, moisturePct: 11, fallingNumber: 400 }];

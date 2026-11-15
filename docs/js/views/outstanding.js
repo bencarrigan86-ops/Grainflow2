@@ -4,19 +4,20 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=273';
-import { openSheet } from '../ui.js?v=273';
-import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=273';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=273';
-import { windowText } from '../orders.js?v=273';
-import { openOrderSheet } from './orders.js?v=273';
-import { openInvoiceListSheet } from './invoice.js?v=273';
-import { renderPayables, returnToAfterBill } from './payables.js?v=273';
-import { openXeroSheet } from './xero.js?v=273';
-import { cashflow } from '../cashflow.js?v=273';
-import { buyerStatements, statementPdf } from '../statement.js?v=273';
-import { sharePdf } from '../sharefile.js?v=273';
-import { emailIn } from '../vendordec.js?v=273';
+import { db } from '../storage.js?v=274';
+import { openSheet } from '../ui.js?v=274';
+import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=274';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=274';
+import { windowText } from '../orders.js?v=274';
+import { openOrderSheet } from './orders.js?v=274';
+import { openInvoiceListSheet } from './invoice.js?v=274';
+import { renderPayables, returnToAfterBill } from './payables.js?v=274';
+import { openXeroSheet } from './xero.js?v=274';
+import { cashflow } from '../cashflow.js?v=274';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=274';
+import { buyerStatements, statementPdf } from '../statement.js?v=274';
+import { sharePdf } from '../sharefile.js?v=274';
+import { emailIn } from '../vendordec.js?v=274';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -27,6 +28,7 @@ const END_BADGE = { ended: 'neg', soon: 'warn', ok: 'pos', none: 'muted' };
 const END_WORD = { ended: 'Past end', soon: 'Ending soon', ok: 'In window', none: 'No end date' };
 
 // which side of the money the sheet shows, and the deliveries filter; kept while the app is open
+let scheduleGrain = 'month';     // week | month
 let moneySide = 'in';          // in | out | month | buyer
 let deliveriesFilter = '';     // '' | ended | soon
 let deliveriesView = 'timeline'; // timeline | list
@@ -66,6 +68,7 @@ export function openDeliveriesSheet() {
       const today = todayLocal();
       const rep = deliveries(sales, movements, db.getOrders(), today);
       const shown = rep.rows.filter((r) => !deliveriesFilter || r.state === deliveriesFilter);
+      const plan = deliveryPlan(rep.rows, today, scheduleGrain);
       const canOrder = ['owner', 'manager', 'bookkeeper'].includes(db.getRole());
 
       root.innerHTML = `
@@ -75,6 +78,7 @@ export function openDeliveriesSheet() {
         </div>
         <div class="row" style="margin-top:8px"><span class="label">Ending within 30 days</span><span class="value">${num(rep.soon.due, 0)} t${rep.soon.count ? ` (${rep.soon.count})` : ''}</span></div>
         ${rep.ordersOverdue ? `<div class="row"><span class="label">Grain orders past their deliver-by date</span><span class="value"><span class="badge neg">${rep.ordersOverdue}</span></span></div>` : ''}
+        ${scheduleHtml(plan, rep)}
         <div class="chips" style="margin:12px 0 10px">
           ${[['', 'All'], ['ended', 'Past end'], ['soon', 'Ending soon']].map(([k, l]) => `<button type="button" class="chip ${deliveriesFilter === k ? 'active' : ''}" data-filter="${k}">${l}</button>`).join('')}
         </div>
@@ -89,7 +93,7 @@ export function openDeliveriesSheet() {
           <div class="list-item stack">
             <div class="li-top"><div class="main">${esc(contractLabel(r.sale, commodities))}</div><div class="main">${num(r.due, 0)} t left</div></div>
             <div class="meta">${num(r.delivered, 0)} of ${num(r.tons, 0)} t delivered${windowText({ deliverFrom: r.start, deliverBy: r.end }, tightDate) ? ` · window ${esc(windowText({ deliverFrom: r.start, deliverBy: r.end }, tightDate))}` : ''}</div>
-            <div class="meta">${esc(endText(r.daysToEnd))}</div>
+            <div class="meta">${esc(endText(r.daysToEnd))}${patternText(r, plan)}</div>
             <div class="meta">${ord.count ? `${ord.count} open order${ord.count === 1 ? '' : 's'} for ${num(ord.left, 0)} t${ord.nextBy ? `, next due ${esc(shortDate(ord.nextBy))}` : ''}${ord.overdue ? ` (${ord.overdue} overdue)` : ''}` : 'No open orders'}${r.unordered > 0.5 ? ` · ${num(r.unordered, 0)} t not yet ordered` : ''}</div>
             <div class="gauge" role="img" aria-label="${Math.round(pct * 100)} percent delivered"><i style="width:${pct * 100}%"></i></div>
             <div class="li-foot"><span class="badges"><span class="badge ${END_BADGE[r.state]}">${END_WORD[r.state]}</span></span>
@@ -97,6 +101,7 @@ export function openDeliveriesSheet() {
           </div>`;
         }).join('')}`;
 
+      root.querySelector('#sched-grain')?.addEventListener('click', (e) => { const b = e.target.closest('[data-grain]'); if (b) { scheduleGrain = b.dataset.grain; draw(); } });
       root.querySelector('#deliv-view').addEventListener('click', (e) => { const b = e.target.closest('[data-view]'); if (b) { deliveriesView = b.dataset.view; draw(); } });
       root.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => { deliveriesFilter = b.dataset.filter; draw(); }));
       root.querySelectorAll('[data-add-order]').forEach((b) => b.addEventListener('click', () => openOrderSheet(null, { saleId: b.dataset.addOrder })));
@@ -133,7 +138,7 @@ export function openMoneySheet() {
           <button data-side="month" class="${moneySide === 'month' ? 'active' : ''}">By month</button>
           <button data-side="buyer" class="${moneySide === 'buyer' ? 'active' : ''}">By buyer</button>
         </div>
-        ${moneySide === 'month' ? cashflowHtml(cashflow(invoices, sales, db.getPayables(), today)) : moneySide === 'buyer' ? buyersHtml(buyerStatements(invoices, sales, movements, today), commodities) : moneySide === 'out' ? '<div id="money-bills"></div>' : `
+        ${moneySide === 'month' ? cashflowHtml(cashflow(invoices, sales, db.getPayables(), today, 6, expectedReceipts(deliveries(sales, movements, db.getOrders(), today).rows, unb.rows, today))) : moneySide === 'buyer' ? buyersHtml(buyerStatements(invoices, sales, movements, today), commodities) : moneySide === 'out' ? '<div id="money-bills"></div>' : `
         <div class="subhead">Delivered, not yet invoiced</div>
         ${unb.rows.length === 0 ? '<div class="empty" style="padding:6px 0">Every delivery is on an invoice.</div>' : `
         <div class="hint" style="margin-bottom:6px">${num(unb.total.tons, 1)} t worth about ${money(unb.total.value, 0)} has gone to buyers with no invoice yet. Tap a contract to invoice it.</div>
@@ -174,17 +179,18 @@ export function openMoneySheet() {
 function cashflowHtml(cf) {
   const neg = (n) => (n < 0 ? 'style="color:var(--danger)"' : '');
   return `
-    <div class="hint" style="margin-bottom:8px">Unpaid invoices coming in and unpaid bills going out, by the month each is due. Grain delivered but not yet invoiced is not in here, as it has no due date yet.</div>
+    <div class="hint" style="margin-bottom:8px">Invoiced is money already owed to you; Out is bills. Expected is a forecast for grain not yet invoiced: what is delivered, what is due to go, and what is ordered, paid on each contract’s terms at the contract price plus GST, before freight, levies and grade adjustments.</div>
     <div class="table-scroll"><table>
-      <thead><tr><th style="text-align:left">When</th><th>In</th><th>Out</th><th>Running</th></tr></thead>
+      <thead><tr><th style="text-align:left">When</th><th>Invoiced</th><th>Expected</th><th>Out</th><th>Running</th></tr></thead>
       <tbody>${cf.rows.map((r) => `
         <tr>
           <td style="text-align:left;${r.key === 'overdue' ? 'color:var(--danger);font-weight:600' : ''}">${esc(r.label)}${r.inCount + r.outCount ? `<div class="meta" style="font-size:11px">${r.inCount ? `${r.inCount} invoice${r.inCount === 1 ? '' : 's'}` : ''}${r.inCount && r.outCount ? ', ' : ''}${r.outCount ? `${r.outCount} bill${r.outCount === 1 ? '' : 's'}` : ''}</div>` : ''}</td>
           <td>${r.in ? money(r.in, 0) : '&ndash;'}</td>
+          <td style="font-style:italic">${r.expected ? money(r.expected, 0) : '&ndash;'}</td>
           <td>${r.out ? money(r.out, 0) : '&ndash;'}</td>
           <td ${neg(r.balance)}>${money(r.balance, 0)}</td>
         </tr>`).join('')}</tbody>
-      <tfoot><tr><td style="text-align:left">Total</td><td>${money(cf.totalIn, 0)}</td><td>${money(cf.totalOut, 0)}</td><td ${neg(cf.net)}>${money(cf.net, 0)}</td></tr></tfoot>
+      <tfoot><tr><td style="text-align:left">Total</td><td>${money(cf.totalIn, 0)}</td><td style="font-style:italic">${money(cf.totalExpected, 0)}</td><td>${money(cf.totalOut, 0)}</td><td ${neg(cf.net)}>${money(cf.net, 0)}</td></tr></tfoot>
     </table></div>`;
 }
 
@@ -213,4 +219,34 @@ async function sendStatement(key, { invoices, sales, movements, commodities, tod
     title: `Statement from ${biz.entityName || biz.farmName || 'us'}`, text: `Statement for ${st.buyer}, ${today}.`,
     mail: { to, subject: `Statement for ${st.buyer} as at ${today}`, body: 'Please find our statement attached.' },
   });
+}
+
+/** How a contract is delivered, and for an even one the weekly or monthly rate: " · spread evenly, about 30 t a week". */
+function patternText(r, plan) {
+  const pc = plan.perContract.get(r.sale.id);
+  if (!pc || !pc.pattern) return '';
+  if (pc.pattern === 'call') return ' · buyer calls it';
+  return pc.spread ? ` · spread evenly, about ${num(pc.perWeek, 0)} t a week (${num(pc.perMonth, 0)} t a month)` : ' · spread evenly';
+}
+
+/** When the grain still to deliver is due to go: tonnes a week or a month, from the even contracts and the open orders. */
+function scheduleHtml(plan, rep) {
+  if (!plan.periods.length && !plan.overdue.tons && !plan.unscheduled.tons) return '';
+  const anySet = rep.rows.some((r) => r.sale.deliveryPattern);
+  const sum = (k) => plan.periods.reduce((a, p) => a + p[k], 0);
+  const rows = plan.periods.map((p) => `<tr><td style="text-align:left">${esc(p.label)}</td><td>${p.even ? num(p.even, 0) : '&ndash;'}</td><td>${p.ordered ? num(p.ordered, 0) : '&ndash;'}</td><td><strong>${num(p.total, 0)}</strong></td></tr>`).join('');
+  return `
+    <div class="subhead" style="margin-top:14px">When it is due to go (tonnes)</div>
+    <div class="segmented" id="sched-grain" style="margin:6px 0 8px">
+      <button data-grain="week" class="${scheduleGrain === 'week' ? 'active' : ''}">Weekly</button>
+      <button data-grain="month" class="${scheduleGrain === 'month' ? 'active' : ''}">Monthly</button>
+    </div>
+    ${plan.periods.length ? `<div class="table-scroll"><table>
+      <thead><tr><th style="text-align:left">${scheduleGrain === 'week' ? 'Week' : 'Month'}</th><th>Spread evenly</th><th>Ordered</th><th>Total</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td style="text-align:left">Total dated</td><td>${num(sum('even'), 0)}</td><td>${num(sum('ordered'), 0)}</td><td>${num(sum('total'), 0)}</td></tr></tfoot>
+    </table></div>` : '<div class="empty" style="padding:6px 0">Nothing has a date yet.</div>'}
+    ${plan.overdue.tons ? `<div class="row"><span class="label">Was due before today</span><span class="value" style="color:var(--danger)">${num(plan.overdue.tons, 0)} t (${plan.overdue.contracts})</span></div>` : ''}
+    ${plan.unscheduled.tons ? `<div class="row"><span class="label">No date yet (not ordered)</span><span class="value">${num(plan.unscheduled.tons, 0)} t (${plan.unscheduled.contracts})</span></div>` : ''}
+    <div class="hint" style="margin-top:6px">${anySet ? 'A contract that is spread evenly is carted evenly from today to the end of its window. A contract the buyer calls is dated by its open grain orders.' : 'Set how each contract is delivered on the contract (the buyer calls it, or spread evenly over the window) and the weekly or monthly tonnes appear here.'}</div>`;
 }

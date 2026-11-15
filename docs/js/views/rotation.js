@@ -1,12 +1,12 @@
 // Rotation and yield history: every paddock against every season, with the crop and its yield in each cell, and the
 // farm's yield for each crop by season underneath. Built from the seasons the farm already holds; nothing is entered here.
 
-import { db } from '../storage.js?v=273';
-import { num, esc } from '../fmt.js?v=273';
-import { openSheet } from '../ui.js?v=273';
-import { canSeeYield } from '../nav.js?v=273';
-import { PALETTE } from '../farmmap.js?v=273';
-import { rotationGrid, cropYields } from '../fieldhistory.js?v=273';
+import { db } from '../storage.js?v=274';
+import { num, esc } from '../fmt.js?v=274';
+import { openSheet } from '../ui.js?v=274';
+import { canSeeYield } from '../nav.js?v=274';
+import { PALETTE } from '../farmmap.js?v=274';
+import { rotationGrid, cropYields } from '../fieldhistory.js?v=274';
 
 export function openRotationSheet() {
   const showYield = canSeeYield(db.getRole());
