@@ -4,12 +4,12 @@
 // into and out of a location are ordinary movements (see the movement form); what a location holds is
 // worked out from them (offfarm.js).
 
-import { db } from '../storage.js?v=270';
-import { openSheet, closeSheet, field, getVal, confirmDelete, toast } from '../ui.js?v=270';
-import { num, esc } from '../fmt.js?v=270';
-import { isOffFarm, holdings, totalHeld, cleanOffFarm } from '../offfarm.js?v=270';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=270';
-import { renderRelatedMovements } from './movements.js?v=270';
+import { db } from '../storage.js?v=271';
+import { openSheet, closeSheet, field, getVal, confirmDelete, toast } from '../ui.js?v=271';
+import { num, esc } from '../fmt.js?v=271';
+import { isOffFarm, holdings, totalHeld, cleanOffFarm } from '../offfarm.js?v=271';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=271';
+import { renderRelatedMovements } from './movements.js?v=271';
 
 const OPERATORS = ['GrainCorp', 'Viterra', 'Cargill', 'Emerald Grain', 'Louis Dreyfus', 'Olam', 'Bunge', 'CBH'];
 

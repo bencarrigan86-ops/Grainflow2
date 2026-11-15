@@ -1,8 +1,9 @@
-import { db } from '../storage.js?v=270';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=270';
-import { num, money, esc, dmy } from '../fmt.js?v=270';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=270';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=270';
+import { db } from '../storage.js?v=271';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=271';
+import { num, money, esc, dmy } from '../fmt.js?v=271';
+import { addressLinesOf } from '../address.js?v=271';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=271';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=271';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -231,7 +232,7 @@ function invoiceDocHTML(sale, invoice, business, commodity) {
           <div class="line"><strong>${esc(business.entityName || '—')}</strong></div>
           ${business.abn ? `<div class="line">ABN ${esc(business.abn)}</div>` : ''}
           ${business.ngr ? `<div class="line">NGR ${esc(business.ngr)}</div>` : ''}
-          ${business.address ? `<div class="line">${esc(business.address)}</div>` : ''}
+          ${addressLinesOf(business.address, business.addressParts).map((l) => `<div class="line">${esc(l)}</div>`).join('')}
           ${business.contactName ? `<div class="line">${esc(business.contactName)}</div>` : ''}
           ${business.phone ? `<div class="line">${esc(business.phone)}</div>` : ''}
           ${business.email ? `<div class="line">${esc(business.email)}</div>` : ''}
@@ -240,7 +241,7 @@ function invoiceDocHTML(sale, invoice, business, commodity) {
           <h3>Buyer</h3>
           <div class="line"><strong>${esc(sale.buyer || '—')}</strong></div>
           ${sale.buyerAbn ? `<div class="line">ABN ${esc(sale.buyerAbn)}</div>` : ''}
-          ${sale.buyerAddress ? `<div class="line">${esc(sale.buyerAddress)}</div>` : ''}
+          ${addressLinesOf(sale.buyerAddress, sale.buyerAddressParts).map((l) => `<div class="line">${esc(l)}</div>`).join('')}
         </div>
       </div>
       <div class="line" style="margin-bottom:10px"><strong>Commodity:</strong> ${esc(commodity?.name || '—')}${sale.grade ? ` (${esc(sale.grade)})` : ''}${sale.location ? ` &middot; ${esc(sale.location)}` : ''}</div>

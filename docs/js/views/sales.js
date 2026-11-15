@@ -1,26 +1,27 @@
-import { db } from '../storage.js?v=270';
+import { db } from '../storage.js?v=271';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=270';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=270';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=270';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=270';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=270';
-import { renderRelatedMovements } from './movements.js?v=270';
-import { openInvoiceListSheet } from './invoice.js?v=270';
-import { openContractDocSheet } from './contract.js?v=270';
-import { wireJumps } from '../jump.js?v=270';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=270';
-import { renderContractFreight } from './freightorders.js?v=270';
-import { activeSales, paidSales } from '../paidsales.js?v=270';
-import { openVendorDecSheet } from './vendordec.js?v=270';
-import { summarise as summariseOrders } from '../orders.js?v=270';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=270';
-import { deliveries, moneyPosition } from '../outstanding.js?v=270';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=270';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=270';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=270';
-import { standardFor } from '../grades.js?v=270';
+} from '../documents.js?v=271';
+import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=271';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=271';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=271';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=271';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=271';
+import { renderRelatedMovements } from './movements.js?v=271';
+import { openInvoiceListSheet } from './invoice.js?v=271';
+import { openContractDocSheet } from './contract.js?v=271';
+import { wireJumps } from '../jump.js?v=271';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=271';
+import { renderContractFreight } from './freightorders.js?v=271';
+import { activeSales, paidSales } from '../paidsales.js?v=271';
+import { openVendorDecSheet } from './vendordec.js?v=271';
+import { summarise as summariseOrders } from '../orders.js?v=271';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=271';
+import { deliveries, moneyPosition } from '../outstanding.js?v=271';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=271';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=271';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=271';
+import { standardFor } from '../grades.js?v=271';
 
 let unsub = null;
 
@@ -492,10 +493,8 @@ function openSaleSheet(existing) {
           <div class="sub">Tons delivered, buyer ABN and address</div></div></summary>
         ${field({ label: 'Tons delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a Movement' })}
         ${movementDelivered > 0 ? `<div class="row"><span class="label">+ Delivered via movements</span><span class="value" id="movement-delivered-value">${num(movementDelivered, 1)} t</span></div>` : ''}
-        <div class="grid-2">
-          ${field({ label: 'Buyer ABN (optional)', id: 'buyerAbn', value: existing?.buyerAbn, hint: 'For invoices' })}
-          ${field({ label: 'Buyer address (optional)', id: 'buyerAddress', value: existing?.buyerAddress })}
-        </div>
+        ${field({ label: 'Buyer ABN (optional)', id: 'buyerAbn', value: existing?.buyerAbn, hint: 'For invoices' })}
+        ${addressFields('buyerAddr', partsOf(existing?.buyerAddress, existing?.buyerAddressParts), { label: 'Buyer address', optional: true })}
       </details>
 
       <details class="fold" ${openAdvanced ? 'open' : ''}>
@@ -675,7 +674,7 @@ function openSaleSheet(existing) {
     };
     const COPY_FIELDS = [
       'location', 'paymentTermsDays', 'paymentTermsBasis', 'weightsToGovern', 'broker', 'brokeragePaidBy',
-      'freight', 'freightPaidBy', 'brokerageRate', 'deliveryTerms', 'contractType', 'pricingPoint', 'buyerContact', 'tradeRules', 'buyerAbn', 'buyerAddress',
+      'freight', 'freightPaidBy', 'brokerageRate', 'deliveryTerms', 'contractType', 'pricingPoint', 'buyerContact', 'tradeRules', 'buyerAbn',
     ];
     const isBlank = (el) => el.value === '' || el.value === '0';
     const offerCopy = () => {
@@ -693,6 +692,13 @@ function openSaleSheet(existing) {
           if (!el || v === undefined || v === null || v === '' || v === 0) return;
           if (isBlank(el)) { el.value = v; filled += 1; }
         });
+        // the buyer's address: all five boxes, and only into an address that is still empty
+        const prevAddr = partsOf(prev.buyerAddress, prev.buyerAddressParts);
+        const addrBoxes = PART_KEYS.map((k) => root.querySelector(`#buyerAddr-${k}`));
+        if (PART_KEYS.some((k) => prevAddr[k]) && addrBoxes.every((el) => el && el.value === '')) {
+          PART_KEYS.forEach((k, i) => { addrBoxes[i].value = prevAddr[k]; });
+          filled += 1;
+        }
         root.querySelectorAll('details.fold').forEach((d) => {
           if ([...d.querySelectorAll('input,select,textarea')].some((i) => i.value !== '' && i.value !== '0' && i.id !== 'levies' && i.id !== 'tolCap')) d.open = true;
         });
@@ -858,7 +864,8 @@ function openSaleSheet(existing) {
         brokerNote: '',   // the old box: whatever it held is in the comments now
         notes: getVal(root, 'notes')?.trim(),
         buyerAbn: getVal(root, 'buyerAbn')?.trim(),
-        buyerAddress: getVal(root, 'buyerAddress')?.trim(),
+        buyerAddress: joinAddress(readAddress(root, 'buyerAddr')),   // the one line the documents print; the parts ride beside it
+        buyerAddressParts: readAddress(root, 'buyerAddr'),
         cropYear: getVal(root, 'cropYear')?.trim(),
         contractType: getVal(root, 'contractType')?.trim(),
         pricingPoint: getVal(root, 'pricingPoint')?.trim(),

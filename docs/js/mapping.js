@@ -27,8 +27,14 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=270';
-import { cleanOffFarm } from './offfarm.js?v=270';
+import { cleanGradeOptions } from './gradeprice.js?v=271';
+import { cleanOffFarm } from './offfarm.js?v=271';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=271';
+
+/** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
+const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
+/** The parts read back, only while they still say what the joined text says. */
+const partsIn = (col, text) => (col && typeof col === 'object' && joinAddress(col) === String(text ?? '').trim() ? cleanParts(col) : undefined);
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -247,6 +253,8 @@ export function stateToRows(state, farmId) {
     ...((b.pic || b.__hasPic) ? { pic: orNull(b.pic) } : {}),
     // Whether Aircair's own form is offered on a spray request. Off unless switched on, so a farm that never has it needs no column.
     ...((b.showAircair || b.__hasAircair) ? { show_aircair: !!b.showAircair } : {}),
+    // The address in its parts (line 1, line 2, town, state, postcode), beside the joined line in `address`. Optional in the same way.
+    ...(partsOut(b.addressParts, b.__hasAddressParts) ? { address_parts: partsOut(b.addressParts, b.__hasAddressParts).v } : {}),
   });
 
   for (const [label, year] of Object.entries(state.years || {})) {
@@ -390,6 +398,8 @@ export function stateToRows(state, farmId) {
         broker_note: orNull(sale.brokerNote),
         buyer_abn: orNull(sale.buyerAbn),
         buyer_address: orNull(sale.buyerAddress),
+        // The buyer's address in its parts, beside the joined line above. Optional like the other later columns.
+        ...(partsOut(sale.buyerAddressParts, sale.__hasBuyerAddressParts) ? { buyer_address_parts: partsOut(sale.buyerAddressParts, sale.__hasBuyerAddressParts).v } : {}),
         // The commercial half of a contract's terms: who the broker is, who
         // pays them, what the buyer pays to leave grain on farm, and which
         // rulebook governs when there is an argument.
@@ -742,6 +752,7 @@ export function rowsToState(rows) {
           brokerNote: t.broker_note ?? '',
           buyerAbn: t.buyer_abn ?? '',
           buyerAddress: t.buyer_address ?? '',
+          ...(t.buyer_address_parts != null ? { __hasBuyerAddressParts: true, ...(partsIn(t.buyer_address_parts, t.buyer_address) ? { buyerAddressParts: partsIn(t.buyer_address_parts, t.buyer_address) } : {}) } : {}),
           cropYear: sale.crop_year ?? '',
           contractType: sale.contract_type ?? '',
           pricingPoint: sale.pricing_point ?? '',
@@ -867,6 +878,7 @@ export function rowsToState(rows) {
       ...((farm.qa_program != null || farm.qa_number != null) ? { qaProgram: farm.qa_program ?? '', qaNumber: farm.qa_number ?? '', __hasQa: true } : {}),
       ...(farm.pic != null ? { pic: farm.pic, __hasPic: true } : {}),
       ...(farm.show_aircair != null ? { showAircair: !!farm.show_aircair, __hasAircair: true } : {}),
+      ...(farm.address_parts != null ? { __hasAddressParts: true, ...(partsIn(farm.address_parts, farm.address) ? { addressParts: partsIn(farm.address_parts, farm.address) } : {}) } : {}),
     },
   };
 }

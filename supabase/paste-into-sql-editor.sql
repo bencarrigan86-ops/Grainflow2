@@ -42,6 +42,12 @@ alter table movements
 alter table farms
   add column if not exists show_aircair boolean;
 
+-- An address in its parts: line 1, line 2, town, state and postcode (optional; stored only once an address has been split)
+alter table farms
+  add column if not exists address_parts jsonb;
+alter table sale_terms
+  add column if not exists buyer_address_parts jsonb;
+
 -- The time a load was loaded or left, as 24 hour text such as 14:30 (optional; stored only when a time is recorded)
 alter table movements
   add column if not exists load_time text;

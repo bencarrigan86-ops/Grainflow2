@@ -7,10 +7,11 @@
 //
 // Pure: the sheet (views/xero.js) supplies the data and downloads the files.
 
-import { invoiceTotals } from './derived.js?v=270';
-import { kindLabel } from './payables.js?v=270';
-import { emailIn } from './vendordec.js?v=270';
-import { toCSV } from './csv.js?v=270';
+import { invoiceTotals } from './derived.js?v=271';
+import { kindLabel } from './payables.js?v=271';
+import { emailIn } from './vendordec.js?v=271';
+import { toCSV } from './csv.js?v=271';
+import { partsOf, hasParts } from './address.js?v=271';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -40,6 +41,13 @@ export const financialYearStart = (today) => {
 
 const inRange = (date, from, to) => !date || ((!from || date >= from) && (!to || date <= to));
 
+/** The buyer's address in Xero's postal address columns, when the contract has one. */
+function postalAddress(sale) {
+  const a = partsOf(sale?.buyerAddress, sale?.buyerAddressParts);
+  if (!hasParts(a)) return {};
+  return { POAddressLine1: a.line1, POAddressLine2: a.line2, POCity: a.town, PORegion: a.state, POPostalCode: a.postcode, ...(a.state ? { POCountry: 'Australia' } : {}) };
+}
+
 const blankRow = () => Object.fromEntries(XERO_COLUMNS.map((c) => [c, '']));
 
 /**
@@ -65,6 +73,7 @@ export function xeroInvoices({ invoices = [], sales = [], commodities = [], from
     const head = {
       '*ContactName': buyer || 'Unknown buyer',
       EmailAddress: emailIn(sale?.buyerContact),
+      ...postalAddress(sale),
       '*InvoiceNumber': inv.invoiceNo ?? '',
       Reference: clean(sale?.contractNo),
       '*InvoiceDate': xeroDate(inv.issueDate || to),

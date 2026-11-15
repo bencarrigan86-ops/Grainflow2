@@ -18,10 +18,11 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=270';
-import { openSheet } from '../ui.js?v=270';
-import { esc, num, money } from '../fmt.js?v=270';
-import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=270';
+import { db } from '../storage.js?v=271';
+import { openSheet } from '../ui.js?v=271';
+import { esc, num, money } from '../fmt.js?v=271';
+import { addressLinesOf } from '../address.js?v=271';
+import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=271';
 
 const DASH = '—';
 
@@ -100,7 +101,7 @@ export function contractDocHTML(sale, business, commodity) {
             ? `<div class="line">"${esc(business.farmName)}"</div>` : ''}
           ${business.abn ? `<div class="line">ABN ${esc(business.abn)}</div>` : ''}
           ${business.ngr ? `<div class="line">NGR ${esc(business.ngr)}</div>` : ''}
-          ${business.address ? `<div class="line">${esc(business.address)}</div>` : ''}
+          ${addressLinesOf(business.address, business.addressParts).map((l) => `<div class="line">${esc(l)}</div>`).join('')}
           ${business.contactName ? `<div class="line">${esc(business.contactName)}</div>` : ''}
           ${business.phone ? `<div class="line">${esc(business.phone)}</div>` : ''}
           ${business.email ? `<div class="line">${esc(business.email)}</div>` : ''}
@@ -109,7 +110,7 @@ export function contractDocHTML(sale, business, commodity) {
           <h3>Buyer</h3>
           <div class="line"><strong>${esc(sale.buyer || DASH)}</strong></div>
           ${sale.buyerAbn ? `<div class="line">ABN ${esc(sale.buyerAbn)}</div>` : ''}
-          ${sale.buyerAddress ? `<div class="line">${esc(sale.buyerAddress)}</div>` : ''}
+          ${addressLinesOf(sale.buyerAddress, sale.buyerAddressParts).map((l) => `<div class="line">${esc(l)}</div>`).join('')}
           ${sale.buyerContact ? `<div class="line">Attn: ${esc(sale.buyerContact)}</div>` : ''}
         </div>
       </div>

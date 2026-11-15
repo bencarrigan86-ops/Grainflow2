@@ -18,22 +18,23 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=270';
+import { hydrate } from './hydrate.js?v=271';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=270';
-import { chooseBootState, resolveLegacy } from './boot.js?v=270';
-import { isLegacyDirty } from './dirty.js?v=270';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=270';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=270';
-import { settleLegs, dedupeLegs } from './legs.js?v=270';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=270';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=270';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=270';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=270';
-import { schedulePush, pushOnReconnect } from './sync.js?v=270';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=270';
+} from './local.js?v=271';
+import { chooseBootState, resolveLegacy } from './boot.js?v=271';
+import { isLegacyDirty } from './dirty.js?v=271';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=271';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=271';
+import { settleLegs, dedupeLegs } from './legs.js?v=271';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=271';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=271';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=271';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=271';
+import { schedulePush, pushOnReconnect } from './sync.js?v=271';
+import { hasParts as hasAddressParts } from './address.js?v=271';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=271';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -734,12 +735,13 @@ export const db = {
         if (merged.freightPaidBy === 'buyer') merged.__hasFreightPaidBy = true;   // and a switch back to 'we' too
         if (merged.ourRef) merged.__hasOurRef = true;   // so clearing it reaches the server
         if (merged.paid) merged.__hasPaid = true;       // and so does marking it unpaid again
+        if (hasAddressParts(merged.buyerAddressParts)) merged.__hasBuyerAddressParts = true;   // and clearing the buyer's address parts
         c.sales[idx] = merged;
       }
       touch('sale', sale.id);
     } else {
       const id = uid();
-      c.sales.push({ ...sale, id, ...(Number(sale.brokerageRate) ? { __hasBrokerageRate: true } : {}), ...(sale.freightPaidBy === 'buyer' ? { __hasFreightPaidBy: true } : {}), ...(sale.ourRef ? { __hasOurRef: true } : {}), ...(sale.paid ? { __hasPaid: true } : {}) });
+      c.sales.push({ ...sale, id, ...(Number(sale.brokerageRate) ? { __hasBrokerageRate: true } : {}), ...(sale.freightPaidBy === 'buyer' ? { __hasFreightPaidBy: true } : {}), ...(sale.ourRef ? { __hasOurRef: true } : {}), ...(sale.paid ? { __hasPaid: true } : {}), ...(hasAddressParts(sale.buyerAddressParts) ? { __hasBuyerAddressParts: true } : {}) });
       touch('sale', id);
     }
     persist();
@@ -1129,6 +1131,7 @@ export const db = {
     if (data.businessDetails.qaProgram || data.businessDetails.qaNumber) data.businessDetails.__hasQa = true;   // so clearing them reaches the server
     if (data.businessDetails.pic) data.businessDetails.__hasPic = true;
     if (data.businessDetails.showAircair) data.businessDetails.__hasAircair = true;   // so switching it off again reaches the server
+    if (hasAddressParts(data.businessDetails.addressParts)) data.businessDetails.__hasAddressParts = true;   // so clearing the parts reaches the server
     touch('business');
     persist();
   },

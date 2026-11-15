@@ -1,28 +1,29 @@
-import { db } from '../storage.js?v=270';
-import { getTheme, setTheme } from '../theme.js?v=270';
-import { num, money, esc, todayLocal } from '../fmt.js?v=270';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=270';
-import { openLoadImportSheet } from './importloads.js?v=270';
-import { openDeletedSheet } from './deleted.js?v=270';
-import { APP_VERSION } from '../version.js?v=270';
-import { exportRowsAsCSV } from '../csv.js?v=270';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=270';
-import { endpointLabel } from './movements.js?v=270';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=270';
-import { layersForStorage } from '../outload.js?v=270';
-import { holdings, totalHeld } from '../offfarm.js?v=270';
-import { kindLabel, billTotal } from '../payables.js?v=270';
-import { orderState, STATE_LABEL } from '../orders.js?v=270';
-import { fieldHarvest } from '../harvest.js?v=270';
-import { openMySignatureSheet } from './signaturepad.js?v=270';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=270';
+import { db } from '../storage.js?v=271';
+import { getTheme, setTheme } from '../theme.js?v=271';
+import { num, money, esc, todayLocal } from '../fmt.js?v=271';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=271';
+import { openLoadImportSheet } from './importloads.js?v=271';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=271';
+import { openDeletedSheet } from './deleted.js?v=271';
+import { APP_VERSION } from '../version.js?v=271';
+import { exportRowsAsCSV } from '../csv.js?v=271';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=271';
+import { endpointLabel } from './movements.js?v=271';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=271';
+import { layersForStorage } from '../outload.js?v=271';
+import { holdings, totalHeld } from '../offfarm.js?v=271';
+import { kindLabel, billTotal } from '../payables.js?v=271';
+import { orderState, STATE_LABEL } from '../orders.js?v=271';
+import { fieldHarvest } from '../harvest.js?v=271';
+import { openMySignatureSheet } from './signaturepad.js?v=271';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=271';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=270';
+} from '../invites.js?v=271';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=270';
+} from '../auth.js?v=271';
 
 let unsub = null;
 
@@ -121,7 +122,7 @@ function paint(root) {
           ${field({ label: 'Phone', id: 'bd-phone', type: 'tel', value: business.phone })}
           ${field({ label: 'Email', id: 'bd-email', type: 'email', value: business.email })}
         </div>
-        ${field({ label: 'Address', id: 'bd-address', value: business.address })}
+        ${addressFields('bd-addr', partsOf(business.address, business.addressParts))}
         ${field({ label: 'Payment terms (days)', id: 'bd-terms', type: 'number', step: '1', value: business.paymentTermsDays })}
         <hr class="sep" />
         <div class="grid-2">
@@ -250,6 +251,7 @@ function paint(root) {
   root.querySelector('#show-aircair')?.addEventListener('change', (e) => db.updateBusinessDetails({ showAircair: e.target.checked }));
 
   root.querySelector('#save-business').addEventListener('click', () => {
+    const addr = readAddress(root, 'bd-addr');
     db.updateBusinessDetails({
       entityName: getVal(root, 'bd-entity')?.trim(),
       abn: getVal(root, 'bd-abn')?.trim(),
@@ -258,7 +260,8 @@ function paint(root) {
       contactName: getVal(root, 'bd-contact')?.trim(),
       phone: getVal(root, 'bd-phone')?.trim(),
       email: getVal(root, 'bd-email')?.trim(),
-      address: getVal(root, 'bd-address')?.trim(),
+      address: joinAddress(addr),   // the one line the documents print; the parts ride beside it
+      addressParts: addr,
       paymentTermsDays: getNum(root, 'bd-terms'),
       bankName: getVal(root, 'bd-bank')?.trim(),
       accountName: getVal(root, 'bd-accname')?.trim(),
