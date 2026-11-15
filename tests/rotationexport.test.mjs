@@ -102,7 +102,7 @@ check('the files follow the farms that are on, and a crop keeps its tint', () =>
 });
 check('the sheet has the farm ticks with Select all and Clear all, and the map has the same buttons', () => {
   const v = read('docs/js/views/rotation.js');
-  for (const t of ['rot-farm', 'id="rot-all"', 'id="rot-none"', 'grainflow.rotation.hidden', 'withoutFarms(fullGrid, hidden)']) assert.ok(v.includes(t), t);
+  for (const t of ['rot-farm', 'id="rot-all"', 'id="rot-none"', 'grainflow.rotation.hidden', 'id="rot-farms"', 'grainflow.rotation.farmsopen', 'withoutFarms(fullGrid, hidden)']) assert.ok(v.includes(t), t);
   const m = read('docs/js/views/farmmap.js');
   for (const t of ['id="fm-all"', 'id="fm-none"', 'hidden.clear()']) assert.ok(m.includes(t), t);
 });

@@ -1,16 +1,16 @@
 // Rotation and yield history: every paddock against every season, with the crop and its yield in each cell, and the
 // farm's yield for each crop by season underneath. Built from the seasons the farm already holds; nothing is entered here.
 
-import { db } from '../storage.js?v=281';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=281';
-import { openSheet, toast } from '../ui.js?v=281';
-import { canSeeYield } from '../nav.js?v=281';
-import { PALETTE } from '../farmmap.js?v=281';
-import { rotationGrid, rotationFarms, withoutFarms } from '../fieldhistory.js?v=281';
-import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=281';
-import { nowTime } from '../loadreport.js?v=281';
-import { downloadCSV } from '../csv.js?v=281';
-import { sharePdf, safeFileName } from '../sharefile.js?v=281';
+import { db } from '../storage.js?v=282';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=282';
+import { openSheet, toast } from '../ui.js?v=282';
+import { canSeeYield } from '../nav.js?v=282';
+import { PALETTE } from '../farmmap.js?v=282';
+import { rotationGrid, rotationFarms, withoutFarms } from '../fieldhistory.js?v=282';
+import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=282';
+import { nowTime } from '../loadreport.js?v=282';
+import { downloadCSV } from '../csv.js?v=282';
+import { sharePdf, safeFileName } from '../sharefile.js?v=282';
 
 const ORIENT_KEY = 'grainflow.rotation.orientation';
 const lastOrientation = () => { try { return orientationOf(localStorage.getItem(ORIENT_KEY)); } catch { return 'landscape'; } };
@@ -21,6 +21,10 @@ const haText = (v) => { const r = Math.round(v * 10) / 10; return num(r, Number.
 // farms switched off on the report, remembered on this device (the same idea as the farm map's Farms list)
 const HIDDEN_KEY = 'grainflow.rotation.hidden';
 const readHidden = () => { try { const h = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]'); return Array.isArray(h) ? h : []; } catch { return []; } };
+// whether the Farms list is open, remembered on this device (open until you fold it away)
+const OPEN_KEY = 'grainflow.rotation.farmsopen';
+const readOpen = () => { try { return localStorage.getItem(OPEN_KEY) !== '0'; } catch { return true; } };
+const saveOpen = (open) => { try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch { /* not remembered */ } };
 const saveHidden = (list) => { try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(list)); } catch { /* not remembered */ } };
 
 export function openRotationSheet() {
@@ -80,9 +84,9 @@ export function openRotationSheet() {
     const farmRow = (f) => `<label class="row" style="cursor:pointer"><span class="label"><input type="checkbox" class="rot-farm" data-farm="${esc(f.name)}" ${hidden.has(f.name) ? '' : 'checked'} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />${esc(f.name || 'No farm name')}</span><span class="value">${f.paddocks} paddock${f.paddocks === 1 ? '' : 's'}</span></label>`;
     const farmsSub = () => `${farms.length} farms, ${hidden.size ? `${farms.length - hidden.size} showing` : 'all showing'}`;
     root.innerHTML = `
-      ${farms.length > 1 ? `<div class="card" style="margin-bottom:10px"><h2>Farms</h2><div class="sub" id="rot-farmsub">${farmsSub()}</div>
+      ${farms.length > 1 ? `<div class="card" style="margin-bottom:10px"><details class="fold" id="rot-farms" style="margin-top:0;border-top:none" ${readOpen() ? 'open' : ''}><summary><div><h2>Farms</h2><div class="sub" id="rot-farmsub">${farmsSub()}</div></div></summary>
         <div style="display:flex;gap:8px;margin:8px 0"><button type="button" class="btn secondary" id="rot-all">Select all</button><button type="button" class="btn secondary" id="rot-none">Clear all</button></div>
-        ${farms.map(farmRow).join('')}</div>` : ''}
+        ${farms.map(farmRow).join('')}</details></div>` : ''}
       <div id="rot-body"></div>
       <div class="subhead" style="margin-top:14px">Save or send</div>
       <div class="segmented" id="rot-orient" style="margin-bottom:8px">
@@ -93,6 +97,7 @@ export function openRotationSheet() {
         <button type="button" class="btn secondary" id="rot-csv">Excel (CSV)</button>
       </div>`;
     paintBody();
+    root.querySelector('#rot-farms')?.addEventListener('toggle', (e) => saveOpen(e.currentTarget.open));
     const setHidden = () => {
       saveHidden([...hidden]);
       grid = withoutFarms(fullGrid, hidden);
