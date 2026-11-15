@@ -23,11 +23,11 @@ const ctx = {
   sales: [{ id: 'k1', buyer: 'Graincorp', contractNo: 'C-77', location: 'Newcastle terminal' }, { id: 'k2', buyer: 'Louis Dreyfus' }],
   commodities: [{ id: 'w', name: 'Wheat' }, { id: 'b', name: 'Barley' }],
 };
-const mv = (o) => ({ id: o.id, ticketNo: o.ticketNo, date: o.date, loadTime: o.loadTime, commodityId: o.commodityId || 'w', truckRego: o.truckRego || 'ABC123', driver: o.driver || 'Sam', tons: o.tons ?? 30, weightStatus: o.weightStatus || 'estimate',
+const mv = (o) => ({ grossWeight: o.grossWeight, tareWeight: o.tareWeight, id: o.id, ticketNo: o.ticketNo, date: o.date, loadTime: o.loadTime, commodityId: o.commodityId || 'w', truckRego: o.truckRego || 'ABC123', driver: o.driver || 'Sam', tons: o.tons ?? 30, weightStatus: o.weightStatus || 'estimate',
   froms: o.froms || [{ type: 'silo', id: 's1' }], tos: o.tos || [{ type: 'sale', id: 'k1' }] });
 const moves = [
   mv({ id: 'a', ticketNo: 3, date: '2026-11-15', loadTime: '14:30' }),
-  mv({ id: 'b', ticketNo: 2, date: '2026-11-15', loadTime: '08:05', froms: [{ type: 'field', id: 'f1' }] }),
+  mv({ id: 'b', ticketNo: 2, date: '2026-11-15', loadTime: '08:05', grossWeight: 45, tareWeight: 15, froms: [{ type: 'field', id: 'f1' }] }),
   mv({ id: 'c', ticketNo: 1, date: '2026-11-14', tons: 25, weightStatus: 'final', tos: [{ type: 'sale', id: 'k2' }] }),
   mv({ id: 'd', ticketNo: 4, date: '2026-11-16', commodityId: 'b', tos: [{ type: 'silo', id: 's1' }] }),
 ];
@@ -57,7 +57,7 @@ check('each line carries the details asked for', () => {
   assert.equal(loadReportRows(moves, ctx).find((x) => x.id === 'c').final, true);
 });
 check('totals add up the loads and tonnes', () => {
-  assert.deepEqual(loadReportTotals(loadReportRows(moves, ctx)), { loads: 4, tons: 115 });
+  assert.deepEqual(loadReportTotals(loadReportRows(moves, ctx)), { loads: 4, tons: 115, gross: 45, tare: 15 });
 });
 check('names: a contract with no number, in transit, unknown things', () => {
   assert.equal(endName({ type: 'sale', id: 'k2' }, ctx), 'Louis Dreyfus');
@@ -92,7 +92,10 @@ check('a PDF is made with the loads, the totals and the origin when it is on', (
   const pdf = text(buildLoadReportPdf(rows, { business: 'Carrigan Farming', from: '2026-11-14', to: '2026-11-16', showOrigin: true }));
   assert.ok(pdf.startsWith('%PDF-1.4'));
   assert.ok(pdf.includes('(LOAD REPORT)') && pdf.includes('(4 loads, 115.00 t)') && pdf.includes('(Carrigan Farming'));
-  assert.ok(pdf.includes('(14:30)') && pdf.includes('(ABC123)') && pdf.includes('(Graincorp #C-77)') && pdf.includes('(#3)') && pdf.includes('(25.00 final)'));
+  assert.ok(pdf.includes('(14:30)') && pdf.includes('(ABC123)') && pdf.includes('(Graincorp #C-77)') && pdf.includes('(#3)'));
+  assert.ok(pdf.includes('(Gross \\(t\\))') && pdf.includes('(Tare \\(t\\))') && pdf.includes('(Net \\(t\\))') && pdf.includes('(45.00)') && pdf.includes('(15.00)'), 'gross, tare and net');
+  assert.ok(pdf.includes('(25.00 final)') && pdf.includes('(30.00 est)'));
+  assert.ok(!text(buildLoadReportPdf(rows.filter((r) => r.gross === null && r.tare === null), {})).includes('(Gross'), 'no gross or tare columns when none was recorded');
   assert.ok(pdf.includes('(From)') && pdf.includes('(River Block)'));
   assert.ok(pdf.includes('(Destination)') && pdf.includes('(Newcastle terminal)'));
   assert.ok(!text(buildLoadReportPdf(rows.filter((r) => !r.destination), {})).includes('(Destination)'), 'no column when no load has one');
@@ -124,7 +127,7 @@ console.log('\n=== one load ===');
 check('a single load makes a slip with the same details, and the origin can be left off', () => {
   const row = loadReportRows(moves, ctx).find((r) => r.id === 'b');
   const on = text(buildLoadTicketPdf(row, { business: 'Carrigan Farming', showOrigin: true }));
-  assert.ok(on.includes('(LOAD TICKET)') && on.includes('(Ticket #2)') && on.includes('(08:05)') && on.includes('(ABC123)') && on.includes('(Sam)') && on.includes('(Graincorp #C-77)') && on.includes('(30.00 t)') && on.includes('(Newcastle terminal)'));
+  assert.ok(on.includes('(LOAD TICKET)') && on.includes('(Ticket #2)') && on.includes('(08:05)') && on.includes('(ABC123)') && on.includes('(Sam)') && on.includes('(Graincorp #C-77)') && on.includes('(45.00 t)') && on.includes('(15.00 t)') && on.includes('(Gross weight)') && on.includes('(Tare weight)') && on.includes('(Net weight)') && on.includes('(30.00 t  \\(estimate\\))') && on.includes('(Newcastle terminal)'));
   assert.ok(on.includes('(From)') && on.includes('(River Block)'));
   const off = text(buildLoadTicketPdf(row, { showOrigin: false }));
   assert.ok(!off.includes('(From)') && !off.includes('(River Block)'));

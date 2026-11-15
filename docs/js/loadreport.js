@@ -3,8 +3,8 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=258';
-import { dmy } from './fmt.js?v=258';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=259';
+import { dmy } from './fmt.js?v=259';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -66,14 +66,17 @@ export function loadReportRows(movements, ctx, { from = '', to = '', commodityId
       destination: [...new Set((m.tos || []).filter((t) => t.type === 'sale').map((t) => siteOf((ctx.sales || []).find((s) => s.id === t.id))).filter(Boolean))].join(', '),
       notes: String(m.notes || '').trim(),
       from: (m.froms || []).map((f) => endName(f, ctx)).filter(Boolean).join(', '),
-      tons: Number(m.tons) || 0,
+      tons: Number(m.tons) || 0,                       // the net load
+      gross: m.grossWeight === null || m.grossWeight === undefined || m.grossWeight === '' ? null : Number(m.grossWeight),
+      tare: m.tareWeight === null || m.tareWeight === undefined || m.tareWeight === '' ? null : Number(m.tareWeight),
       final: m.weightStatus === 'final',
     }))
     .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time) || (Number(a.ticketNo) || 0) - (Number(b.ticketNo) || 0));
 }
 
 export function loadReportTotals(rows) {
-  return { loads: rows.length, tons: rows.reduce((s, r) => s + r.tons, 0) };
+  const sum = (k) => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
+  return { loads: rows.length, tons: sum('tons'), gross: sum('gross'), tare: sum('tare') };
 }
 
 /** A line of the covered dates: "15-11-2026" or "01-11-2026 to 15-11-2026". */
@@ -96,18 +99,19 @@ const PAGE = { width: 841.89, height: 595.28 };   // A4 landscape
 const MARGIN = 36;
 
 /** The columns, left to right, with their widths; the going-to column takes up the slack. */
-export function reportColumns({ showOrigin = true, showCommodity = true, showDestination = false } = {}) {
+export function reportColumns({ showOrigin = true, showCommodity = true, showDestination = false, showGrossTare = true } = {}) {
   const cols = [
-    { key: 'date', head: 'Date', w: 58 },
-    { key: 'time', head: 'Time', w: 38 },
-    { key: 'ticketNo', head: 'Ticket', w: 42 },
-    { key: 'truck', head: 'Truck', w: 66 },
-    { key: 'driver', head: 'Driver', w: 80 },
-    ...(showCommodity ? [{ key: 'commodity', head: 'Commodity', w: 62 }] : []),
+    { key: 'date', head: 'Date', w: 56 },
+    { key: 'time', head: 'Time', w: 34 },
+    { key: 'ticketNo', head: 'Ticket', w: 40 },
+    { key: 'truck', head: 'Truck', w: 62 },
+    { key: 'driver', head: 'Driver', w: 74 },
+    ...(showCommodity ? [{ key: 'commodity', head: 'Commodity', w: 56 }] : []),
     { key: 'goingTo', head: 'Contract / going to', w: 0 },
-    ...(showDestination ? [{ key: 'destination', head: 'Destination', w: 100 }] : []),
-    { key: 'weight', head: 'Est. weight (t)', w: 78, right: true },
-    ...(showOrigin ? [{ key: 'from', head: 'From', w: 120 }] : []),
+    ...(showDestination ? [{ key: 'destination', head: 'Destination', w: 90 }] : []),
+    ...(showGrossTare ? [{ key: 'gross', head: 'Gross (t)', w: 48, right: true }, { key: 'tare', head: 'Tare (t)', w: 46, right: true }] : []),
+    { key: 'net', head: 'Net (t)', w: 64, right: true },
+    ...(showOrigin ? [{ key: 'from', head: 'From', w: 104 }] : []),
   ];
   const fixed = cols.reduce((s, c) => s + c.w, 0);
   cols.find((c) => c.key === 'goingTo').w = PAGE.width - 2 * MARGIN - fixed;
@@ -119,12 +123,13 @@ export function reportColumns({ showOrigin = true, showCommodity = true, showDes
 /** The report as a landscape A4 PDF, as many pages as the loads need. */
 export function buildLoadReportPdf(rows, { title = 'Load report', business = '', from = '', to = '', showOrigin = true, showDestination = true, madeAt = '' } = {}) {
   const pdf = new Pdf({ width: PAGE.width, height: PAGE.height });
-  const cols = reportColumns({ showOrigin, showCommodity: new Set(rows.map((r) => r.commodity).filter(Boolean)).size > 0, showDestination: showDestination && rows.some((r) => r.destination) });
+  const cols = reportColumns({ showOrigin, showCommodity: new Set(rows.map((r) => r.commodity).filter(Boolean)).size > 0, showDestination: showDestination && rows.some((r) => r.destination), showGrossTare: rows.some((r) => r.gross !== null || r.tare !== null) });
   const totals = loadReportTotals(rows);
   const ROW = 17; const BOTTOM = PAGE.height - 40;
   const cell = (c, r) => {
     if (c.key === 'date') return dmy(r.date);
-    if (c.key === 'weight') return r.tons ? `${plain(r.tons)}${r.final ? ' final' : ''}` : '';
+    if (c.key === 'net') return r.tons ? `${plain(r.tons)} ${r.final ? 'final' : 'est'}` : '';
+    if (c.key === 'gross' || c.key === 'tare') return r[c.key] === null ? '' : plain(r[c.key]);
     if (c.key === 'ticketNo') return r.ticketNo === '' ? '' : `#${r.ticketNo}`;
     return r[c.key] || '';
   };
@@ -154,9 +159,11 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
   if (!rows.length) pdf.text(MARGIN + 4, y + 5, 'No loads match.', { size: 10, gray: 0.4 });
   else {
     pdf.line(MARGIN, y + 1, PAGE.width - MARGIN, y + 1, { width: 0.8 });
-    const wc = cols.find((c) => c.key === 'weight');
     pdf.text(cols.find((c) => c.key === 'goingTo').x + 4, y + 6, 'Total', { size: 9.5, bold: true });
-    pdf.text(wc.x + wc.w - 4, y + 6, plain(totals.tons), { size: 9.5, bold: true, align: 'right' });
+    for (const [key, value] of [['gross', totals.gross], ['tare', totals.tare], ['net', totals.tons]]) {
+      const wc = cols.find((c) => c.key === key);
+      if (wc && value) pdf.text(wc.x + wc.w - 4, y + 6, plain(value), { size: 9.5, bold: true, align: 'right' });
+    }
   }
   pdf.text(MARGIN, PAGE.height - 22, `Made in Grainflow${madeAt ? ` ${madeAt}` : ''}`, { size: 7.5, gray: 0.5 });
   return pdf.bytes();
@@ -181,7 +188,9 @@ export function buildLoadTicketPdf(row, { business = '', showOrigin = true, show
     ['Commodity', row.commodity],
     ['Contract / going to', row.goingTo],
     ...(showDestination && row.destination ? [['Destination', row.destination]] : []),
-    ['Est. weight', row.tons ? `${plain(row.tons)} t${row.final ? ' (final)' : ''}` : ''],
+    ['Gross weight', row.gross === null ? '' : `${plain(row.gross)} t`],
+    ['Tare weight', row.tare === null ? '' : `${plain(row.tare)} t`],
+    ['Net weight', row.tons ? `${plain(row.tons)} t  (${row.final ? 'final' : 'estimate'})` : ''],
     ...(showOrigin ? [['From', row.from]] : []),
   ];
   let y = 112; let n = 0;

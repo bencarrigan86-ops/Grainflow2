@@ -4,16 +4,16 @@
 // and Bought, Used and Count record an entry. Seed and fertiliser also show what this season's paddocks call for
 // against what is in the shed. The arithmetic is in inputs.js.
 
-import { db } from '../storage.js?v=258';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=258';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=258';
-import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=258';
-import { isTransit } from '../transit.js?v=258';
-import { isOffFarm } from '../offfarm.js?v=258';
+import { db } from '../storage.js?v=259';
+import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=259';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=259';
+import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=259';
+import { isTransit } from '../transit.js?v=259';
+import { isOffFarm } from '../offfarm.js?v=259';
 import {
   KINDS, UNITS, MOVE_TYPES, kindLabel, defaultUnit, productKey, stockLevels, productMoves, stockValue,
   plannedNeeds, planVsStock, inputProblems, adjustmentFor, moveDelta, qtyText, onHandAt,
-} from '../inputs.js?v=258';
+} from '../inputs.js?v=259';
 
 const TYPE_LABEL = { buy: 'Bought', use: 'Used', adjust: 'Count' };
 const TYPE_BADGE = { buy: 'pos', use: 'warn', adjust: 'muted' };

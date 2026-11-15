@@ -4,15 +4,15 @@
 // what is unpaid and overdue, and the brokerage that has run up on contracts but has not been billed yet. Each
 // bill is recorded in a form of its own. The arithmetic is in payables.js.
 
-import { db } from '../storage.js?v=258';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=258';
-import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=258';
+import { db } from '../storage.js?v=259';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=259';
+import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=259';
 import {
   KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed,
-} from '../payables.js?v=258';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=258';
-import { activeSales } from '../paidsales.js?v=258';
-import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=258';
+} from '../payables.js?v=259';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=259';
+import { activeSales } from '../paidsales.js?v=259';
+import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=259';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'unpaid';   // unpaid | paid | all
