@@ -10,8 +10,8 @@
 // it works out what goes where, as plain data, and spraypdf.js draws it. That keeps the layout testable without a
 // PDF library or a browser.
 
-import { textWidth, wrapText } from './pdf.js?v=250';
-import { dmy } from './fmt.js?v=250';
+import { textWidth, wrapText } from './pdf.js?v=251';
+import { dmy } from './fmt.js?v=251';
 
 export const FORMS = [
   { key: 'standard', label: 'Our own form' },
@@ -116,18 +116,18 @@ export function sprayRows(job) {
   const chems = usedChemicals(job);
   const water = Number(job.waterRate) || 0;
   const rows = [];
-  for (const p of job.paddocks || []) {
+  (job.paddocks || []).forEach((p, g) => {
     const ha = Number(p.areaHa) || 0;
-    if (!chems.length) { rows.push({ field: p.name, ha, chemical: '', rate: '', amount: '', spray: water > 0 ? `${plain(ha * water, 0)} L` : '' }); continue; }
+    if (!chems.length) { rows.push({ g, field: p.name, ha, chemical: '', rate: '', amount: '', spray: water > 0 ? `${plain(ha * water, 0)} L` : '' }); return; }
     chems.forEach((c, n) => {
       const rate = rateOn(job, p.id, c);
       rows.push({
-        field: p.name, ha, chemical: c.name, rate: rate > 0 ? rateText({ rate, unit: c.unit }) : '',
+        g, field: p.name, ha, chemical: c.name, rate: rate > 0 ? rateText({ rate, unit: c.unit }) : '',
         amount: rate > 0 ? amountText(ha * rate, c.unit) : '',
         spray: n === 0 && water > 0 ? `${plain(ha * water, 0)} L` : '',
       });
     });
-  }
+  });
   return rows;
 }
 
@@ -251,6 +251,10 @@ export function aircairOps(job) {
     const [x0, x1] = A.cols[key];
     put(p1, { x: x0 + 3, y: A.tableLines[i] + 13.5, w: x1 - x0 - 6 }, text, opts);
   };
+  // every other paddock gets a light band across its rows (a paddock with two products has two rows in one band)
+  shown.forEach((r, i) => {
+    if (r.g % 2) p1.unshift({ t: 'band', x0: A.cols.field[0], x1: A.cols.spray[1], y0: A.tableLines[i] + 0.8, y1: A.tableLines[i + 1] - 0.8 });
+  });
   shown.forEach((r, i) => {
     cell('field', i, r.field); cell('ha', i, r.ha ? plain(r.ha, 1) : ''); cell('chemical', i, r.chemical);
     cell('rate', i, r.rate); cell('amount', i, r.amount); cell('spray', i, r.spray);
@@ -358,6 +362,7 @@ export function standardOps(job) {
   let shown = 0;
   for (const r of rows) {
     if (y > bottom) break;
+    if (r.g % 2) ops.push({ t: 'rect', x: M, y: y - 10.5, w: A4.w - 2 * M, h: 14.5, tint: [0.86, 0.93, 0.86] });
     text(cols[0][0] + 3, y, fitText(r.field, 112).text, { size: 9 });
     text(cols[1][0] + 3, y, r.ha ? plain(r.ha, 1) : '', { size: 9 });
     text(cols[2][0] + 3, y, fitText(r.chemical, 162).text, { size: 9 });
@@ -395,14 +400,15 @@ export function niceLength(maxM) {
  * them. `box` is where it goes on the page, in points from the top left.
  * Returns the scale (points per metre), the view origin (metres), what to draw and where north and the scale bar go.
  */
-export function sprayMapPlan({ items, selectedIds, box, margin = 0.3, minSpanM = 1400, named = false }) {
+// `view` ({x, y, w, h} in metres) fits the picture to exactly that area instead (the farm map, as zoomed on screen).
+export function sprayMapPlan({ items, selectedIds, box, margin = 0.3, minSpanM = 1400, named = false, view = null }) {
   const sel = new Set(selectedIds);
   const chosen = items.filter((i) => sel.has(i.id));
   const use = chosen.length ? chosen : items;
-  const b = [Infinity, Infinity, -Infinity, -Infinity];
-  for (const i of use) { b[0] = Math.min(b[0], i.bbox[0]); b[1] = Math.min(b[1], i.bbox[1]); b[2] = Math.max(b[2], i.bbox[2]); b[3] = Math.max(b[3], i.bbox[3]); }
-  const spanW = Math.max((b[2] - b[0]) * (1 + 2 * margin), minSpanM);
-  const spanH = Math.max((b[3] - b[1]) * (1 + 2 * margin), minSpanM * (box.h / box.w));
+  const b = view ? [view.x, view.y, view.x + view.w, view.y + view.h] : [Infinity, Infinity, -Infinity, -Infinity];
+  if (!view) for (const i of use) { b[0] = Math.min(b[0], i.bbox[0]); b[1] = Math.min(b[1], i.bbox[1]); b[2] = Math.max(b[2], i.bbox[2]); b[3] = Math.max(b[3], i.bbox[3]); }
+  const spanW = view ? b[2] - b[0] : Math.max((b[2] - b[0]) * (1 + 2 * margin), minSpanM);
+  const spanH = view ? b[3] - b[1] : Math.max((b[3] - b[1]) * (1 + 2 * margin), minSpanM * (box.h / box.w));
   const s = Math.min(box.w / spanW, box.h / spanH);
   const cx = (b[0] + b[2]) / 2; const cy = (b[1] + b[3]) / 2;
   const vx0 = cx - box.w / (2 * s); const vy0 = cy - box.h / (2 * s);

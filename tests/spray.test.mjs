@@ -264,6 +264,23 @@ check('the farm map can be sent as a PDF too, with every paddock named only wher
   const tiny = sprayMapPlan({ items: crowded, selectedIds: ['c3'], box, margin: 0.06, minSpanM: 600, named: true });
   assert.ok(tiny.labels.some((l) => l.id === 'c3'), 'a chosen one always is');
 });
+check('the table is banded by paddock, not by product: a paddock with two products is one colour', () => {
+  const j = job({ paddocks: pads(3), chemicals: [{ name: 'A', rate: '1', unit: 'L' }, { name: 'B', rate: '2', unit: 'L' }] });
+  assert.deepEqual(sprayRows(j).map((r) => r.g), [0, 0, 1, 1, 2, 2]);
+  const bands = aircairOps({ ...j, form: 'aircair' }).pages[0].filter((o) => o.t === 'band');
+  assert.equal(bands.length, 2, 'only the second paddock is tinted: one band for each of its two rows');
+  const std = standardOps(j).ops.filter((o) => o.t === 'rect' && o.tint);
+  assert.equal(std.length, 2);
+  assert.equal(new Set(std.map((o) => o.tint.join())).size, 1, 'one tint');
+});
+check('the farm map PDF can be fitted to the area on the screen, not just the farms switched on', () => {
+  const plan = sprayMapPlan({ items, selectedIds: [], box, named: true, view: { x: 0, y: 0, w: 900, h: 900 } });
+  assert.ok(Math.abs(plan.s - Math.min(box.w / 900, box.h / 900)) < 1e-9, 'the scale is that of the view');
+  assert.ok(plan.draw.some((d) => d.id === 'a'));
+  assert.ok(!plan.draw.some((d) => d.id === 'far' || d.id === 'b'), 'what is off the screen is left out');
+  const m = read('docs/js/views/farmmap.js');
+  assert.ok(m.includes('view: mapApi.getView()') && m.includes('getView:'));
+});
 check('the PDF library is only fetched when a request is made, from the vendor host the service worker caches', () => {
   const s = read('docs/js/spraypdf.js');
   assert.ok(s.includes('https://esm.sh/pdf-lib@1.17.1'));

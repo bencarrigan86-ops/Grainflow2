@@ -4,14 +4,14 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=250';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=250';
-import { esc, num, todayLocal, dmy } from '../fmt.js?v=250';
-import { sharePdf, safeFileName } from '../sharefile.js?v=250';
-import { buildFarmMapPdf } from '../spraypdf.js?v=250';
+import { db } from '../storage.js?v=251';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=251';
+import { esc, num, todayLocal, dmy } from '../fmt.js?v=251';
+import { sharePdf, safeFileName } from '../sharefile.js?v=251';
+import { buildFarmMapPdf } from '../spraypdf.js?v=251';
 import {
   readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox,
-} from '../farmmap.js?v=250';
+} from '../farmmap.js?v=251';
 
 const MAX_ZOOM = 40;
 
@@ -88,7 +88,8 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
         ${unmapped.length ? `<div class="hint" style="margin-bottom:8px">Not on the map: ${unmapped.map((f) => esc(f.name)).join(', ')}.</div>` : ''}
         ${pick ? '<button type="button" class="btn secondary" id="fm-pickcancel" style="margin-top:6px">Cancel</button>' : `
         ${onSpray ? '<button type="button" class="btn" id="fm-spray" style="margin-top:6px">Spray request from this map</button>' : ''}
-        <button type="button" class="btn secondary" id="fm-pdf" style="margin-top:8px">Send the map as a PDF</button>
+        <button type="button" class="btn secondary" id="fm-pdf" style="margin-top:8px">Send this view as a PDF</button>
+        <div class="hint" style="margin-top:4px">The PDF shows what is on the map now: zoom to the area you want and switch off the farms you do not.</div>
         <button type="button" class="btn secondary" id="fm-update" style="margin-top:8px">Update from a file</button>
         <button type="button" class="btn ghost-danger" id="fm-clear" style="margin-top:8px">Remove the map</button>`}`;
 
@@ -99,7 +100,7 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
         if (el && item) { el.setAttribute('fill', chosen.has(id) ? RED : item.color); el.setAttribute('fill-opacity', chosen.has(id) ? 0.85 : 0.3); }
         root.querySelector('#fm-picked').textContent = pickedText();
       };
-      wireMap(root, vb, layout, (id) => {
+      const mapApi = wireMap(root, vb, layout, (id) => {
         if (pick) { toggle(id); return; }
         const f = fields.find((x) => x.id === id); if (f && onOpenField) onOpenField(f);
       }, { groups });
@@ -115,7 +116,7 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
           const business = db.getBusinessDetails();
           const legend = [...inUse.map((c, i) => ({ name: c.name, color: PALETTE[i % PALETTE.length] })), ...(mapped.some((f) => colourOf(f) === NO_CROP) ? [{ name: 'No crop set', color: NO_CROP }] : [])];
           const bytes = await buildFarmMapPdf(layout, {
-            title: 'Farm map', date: todayLocal(), legend, hiddenFarms: readHidden(),
+            title: 'Farm map', date: todayLocal(), legend, hiddenFarms: readHidden(), view: mapApi.getView(),
             subtitle: [business.entityName || business.farmName, db.getCurrentYear()].filter(Boolean).join('  ·  '),
           });
           const fileName = safeFileName(`Farm map ${dmy(todayLocal())}`);
@@ -242,6 +243,7 @@ function wireMap(root, full, layout, open, { groups = [] } = {}) {
   svg.addEventListener('pointercancel', up);
   applyFarms(); fitToVisible(); fit();
   window.addEventListener('resize', labels, { once: true });
+  return { getView: () => ({ ...v }) };   // the area on the screen now, in metres
 }
 
 /** Choosing the files, matching them to the paddocks, and saving. */
