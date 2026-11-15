@@ -5,13 +5,17 @@
 // navigation per role, and that is when this gets a proper home in the
 // interface. Until then it is reachable at #/account.
 
-import { notify } from '../ui.js?v=279';
+import { notify } from '../ui.js?v=280';
 import {
   getSession, getMembership, signOut, listMyInvitations, acceptInvitation,
-} from '../auth.js?v=279';
-import { roleLabel, expiryText } from '../invites.js?v=279';
-import { esc } from '../fmt.js?v=279';
-import { openReportProblemSheet } from './support.js?v=279';
+} from '../auth.js?v=280';
+import { roleLabel, expiryText } from '../invites.js?v=280';
+import { esc } from '../fmt.js?v=280';
+import { openReportProblemSheet } from './support.js?v=280';
+import {
+  platformOf, isStandalone, installSteps, installState, requestPersistence, storageStatus, storageText, canPromptInstall, promptInstall,
+} from '../pwa.js?v=280';
+import { toast } from '../ui.js?v=280';
 
 const ROLE_LABELS = {
   owner: 'Owner',
@@ -77,6 +81,8 @@ export async function renderAccount(root) {
             owner needs to invite you, or you can create one.</div>
         </div>` : ''}
 
+      <div class="card" id="device-card"><h2>This device</h2><div id="device-body"><div class="meta">Checking…</div></div></div>
+
       <div id="pending-invites"></div>
 
       <button type="button" class="btn secondary" id="report-problem" style="margin-top:12px">Report a problem</button>
@@ -85,6 +91,7 @@ export async function renderAccount(root) {
   `;
 
   showPendingInvitations(root, membership);
+  paintDeviceCard(root);
 
   root.querySelector('#report-problem')?.addEventListener('click', () => openReportProblemSheet());
   root.querySelector('#open-help')?.addEventListener('click', () => { location.hash = '#/help'; });
@@ -138,5 +145,36 @@ async function showPendingInvitations(root, membership) {
         notify(`Could not join.\n\n${e.message}`);
       }
     });
+  });
+}
+
+/**
+ * This phone: is the app on the home screen, and has the phone promised to keep what is saved on it. A farm worker's
+ * phone is the one place their loads live until there is signal, so this is on Account, which every role has.
+ */
+async function paintDeviceCard(root) {
+  const body = root.querySelector('#device-body');
+  if (!body) return;
+  const platform = platformOf(navigator.userAgent, navigator.maxTouchPoints);
+  const standalone = isStandalone();
+  const inst = installState({ standalone, platform, canPrompt: canPromptInstall() });
+  const st = await storageStatus();
+  if (!body.isConnected) return;
+  body.innerHTML = `
+    <div class="row"><span class="label">${esc(inst.text)}</span></div>
+    ${inst.state === 'prompt' ? '<button type="button" class="btn secondary" id="dev-install">Install Grainflow</button>' : ''}
+    ${inst.state === 'steps' ? `<ol class="steps" style="margin:6px 0 10px 18px;padding:0">${installSteps(platform).map((t) => `<li>${esc(t)}</li>`).join('')}</ol>` : ''}
+    <div class="row" style="margin-top:8px"><span class="label">${esc(storageText(st, standalone))}</span></div>
+    ${st.persisted === false ? '<button type="button" class="btn secondary" id="dev-keep">Keep my saved data</button>' : ''}
+    ${st.usageMb !== null ? `<div class="meta" style="margin-top:6px">Using ${st.usageMb} MB of the ${st.quotaMb} MB this browser allows.</div>` : ''}`;
+  body.querySelector('#dev-install')?.addEventListener('click', async () => {
+    const r = await promptInstall();
+    if (r === 'accepted') toast('Installed. Open it from your home screen.');
+    paintDeviceCard(root);
+  });
+  body.querySelector('#dev-keep')?.addEventListener('click', async () => {
+    const r = await requestPersistence();
+    toast(r === 'kept' ? 'The phone will keep your saved data' : r === 'refused' ? 'The phone said no for now. Add Grainflow to the home screen and try again.' : 'This browser cannot do that');
+    paintDeviceCard(root);
   });
 }

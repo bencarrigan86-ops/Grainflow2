@@ -1,29 +1,30 @@
-import { db } from './storage.js?v=279';
-import { supabase, ENV } from './supabase.js?v=279';
-import { installErrorLog } from './supportinfo.js?v=279';
-import { initTheme } from './theme.js?v=279';
+import { db } from './storage.js?v=280';
+import { supabase, ENV } from './supabase.js?v=280';
+import { installErrorLog } from './supportinfo.js?v=280';
+import { initTheme } from './theme.js?v=280';
 initTheme();
-import { renderPosition } from './views/position.js?v=279';
-import { renderProduction } from './views/production.js?v=279';
-import { renderReports } from './views/reports.js?v=279';
-import { renderSales } from './views/sales.js?v=279';
-import { renderMovements } from './views/movements.js?v=279';
-import { renderStorage } from './views/storage.js?v=279';
-import { renderSettings } from './views/settings.js?v=279';
-import { renderLogin } from './views/login.js?v=279';
-import { renderAccount } from './views/account.js?v=279';
-import { renderHelp } from './views/help.js?v=279';
+import { renderPosition } from './views/position.js?v=280';
+import { renderProduction } from './views/production.js?v=280';
+import { renderReports } from './views/reports.js?v=280';
+import { renderSales } from './views/sales.js?v=280';
+import { renderMovements } from './views/movements.js?v=280';
+import { renderStorage } from './views/storage.js?v=280';
+import { renderSettings } from './views/settings.js?v=280';
+import { renderLogin } from './views/login.js?v=280';
+import { renderAccount } from './views/account.js?v=280';
+import { renderHelp } from './views/help.js?v=280';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=279';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=279';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=279';
-import { esc } from './fmt.js?v=279';
-import { isSheetOpen, notify } from './ui.js?v=279';
-import { describeMerges } from './ticketmerge.js?v=279';
-import { watchLists } from './band.js?v=279';
-import { APP_VERSION } from './version.js?v=279';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=279';
+} from './auth.js?v=280';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=280';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=280';
+import { esc } from './fmt.js?v=280';
+import { isSheetOpen, notify } from './ui.js?v=280';
+import { describeMerges } from './ticketmerge.js?v=280';
+import { watchLists } from './band.js?v=280';
+import { APP_VERSION } from './version.js?v=280';
+import { installWatch, requestPersistence } from './pwa.js?v=280';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=280';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -411,6 +412,8 @@ async function boot() {
   try {
     currentRole = membership.role;
     await db.init({ farmId: membership.farmId, role: membership.role });
+    // Ask the phone to keep what is saved on it. Best effort, and quiet: the answer is shown on Account.
+    requestPersistence().catch(() => {});
     if (currentRole === 'support') noteSupportOpen(membership.farmId);
   } catch (e) {
     app.innerHTML = `<div class="view"><div class="card">
@@ -471,6 +474,7 @@ if (ENV.name === 'test') {
 }
 
 installErrorLog();
+installWatch();
 
 // Signing in or out anywhere in the app re-runs the gate rather than trying to
 // patch the current screen into shape.

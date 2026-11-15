@@ -1,20 +1,22 @@
 // Rotation and yield history: every paddock against every season, with the crop and its yield in each cell, and the
 // farm's yield for each crop by season underneath. Built from the seasons the farm already holds; nothing is entered here.
 
-import { db } from '../storage.js?v=279';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=279';
-import { openSheet, toast } from '../ui.js?v=279';
-import { canSeeYield } from '../nav.js?v=279';
-import { PALETTE } from '../farmmap.js?v=279';
-import { rotationGrid, cropYields } from '../fieldhistory.js?v=279';
-import { rotationCsv, rotationPdf, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=279';
-import { nowTime } from '../loadreport.js?v=279';
-import { downloadCSV } from '../csv.js?v=279';
-import { sharePdf, safeFileName } from '../sharefile.js?v=279';
+import { db } from '../storage.js?v=280';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=280';
+import { openSheet, toast } from '../ui.js?v=280';
+import { canSeeYield } from '../nav.js?v=280';
+import { PALETTE } from '../farmmap.js?v=280';
+import { rotationGrid } from '../fieldhistory.js?v=280';
+import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=280';
+import { nowTime } from '../loadreport.js?v=280';
+import { downloadCSV } from '../csv.js?v=280';
+import { sharePdf, safeFileName } from '../sharefile.js?v=280';
 
 const ORIENT_KEY = 'grainflow.rotation.orientation';
 const lastOrientation = () => { try { return orientationOf(localStorage.getItem(ORIENT_KEY)); } catch { return 'landscape'; } };
 const rememberOrientation = (v) => { try { localStorage.setItem(ORIENT_KEY, v); } catch { /* not kept; it still works */ } };
+
+const haText = (v) => { const r = Math.round(v * 10) / 10; return num(r, Number.isInteger(r) ? 0 : 1); };
 
 export function openRotationSheet() {
   let orientation = lastOrientation();
@@ -33,7 +35,7 @@ export function openRotationSheet() {
 
   openSheet('Rotation and yield history', (root) => {
     if (!grid.rows.length) { root.innerHTML = '<div class="empty">No paddocks yet.</div>'; return; }
-    const yields = showYield ? cropYields(grid) : [];
+    const yields = areaSummary(grid);
     let lastProperty = null;
     const hasFarms = grid.rows.some((x) => x.property);
     // one column per season, so the header and body rows are built here rather than written out in the template
@@ -45,7 +47,12 @@ export function openRotationSheet() {
       return `${head}<tr><td style="text-align:left;white-space:nowrap">${esc(r.name)}</td>${grid.seasons.map((s) => cell(r.cells[s], repeatIn(r, s))).join('')}</tr>`;
     }).join('');
     const yieldHead = `<tr><th style="text-align:left">Crop</th>${seasonHeads}</tr>`;
-    const yieldBody = yields.map((y) => `<tr><td style="text-align:left">${esc(y.crop)}</td>${grid.seasons.map((s) => `<td>${y.bySeason[s] && y.bySeason[s].tons > 0 ? num(y.bySeason[s].yieldTHa, 2) : '&ndash;'}</td>`).join('')}</tr>`).join('');
+    const yieldCell = (y, s) => {
+      const b = y.bySeason[s];
+      if (!b) return '<td>&ndash;</td>';
+      return `<td style="${y.total ? 'font-weight:700;' : ''}">${haText(b.areaHa)} ha${showYield && b.tons > 0 ? `<div class="meta" style="font-size:11px">${num(b.yieldTHa, 2)} t/ha</div>` : ''}</td>`;
+    };
+    const yieldBody = yields.map((y) => `<tr><td style="text-align:left;${y.total ? 'font-weight:700;' : ''}">${esc(y.crop)}</td>${grid.seasons.map((s) => yieldCell(y, s)).join('')}</tr>`).join('');
     root.innerHTML = `
       <div class="hint" style="margin-bottom:8px">Each paddock in each season, found by its name. Colours are crops. ${showYield ? 'Yield is tonnes per hectare: the actual loads once a paddock is on actual, otherwise the estimate. ' : ''}An outlined cell is the same crop as the season before.</div>
       <div class="table-scroll"><table>
@@ -53,8 +60,8 @@ export function openRotationSheet() {
         <tbody>${gridBody}</tbody>
       </table></div>
       ${grid.crops.length ? `<div class="hint" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px 12px">${grid.crops.map((c) => `<span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${tint(c)};vertical-align:-1px"></span> ${esc(c)}</span>`).join('')}</div>` : ''}
-      ${showYield && yields.length ? `
-      <div class="subhead" style="margin-top:14px">Yield by crop across the farm (t/ha)</div>
+      ${yields.length ? `
+      <div class="subhead" style="margin-top:14px">${showYield ? 'Area and yield by crop across the farm' : 'Area by crop across the farm'}</div>
       <div class="table-scroll"><table>
         <thead>${yieldHead}</thead>
         <tbody>${yieldBody}</tbody>

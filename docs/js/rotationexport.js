@@ -4,12 +4,23 @@
 // each crop's yield by season), so what is exported is what is shown. A role that is not shown yields is not given them
 // here either: `showYield` false leaves out every tonnage and yield and the crop table. Pure: it builds text and bytes.
 
-import { toCSV } from './csv.js?v=279';
-import { Pdf, wrapText, textWidth } from './pdf.js?v=279';
-import { PALETTE } from './farmmap.js?v=279';
-import { cropYields } from './fieldhistory.js?v=279';
+import { toCSV } from './csv.js?v=280';
+import { Pdf, wrapText, textWidth } from './pdf.js?v=280';
+import { PALETTE } from './farmmap.js?v=280';
+import { cropYields } from './fieldhistory.js?v=280';
 
 const round = (n, dp = 2) => { const f = 10 ** dp; return Math.round((Number(n) || 0) * f) / f; };
+
+/** The farm's hectares by crop and season, with an "All crops" row of the hectares added up (no yield: crops are not mixed). */
+export function areaSummary(grid) {
+  const rows = cropYields(grid);
+  const total = { crop: 'All crops', total: true, bySeason: {} };
+  for (const s of grid.seasons) {
+    const ha = rows.reduce((a, r) => a + (r.bySeason[s]?.areaHa || 0), 0);
+    if (ha > 0) total.bySeason[s] = { areaHa: ha, tons: 0, yieldTHa: 0 };
+  }
+  return rows.length ? [...rows, total] : [];
+}
 
 /**
  * The CSV: one row per paddock with, for each season, the crop, the hectares and (when yields are shown) the tonnes and
@@ -32,13 +43,15 @@ export function rotationCsv(grid, { showYield = true } = {}) {
   columns.push({ label: 'Same crop as the season before', get: (r) => r.repeats.map(([, b]) => b).join('; ') });
   let text = toCSV(grid.rows, columns);
 
-  const yields = showYield ? cropYields(grid) : [];
+  const yields = areaSummary(grid);
   if (yields.length) {
-    const ycols = [{ label: 'Crop (farm yield)', get: (y) => y.crop }];
+    const ycols = [{ label: showYield ? 'Crop (farm area and yield)' : 'Crop (farm area)', get: (y) => y.crop }];
     for (const s of seasons) {
       ycols.push({ label: `${s} area (ha)`, get: (y) => (y.bySeason[s] ? round(y.bySeason[s].areaHa) : '') });
-      ycols.push({ label: `${s} tonnes`, get: (y) => (y.bySeason[s] && y.bySeason[s].tons > 0 ? round(y.bySeason[s].tons) : '') });
-      ycols.push({ label: `${s} yield (t/ha)`, get: (y) => (y.bySeason[s] && y.bySeason[s].tons > 0 ? round(y.bySeason[s].yieldTHa) : '') });
+      if (showYield) {
+        ycols.push({ label: `${s} tonnes`, get: (y) => (y.bySeason[s] && y.bySeason[s].tons > 0 ? round(y.bySeason[s].tons) : '') });
+        ycols.push({ label: `${s} yield (t/ha)`, get: (y) => (y.bySeason[s] && y.bySeason[s].tons > 0 ? round(y.bySeason[s].yieldTHa) : '') });
+      }
     }
     text += `\r\n\r\n${toCSV(yields, ycols)}`;
   }
@@ -95,7 +108,8 @@ export function rotationPdf(grid, { orientation = 'landscape', showYield = true,
   const NAME_W = nameWidth(o);
   const pdf = new Pdf(PAGE);
   const tint = (crop) => { const i = grid.crops.indexOf(crop); return i < 0 ? null : tintOf(PALETTE[i % PALETTE.length]); };
-  const yields = showYield ? cropYields(grid) : [];
+  const yields = areaSummary(grid);
+  const SUM_H = showYield ? 26 : 18;
   const groups = seasonGroups(grid.seasons, seasonsPerPage(o));
   const BOTTOM = PAGE.height - 40;
   const hasFarms = grid.rows.some((r) => r.property);
@@ -167,27 +181,33 @@ export function rotationPdf(grid, { orientation = 'landscape', showYield = true,
 
     // the farm's yield by crop
     if (yields.length) {
-      const need = 30 + BAND_H + yields.length * 18;
+      const need = 30 + BAND_H + yields.length * SUM_H;
       if (y + need > BOTTOM) y = nextPage(note); else y += 12;
-      pdf.text(M, y, 'Yield by crop across the farm (t/ha)', { size: 10, bold: true });
+      pdf.text(M, y, showYield ? 'Area and yield by crop across the farm (ha, t/ha)' : 'Area by crop across the farm (ha)', { size: 10, bold: true });
       y += 16;
       y = band(y, 'Crop');
       yields.forEach((yd, k) => {
-        if (y + 18 > BOTTOM) { y = band(nextPage(note), 'Crop'); }
-        if (k % 2) pdf.rect(M, y, tableW, 18, { stroke: null, fill: 0.96 });
-        pdf.text(M + 4, y + 5, fit(yd.crop, NAME_W - 8, 9), { size: 9 });
+        if (y + SUM_H > BOTTOM) { y = band(nextPage(note), 'Crop'); }
+        if (yd.total) pdf.line(M, y, M + tableW, y, { width: 0.5 });
+        if (k % 2) pdf.rect(M, y, tableW, SUM_H, { stroke: null, fill: 0.96 });
+        const ty = y + (SUM_H - 9) / 2 - 1;
+        pdf.text(M + 4, ty, fit(yd.crop, NAME_W - 8, 9, yd.total), { size: 9, bold: !!yd.total });
         seasons.forEach((s, i) => {
           const b = yd.bySeason[s];
-          pdf.text(M + NAME_W + i * SEASON_W + SEASON_W / 2, y + 5, b && b.tons > 0 ? `${round(b.yieldTHa)}` : '-', { size: 9, align: 'center', gray: b && b.tons > 0 ? 0 : 0.5 });
+          const cx = M + NAME_W + i * SEASON_W + SEASON_W / 2;
+          if (!b) { pdf.text(cx, ty, '-', { size: 9, align: 'center', gray: 0.5 }); return; }
+          const hasYield = showYield && b.tons > 0;
+          pdf.text(cx, hasYield ? y + 4.5 : ty, `${round(b.areaHa, 1)} ha`, { size: 9, bold: !!yd.total, align: 'center' });
+          if (hasYield) pdf.text(cx, y + 15, `${round(b.yieldTHa)} t/ha`, { size: 7.5, gray: 0.3, align: 'center' });
         });
-        y += 18;
+        y += SUM_H;
       });
       pdf.line(M, y + 1, M + tableW, y + 1, { width: 0.8 });
       y += 10;
     }
 
     // how to read it
-    const readMe = `${showYield ? 'Yield is tonnes per hectare: actual loads once a paddock is on actual, otherwise the estimate (est). ' : ''}An orange outline is the same crop as the season before.`;
+    const readMe = `${showYield ? 'Yield is tonnes per hectare: actual loads once a paddock is on actual, otherwise the estimate (est). ' : ''}Hectares are the paddock areas added up by crop. An orange outline is the same crop as the season before.`;
     pdf.paragraph(M, Math.min(y + 4, PAGE.height - 56), readMe, PAGE.width - M * 2, { size: 8, gray: 0.4, lineHeight: 10 });
   });
   footer();

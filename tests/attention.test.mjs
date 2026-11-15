@@ -196,7 +196,7 @@ check('Production opens the rotation report once the farm has more than one seas
   const p = read('docs/js/views/production.js');
   assert.ok(p.includes('id="open-rotation"') && p.includes('db.getYears().length > 1') && p.includes('openRotationSheet()'));
   const v = read('docs/js/views/rotation.js');
-  assert.ok(v.includes('rotationGrid(years)') && v.includes('cropYields(grid)') && v.includes('canSeeYield'), 'yields are shown only to roles that may see them');
+  assert.ok(v.includes('rotationGrid(years)') && v.includes('areaSummary(grid)') && v.includes('canSeeYield'), 'yields are shown only to roles that may see them');
 });
 check('the Production table has a share-of-area column that totals 100%', () => {
   const p = read('docs/js/views/production.js');

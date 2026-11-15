@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=279';
+import { ROLES, canOpen } from './nav.js?v=280';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -340,6 +340,20 @@ export const GUIDES = [
     tips: [
       'You cannot change or remove yourself, so there is always an owner.',
       'Bank details are kept in a table that only the owner and the bookkeeper can read, so a manager, worker or driver is never sent them.',
+    ],
+  },
+  {
+    id: 'install', title: 'Putting Grainflow on your phone', roles: ALL, open: 'account', openLabel: 'Open Account',
+    blurb: 'Add it to the home screen so it opens like any other app.',
+    steps: [
+      'iPhone: open Grainflow in Safari, tap the Share button, then Add to Home Screen, then Add.',
+      'Android: open Grainflow in Chrome, tap the menu (three dots), then Install app or Add to Home screen.',
+      'Open it from the new icon. It fills the screen, opens faster and works the same with no signal.',
+      'On Account, This device says whether it is installed and whether the phone has promised to keep what is saved on it. If it has not, tap Keep my saved data.',
+    ],
+    tips: [
+      'Everything you enter is saved on the phone first and sent when there is signal. A phone that runs short of space can clear a website\'s saved data, and an app on the home screen is much less likely to be cleared.',
+      'Sign in once on the installed copy. It is the same farm and the same login.',
     ],
   },
   {

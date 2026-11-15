@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rotationGrid } from '../docs/js/fieldhistory.js';
-import { rotationCsv, rotationPdf, tintOf, seasonGroups, seasonsPerPage, orientationOf, ORIENTATIONS } from '../docs/js/rotationexport.js';
+import { rotationCsv, rotationPdf, areaSummary, tintOf, seasonGroups, seasonsPerPage, orientationOf, ORIENTATIONS } from '../docs/js/rotationexport.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -49,13 +49,31 @@ check('a paddock not in a season is blank there, and a name with quotes is escap
 });
 check('the farm yield by crop follows after a blank line', () => {
   const csv = rotationCsv(grid, { showYield: true });
-  assert.ok(csv.includes('\r\n\r\nCrop (farm yield),2024 area (ha)'));
+  assert.ok(csv.includes('\r\n\r\nCrop (farm area and yield),2024 area (ha)'));
 });
-check('a role that does not see yields gets no tonnes, no yields and no crop table', () => {
+check('a role that does not see yields gets no tonnes or yields, but still the hectares by crop', () => {
   const csv = rotationCsv(grid, { showYield: false });
   assert.ok(!/tonnes|yield/i.test(csv), 'no yield words at all');
   assert.ok(csv.includes('2024 crop') && csv.includes('2024 area (ha)'));
-  assert.ok(!csv.includes('\r\n\r\n'));
+  assert.ok(csv.includes('\r\n\r\nCrop (farm area),2024 area (ha)'));
+  assert.ok(csv.includes('\r\nAll crops,150'));
+});
+
+console.log('\n=== hectares by crop ===');
+check('the summary has each crop\'s hectares per season and an All crops row that adds them up', () => {
+  const rows = areaSummary(grid);
+  const wheat = rows.find((r) => r.crop === 'Wheat');
+  assert.equal(wheat.bySeason[2024].areaHa, 100);
+  assert.equal(wheat.bySeason[2025].areaHa, 150);
+  const all = rows[rows.length - 1];
+  assert.equal(all.crop, 'All crops');
+  assert.equal(all.bySeason[2024].areaHa, 150);
+  assert.equal(all.bySeason[2026].areaHa, 100);
+  assert.deepEqual(areaSummary(rotationGrid({})), []);
+});
+check('the screen shows hectares to every role, and yields only where allowed', () => {
+  const v = read('docs/js/views/rotation.js');
+  assert.ok(v.includes('areaSummary(grid)') && v.includes('Area by crop across the farm') && v.includes('showYield && b.tons > 0'));
 });
 
 console.log('\n=== the PDF ===');
@@ -65,12 +83,12 @@ check('it is a landscape A4 PDF with the title, the crops and the paddocks', () 
   const t = text(b);
   assert.ok(t.startsWith('%PDF'));
   assert.match(t, /\/MediaBox \[0 0 841\.89 595\.28\]/);
-  for (const w of ['ROTATION AND YIELD HISTORY', 'Carrigan Farms', 'NGR 12345', 'Made in Grainflow 16-11-2026 09:30', '2 paddocks, 3 seasons', 'East', 'Wheat', 'Canola', 'Yield by crop across the farm']) assert.ok(t.includes(w), w);
+  for (const w of ['ROTATION AND YIELD HISTORY', 'Carrigan Farms', 'NGR 12345', 'Made in Grainflow 16-11-2026 09:30', '2 paddocks, 3 seasons', 'East', 'Wheat', 'Canola', 'Area and yield by crop across the farm', 'All crops', '150 ha']) assert.ok(t.includes(w), w);
 });
 check('a role that does not see yields gets a PDF with no yields in it', () => {
   const t = text(rotationPdf(grid, { showYield: false }));
   assert.ok(!t.includes('t/ha') && !t.includes('Yield by crop'));
-  assert.ok(t.includes('East'));
+  assert.ok(t.includes('East') && t.includes('Area by crop across the farm') && t.includes('All crops'));
 });
 check('many seasons split across pages, and many paddocks run onto more pages', () => {
   const many = {};
