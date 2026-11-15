@@ -9,6 +9,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parsePastSales, planPastSales, salesRecords } from '../docs/js/pastsales.js';
 import { saleEconomics, position } from '../docs/js/derived.js';
+import { stateToRows } from '../docs/js/mapping.js';
 
 let failures = 0;
 const check = (name, fn) => {

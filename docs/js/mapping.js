@@ -27,9 +27,9 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=286';
-import { cleanOffFarm } from './offfarm.js?v=286';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=286';
+import { cleanGradeOptions } from './gradeprice.js?v=287';
+import { cleanOffFarm } from './offfarm.js?v=287';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=287';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -42,6 +42,20 @@ const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
 const n = (v) => (v === '' || v === null || v === undefined ? 0 : Number(v) || 0);
 const s = (v) => (v === null || v === undefined ? '' : String(v));
 const orNull = (v) => (v === '' || v === undefined ? null : v);
+/**
+ * A date column: the date as written, but a day that is past the end of its month (2020-11-31) is the last day of that
+ * month, and anything that is not a date at all is nothing. The server refuses an impossible date, and one such date
+ * must not hold back everything else that is waiting to be sent.
+ */
+const dateOrNull = (v) => {
+  if (v === '' || v === undefined || v === null) return null;
+  const m = /^(d{4})-(d{2})-(d{2})(.*)$/.exec(String(v));
+  if (!m) return v;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  return d <= last ? v : `${m[1]}-${m[2]}-${String(last).padStart(2, '0')}${m[4]}`;
+};
 
 // Quality — what the grain is, as opposed to how much of it there is. [app key,
 // column, kind]. A storage carries all seven; a load carries the six that
@@ -369,10 +383,10 @@ export function stateToRows(state, farmId) {
         // build has ever written — is why contract tonnage was discarded.
         tonnes: n(sale.tons),
         delivery_period: orNull(sale.deliveryPeriod),
-        sale_date: orNull(sale.date),
+        sale_date: dateOrNull(sale.date),
         location: orNull(sale.location),
-        delivery_start: orNull(sale.deliveryStart),
-        delivery_end: orNull(sale.deliveryEnd),
+        delivery_start: dateOrNull(sale.deliveryStart),
+        delivery_end: dateOrNull(sale.deliveryEnd),
         tons_delivered: n(sale.tonsDelivered),
         tolerance_pct: n(sale.tolerancePct),
         tolerance_cap_tons: n(sale.toleranceCapTons),

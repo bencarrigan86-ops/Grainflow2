@@ -265,6 +265,7 @@ export function parseDate(s, order = 'dmy') {
     }
   }
   if (!(month >= 1 && month <= 12) || !(day >= 1 && day <= 31) || !(y >= 1900)) return null;
+  if (day > new Date(Date.UTC(y, month, 0)).getUTCDate()) return null;   // 31 November is not a date
   return `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
