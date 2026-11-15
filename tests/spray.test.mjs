@@ -9,7 +9,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   nextSprayNo, sprayDefaults, sprayRows, sprayTotals, sprayProblems, amountText, aircairOps, standardOps, fitText,
-  sprayMapPlan, niceLength, AIRCAIR_LAYOUT, AIRCAIR_ROWS, CHECKLIST, plain, sprayTitle,
+  sprayMapPlan, niceLength, rateSummary, usedChemicals, AIRCAIR_LAYOUT, AIRCAIR_ROWS, CHECKLIST, plain, sprayTitle,
 } from '../docs/js/spray.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 import { selectDirtyRows, KINDS } from '../docs/js/dirty.js';
@@ -74,6 +74,24 @@ check('totals: hectares, what to mix of each product, and the water', () => {
   assert.equal(t.ha, 201); assert.equal(t.paddocks, 2);
   assert.equal(t.chemicals[0].text, '241.2 L');
   assert.equal(t.waterL, 10050);
+});
+check('the same product at a different rate on one paddock: its own row, amount and a range in the summary', () => {
+  const j = job({ chemicals: [{ name: 'Gly', rate: '1', unit: 'L' }], rateOverrides: { f1: { 0: '1.5' } } });
+  const rows = sprayRows(j);
+  assert.equal(rows[0].rate, '1 L'); assert.equal(rows[0].amount, '100 L');
+  assert.equal(rows[1].rate, '1.5 L'); assert.equal(rows[1].amount, '151.5 L');   // f1 is 101 ha
+  assert.equal(sprayTotals(j).chemicals[0].text, '251.5 L');
+  assert.equal(rateSummary(j, usedChemicals(j)[0]), '1 to 1.5 L');
+  assert.equal(rateSummary(job(), usedChemicals(job())[0]), '1.2 L');
+});
+check('a paddock with its own rate needs no product rate, and one with neither is asked for', () => {
+  const j = job({ chemicals: [{ name: 'Gly', rate: '', unit: 'L' }], rateOverrides: { f0: { 0: '1' }, f1: { 0: '2' } } });
+  assert.deepEqual(sprayProblems(j), []);
+  assert.ok(sprayProblems({ ...j, rateOverrides: { f0: { 0: '1' } } }).some((p) => p.includes('rate')));
+});
+check('the rate a paddock is given follows the product, not its place on the screen', () => {
+  const j = job({ chemicals: [{ name: '', rate: '', unit: 'L' }, { name: 'B', rate: '2', unit: 'L' }], rateOverrides: { f0: { 1: '3' } } });
+  assert.equal(sprayRows(j)[0].rate, '3 L'); assert.equal(sprayRows(j)[1].rate, '2 L');
 });
 check('what is missing is said before it goes', () => {
   assert.ok(sprayProblems(sprayDefaults({ paddocks: [], jobs: [] })).length >= 4);

@@ -10,8 +10,8 @@
 // it works out what goes where, as plain data, and spraypdf.js draws it. That keeps the layout testable without a
 // PDF library or a browser.
 
-import { textWidth, wrapText } from './pdf.js?v=249';
-import { dmy } from './fmt.js?v=249';
+import { textWidth, wrapText } from './pdf.js?v=250';
+import { dmy } from './fmt.js?v=250';
 
 export const FORMS = [
   { key: 'standard', label: 'Our own form' },
@@ -77,10 +77,27 @@ export function sprayDefaults({ business = {}, paddocks = [], today = '', jobs =
   };
 }
 
-/** The products actually filled in. */
-export const usedChemicals = (job) => (job.chemicals || []).filter((c) => clean(c.name));
+/** The products actually filled in, each knowing its place in the list (`i`), which is what a paddock's own rate is kept against. */
+export const usedChemicals = (job) => (job.chemicals || []).map((c, i) => ({ ...c, i })).filter((c) => clean(c.name));
 
 export const rateText = (c) => (c && Number(c.rate) > 0 ? `${plain(c.rate, 3)} ${c.unit || 'L'}` : '');
+
+/**
+ * The rate per hectare for one product on one paddock: the paddock's own rate when it has been given one (a stronger
+ * rate on the worse paddock), otherwise the rate set for the product.
+ */
+export function rateOn(job, paddockId, c) {
+  const own = Number(job.rateOverrides?.[paddockId]?.[c.i]);
+  return own > 0 ? own : Number(c.rate) || 0;
+}
+
+/** The rate as written where there is one for the whole job: "1.2 L", or "1.2 to 1.5 L" when paddocks differ. */
+export function rateSummary(job, c) {
+  const rates = (job.paddocks || []).map((p) => rateOn(job, p.id, c)).filter((r) => r > 0);
+  if (!rates.length) return rateText(c);
+  const lo = Math.min(...rates); const hi = Math.max(...rates);
+  return lo === hi ? `${plain(lo, 3)} ${c.unit || 'L'}` : `${plain(lo, 3)} to ${plain(hi, 3)} ${c.unit || 'L'}`;
+}
 
 /** An amount in its unit, tidied: 1500 mL is 1.5 L, 2500 g is 2.5 kg. */
 export function amountText(qty, unit) {
@@ -91,8 +108,9 @@ export function amountText(qty, unit) {
 }
 
 /**
- * The table of what goes where: a row for each paddock and product. The water goes on the first row of each paddock
- * (it is the paddock's, not the product's). With no product named yet there is still a row for each paddock.
+ * The table of what goes where: a row for each paddock and product, each at its own rate. The water goes on the first
+ * row of each paddock (it is the paddock's, not the product's). With no product named yet there is still a row for
+ * each paddock.
  */
 export function sprayRows(job) {
   const chems = usedChemicals(job);
@@ -101,22 +119,28 @@ export function sprayRows(job) {
   for (const p of job.paddocks || []) {
     const ha = Number(p.areaHa) || 0;
     if (!chems.length) { rows.push({ field: p.name, ha, chemical: '', rate: '', amount: '', spray: water > 0 ? `${plain(ha * water, 0)} L` : '' }); continue; }
-    chems.forEach((c, i) => rows.push({
-      field: p.name, ha, chemical: c.name, rate: rateText(c),
-      amount: Number(c.rate) > 0 ? amountText(ha * Number(c.rate), c.unit) : '',
-      spray: i === 0 && water > 0 ? `${plain(ha * water, 0)} L` : '',
-    }));
+    chems.forEach((c, n) => {
+      const rate = rateOn(job, p.id, c);
+      rows.push({
+        field: p.name, ha, chemical: c.name, rate: rate > 0 ? rateText({ rate, unit: c.unit }) : '',
+        amount: rate > 0 ? amountText(ha * rate, c.unit) : '',
+        spray: n === 0 && water > 0 ? `${plain(ha * water, 0)} L` : '',
+      });
+    });
   }
   return rows;
 }
 
-/** Hectares, what has to be mixed of each product, and the water, for the whole request. */
+/** Hectares, what has to be mixed of each product (each paddock at its own rate), and the water, for the whole request. */
 export function sprayTotals(job) {
   const ha = (job.paddocks || []).reduce((s, p) => s + (Number(p.areaHa) || 0), 0);
   return {
     ha: round(ha),
     paddocks: (job.paddocks || []).length,
-    chemicals: usedChemicals(job).map((c) => ({ name: c.name, text: Number(c.rate) > 0 ? amountText(ha * Number(c.rate), c.unit) : '' })),
+    chemicals: usedChemicals(job).map((c) => {
+      const qty = (job.paddocks || []).reduce((sum, p) => sum + (Number(p.areaHa) || 0) * rateOn(job, p.id, c), 0);
+      return { name: c.name, text: qty > 0 ? amountText(qty, c.unit) : '' };
+    }),
     waterL: Number(job.waterRate) > 0 ? round(ha * Number(job.waterRate), 0) : 0,
   };
 }
@@ -126,7 +150,7 @@ export function sprayProblems(job) {
   const out = [];
   if (!(job.paddocks || []).length) out.push('Tick the paddocks to be sprayed.');
   if (!usedChemicals(job).length) out.push('Name the product to go on.');
-  for (const c of usedChemicals(job)) if (!(Number(c.rate) > 0)) out.push(`Give the rate per hectare for ${c.name}.`);
+  for (const c of usedChemicals(job)) if ((job.paddocks || []).some((p) => !(rateOn(job, p.id, c) > 0))) out.push(`Give the rate per hectare for ${c.name}.`);
   if (!clean(job.dateRequired)) out.push('Say when you need it done.');
   if (!clean(job.contractor)) out.push('Who is it going to? Enter the contractor.');
   if (job.form === 'aircair' && !clean(job.tradingName)) out.push("Enter your trading name (Aircair's form asks for it).");
@@ -318,7 +342,7 @@ export function standardOps(job) {
   for (const c of usedChemicals(job)) {
     const t = tot.chemicals.find((x) => x.name === c.name);
     text(M, y, c.name, { size: 10, bold: true });
-    text(col2, y, `${rateText(c)} per ha${t?.text ? `   =   ${t.text} in all` : ''}`, { size: 10 });
+    text(col2, y, `${rateSummary(job, c)} per ha${t?.text ? `   =   ${t.text} in all` : ''}`, { size: 10 });
     y += 14;
   }
   if (Number(job.waterRate) > 0) { text(M, y, 'Water', { size: 10, bold: true }); text(col2, y, `${plain(job.waterRate, 1)} L per ha   =   ${plain(tot.waterL, 0)} L in all`, { size: 10 }); y += 14; }
@@ -411,7 +435,7 @@ export function mapPageText(job) {
     lines: [
       [job.jobNo, job.contractor && `to ${job.contractor}`, job.dateRequired && `needed ${dmy(job.dateRequired)}`].filter(clean).join('   '),
       [job.property && `Property: ${job.property}`, job.crop && `Crop: ${job.crop}`].filter(clean).join('   '),
-      [...usedChemicals(job).map((c) => `${c.name} ${rateText(c)}/ha`), Number(job.waterRate) > 0 && `water ${plain(job.waterRate, 1)} L/ha`].filter(Boolean).join('   +   '),
+      [...usedChemicals(job).map((c) => `${c.name} ${rateSummary(job, c)}/ha`), Number(job.waterRate) > 0 && `water ${plain(job.waterRate, 1)} L/ha`].filter(Boolean).join('   +   '),
     ].filter(clean),
     total: `${tot.paddocks} paddock${tot.paddocks === 1 ? '' : 's'}, ${plain(tot.ha, 1)} ha`,
   };

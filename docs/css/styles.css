@@ -1018,3 +1018,12 @@ details.fold.feature > *:last-child { margin-bottom: 14px; }
 .liquidity .row.total { border-top: 1px solid var(--btn-edge); padding-top: 10px; }
 .liquidity .row.total .sub { display: block; font-size: 12px; color: var(--text-dim); font-weight: 400; margin-top: 2px; }
 .actual-flag { margin-top: 4px; padding: 3px 8px; border-radius: 8px; display: inline-block; font-size: 13px; font-weight: 600; background: var(--warn-bg); border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--border)); }
+
+/* The spray request form: each paddock, product, contact and neighbour is its own block in alternating colours, so
+   neighbouring boxes are not read as one. A farm's heading is stronger than the paddocks under it. */
+.row.sp-band { padding: 10px 12px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.row.sp-band.alt, .sp-block.alt { background: color-mix(in srgb, var(--accent-summary) 14%, var(--surface)); border-color: color-mix(in srgb, var(--accent-summary) 28%, var(--border)); }
+.row.sp-band:last-child { border-bottom: 1px solid var(--border); }
+.row.sp-farmhead { background: color-mix(in srgb, var(--accent-summary) 38%, var(--surface)); border-color: color-mix(in srgb, var(--accent-summary) 60%, var(--border)); margin-top: 12px; }
+.row.sp-farmhead:first-of-type { margin-top: 0; }
+.sp-block { padding: 10px 12px 2px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
