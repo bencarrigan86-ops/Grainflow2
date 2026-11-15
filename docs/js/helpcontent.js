@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=271';
+import { ROLES, canOpen } from './nav.js?v=272';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ export const ROLE_INFO = [
   },
   {
     role: 'manager', label: 'Farm manager',
-    summary: 'Runs the paddocks, silos and loads, sends spray requests, and handles orders, invoices and bills. Sees contracts and tonnes, but not contract prices or overheads.',
+    summary: 'Runs the paddocks, silos and loads, sends spray requests, and handles orders, invoices and bills. Sees contracts and tonnes, but not contract prices, overheads or the bank details in Settings.',
     only: 'Can remove anyone\'s loads and records, bring in last season\'s contracts and start a new season.',
   },
   {

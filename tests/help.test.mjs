@@ -9,6 +9,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ROLES, tabsForRole, canOpen } from '../docs/js/nav.js';
+import { INVITABLE_ROLES } from '../docs/js/invites.js';
 import { figureFor, tabsSvg, rolesSvg, FIGURE_IDS } from '../docs/js/helpvisuals.js';
 import { ACCESS, LEVELS, ROLE_INFO, GUIDES, guidesForRole, accessFor, startProgress, START_STEPS } from '../docs/js/helpcontent.js';
 
@@ -129,6 +130,21 @@ check('Help is reachable by every role, from Account and Settings, and the Posit
   assert.ok(read('docs/js/views/settings.js').includes('id="open-help"'));
   const p = read('docs/js/views/position.js');
   assert.ok(p.includes('startProgress(') && p.includes('id="start-help"') && p.includes('id="start-hide"'));
+});
+
+console.log('\n=== the invite words and Settings agree with the table ===');
+check('the invite screen does not say a manager is kept from what they can do', () => {
+  const blurb = (r) => INVITABLE_ROLES.find((x) => x.value === r).blurb;
+  assert.ok(/invoices/i.test(blurb('manager')) && /bills/i.test(blurb('manager')), 'a manager handles invoices and bills');
+  assert.ok(/contract prices/i.test(blurb('manager')) && /bank/i.test(blurb('manager')));
+  assert.ok(/overheads/i.test(blurb('bookkeeper')) && /invoic/i.test(blurb('bookkeeper')));
+});
+check('only the owner edits the business details; a manager is not shown the bank details', () => {
+  const s = read('docs/js/views/settings.js');
+  assert.ok(s.includes("const canEditBusiness = db.getRole() === 'owner';") && s.includes("const seesBank = db.getRole() !== 'manager';"));
+  assert.ok(s.includes("${seesBank ? `<hr class=\"sep\" />") && s.includes("id=\"save-business\">Save business details</button>' : ''"));
+  assert.ok(/farms_update on farms for update\s+using \(app_role\(id\) = 'owner'\)/.test(read('supabase/migrations/20260831130000_rls_policies.sql')), 'the server lets only the owner edit the farm');
+  assert.ok(area('Settings').note.includes('business and bank details by the owner only'));
 });
 
 console.log('\n=== the pictures ===');

@@ -1,29 +1,29 @@
-import { db } from '../storage.js?v=271';
-import { getTheme, setTheme } from '../theme.js?v=271';
-import { num, money, esc, todayLocal } from '../fmt.js?v=271';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=271';
-import { openLoadImportSheet } from './importloads.js?v=271';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=271';
-import { openDeletedSheet } from './deleted.js?v=271';
-import { APP_VERSION } from '../version.js?v=271';
-import { exportRowsAsCSV } from '../csv.js?v=271';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=271';
-import { endpointLabel } from './movements.js?v=271';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=271';
-import { layersForStorage } from '../outload.js?v=271';
-import { holdings, totalHeld } from '../offfarm.js?v=271';
-import { kindLabel, billTotal } from '../payables.js?v=271';
-import { orderState, STATE_LABEL } from '../orders.js?v=271';
-import { fieldHarvest } from '../harvest.js?v=271';
-import { openMySignatureSheet } from './signaturepad.js?v=271';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=271';
+import { db } from '../storage.js?v=272';
+import { getTheme, setTheme } from '../theme.js?v=272';
+import { num, money, esc, todayLocal } from '../fmt.js?v=272';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=272';
+import { openLoadImportSheet } from './importloads.js?v=272';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=272';
+import { openDeletedSheet } from './deleted.js?v=272';
+import { APP_VERSION } from '../version.js?v=272';
+import { exportRowsAsCSV } from '../csv.js?v=272';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=272';
+import { endpointLabel } from './movements.js?v=272';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=272';
+import { layersForStorage } from '../outload.js?v=272';
+import { holdings, totalHeld } from '../offfarm.js?v=272';
+import { kindLabel, billTotal } from '../payables.js?v=272';
+import { orderState, STATE_LABEL } from '../orders.js?v=272';
+import { fieldHarvest } from '../harvest.js?v=272';
+import { openMySignatureSheet } from './signaturepad.js?v=272';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=272';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=271';
+} from '../invites.js?v=272';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=271';
+} from '../auth.js?v=272';
 
 let unsub = null;
 
@@ -39,6 +39,9 @@ function paint(root) {
   const currentYear = db.getCurrentYear();
   const overheads = db.getOverheads();
   const business = db.getBusinessDetails();
+  // Only the owner can change the business details (the server refuses anyone else), and a manager does not see the bank details.
+  const canEditBusiness = db.getRole() === 'owner';
+  const seesBank = db.getRole() !== 'manager';
 
   root.innerHTML = `
     <div class="topbar">
@@ -105,9 +108,10 @@ function paint(root) {
         <button class="btn secondary" id="open-my-signature">My signature&hellip;</button>
       </div>
 
-      <div class="card">
+      <div class="card" id="business-card">
         <details class="fold" style="border-top:none;margin-top:0">
-          <summary><div><h2>Business details</h2><div class="sub">ABN, contact and bank details shown on invoices</div></div></summary>
+          <summary><div><h2>Business details</h2><div class="sub">${seesBank ? 'ABN, contact and bank details shown on invoices' : 'ABN, contact and address shown on invoices'}</div></div></summary>
+        ${canEditBusiness ? '' : '<div class="field hint" style="margin-bottom:6px">Only the owner can change these.</div>'}
         <div class="field hint" style="margin-bottom:6px">The entity that holds the ABN and the
           bank account. Used as the "Seller" on invoices you generate in Sales — not as the
           name of the farm, which is set above.</div>
@@ -124,7 +128,7 @@ function paint(root) {
         </div>
         ${addressFields('bd-addr', partsOf(business.address, business.addressParts))}
         ${field({ label: 'Payment terms (days)', id: 'bd-terms', type: 'number', step: '1', value: business.paymentTermsDays })}
-        <hr class="sep" />
+        ${seesBank ? `<hr class="sep" />
         <div class="grid-2">
           ${field({ label: 'Bank name', id: 'bd-bank', value: business.bankName })}
           ${field({ label: 'Account name', id: 'bd-accname', value: business.accountName })}
@@ -132,8 +136,8 @@ function paint(root) {
         <div class="grid-2">
           ${field({ label: 'BSB', id: 'bd-bsb', type: 'text', placeholder: '000-000', value: business.bsb })}
           ${field({ label: 'Account number', id: 'bd-accno', placeholder: 'Digits only', value: business.accountNumber })}
-        </div>
-        <button class="btn" id="save-business">Save business details</button>
+        </div>` : ''}
+        ${canEditBusiness ? '<button class="btn" id="save-business">Save business details</button>' : ''}
         </details>
       </div>
 
@@ -141,7 +145,7 @@ function paint(root) {
         <h2>Farm</h2>
         <div class="field hint" style="margin-bottom:6px">What this place is called in the app and in invitations. The entity on invoices is set under Business details.</div>
         ${field({ label: 'Farm / property name', id: 'bd-farm', value: business.farmName, placeholder: 'e.g. Sunnyridge' })}
-        <button class="btn" id="save-farm">Save farm name</button>
+        ${canEditBusiness ? '<button class="btn" id="save-farm">Save farm name</button>' : '<div class="hint">Only the owner can rename the farm.</div>'}
         ${db.getRole() === 'owner' ? `<hr class="sep" />
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:6px 0"><input type="checkbox" id="show-aircair" ${business.showAircair ? 'checked' : ''} style="width:18px;height:18px" /> Offer Aircair's form on spray requests</label>
         <div class="hint">Off for most farms: a spray request goes out on our own form. Switch on if you send Aircair's own form.</div>` : ''}
@@ -243,14 +247,16 @@ function paint(root) {
     });
   });
 
-  root.querySelector('#save-farm').addEventListener('click', () => {
+  root.querySelector('#save-farm')?.addEventListener('click', () => {
     db.updateBusinessDetails({ farmName: getVal(root, 'bd-farm')?.trim() });
   });
+  // read-only for anyone but the owner
+  if (!canEditBusiness) root.querySelectorAll('#business-card input, #business-card select, #bd-farm').forEach((el) => { el.disabled = true; });
 
   root.querySelector('#open-help')?.addEventListener('click', () => { location.hash = '#/help'; });
   root.querySelector('#show-aircair')?.addEventListener('change', (e) => db.updateBusinessDetails({ showAircair: e.target.checked }));
 
-  root.querySelector('#save-business').addEventListener('click', () => {
+  root.querySelector('#save-business')?.addEventListener('click', () => {
     const addr = readAddress(root, 'bd-addr');
     db.updateBusinessDetails({
       entityName: getVal(root, 'bd-entity')?.trim(),
