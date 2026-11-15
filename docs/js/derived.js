@@ -1,7 +1,7 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=264';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=264';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=266';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=266';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -156,6 +156,20 @@ export function invoiceTotals(sale, lines) {
   const gst = subtotalExGST * GST_RATE;
   const totalPayable = subtotalExGST + gst - levies - freightTotal;
   return { totalTons, subtotalExGST, levies, freightTotal, gst, totalPayable };
+}
+
+/**
+ * Our invoice against the buyer's RCTI: how far the total the buyer's RCTI says it pays is from the total we invoiced.
+ * Null until an RCTI total has been entered. `diff` is the RCTI less ours, so a negative one is the buyer paying less than
+ * we invoiced; `agrees` is true when the two are the same to the cent.
+ */
+export function rctiCheck(invoice) {
+  const raw = invoice?.rctiTotal;
+  if (raw === null || raw === undefined || raw === '' || !Number.isFinite(Number(raw))) return null;
+  const ours = Math.round((Number(invoice.totalPayable) || 0) * 100) / 100;
+  const theirs = Math.round(Number(raw) * 100) / 100;
+  const diff = Math.round((theirs - ours) * 100) / 100;
+  return { ours, theirs, diff, agrees: diff === 0 };
 }
 
 /** Movement ids already included on any existing invoice, so they aren't offered again. */

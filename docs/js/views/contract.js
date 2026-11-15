@@ -18,9 +18,10 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=264';
-import { openSheet } from '../ui.js?v=264';
-import { esc, num, money } from '../fmt.js?v=264';
+import { db } from '../storage.js?v=266';
+import { openSheet } from '../ui.js?v=266';
+import { esc, num, money } from '../fmt.js?v=266';
+import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=266';
 
 const DASH = '—';
 
@@ -29,23 +30,6 @@ function longDate(iso) {
   if (!iso) return '';
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   return m ? `${m[3]}-${m[2]}-${m[1]}` : String(iso);
-}
-
-/**
- * Tolerance in the words the trade uses.
- *
- * Every one of the six says this differently and they all mean the same thing:
- * whichever of the two is smaller. Saying "whichever is the lesser" out loud
- * matters — a reader who has to work out which limit binds is a reader who
- * will assume the one that suits them.
- */
-function toleranceText(sale, unit) {
-  const pct = Number(sale.tolerancePct) || 0;
-  const cap = Number(sale.toleranceCapTons) || 0;
-  if (!pct && !cap) return '';
-  if (pct && cap) return `+/- ${num(cap, 0)} ${unit} or ${num(pct, 1)}%, whichever is the lesser`;
-  if (pct) return `+/- ${num(pct, 1)}%`;
-  return `+/- ${num(cap, 0)} ${unit}`;
 }
 
 function paymentText(sale) {
@@ -80,10 +64,13 @@ function carryText(sale) {
     : `${money(rate, 2)} per tonne per month`;
 }
 
-/** One term. Omitted entirely when empty — a blank line invites a pen. */
-const term = (label, value) => (value
-  ? `<div class="row"><span class="label">${esc(label)}</span><span class="value">${esc(value)}</span></div>`
-  : '');
+/** One term, its value on one line or on several (an array). Omitted entirely when empty — a blank line invites a pen. */
+const term = (label, value) => {
+  const lines = (Array.isArray(value) ? value : [value]).filter(Boolean);
+  return lines.length
+    ? `<div class="row"><span class="label">${esc(label)}</span><span class="value">${lines.map(esc).join('<br>')}</span></div>`
+    : '';
+};
 
 export function contractDocHTML(sale, business, commodity) {
   const unit = commodity?.unit === 'bale' ? 'bales' : 't';
@@ -91,6 +78,9 @@ export function contractDocHTML(sale, business, commodity) {
 
   const quantity = `${num(sale.tons, 0)} ${unit}`;
   const tol = toleranceText(sale, unit);
+  // a multigrade contract lists each grade it takes with its premium or discount
+  const gradeLines = gradeTermsLines(sale, perUnit);
+  const gradeNames = gradeNamesText(sale);
 
   return `
     <div class="invoice-doc">
@@ -128,12 +118,14 @@ export function contractDocHTML(sale, business, commodity) {
         purchase the following commodity on the terms set out below.</div>
 
       <div class="invoice-totals">
-        ${term('Commodity', [commodity?.name, sale.grade].filter(Boolean).join(' — ') || DASH)}
+        ${term('Commodity', commodity?.name || DASH)}
+        ${term(gradeLines.length ? 'Grades' : 'Grade', gradeLines.length ? gradeNames : sale.grade)}
         ${term('Quality', 'As per Grain Trade Australia standards')}
-        ${term('Quantity', tol ? `${quantity} (${tol})` : quantity)}
+        ${term('Quantity', [quantity, tol])}
         ${term('Price', sale.price ? `${money(sale.price, 2)} per ${perUnit}, exclusive of GST` : '')}
         ${term('Freight', sale.freight ? `${money(sale.freight, 2)} per ${perUnit}` : '')}
         ${term('Premium / discount', sale.premiumDiscount ? `${money(sale.premiumDiscount, 2)} per ${perUnit}` : '')}
+        ${term('Premium / discount by grade', gradeLines.length ? [...gradeLines, 'A grade not listed is paid the price as above'] : '')}
         ${term('Levies', sale.leviesPct ? `${num(sale.leviesPct * 100, 3)}%` : '')}
         ${term('Pricing point', sale.pricingPoint)}
         ${term('Location', sale.location)}

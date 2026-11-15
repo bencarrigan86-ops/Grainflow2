@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=264';
-import { cleanOffFarm } from './offfarm.js?v=264';
+import { cleanGradeOptions } from './gradeprice.js?v=266';
+import { cleanOffFarm } from './offfarm.js?v=266';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -69,7 +69,7 @@ const LOAD_QUALITY_FIELDS = QUALITY_FIELDS.filter(([key]) => key !== 'cropYear')
 // What an invoice carries that has no column of its own: when it was issued and is due, and its figures. Kept in the
 // row's `totals` under this key, so they come back with the invoice.
 const INVOICE_KEY = '__invoice';
-const INVOICE_EXTRAS = ['issueDate', 'dueDate', 'totalTons', 'subtotalExGST', 'freightTotal', 'levies', 'gst', 'totalPayable'];
+const INVOICE_EXTRAS = ['issueDate', 'dueDate', 'totalTons', 'subtotalExGST', 'freightTotal', 'levies', 'gst', 'totalPayable', 'rctiNo', 'rctiTotal'];
 function invoiceExtras(inv) {
   const out = {};
   for (const k of INVOICE_EXTRAS) if (inv[k] !== undefined) out[k] = inv[k];

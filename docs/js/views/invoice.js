@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=264';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice } from '../derived.js?v=264';
-import { num, money, esc, dmy } from '../fmt.js?v=264';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=264';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=264';
+import { db } from '../storage.js?v=266';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=266';
+import { num, money, esc, dmy } from '../fmt.js?v=266';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=266';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=266';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -32,11 +32,12 @@ function paintList(sale) {
 function invoiceRow(inv) {
   const isPaid = inv.status === 'paid';
   const loadCount = inv.lines.length;
+  const rcti = rctiCheck(inv);
   return `
     <div class="list-item" data-view-invoice="${inv.id}">
       <div>
         <div class="main">Invoice #${inv.invoiceNo}</div>
-        <div class="meta">${esc(dmy(inv.issueDate))} &middot; ${loadCount} item${loadCount === 1 ? '' : 's'}</div>
+        <div class="meta">${esc(dmy(inv.issueDate))} &middot; ${loadCount} item${loadCount === 1 ? '' : 's'}${rcti && !rcti.agrees ? ` &middot; <span style="color:var(--danger,#c0392b);font-weight:600">RCTI ${rcti.diff < 0 ? 'less' : 'more'} by ${money(Math.abs(rcti.diff), 2)}</span>` : ''}</div>
       </div>
       <div class="right">
         <div class="main">${money(inv.totalPayable, 2)}</div>
@@ -323,6 +324,16 @@ function openInvoiceDocSheet(sale, invoice) {
         <button class="btn secondary" id="edit-invoice">Edit</button>
       </div>
       ${invoiceDocHTML(sale, invoice, business, commodity)}
+      <div class="card input" style="margin-top:14px" id="rcti-card">
+        <h2><span class="dot input"></span>Buyer's RCTI</h2>
+        <div class="hint">Type what the buyer's recipient created tax invoice says, to see whether it agrees with this invoice. This is for you: it is not printed on the invoice.</div>
+        <div class="grid-2">
+          ${field({ label: 'RCTI number', id: 'rcti-no', value: invoice.rctiNo || '' })}
+          ${field({ label: 'RCTI total payable ($)', id: 'rcti-total', type: 'number', step: '0.01', value: rctiCheck(invoice) ? invoice.rctiTotal : '' })}
+        </div>
+        <div id="rcti-result"></div>
+        <button class="btn secondary" id="rcti-save" type="button">Save RCTI</button>
+      </div>
       ${attachmentsHtml('invoice', invoice.documents || [], { sub: 'A copy of the invoice, the remittance, proof of delivery' })}
       <button class="btn" id="print-invoice" style="margin-top:14px">Print / Save as PDF</button>
       <button class="btn danger" id="delete-invoice" style="margin-top:8px">Delete invoice</button>
@@ -337,6 +348,23 @@ function openInvoiceDocSheet(sale, invoice) {
       openInvoiceDocSheet(sale, refreshed);
     });
     root.querySelector('#edit-invoice').addEventListener('click', () => openInvoiceBuilderSheet(sale, invoice));
+    // our invoice against the buyer's RCTI
+    const showRcti = (inv) => {
+      const c = rctiCheck(inv);
+      root.querySelector('#rcti-result').innerHTML = !c ? '' : c.agrees
+        ? `<div class="row"><span class="label">Against our invoice</span><span class="value"><span class="badge pos">Agrees</span></span></div>`
+        : `<div class="row"><span class="label">Our invoice</span><span class="value">${money(c.ours, 2)}</span></div>
+           <div class="row"><span class="label">Their RCTI</span><span class="value">${money(c.theirs, 2)}</span></div>
+           <div class="row"><span class="label"><strong>Difference</strong></span><span class="value"><span class="badge neg">${c.diff < 0 ? 'RCTI is less by' : 'RCTI is more by'} ${money(Math.abs(c.diff), 2)}</span></span></div>`;
+    };
+    showRcti(invoice);
+    root.querySelector('#rcti-save').addEventListener('click', () => {
+      const raw = String(getVal(root, 'rcti-total') ?? '').trim();
+      const patch = { rctiNo: String(getVal(root, 'rcti-no') ?? '').trim(), rctiTotal: raw === '' ? null : getNum(root, 'rcti-total') };
+      db.updateInvoice(invoice.id, patch);
+      showRcti({ ...invoice, ...patch });
+      toast('RCTI saved');
+    });
     root.querySelector('#print-invoice').addEventListener('click', () => window.print());
     root.querySelector('#delete-invoice').addEventListener('click', () => {
       confirmDelete(`Delete invoice #${invoice.invoiceNo}? This cannot be undone.`, () => {
