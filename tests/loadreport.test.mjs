@@ -175,6 +175,24 @@ check('the slip has a comments box with the load\'s notes, and it can be turned 
   assert.equal(loadReportRows([{ ...moves[0], notes: ' hi ' }], ctx)[0].notes, 'hi');
 });
 
+check('a load from two places can list the tonnes from each, and that can be turned off', () => {
+  const two = { ...moves[0], id: 'two', froms: [{ type: 'field', id: 'f1', tons: 12.5 }, { type: 'silo', id: 's1', tons: 17.5 }], tons: 30 };
+  const row = loadReportRows([two], ctx)[0];
+  assert.deepEqual(row.fromLegs, [{ name: 'River Block', tons: 12.5 }, { name: 'Silo 3', tons: 17.5 }]);
+  const on = text(buildLoadTicketPdf(row, {}));
+  assert.ok(on.includes('(River Block)') && on.includes('(12.50 t)') && on.includes('(Silo 3)') && on.includes('(17.50 t)'));
+  const off = text(buildLoadTicketPdf(row, { showSplit: false }));
+  assert.ok(off.includes('(River Block, Silo 3)') && !off.includes('(12.50 t)'));
+  assert.ok(text(buildLoadTicketPdf(row, { showOrigin: false })).indexOf('(12.50 t)') < 0, 'nothing when the origin is hidden');
+});
+check('a load from one place has no split, and the tick is on the ticket sheet', () => {
+  const one = loadReportRows([moves[0]], ctx)[0];
+  assert.ok(text(buildLoadTicketPdf(one, {})).includes('(Silo 3)'));
+  const m = read('docs/js/views/movements.js');
+  assert.ok(m.includes('id="tk-split"') && m.includes("showSplit: root.querySelector('#tk-split').checked"));
+  assert.ok(read('docs/js/views/loadreport.js').includes('export const readSplit'));
+});
+
 console.log('\n=== saved with the farm ===');
 const FARM = '99999999-9999-9999-9999-999999999999';
 const state = (movement) => ({

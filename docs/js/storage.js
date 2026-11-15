@@ -18,22 +18,22 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=262';
+import { hydrate } from './hydrate.js?v=263';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=262';
-import { chooseBootState, resolveLegacy } from './boot.js?v=262';
-import { isLegacyDirty } from './dirty.js?v=262';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=262';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=262';
-import { settleLegs, dedupeLegs } from './legs.js?v=262';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=262';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=262';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=262';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=262';
-import { schedulePush, pushOnReconnect } from './sync.js?v=262';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=262';
+} from './local.js?v=263';
+import { chooseBootState, resolveLegacy } from './boot.js?v=263';
+import { isLegacyDirty } from './dirty.js?v=263';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=263';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=263';
+import { settleLegs, dedupeLegs } from './legs.js?v=263';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=263';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=263';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=263';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=263';
+import { schedulePush, pushOnReconnect } from './sync.js?v=263';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=263';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.

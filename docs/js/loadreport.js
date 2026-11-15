@@ -3,9 +3,9 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=262';
-import { dmy } from './fmt.js?v=262';
-import { SPECS, specOf } from './outload.js?v=262';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=263';
+import { dmy } from './fmt.js?v=263';
+import { SPECS, specOf } from './outload.js?v=263';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -80,6 +80,8 @@ export function loadReportRows(movements, ctx, { from = '', to = '', commodityId
       grade: String(m.grade || '').trim(),
       quality: testedOn(m),
       from: (m.froms || []).map((f) => endName(f, ctx)).filter(Boolean).join(', '),
+      // each place it came from with the tonnes taken from it, for a load drawn from more than one
+      fromLegs: (m.froms || []).map((f) => ({ name: endName(f, ctx), tons: Number(f.tons) || 0 })).filter((l) => l.name),
       tons: Number(m.tons) || 0,                       // the net load
       gross: m.grossWeight === null || m.grossWeight === undefined || m.grossWeight === '' ? null : Number(m.grossWeight),
       tare: m.tareWeight === null || m.tareWeight === undefined || m.tareWeight === '' ? null : Number(m.tareWeight),
@@ -193,7 +195,7 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
  * details in cards, where it came from and where it is going, the weights (the net picked out), and a ruled box for
  * comments. Portrait A4.
  */
-export function buildLoadTicketPdf(row, { business = '', ngr = '', showOrigin = true, showDestination = true, showComments = true, showQuality = true, madeAt = '' } = {}) {
+export function buildLoadTicketPdf(row, { business = '', ngr = '', showOrigin = true, showDestination = true, showComments = true, showQuality = true, showSplit = true, madeAt = '' } = {}) {
   const pdf = new Pdf();
   const W = 595.28; const L = 40; const R = W - 40; const CW = R - L;
   const GREEN = [0.12, 0.37, 0.23]; const WHITE = 1; const CARD = 0.955; const DIM = 0.42;
@@ -236,9 +238,20 @@ export function buildLoadTicketPdf(row, { business = '', ngr = '', showOrigin = 
   const fromW = showOrigin ? (CW - 34) * 0.42 : 0;
   const toX = showOrigin ? L + fromW + 34 : L;
   const toW = R - toX;
-  const routeH = 78;
+  // a load from more than one place can list the tonnes taken from each, one to a line
+  const legs = showOrigin && showSplit && (row.fromLegs || []).length > 1 ? row.fromLegs : [];
+  const routeH = Math.max(78, legs.length ? 36 + legs.length * 16 + 8 : 0);
   if (showOrigin) {
-    card(L, y, fromW, routeH, 'FROM', row.from);
+    if (legs.length) {
+      pdf.rect(L, y, fromW, routeH, { stroke: null, fill: CARD });
+      pdf.text(L + 12, y + 10, 'FROM', { size: 7.5, bold: true, gray: DIM });
+      legs.forEach((l, i) => {
+        const ty = y + 26 + i * 16;
+        const tons = `${plain(l.tons)} t`;
+        pdf.text(L + fromW - 12, ty, tons, { size: 11, bold: true, align: 'right' });
+        pdf.text(L + 12, ty, clipText(l.name, fromW - 24 - textWidth(tons, 11, true) - 8, 11, true), { size: 11, bold: true });
+      });
+    } else card(L, y, fromW, routeH, 'FROM', row.from);
     const ay = y + routeH / 2;
     pdf.line(L + fromW + 6, ay, L + fromW + 26, ay, { width: 2, gray: GREEN });
     pdf.polyline([[L + fromW + 20, ay - 6], [L + fromW + 27, ay], [L + fromW + 20, ay + 6]], { width: 2, gray: GREEN });
