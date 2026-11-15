@@ -4,18 +4,18 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=253';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=253';
-import { esc, num, todayLocal, dmy } from '../fmt.js?v=253';
-import { sharePdf, safeFileName } from '../sharefile.js?v=253';
-import { buildFarmMapPdf } from '../spraypdf.js?v=253';
+import { db } from '../storage.js?v=254';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=254';
+import { esc, num, todayLocal, dmy } from '../fmt.js?v=254';
+import { sharePdf, safeFileName } from '../sharefile.js?v=254';
+import { buildFarmMapPdf } from '../spraypdf.js?v=254';
 import {
-  readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx, farmLabelPx,
-} from '../farmmap.js?v=253';
+  readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx, farmLabelPx, commonLabelPx,
+} from '../farmmap.js?v=254';
 
 const MAX_ZOOM = 40;
 const MIN_LABEL_PX = 6.5;    // the smallest writing a paddock's name is shown in, on screen
-const MAX_LABEL_PX = 18;     // the largest
+const MAX_LABEL_PX = 16;     // the largest
 
 // what is written on the paddocks, remembered on this device
 const SHOW_KEY = 'grainflow.farmmap.show';
@@ -165,12 +165,16 @@ function wireMap(root, full, layout, open, { groups = [] } = {}) {
     clamp();
   };
   const labels = () => {
-    const width = svg.getBoundingClientRect().width || 360;
-    const unit = v.w / width;                              // map metres to a pixel
-    // A name is written as large as the paddock allows, between a small and a comfortable size: zoom in and the
-    // names grow with the paddocks, zoom out and they shrink to fit, and one is only left out when even the smallest
-    // writing would not fit inside its paddock.
-    svg.querySelectorAll('text[data-label]').forEach((t) => {
+    const r = svg.getBoundingClientRect();
+    // a pixel in metres: the picture is fitted to its box, so it is the larger of the two scales
+    const unit = Math.max(v.w / (r.width || 360), v.h / (r.height || 300));
+    // Names are all written in one size that follows the zoom (bigger paddocks on screen, bigger writing), and a name
+    // only goes smaller than that where its own paddock cannot hold it, and is left out when even the smallest would not fit.
+    const texts = [...svg.querySelectorAll('text[data-label]')];
+    // one lettering size for the whole view, set by the paddocks that are in it
+    const inView = texts.filter((t) => !hidden.has(t.dataset.farm) && Number(t.getAttribute('x')) >= v.x && Number(t.getAttribute('x')) <= v.x + v.w && Number(t.getAttribute('y')) >= v.y && Number(t.getAttribute('y')) <= v.y + v.h);
+    const common = commonLabelPx(inView.map((t) => Math.min(Number(t.dataset.w), Number(t.dataset.h)) / unit), { max: MAX_LABEL_PX });
+    texts.forEach((t) => {
       const n = t.querySelector('.fm-n'); const a = t.querySelector('.fm-a');
       n.style.display = show.names ? '' : 'none';
       a.style.display = show.areas ? '' : 'none';
@@ -179,7 +183,7 @@ function wireMap(root, full, layout, open, { groups = [] } = {}) {
       if (!lines || hidden.has(t.dataset.farm)) { t.style.display = 'none'; return; }
       const wPx = Number(t.dataset.w) / unit; const hPx = Number(t.dataset.h) / unit;
       const chars = Math.max(show.names ? n.textContent.length : 0, show.areas ? a.textContent.length : 0);
-      const px = labelFontPx(wPx, hPx, chars, lines, { min: MIN_LABEL_PX, max: MAX_LABEL_PX });
+      const px = labelFontPx(wPx, hPx, chars, lines, { min: MIN_LABEL_PX, max: common });
       if (!px) { t.style.display = 'none'; return; }
       t.style.display = '';
       t.setAttribute('font-size', px * unit);
@@ -187,7 +191,10 @@ function wireMap(root, full, layout, open, { groups = [] } = {}) {
     });
     svg.querySelectorAll('text[data-farm-label]').forEach((t) => {
       // a farm's name grows and shrinks with the farm, and goes when the farm is too small on screen to carry it
-      const px = farmLabelPx(Number(t.dataset.w) / unit, t.textContent.length);
+      // a farm's name is the larger lettering, but only a step above the paddock names: never smaller than them, and
+      // never so much larger that it swamps them when zoomed out
+      const fit = farmLabelPx(Number(t.dataset.w) / unit, t.textContent.length);
+      const px = fit ? Math.min(Math.max(fit, common * 1.15), common * 1.5, 22) : 0;
       t.style.display = show.farmNames !== false && !hidden.has(t.dataset.farmLabel) && px ? '' : 'none';
       t.setAttribute('font-size', px * unit);
       t.setAttribute('stroke-width', Math.max(2, px * 0.25) * unit);

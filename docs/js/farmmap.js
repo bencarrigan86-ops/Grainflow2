@@ -300,3 +300,16 @@ export function farmLabelPx(wPx, chars, { min = 8, max = 16 } = {}) {
   const px = Math.min(max, (wPx * 1.05) / (chars * 0.78));
   return px >= min ? px : 0;
 }
+
+/**
+ * The one size names are written in across the view, from the paddocks in it: a third of the typical paddock's smaller
+ * side on screen, kept between `min` and `max`. Zoom in and the paddocks are bigger, so the lettering follows; zoom out
+ * and it comes down. A name only goes smaller than this when its own paddock is too small to hold it (labelFontPx).
+ * @param {number[]} minSidesPx  for each paddock in view, its smaller side in pixels
+ */
+export function commonLabelPx(minSidesPx, { min = 8, max = 16 } = {}) {
+  const s = minSidesPx.filter((n) => n > 0).sort((a, b) => a - b);
+  if (!s.length) return min;
+  const mid = s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+  return Math.max(min, Math.min(max, mid * 0.34));
+}

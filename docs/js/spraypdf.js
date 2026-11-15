@@ -6,11 +6,11 @@
 
 import {
   AIRCAIR_LAYOUT, CHECKLIST, aircairOps, standardOps, sprayMapPlan, mapPageText, sprayRows, sprayTotals, plain, fitText, A4,
-} from './spray.js?v=253';
-import { wrapText } from './pdf.js?v=253';
-import { ASPECT, strokesInBox } from './signature.js?v=253';
-import { NO_FARM, farmGroups } from './farmmap.js?v=253';
-import { dmy } from './fmt.js?v=253';
+} from './spray.js?v=254';
+import { wrapText } from './pdf.js?v=254';
+import { ASPECT, strokesInBox } from './signature.js?v=254';
+import { NO_FARM, farmGroups } from './farmmap.js?v=254';
+import { dmy } from './fmt.js?v=254';
 
 const PDF_LIB = 'https://esm.sh/pdf-lib@1.17.1';
 const AIRCAIR_URL = './forms/aircair-spray-request.pdf';

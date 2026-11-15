@@ -9,7 +9,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateRawSync } from 'node:zlib';
 import {
-  parseDbf, parseShp, readBoundaries, unzipFiles, simplifyRing, simplifyRings, ringsAreaHa, normName, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx, farmLabelPx,
+  parseDbf, parseShp, readBoundaries, unzipFiles, simplifyRing, simplifyRings, ringsAreaHa, normName, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx, farmLabelPx, commonLabelPx,
 } from '../docs/js/farmmap.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
@@ -261,8 +261,15 @@ await check('a name is written as large as its paddock allows: it grows as you z
   assert.ok(farmLabelPx(90, 8) > farmLabelPx(60, 8), 'a farm name grows with the farm');
   assert.equal(farmLabelPx(20, 12), 0, 'and goes when the farm is too small on screen to carry it');
   assert.ok(farmLabelPx(2000, 8) === 16);
+  // one size for the whole view, following the zoom, and the same for big paddocks and small
+  assert.ok(commonLabelPx([30, 30, 30, 120]) < commonLabelPx([60, 60, 60, 240]), 'zoomed in, the writing follows');
+  assert.equal(commonLabelPx([4, 5, 6]), 8, 'never below the smallest readable size');
+  assert.equal(commonLabelPx([500, 500]), 16, 'nor above the largest');
+  assert.equal(commonLabelPx([]), 8);
+  assert.ok(commonLabelPx([10, 200, 40]) === commonLabelPx([40, 10, 200]), 'it does not depend on the order');
   const v = read('docs/js/views/farmmap.js');
   assert.ok(v.includes('data-w=') && v.includes('labelFontPx(wPx, hPx, chars, lines'));
+  assert.ok(v.includes('common * 1.5, 22'), 'a farm name is never smaller than the paddock names');
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
