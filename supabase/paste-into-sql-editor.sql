@@ -27,6 +27,10 @@ alter table storages
 alter table movements
   add column if not exists external_ticket_no text;
 
+-- The time a load was loaded or left, as 24 hour text such as 14:30 (optional; stored only when a time is recorded)
+alter table movements
+  add column if not exists load_time text;
+
 -- Accounts payable: bills owed (brokerage, freight, storage, other), and a contract's brokerage $/t.
 -- This creates a table, so it is longer than the others; it is safe to run more than once.
 create table if not exists payables (

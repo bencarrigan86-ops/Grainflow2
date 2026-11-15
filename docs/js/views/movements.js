@@ -1,17 +1,19 @@
-import { db } from '../storage.js?v=256';
-import { movementsForEndpoint } from '../derived.js?v=256';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=256';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=256';
-import { compressAndStampImage } from '../img.js?v=256';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=256';
-import { specText } from '../outload.js?v=256';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=256';
-import { pickableSilos } from '../silopick.js?v=256';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=256';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=256';
-import { activeSales } from '../paidsales.js?v=256';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=256';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=256';
+import { db } from '../storage.js?v=257';
+import { movementsForEndpoint } from '../derived.js?v=257';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=257';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=257';
+import { compressAndStampImage } from '../img.js?v=257';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=257';
+import { specText } from '../outload.js?v=257';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=257';
+import { pickableSilos } from '../silopick.js?v=257';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=257';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=257';
+import { activeSales } from '../paidsales.js?v=257';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=257';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=257';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination } from './loadreport.js?v=257';
+import { nowTime } from '../loadreport.js?v=257';
 
 let unsub = null;
 
@@ -61,6 +63,7 @@ function paint(root) {
       <div class="stat-grid" id="move-stats"></div>
 
       ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="log-ginning" style="margin-bottom:10px">+ Log ginning</button>` : ''}
+      ${movements.length > 0 ? `<button class="btn secondary small" id="load-report" style="margin-bottom:10px">Send a load report</button>` : ''}
 
       ${movements.length > 0 ? `
       <div class="filterbar">
@@ -85,6 +88,7 @@ function paint(root) {
 
   root.querySelector('#add-movement').addEventListener('click', () => openMovementSheet(null));
   root.querySelector('#log-ginning')?.addEventListener('click', () => openGinningSheet());
+  root.querySelector('#load-report')?.addEventListener('click', () => openLoadReportSheet());
   // The most recent ticket by date — not the last one typed in, which is
   // whatever order an import or an edit happened to leave.
   root.querySelector('#repeat-movement')?.addEventListener('click', () => {
@@ -524,7 +528,10 @@ export function openMovementSheet(existing, template) {
     root.innerHTML = `
       <datalist id="dl-regos">${distinctOf(movements, 'truckRego').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
       <datalist id="dl-drivers">${distinctOf(movements, 'driver').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
-      ${field({ label: 'Date', id: 'date', type: 'date', value: existing ? existing.date : todayLocal() })}
+      <div class="grid-2">
+        ${field({ label: 'Date', id: 'date', type: 'date', value: existing ? existing.date : todayLocal() })}
+        ${field({ label: 'Time', id: 'loadTime', type: 'time', value: existing ? (existing.loadTime || '') : nowTime() })}
+      </div>
       ${pickableOrders.length ? `
       <div class="field">
         <label for="m-order">Delivering against a grain order</label>
@@ -607,6 +614,11 @@ export function openMovementSheet(existing, template) {
         <div id="m-photo-preview" style="margin-top:8px"></div>
       </div>
       ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete movement</button>` : ''}
+      ${existing ? `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:6px 0 10px"><input type="checkbox" id="tk-origin" ${readOrigin() ? 'checked' : ''} style="width:18px;height:18px" /> Show where it came from (storage or paddock)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-dest" ${readDestination() ? 'checked' : ''} style="width:18px;height:18px" /> Show the destination</label>
+        <button class="btn secondary" id="tk-send" type="button">Send this load as a PDF</button>
+        <div class="meta" style="margin-top:6px;font-size:12px">Sends the load as last saved: date, time, truck, driver, contract, estimated weight and ticket number.</div></div>` : ''}
       <div class="save-bar"><div class="total"><div class="l">Net load</div><div class="v" id="load-preview">—</div></div><button class="btn" id="save">Save</button></div>
     `;
 
@@ -718,9 +730,17 @@ export function openMovementSheet(existing, template) {
             <select id="to-sale-select">${opts}</select>
             ${ctx.saleOpts().length <= 1 ? `<div class="hint">No contracts for this commodity — add one in Sales, or widen the commodity above.</div>` : ''}
           </div>
+          <div id="dest-wrap" class="meta" style="margin:6px 0 0"></div>
           <div id="order-wrap"></div>
           <div id="freight-wrap"></div>`;
         const saleSelectEl = toBody.querySelector('#to-sale-select');
+        // where the contract delivers to, so it is in front of whoever is capturing the load
+        const destWrap = toBody.querySelector('#dest-wrap');
+        const drawDest = () => {
+          const sale = db.get().sales.find((s) => s.id === String(saleSelectEl.value || '').replace(/^sale:/, ''));
+          destWrap.innerHTML = !sale ? '' : (sale.location ? `Destination: <strong>${esc(sale.location)}</strong>` : '<span class="hint">No delivery site on this contract.</span>');
+        };
+        saleSelectEl.addEventListener('change', drawDest); drawDest();
         // The orders open against the chosen contract, to say which one this load fills. Nothing shows when it has none.
         const orderWrap = toBody.querySelector('#order-wrap');
         const freightWrap = toBody.querySelector('#freight-wrap');
@@ -914,6 +934,7 @@ export function openMovementSheet(existing, template) {
         tos,
         // the commodity of the load, when one is chosen: holdings off-farm are kept by commodity and grade
         ...(ctx.commodityId ? { commodityId: ctx.commodityId } : {}),
+        loadTime: getVal(root, 'loadTime') || '',
         externalTicketNo: getVal(root, 'extTicket')?.trim() || '',
         // the order it fills; only a load going to a contract can be against one
         orderId: toKind === 'sale' ? (getVal(root, 'to-order-select') || null) : null,
@@ -938,6 +959,15 @@ export function openMovementSheet(existing, template) {
         photoPath,
       });
       closeSheet(); toast('Saved');
+    });
+    // the slip is made from the saved load; the tick is remembered with the one on the report
+    root.querySelector('#tk-origin')?.addEventListener('change', (e) => saveOrigin(e.target.checked));
+    root.querySelector('#tk-dest')?.addEventListener('change', (e) => saveDestination(e.target.checked));
+    root.querySelector('#tk-send')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget; btn.disabled = true;
+      try { await sendLoadTicket(existing, { showOrigin: root.querySelector('#tk-origin').checked, showDestination: root.querySelector('#tk-dest').checked }); }
+      catch (err) { notify(`The load ticket could not be made: ${err.message}`); }
+      finally { btn.disabled = false; }
     });
     const del = root.querySelector('#del');
     if (del) {

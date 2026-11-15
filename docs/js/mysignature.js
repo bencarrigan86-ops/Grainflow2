@@ -5,9 +5,9 @@
 // document can be signed with no signal. Any document that needs a signature takes it from here: the vendor
 // declaration today, contracts and others as they are added.
 
-import { supabase } from './supabase.js?v=256';
-import { getSession } from './auth.js?v=256';
-import { cleanStrokes, strokesToText, strokesFromText, hasSignature } from './signature.js?v=256';
+import { supabase } from './supabase.js?v=257';
+import { getSession } from './auth.js?v=257';
+import { cleanStrokes, strokesToText, strokesFromText, hasSignature } from './signature.js?v=257';
 
 const KEY = 'grainflow.signature';
 
