@@ -4,18 +4,18 @@
 // spray marked. What is on the form and where is decided in spray.js; the PDF is drawn in spraypdf.js. The job is saved
 // as it is filled in, so a request can be started in the paddock and finished at the desk.
 
-import { db } from '../storage.js?v=248';
-import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=248';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=248';
-import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=248';
+import { db } from '../storage.js?v=249';
+import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=249';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=249';
+import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=249';
 import {
   FORMS, RATE_UNITS, MAX_CHEMICALS, CHECKLIST, sprayDefaults, sprayProblems, sprayTotals, sprayTitle, usedChemicals, plain,
-} from '../spray.js?v=248';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=248';
-import { loadMySignature } from '../mysignature.js?v=248';
-import { signatureSvg } from './signaturepad.js?v=248';
-import { openMapSheet } from './farmmap.js?v=248';
-import { buildSprayPdf } from '../spraypdf.js?v=248';
+} from '../spray.js?v=249';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=249';
+import { loadMySignature } from '../mysignature.js?v=249';
+import { signatureSvg } from './signaturepad.js?v=249';
+import { openMapSheet } from './farmmap.js?v=249';
+import { buildSprayPdf } from '../spraypdf.js?v=249';
 
 export const canSpray = (role) => ['owner', 'manager'].includes(role);
 

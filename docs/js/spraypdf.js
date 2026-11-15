@@ -6,11 +6,11 @@
 
 import {
   AIRCAIR_LAYOUT, CHECKLIST, aircairOps, standardOps, sprayMapPlan, mapPageText, sprayRows, sprayTotals, plain, fitText, A4,
-} from './spray.js?v=248';
-import { wrapText } from './pdf.js?v=248';
-import { ASPECT, strokesInBox } from './signature.js?v=248';
-import { NO_FARM, farmGroups } from './farmmap.js?v=248';
-import { dmy } from './fmt.js?v=248';
+} from './spray.js?v=249';
+import { wrapText } from './pdf.js?v=249';
+import { ASPECT, strokesInBox } from './signature.js?v=249';
+import { NO_FARM, farmGroups } from './farmmap.js?v=249';
+import { dmy } from './fmt.js?v=249';
 
 const PDF_LIB = 'https://esm.sh/pdf-lib@1.17.1';
 const AIRCAIR_URL = './forms/aircair-spray-request.pdf';
@@ -150,7 +150,8 @@ function addRowsPage(doc, job, text) {
 
 /** The map page: the paddocks to spray in red among the farm's others, with north, a scale bar and the list. */
 async function addMapPage(doc, lib, job, layout, text) {
-  const { rgb, pushGraphicsState, popGraphicsState, rectangle, clip, endPath } = lib;
+  const { rgb } = lib;
+  const black = rgb(0, 0, 0);
   const page = doc.addPage([A4.w, A4.h]);
   const H = A4.h;
   const head = mapPageText(job);

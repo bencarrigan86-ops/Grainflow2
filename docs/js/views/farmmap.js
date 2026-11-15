@@ -4,14 +4,14 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=248';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=248';
-import { esc, num, todayLocal, dmy } from '../fmt.js?v=248';
-import { sharePdf, safeFileName } from '../sharefile.js?v=248';
-import { buildFarmMapPdf } from '../spraypdf.js?v=248';
+import { db } from '../storage.js?v=249';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=249';
+import { esc, num, todayLocal, dmy } from '../fmt.js?v=249';
+import { sharePdf, safeFileName } from '../sharefile.js?v=249';
+import { buildFarmMapPdf } from '../spraypdf.js?v=249';
 import {
   readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox,
-} from '../farmmap.js?v=248';
+} from '../farmmap.js?v=249';
 
 const MAX_ZOOM = 40;
 
