@@ -4,18 +4,18 @@
 // spray marked. What is on the form and where is decided in spray.js; the PDF is drawn in spraypdf.js. The job is saved
 // as it is filled in, so a request can be started in the paddock and finished at the desk.
 
-import { db } from '../storage.js?v=251';
-import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=251';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=251';
-import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=251';
+import { db } from '../storage.js?v=252';
+import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=252';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=252';
+import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=252';
 import {
   FORMS, RATE_UNITS, MAX_CHEMICALS, CHECKLIST, sprayDefaults, sprayProblems, sprayTotals, sprayTitle, usedChemicals, plain,
-} from '../spray.js?v=251';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=251';
-import { loadMySignature } from '../mysignature.js?v=251';
-import { signatureSvg } from './signaturepad.js?v=251';
-import { openMapSheet } from './farmmap.js?v=251';
-import { buildSprayPdf } from '../spraypdf.js?v=251';
+} from '../spray.js?v=252';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=252';
+import { loadMySignature } from '../mysignature.js?v=252';
+import { signatureSvg } from './signaturepad.js?v=252';
+import { openMapSheet } from './farmmap.js?v=252';
+import { buildSprayPdf } from '../spraypdf.js?v=252';
 
 export const canSpray = (role) => ['owner', 'manager'].includes(role);
 
@@ -146,7 +146,7 @@ export async function openSprayFormSheet(existing, start = {}) {
     function chemicalsCard() {
       return `
         <div class="card">
-          <h2>What goes on</h2>
+          <h2>Products</h2>
           ${d.chemicals.map((c, i) => `
             <div class="sp-block${i % 2 ? ' alt' : ''}" style="display:grid;grid-template-columns:1fr 84px 76px;gap:8px;align-items:end">
               ${field({ label: i === 0 ? 'Product' : `Product ${i + 1} (tank mix)`, id: `sp-chem-${i}-name`, value: c.name, placeholder: 'e.g. Glyphosate 450' })}
@@ -283,7 +283,8 @@ export async function openSprayFormSheet(existing, start = {}) {
       if (pad) pad.textContent = t.paddocks ? `${t.paddocks} paddock${t.paddocks === 1 ? '' : 's'}, ${plain(t.ha, 1)} ha` : 'None ticked yet.';
       const box = root.querySelector('#sp-totals');
       if (box) {
-        const bits = t.chemicals.filter((c) => c.text).map((c) => `${c.name}: ${c.text}`);
+        // a product at two rates is shown as each rate and what it takes
+        const bits = t.chemicals.filter((c) => c.text).map((c) => (c.groups.length > 1 ? `${c.name}: ${c.groups.map((g) => `${g.amount} at ${g.rateText}`).join(', ')}` : `${c.name}: ${c.text}`));
         if (t.waterL) bits.push(`water: ${num(t.waterL, 0)} L`);
         box.textContent = t.ha && bits.length ? `For ${plain(t.ha, 1)} ha: ${bits.join(' · ')}` : 'Tick the paddocks and give a rate to see what to mix.';
       }

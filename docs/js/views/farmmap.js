@@ -4,16 +4,18 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=251';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=251';
-import { esc, num, todayLocal, dmy } from '../fmt.js?v=251';
-import { sharePdf, safeFileName } from '../sharefile.js?v=251';
-import { buildFarmMapPdf } from '../spraypdf.js?v=251';
+import { db } from '../storage.js?v=252';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=252';
+import { esc, num, todayLocal, dmy } from '../fmt.js?v=252';
+import { sharePdf, safeFileName } from '../sharefile.js?v=252';
+import { buildFarmMapPdf } from '../spraypdf.js?v=252';
 import {
-  readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox,
-} from '../farmmap.js?v=251';
+  readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx,
+} from '../farmmap.js?v=252';
 
 const MAX_ZOOM = 40;
+const MIN_LABEL_PX = 6.5;    // the smallest writing a paddock's name is shown in, on screen
+const MAX_LABEL_PX = 20;     // the largest
 
 // what is written on the paddocks, remembered on this device
 const SHOW_KEY = 'grainflow.farmmap.show';
@@ -63,7 +65,7 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
         <div id="fm-wrap" style="position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg);touch-action:none">
           <svg id="fm-svg" viewBox="0 0 ${vb.w} ${vb.h}" style="display:block;width:100%;height:auto;max-height:68vh" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of the paddocks">
             ${layout.items.map((i) => `<path data-id="${esc(i.id)}" data-farm="${esc(i.farm || NO_FARM)}" d="${i.d}" fill="${chosen.has(i.id) ? RED : i.color}" fill-opacity="${chosen.has(i.id) ? 0.85 : pick ? 0.3 : 0.55}" fill-rule="evenodd" stroke="var(--text)" stroke-opacity="0.55" stroke-width="1" vector-effect="non-scaling-stroke" style="cursor:pointer"><title>${esc(i.name)}</title></path>`).join('')}
-            ${layout.items.map((i) => `<text data-label="${esc(i.id)}" data-farm="${esc(i.farm || NO_FARM)}" data-area="${Math.round(i.areaHa * 10000)}" x="${Math.round(i.cx)}" y="${Math.round(i.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="3" paint-order="stroke" pointer-events="none" style="font-weight:600"><tspan class="fm-n" x="${Math.round(i.cx)}">${esc(i.name)}</tspan><tspan class="fm-a" x="${Math.round(i.cx)}" dy="1.15em" style="font-weight:500">${num(Number(mapped.find((f) => f.id === i.id)?.areaHa) || i.areaHa, 1)} ha</tspan></text>`).join('')}
+            ${layout.items.map((i) => `<text data-label="${esc(i.id)}" data-farm="${esc(i.farm || NO_FARM)}" data-area="${Math.round(i.areaHa * 10000)}" data-w="${Math.round(i.bbox[2] - i.bbox[0])}" data-h="${Math.round(i.bbox[3] - i.bbox[1])}" x="${Math.round(i.cx)}" y="${Math.round(i.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="3" paint-order="stroke" pointer-events="none" style="font-weight:600"><tspan class="fm-n" x="${Math.round(i.cx)}">${esc(i.name)}</tspan><tspan class="fm-a" x="${Math.round(i.cx)}" dy="1.15em" style="font-weight:500">${num(Number(mapped.find((f) => f.id === i.id)?.areaHa) || i.areaHa, 1)} ha</tspan></text>`).join('')}
             ${hasFarms ? groups.filter((g) => g.name !== NO_FARM).map((g) => `<text data-farm-label="${esc(g.name)}" x="${Math.round(g.cx)}" y="${Math.round(g.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="4" paint-order="stroke" pointer-events="none" style="font-weight:800;letter-spacing:.05em;text-transform:uppercase">${esc(g.name)}</text>`).join('') : ''}
           </svg>
           <div style="position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px">
@@ -165,17 +167,23 @@ function wireMap(root, full, layout, open, { groups = [] } = {}) {
   const labels = () => {
     const width = svg.getBoundingClientRect().width || 360;
     const unit = v.w / width;                              // map metres to a pixel
-    const size = 11 * unit;
-    const both = show.names && show.areas;
+    // A name is written as large as the paddock allows, between a small and a comfortable size: zoom in and the
+    // names grow with the paddocks, zoom out and they shrink to fit, and one is only left out when even the smallest
+    // writing would not fit inside its paddock.
     svg.querySelectorAll('text[data-label]').forEach((t) => {
-      const px2 = Number(t.dataset.area) / (unit * unit);   // the paddock's area in square pixels (data-area is square metres)
-      t.style.display = !hidden.has(t.dataset.farm) && (show.names || show.areas) && px2 > (both ? 4200 : 2600) ? '' : 'none';
-      t.setAttribute('font-size', size);
-      t.setAttribute('stroke-width', 3 * unit);
       const n = t.querySelector('.fm-n'); const a = t.querySelector('.fm-a');
       n.style.display = show.names ? '' : 'none';
       a.style.display = show.areas ? '' : 'none';
       a.setAttribute('dy', show.names ? '1.15em' : '0');
+      const lines = (show.names ? 1 : 0) + (show.areas ? 1 : 0);
+      if (!lines || hidden.has(t.dataset.farm)) { t.style.display = 'none'; return; }
+      const wPx = Number(t.dataset.w) / unit; const hPx = Number(t.dataset.h) / unit;
+      const chars = Math.max(show.names ? n.textContent.length : 0, show.areas ? a.textContent.length : 0);
+      const px = labelFontPx(wPx, hPx, chars, lines, { min: MIN_LABEL_PX, max: MAX_LABEL_PX });
+      if (!px) { t.style.display = 'none'; return; }
+      t.style.display = '';
+      t.setAttribute('font-size', px * unit);
+      t.setAttribute('stroke-width', Math.max(1.5, px * 0.28) * unit);
     });
     svg.querySelectorAll('text[data-farm-label]').forEach((t) => {
       t.style.display = show.farmNames !== false && !hidden.has(t.dataset.farmLabel) ? '' : 'none';

@@ -276,3 +276,14 @@ export function visibleBox(items, hidden = []) {
   for (const i of use) { b[0] = Math.min(b[0], i.bbox[0]); b[1] = Math.min(b[1], i.bbox[1]); b[2] = Math.max(b[2], i.bbox[2]); b[3] = Math.max(b[3], i.bbox[3]); }
   return b;
 }
+
+/**
+ * How big to write a paddock's name on screen, in pixels: as large as fits inside the paddock (its box is `wPx` by
+ * `hPx`, the writing `chars` wide and `lines` high), no larger than `max`. 0 when even `min` would not fit, so the name
+ * is left out. Zoomed in the paddock is big and the name grows; zoomed out it shrinks until it cannot be read.
+ */
+export function labelFontPx(wPx, hPx, chars, lines, { min = 6.5, max = 15 } = {}) {
+  if (!chars || !lines) return 0;
+  const px = Math.min(max, (wPx * 0.78) / (chars * 0.58), (hPx * 0.8) / (lines * 1.25));
+  return px >= min ? px : 0;
+}

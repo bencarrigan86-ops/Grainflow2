@@ -10,8 +10,9 @@
 // it works out what goes where, as plain data, and spraypdf.js draws it. That keeps the layout testable without a
 // PDF library or a browser.
 
-import { textWidth, wrapText } from './pdf.js?v=251';
-import { dmy } from './fmt.js?v=251';
+import { textWidth, wrapText } from './pdf.js?v=252';
+import { dmy } from './fmt.js?v=252';
+import { labelFontPx } from './farmmap.js?v=252';
 
 export const FORMS = [
   { key: 'standard', label: 'Our own form' },
@@ -99,6 +100,22 @@ export function rateSummary(job, c) {
   return lo === hi ? `${plain(lo, 3)} ${c.unit || 'L'}` : `${plain(lo, 3)} to ${plain(hi, 3)} ${c.unit || 'L'}`;
 }
 
+/**
+ * What a product goes on at, one entry for each different rate: the rate, the hectares it covers and the volume that
+ * takes. A product at one rate everywhere is one entry; a stronger rate on a paddock or two makes a second.
+ */
+export function rateGroups(job, c) {
+  const by = new Map();
+  for (const p of job.paddocks || []) {
+    const rate = rateOn(job, p.id, c);
+    if (!(rate > 0)) continue;
+    const g = by.get(rate) || { rate, rateText: `${plain(rate, 3)} ${c.unit || 'L'}`, ha: 0, paddocks: 0, qty: 0 };
+    g.ha += Number(p.areaHa) || 0; g.paddocks += 1; g.qty += (Number(p.areaHa) || 0) * rate;
+    by.set(rate, g);
+  }
+  return [...by.values()].sort((a, b) => a.rate - b.rate).map((g) => ({ ...g, ha: round(g.ha), amount: amountText(g.qty, c.unit) }));
+}
+
 /** An amount in its unit, tidied: 1500 mL is 1.5 L, 2500 g is 2.5 kg. */
 export function amountText(qty, unit) {
   let q = Number(qty) || 0; let u = unit || 'L';
@@ -139,7 +156,7 @@ export function sprayTotals(job) {
     paddocks: (job.paddocks || []).length,
     chemicals: usedChemicals(job).map((c) => {
       const qty = (job.paddocks || []).reduce((sum, p) => sum + (Number(p.areaHa) || 0) * rateOn(job, p.id, c), 0);
-      return { name: c.name, text: qty > 0 ? amountText(qty, c.unit) : '' };
+      return { name: c.name, text: qty > 0 ? amountText(qty, c.unit) : '', groups: rateGroups(job, c) };
     }),
     waterL: Number(job.waterRate) > 0 ? round(ha * Number(job.waterRate), 0) : 0,
   };
@@ -342,13 +359,20 @@ export function standardOps(job) {
   kv('PURCHASE ORDER', job.poNumber, M, y); kv('CHEMICAL SUPPLIED BY', [job.chemicalSuppliedBy, job.locatedAt && `at ${job.locatedAt}`].filter(clean).join(' '), col2, y); y += 32;
 
   // products
-  text(M, y, 'WHAT GOES ON', { size: 8, bold: true, gray: 0.35 }); y += 13;
-  for (const c of usedChemicals(job)) {
-    const t = tot.chemicals.find((x) => x.name === c.name);
-    text(M, y, c.name, { size: 10, bold: true });
-    text(col2, y, `${rateSummary(job, c)} per ha${t?.text ? `   =   ${t.text} in all` : ''}`, { size: 10 });
-    y += 14;
-  }
+  text(M, y, 'PRODUCTS', { size: 8, bold: true, gray: 0.35 }); y += 13;
+  // one block for each product, every other one tinted; a product at two rates has a line for each rate and its name once
+  usedChemicals(job).forEach((c, n) => {
+    const groups = tot.chemicals.find((x) => x.name === c.name)?.groups || [];
+    const lines = Math.max(1, groups.length);
+    if (n % 2) ops.push({ t: 'rect', x: M, y: y - 11, w: A4.w - 2 * M, h: lines * 14 + 1, tint: [0.86, 0.93, 0.86] });
+    text(M + 3, y, c.name, { size: 10, bold: true });
+    if (!groups.length) text(col2, y, 'rate not set', { size: 10 });
+    groups.forEach((g, i) => {
+      text(col2, y + i * 14, `${g.rateText} per ha`, { size: 10 });
+      text(col2 + 80, y + i * 14, `${plain(g.ha, 1)} ha   =   ${g.amount}`, { size: 10 });
+    });
+    y += lines * 14 + 4;
+  });
   if (Number(job.waterRate) > 0) { text(M, y, 'Water', { size: 10, bold: true }); text(col2, y, `${plain(job.waterRate, 1)} L per ha   =   ${plain(tot.waterL, 0)} L in all`, { size: 10 }); y += 14; }
   y += 8;
 
@@ -421,9 +445,11 @@ export function sprayMapPlan({ items, selectedIds, box, margin = 0.3, minSpanM =
     const wPt = (i.bbox[2] - i.bbox[0]) * s; const hPt = (i.bbox[3] - i.bbox[1]) * s;
     const X = box.x + (i.cx - vx0) * s; const Y = box.y + (i.cy - vy0) * s;
     const inside = X > box.x + 4 && X < box.x + box.w - 4 && Y > box.y + 4 && Y < box.y + box.h - 4;
-    // chosen paddocks are always named; the others only when there is room for the name
-    const room = Math.min(wPt, hPt) > (named ? 22 : 16) && wPt > (named ? 38 : 26);
-    return { id: i.id, name: i.name, areaHa: i.areaHa, x: X, y: Y, selected, show: inside && (chosen || room) };
+    // a name is written as large as its paddock allows; the paddocks to spray are always named, the others only
+    // when the smallest writing fits inside them
+    const fit = labelFontPx(wPt, hPt, Math.max(String(i.name).length, 8), 2, { min: 4.5, max: 10 });
+    const size = chosen ? Math.min(9.5, Math.max(fit, 7)) : Math.min(fit, named ? 10 : 7.5);
+    return { id: i.id, name: i.name, areaHa: i.areaHa, x: X, y: Y, selected, size, show: inside && (chosen || fit > 0) };
   }).filter((l) => l.show);
   const barM = niceLength((box.w * 0.32) / s);
   return {

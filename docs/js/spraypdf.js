@@ -6,11 +6,11 @@
 
 import {
   AIRCAIR_LAYOUT, CHECKLIST, aircairOps, standardOps, sprayMapPlan, mapPageText, sprayRows, sprayTotals, plain, fitText, A4,
-} from './spray.js?v=251';
-import { wrapText } from './pdf.js?v=251';
-import { ASPECT, strokesInBox } from './signature.js?v=251';
-import { NO_FARM, farmGroups } from './farmmap.js?v=251';
-import { dmy } from './fmt.js?v=251';
+} from './spray.js?v=252';
+import { wrapText } from './pdf.js?v=252';
+import { ASPECT, strokesInBox } from './signature.js?v=252';
+import { NO_FARM, farmGroups } from './farmmap.js?v=252';
+import { dmy } from './fmt.js?v=252';
 
 const PDF_LIB = 'https://esm.sh/pdf-lib@1.17.1';
 const AIRCAIR_URL = './forms/aircair-spray-request.pdf';
@@ -214,10 +214,10 @@ function drawMapBox(page, lib, plan, box, text, { tint = false } = {}) {
   const black = rgb(0, 0, 0);
   for (const l of plan.labels) {
     if (l.selected) {
-      text(page, l.x, l.y - 1, fitText(l.name, 110, 9, { bold: true }).text, { size: 9, isBold: true, align: 'center', color: black });
-      text(page, l.x, l.y + 9, `${plain(l.areaHa, 1)} ha`, { size: 7.5, align: 'center', color: black });
+      text(page, l.x, l.y - 1, fitText(l.name, 110, l.size, { bold: true, min: 4 }).text, { size: l.size, isBold: true, align: 'center', color: black });
+      if (l.size >= 6) text(page, l.x, l.y + l.size, `${plain(l.areaHa, 1)} ha`, { size: l.size * 0.85, align: 'center', color: black });
     } else {
-      text(page, l.x, l.y + 2, fitText(l.name, 70, 6.5, { min: 5.5 }).text, { size: 6.5, align: 'center', color: rgb(0.4, 0.42, 0.4) });
+      text(page, l.x, l.y + 2, fitText(l.name, 70, l.size, { min: 4 }).text, { size: l.size, align: 'center', color: rgb(0.4, 0.42, 0.4) });
     }
   }
 

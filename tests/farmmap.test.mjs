@@ -9,7 +9,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateRawSync } from 'node:zlib';
 import {
-  parseDbf, parseShp, readBoundaries, unzipFiles, simplifyRing, simplifyRings, ringsAreaHa, normName, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox,
+  parseDbf, parseShp, readBoundaries, unzipFiles, simplifyRing, simplifyRings, ringsAreaHa, normName, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx,
 } from '../docs/js/farmmap.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
@@ -247,6 +247,18 @@ await check('each paddock keeps its farm from the file, the map labels and switc
 });
 await check('the column is in the paste-in file', () => {
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists boundary jsonb'));
+});
+await check('a name is written as large as its paddock allows: it grows as you zoom in and shrinks as you zoom out', () => {
+  const small = labelFontPx(60, 40, 8, 1);       // a paddock 60 x 40 px, an 8 letter name
+  const bigger = labelFontPx(120, 80, 8, 1);     // zoomed in two times
+  const huge = labelFontPx(900, 600, 8, 1);
+  assert.ok(small > 0 && bigger > small, `${small} -> ${bigger}`);
+  assert.equal(huge, 15, 'never larger than the comfortable maximum');
+  assert.ok(labelFontPx(60, 24, 8, 2) < labelFontPx(60, 24, 8, 1), 'the area under the name takes room, so the writing is smaller');
+  assert.equal(labelFontPx(14, 10, 8, 1), 0, 'left out when even the smallest writing would not fit');
+  assert.equal(labelFontPx(100, 100, 0, 1), 0);
+  const v = read('docs/js/views/farmmap.js');
+  assert.ok(v.includes('data-w=') && v.includes('labelFontPx(wPx, hPx, chars, lines'));
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }

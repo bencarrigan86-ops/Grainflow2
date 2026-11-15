@@ -84,6 +84,19 @@ check('the same product at a different rate on one paddock: its own row, amount 
   assert.equal(rateSummary(j, usedChemicals(j)[0]), '1 to 1.5 L');
   assert.equal(rateSummary(job(), usedChemicals(job())[0]), '1.2 L');
 });
+check('a product at two rates: a line for each rate with its hectares and volume, and the name once', () => {
+  const j = job({ paddocks: pads(3), chemicals: [{ name: 'Gly', rate: '1', unit: 'L' }, { name: 'Other', rate: '2', unit: 'L' }], rateOverrides: { f2: { 0: '1.5' } } });
+  const g = sprayTotals(j).chemicals[0].groups;
+  assert.deepEqual(g.map((x) => [x.rateText, x.paddocks]), [['1 L', 2], ['1.5 L', 1]]);
+  assert.equal(g[0].ha, 201); assert.equal(g[0].amount, '201 L');
+  assert.equal(g[1].ha, 102); assert.equal(g[1].amount, '153 L');
+  assert.equal(sprayTotals(j).chemicals[1].groups.length, 1);
+  const t = standardOps(j).ops.filter((o) => o.t === 'text');
+  assert.equal(t.filter((o) => o.text === 'Gly' && o.bold).length, 1, 'the name is not repeated for the second rate');
+  assert.ok(t.some((o) => o.text === '1.5 L per ha') && t.some((o) => o.text === '1 L per ha'));
+  assert.ok(t.some((o) => o.text === 'PRODUCTS') && !t.some((o) => o.text === 'WHAT GOES ON'));
+  assert.ok(read('docs/js/views/spray.js').includes('<h2>Products</h2>'));
+});
 check('a paddock with its own rate needs no product rate, and one with neither is asked for', () => {
   const j = job({ chemicals: [{ name: 'Gly', rate: '', unit: 'L' }], rateOverrides: { f0: { 0: '1' }, f1: { 0: '2' } } });
   assert.deepEqual(sprayProblems(j), []);
@@ -270,7 +283,7 @@ check('the table is banded by paddock, not by product: a paddock with two produc
   const bands = aircairOps({ ...j, form: 'aircair' }).pages[0].filter((o) => o.t === 'band');
   assert.equal(bands.length, 2, 'only the second paddock is tinted: one band for each of its two rows');
   const std = standardOps(j).ops.filter((o) => o.t === 'rect' && o.tint);
-  assert.equal(std.length, 2);
+  assert.equal(std.length, 3, 'two strips for the second paddock, and one block for the second product');
   assert.equal(new Set(std.map((o) => o.tint.join())).size, 1, 'one tint');
 });
 check('the farm map PDF can be fitted to the area on the screen, not just the farms switched on', () => {
