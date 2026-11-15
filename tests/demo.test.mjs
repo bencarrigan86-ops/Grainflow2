@@ -317,6 +317,45 @@ check('the outlines come back from the server with the paddocks', () => {
   assert.ok(fields.every((f) => f.boundary && f.property), 'an outline or farm was lost on the way');
 });
 
+console.log('\n=== earlier seasons ===');
+
+const earlier = Object.keys(seed.years).filter((l) => l !== seed.currentYear);
+check('two earlier seasons come with it, named as samples', () => {
+  assert.deepEqual(earlier.sort(), ['Sample 2024', 'Sample 2025']);
+});
+check('every record id is unique across seasons, so two seasons never share a primary key', () => {
+  const ids = Object.values(seed.years).flatMap((y) => [
+    ...y.commodities, ...y.fields, ...y.storages, ...y.sales, ...y.movements, ...y.invoices]).map((r) => r.id);
+  assert.equal(new Set(ids).size, ids.length, 'a record id repeats between seasons');
+});
+check('the same paddocks appear every season, in a rotation rather than the same crop', () => {
+  const cropOf = (y, name) => {
+    const f = y.fields.find((q) => q.name === name);
+    return y.commodities.find((c) => c.id === f.commodityId).name;
+  };
+  for (const label of earlier) {
+    const y = seed.years[label];
+    assert.deepEqual(y.fields.map((f) => f.name).sort(), season.fields.map((f) => f.name).sort(), `${label} paddocks differ`);
+    // each season against the one after it, not against this season: wheat two years apart is a rotation
+    const next = label === 'Sample 2025' ? season : seed.years['Sample 2025'];
+    const same = next.fields.filter((f) => cropOf(y, f.name) === cropOf(next, f.name)).length;
+    assert.equal(same, 0, `${label}: ${same} paddock(s) grew the same crop two seasons running`);
+  }
+});
+check('each earlier season sold what it grew, all delivered, with no loads to balance', () => {
+  for (const label of earlier) {
+    const y = seed.years[label];
+    assert.deepEqual([y.movements.length, y.storages.length, y.invoices.length], [0, 0, 0]);
+    for (const c of y.commodities) {
+      const grown = y.fields.filter((f) => f.commodityId === c.id).reduce((s, f) => s + f.areaHa * f.yieldTHa, 0);
+      const sold = y.sales.filter((s) => s.commodityId === c.id).reduce((s, q) => s + q.tons, 0);
+      assert.ok(sold > 0 && sold <= grown, `${label} ${c.name}: sold ${sold} of ${grown.toFixed(1)}`);
+    }
+    assert.ok(y.sales.every((s) => s.tonsDelivered === s.tons), `${label}: a contract is not fully delivered`);
+    assert.ok(y.fields.every((f) => f.yieldMode === 'recorded' && f.boundary && f.property), `${label}: a paddock lacks a recorded yield or its outline`);
+  }
+});
+
 console.log('');
 if (failures) { console.log(`${failures} FAILURES`); process.exit(1); }
 console.log('ALL PASS');

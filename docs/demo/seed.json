@@ -2106,6 +2106,1988 @@
         "repairsMaintenance": 96000,
         "other": 22000
       }
+    },
+    "Sample 2025": {
+      "commodities": [
+        {
+          "unit": "t",
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": "",
+          "id": "chickpeas-2025",
+          "name": "Chickpeas",
+          "angleOfRepose": 28,
+          "testWeight": 0.76,
+          "nPerTonne": 35,
+          "mtmPrice": 0,
+          "targetYieldTHa": 2,
+          "defaultYieldTHa": 1.9,
+          "grossMarginCost": 149000
+        },
+        {
+          "unit": "t",
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": "",
+          "id": "canola-2025",
+          "name": "Canola",
+          "angleOfRepose": 26,
+          "testWeight": 0.67,
+          "nPerTonne": 0,
+          "mtmPrice": 0,
+          "targetYieldTHa": 2.2,
+          "defaultYieldTHa": 2.1,
+          "grossMarginCost": 141000
+        },
+        {
+          "unit": "t",
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": "",
+          "id": "barley-2025",
+          "name": "Barley",
+          "angleOfRepose": 27,
+          "testWeight": 0.69,
+          "nPerTonne": 34,
+          "mtmPrice": 0,
+          "targetYieldTHa": 4.4,
+          "defaultYieldTHa": 4.2,
+          "grossMarginCost": 168000
+        },
+        {
+          "unit": "t",
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": "",
+          "id": "wheat-2025",
+          "name": "Wheat",
+          "angleOfRepose": 24,
+          "testWeight": 0.82,
+          "nPerTonne": 44,
+          "mtmPrice": 0,
+          "targetYieldTHa": 4,
+          "defaultYieldTHa": 3.8,
+          "grossMarginCost": 412000
+        }
+      ],
+      "fields": [
+        {
+          "id": "fld-boundary-2025",
+          "name": "Boundary",
+          "areaHa": 210,
+          "commodityId": "chickpeas-2025",
+          "yieldTHa": 1.83,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Seamer",
+          "seedRateKgHa": 90,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.050165,
+                -33.600077
+              ],
+              [
+                148.059459,
+                -33.600142
+              ],
+              [
+                148.068684,
+                -33.600058
+              ],
+              [
+                148.06871,
+                -33.611164
+              ],
+              [
+                148.059447,
+                -33.611118
+              ],
+              [
+                148.050068,
+                -33.611116
+              ],
+              [
+                148.050165,
+                -33.600077
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        },
+        {
+          "id": "fld-river-2025",
+          "name": "River Block",
+          "areaHa": 178,
+          "commodityId": "canola-2025",
+          "yieldTHa": 1.77,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Hyola 410XX",
+          "seedRateKgHa": 3,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.099738,
+                -33.600081
+              ],
+              [
+                148.108747,
+                -33.60005
+              ],
+              [
+                148.117548,
+                -33.600064
+              ],
+              [
+                148.11763,
+                -33.609761
+              ],
+              [
+                148.108619,
+                -33.609776
+              ],
+              [
+                148.099749,
+                -33.60985
+              ],
+              [
+                148.099738,
+                -33.600081
+              ]
+            ]
+          ],
+          "property": "River Flats"
+        },
+        {
+          "id": "fld-long-2025",
+          "name": "Long Paddock",
+          "areaHa": 165,
+          "commodityId": "barley-2025",
+          "yieldTHa": 3.64,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Compass",
+          "seedRateKgHa": 65,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.06884,
+                -33.600116
+              ],
+              [
+                148.083533,
+                -33.600076
+              ],
+              [
+                148.083396,
+                -33.611125
+              ],
+              [
+                148.076248,
+                -33.611157
+              ],
+              [
+                148.069002,
+                -33.611231
+              ],
+              [
+                148.06884,
+                -33.600116
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        },
+        {
+          "id": "fld-airstrip-2025",
+          "name": "Airstrip",
+          "areaHa": 142,
+          "commodityId": "canola-2025",
+          "yieldTHa": 2.01,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Hyola 410XX",
+          "seedRateKgHa": 3,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.050073,
+                -33.61142
+              ],
+              [
+                148.057311,
+                -33.611364
+              ],
+              [
+                148.064454,
+                -33.611407
+              ],
+              [
+                148.064312,
+                -33.621083
+              ],
+              [
+                148.057234,
+                -33.621157
+              ],
+              [
+                148.050216,
+                -33.621073
+              ],
+              [
+                148.050073,
+                -33.61142
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        },
+        {
+          "id": "fld-stony-2025",
+          "name": "Stony Rise",
+          "areaHa": 118,
+          "commodityId": "chickpeas-2025",
+          "yieldTHa": 1.67,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Seamer",
+          "seedRateKgHa": 90,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.064676,
+                -33.611374
+              ],
+              [
+                148.07055,
+                -33.61139
+              ],
+              [
+                148.076459,
+                -33.611456
+              ],
+              [
+                148.07648,
+                -33.621194
+              ],
+              [
+                148.070601,
+                -33.621227
+              ],
+              [
+                148.064754,
+                -33.621133
+              ],
+              [
+                148.064676,
+                -33.611374
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        },
+        {
+          "id": "fld-woolshed-2025",
+          "name": "Woolshed",
+          "areaHa": 155,
+          "commodityId": "wheat-2025",
+          "yieldTHa": 3.84,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.076838,
+                -33.611415
+              ],
+              [
+                148.084661,
+                -33.611508
+              ],
+              [
+                148.09233,
+                -33.611408
+              ],
+              [
+                148.092384,
+                -33.621239
+              ],
+              [
+                148.084588,
+                -33.621119
+              ],
+              [
+                148.076767,
+                -33.621249
+              ],
+              [
+                148.076838,
+                -33.611415
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        },
+        {
+          "id": "fld-backcreek-2025",
+          "name": "Back Creek",
+          "areaHa": 132,
+          "commodityId": "canola-2025",
+          "yieldTHa": 1.86,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Hyola 410XX",
+          "seedRateKgHa": 3,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.117875,
+                -33.600077
+              ],
+              [
+                148.124612,
+                -33.600111
+              ],
+              [
+                148.131118,
+                -33.600175
+              ],
+              [
+                148.131217,
+                -33.60981
+              ],
+              [
+                148.124507,
+                -33.6098
+              ],
+              [
+                148.117881,
+                -33.609817
+              ],
+              [
+                148.117875,
+                -33.600077
+              ]
+            ]
+          ],
+          "property": "River Flats"
+        },
+        {
+          "id": "fld-dam-2025",
+          "name": "Dam Paddock",
+          "areaHa": 96,
+          "commodityId": "wheat-2025",
+          "yieldTHa": 3.35,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.099782,
+                -33.610005
+              ],
+              [
+                148.105158,
+                -33.610144
+              ],
+              [
+                148.110421,
+                -33.610102
+              ],
+              [
+                148.110424,
+                -33.618775
+              ],
+              [
+                148.105119,
+                -33.618949
+              ],
+              [
+                148.099757,
+                -33.618886
+              ],
+              [
+                148.099782,
+                -33.610005
+              ]
+            ]
+          ],
+          "property": "River Flats"
+        },
+        {
+          "id": "fld-ironbark-2025",
+          "name": "Ironbark",
+          "areaHa": 148,
+          "commodityId": "wheat-2025",
+          "yieldTHa": 3.65,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.110645,
+                -33.610144
+              ],
+              [
+                148.127034,
+                -33.610046
+              ],
+              [
+                148.127097,
+                -33.61887
+              ],
+              [
+                148.118839,
+                -33.618887
+              ],
+              [
+                148.110667,
+                -33.618928
+              ],
+              [
+                148.110645,
+                -33.610144
+              ]
+            ]
+          ],
+          "property": "River Flats"
+        },
+        {
+          "id": "fld-bore-2025",
+          "name": "Bore Paddock",
+          "areaHa": 121,
+          "commodityId": "barley-2025",
+          "yieldTHa": 4.03,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Compass",
+          "seedRateKgHa": 65,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.127273,
+                -33.610017
+              ],
+              [
+                148.133955,
+                -33.610057
+              ],
+              [
+                148.140708,
+                -33.610023
+              ],
+              [
+                148.140714,
+                -33.618795
+              ],
+              [
+                148.134055,
+                -33.618891
+              ],
+              [
+                148.127426,
+                -33.618917
+              ],
+              [
+                148.127273,
+                -33.610017
+              ]
+            ]
+          ],
+          "property": "River Flats"
+        },
+        {
+          "id": "fld-homestead-2025",
+          "name": "Homestead",
+          "areaHa": 134,
+          "commodityId": "wheat-2025",
+          "yieldTHa": 3.56,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.050123,
+                -33.621425
+              ],
+              [
+                148.058426,
+                -33.621407
+              ],
+              [
+                148.066648,
+                -33.621321
+              ],
+              [
+                148.066722,
+                -33.629383
+              ],
+              [
+                148.058389,
+                -33.629229
+              ],
+              [
+                148.050164,
+                -33.629334
+              ],
+              [
+                148.050123,
+                -33.621425
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        },
+        {
+          "id": "fld-siloblock-2025",
+          "name": "Silo Block",
+          "areaHa": 108,
+          "commodityId": "barley-2025",
+          "yieldTHa": 3.72,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Compass",
+          "seedRateKgHa": 65,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.067007,
+                -33.621428
+              ],
+              [
+                148.073534,
+                -33.621323
+              ],
+              [
+                148.08029,
+                -33.621313
+              ],
+              [
+                148.080213,
+                -33.629314
+              ],
+              [
+                148.073528,
+                -33.629334
+              ],
+              [
+                148.067004,
+                -33.629223
+              ],
+              [
+                148.067007,
+                -33.621428
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        }
+      ],
+      "storages": [],
+      "sales": [
+        {
+          "id": "sale-2025-chickpeas-1",
+          "commodityId": "chickpeas-2025",
+          "buyer": "Southern Pulse Exporters",
+          "contractNo": "CH-2511",
+          "grade": "No.1 Chickpea",
+          "tons": 232,
+          "price": 829,
+          "date": "2025-03-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2026-01-05",
+          "deliveryEnd": "2026-03-15",
+          "freight": 46,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 232,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2025-chickpeas-2",
+          "commodityId": "chickpeas-2025",
+          "buyer": "Northbound Commodities",
+          "contractNo": "CH-2512",
+          "grade": "No.1 Chickpea",
+          "tons": 203,
+          "price": 799,
+          "date": "2025-06-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2026-01-05",
+          "deliveryEnd": "2026-03-28",
+          "freight": 46,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 203,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2025-chickpeas-3",
+          "commodityId": "chickpeas-2025",
+          "buyer": "Southern Pulse Exporters",
+          "contractNo": "CH-2513",
+          "grade": "No.1 Chickpea",
+          "tons": 146,
+          "price": 785,
+          "date": "2025-09-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2026-01-05",
+          "deliveryEnd": "2026-03-28",
+          "freight": 46,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 146,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2025-canola-1",
+          "commodityId": "canola-2025",
+          "buyer": "Meridian Oilseeds",
+          "contractNo": "CA-2514",
+          "grade": "CAN",
+          "tons": 338,
+          "price": 855,
+          "date": "2025-03-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2026-01-05",
+          "deliveryEnd": "2026-03-15",
+          "freight": 33,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 338,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2025-canola-2",
+          "commodityId": "canola-2025",
+          "buyer": "Northbound Commodities",
+          "contractNo": "CA-2515",
+          "grade": "CAN",
+          "tons": 296,
+          "price": 874,
+          "date": "2025-06-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2026-01-05",
+          "deliveryEnd": "2026-03-28",
+          "freight": 33,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 296,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2025-canola-3",
+          "commodityId": "canola-2025",
+          "buyer": "Meridian Oilseeds",
+          "contractNo": "CA-2516",
+          "grade": "CAN",
+          "tons": 212,
+          "price": 865,
+          "date": "2025-09-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2026-01-05",
+          "deliveryEnd": "2026-03-28",
+          "freight": 33,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 212,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2025-barley-1",
+          "commodityId": "barley-2025",
+          "buyer": "Coastal Feeds Pty Ltd",
+          "contractNo": "BA-2517",
+          "grade": "BAR1",
+          "tons": 595,
+          "price": 329,
+          "date": "2025-03-12",
+          "location": "Ex farm",
+          "deliveryStart": "2026-01-05",
+          "deliveryEnd": "2026-03-15",
+          "freight": 0,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 595,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2025-barley-2",
+          "commodityId": "barley-2025",
+          "buyer": "Riverina Grain Traders",
+          "contractNo": "BA-2518",
+          "grade": "BAR1",
+          "tons": 521,
+          "price": 336,
+          "date": "2025-06-12",
+          "location": "Ex farm",
+          "deliveryStart": "2026-01-05",
+          "deliveryEnd": "2026-03-28",
+          "freight": 0,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 521,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2025-barley-3",
+          "commodityId": "barley-2025",
+          "buyer": "Northbound Commodities",
+          "contractNo": "BA-2519",
+          "grade": "BAR1",
+          "tons": 373,
+          "price": 334,
+          "date": "2025-09-12",
+          "location": "Ex farm",
+          "deliveryStart": "2026-01-05",
+          "deliveryEnd": "2026-03-28",
+          "freight": 0,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 373,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2025-wheat-1",
+          "commodityId": "wheat-2025",
+          "buyer": "Riverina Grain Traders",
+          "contractNo": "WH-2520",
+          "grade": "APW1",
+          "tons": 773,
+          "price": 392,
+          "date": "2025-03-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2026-01-05",
+          "deliveryEnd": "2026-03-15",
+          "freight": 21.5,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 773,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2025-wheat-2",
+          "commodityId": "wheat-2025",
+          "buyer": "Kurrajong Milling Co",
+          "contractNo": "WH-2521",
+          "grade": "APW1",
+          "tons": 676,
+          "price": 403,
+          "date": "2025-06-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2026-01-05",
+          "deliveryEnd": "2026-03-28",
+          "freight": 21.5,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 676,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2025-wheat-3",
+          "commodityId": "wheat-2025",
+          "buyer": "Northbound Commodities",
+          "contractNo": "WH-2522",
+          "grade": "APW1",
+          "tons": 485,
+          "price": 403,
+          "date": "2025-09-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2026-01-05",
+          "deliveryEnd": "2026-03-28",
+          "freight": 21.5,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 485,
+          "deliveryPeriod": ""
+        }
+      ],
+      "movements": [],
+      "invoices": [],
+      "overheads": {
+        "finance": 177000,
+        "equipmentRepayments": 203000,
+        "depreciation": 160000,
+        "wages": 144000,
+        "drawings": 114000,
+        "admin": 32000,
+        "energy": 44000,
+        "insurance": 55000,
+        "repairsMaintenance": 91000,
+        "other": 21000
+      }
+    },
+    "Sample 2024": {
+      "commodities": [
+        {
+          "unit": "t",
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": "",
+          "id": "barley-2024",
+          "name": "Barley",
+          "angleOfRepose": 27,
+          "testWeight": 0.69,
+          "nPerTonne": 34,
+          "mtmPrice": 0,
+          "targetYieldTHa": 4.4,
+          "defaultYieldTHa": 4.2,
+          "grossMarginCost": 168000
+        },
+        {
+          "unit": "t",
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": "",
+          "id": "wheat-2024",
+          "name": "Wheat",
+          "angleOfRepose": 24,
+          "testWeight": 0.82,
+          "nPerTonne": 44,
+          "mtmPrice": 0,
+          "targetYieldTHa": 4,
+          "defaultYieldTHa": 3.8,
+          "grossMarginCost": 412000
+        },
+        {
+          "unit": "t",
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": "",
+          "id": "canola-2024",
+          "name": "Canola",
+          "angleOfRepose": 26,
+          "testWeight": 0.67,
+          "nPerTonne": 0,
+          "mtmPrice": 0,
+          "targetYieldTHa": 2.2,
+          "defaultYieldTHa": 2.1,
+          "grossMarginCost": 141000
+        },
+        {
+          "unit": "t",
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": "",
+          "id": "chickpeas-2024",
+          "name": "Chickpeas",
+          "angleOfRepose": 28,
+          "testWeight": 0.76,
+          "nPerTonne": 35,
+          "mtmPrice": 0,
+          "targetYieldTHa": 2,
+          "defaultYieldTHa": 1.9,
+          "grossMarginCost": 149000
+        }
+      ],
+      "fields": [
+        {
+          "id": "fld-boundary-2024",
+          "name": "Boundary",
+          "areaHa": 210,
+          "commodityId": "barley-2024",
+          "yieldTHa": 4.41,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Compass",
+          "seedRateKgHa": 65,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.050165,
+                -33.600077
+              ],
+              [
+                148.059459,
+                -33.600142
+              ],
+              [
+                148.068684,
+                -33.600058
+              ],
+              [
+                148.06871,
+                -33.611164
+              ],
+              [
+                148.059447,
+                -33.611118
+              ],
+              [
+                148.050068,
+                -33.611116
+              ],
+              [
+                148.050165,
+                -33.600077
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        },
+        {
+          "id": "fld-river-2024",
+          "name": "River Block",
+          "areaHa": 178,
+          "commodityId": "wheat-2024",
+          "yieldTHa": 4.2,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.099738,
+                -33.600081
+              ],
+              [
+                148.108747,
+                -33.60005
+              ],
+              [
+                148.117548,
+                -33.600064
+              ],
+              [
+                148.11763,
+                -33.609761
+              ],
+              [
+                148.108619,
+                -33.609776
+              ],
+              [
+                148.099749,
+                -33.60985
+              ],
+              [
+                148.099738,
+                -33.600081
+              ]
+            ]
+          ],
+          "property": "River Flats"
+        },
+        {
+          "id": "fld-long-2024",
+          "name": "Long Paddock",
+          "areaHa": 165,
+          "commodityId": "canola-2024",
+          "yieldTHa": 2.24,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Hyola 410XX",
+          "seedRateKgHa": 3,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.06884,
+                -33.600116
+              ],
+              [
+                148.083533,
+                -33.600076
+              ],
+              [
+                148.083396,
+                -33.611125
+              ],
+              [
+                148.076248,
+                -33.611157
+              ],
+              [
+                148.069002,
+                -33.611231
+              ],
+              [
+                148.06884,
+                -33.600116
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        },
+        {
+          "id": "fld-airstrip-2024",
+          "name": "Airstrip",
+          "areaHa": 142,
+          "commodityId": "wheat-2024",
+          "yieldTHa": 3.99,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.050073,
+                -33.61142
+              ],
+              [
+                148.057311,
+                -33.611364
+              ],
+              [
+                148.064454,
+                -33.611407
+              ],
+              [
+                148.064312,
+                -33.621083
+              ],
+              [
+                148.057234,
+                -33.621157
+              ],
+              [
+                148.050216,
+                -33.621073
+              ],
+              [
+                148.050073,
+                -33.61142
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        },
+        {
+          "id": "fld-stony-2024",
+          "name": "Stony Rise",
+          "areaHa": 118,
+          "commodityId": "wheat-2024",
+          "yieldTHa": 4.15,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.064676,
+                -33.611374
+              ],
+              [
+                148.07055,
+                -33.61139
+              ],
+              [
+                148.076459,
+                -33.611456
+              ],
+              [
+                148.07648,
+                -33.621194
+              ],
+              [
+                148.070601,
+                -33.621227
+              ],
+              [
+                148.064754,
+                -33.621133
+              ],
+              [
+                148.064676,
+                -33.611374
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        },
+        {
+          "id": "fld-woolshed-2024",
+          "name": "Woolshed",
+          "areaHa": 155,
+          "commodityId": "canola-2024",
+          "yieldTHa": 2.08,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Hyola 410XX",
+          "seedRateKgHa": 3,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.076838,
+                -33.611415
+              ],
+              [
+                148.084661,
+                -33.611508
+              ],
+              [
+                148.09233,
+                -33.611408
+              ],
+              [
+                148.092384,
+                -33.621239
+              ],
+              [
+                148.084588,
+                -33.621119
+              ],
+              [
+                148.076767,
+                -33.621249
+              ],
+              [
+                148.076838,
+                -33.611415
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        },
+        {
+          "id": "fld-backcreek-2024",
+          "name": "Back Creek",
+          "areaHa": 132,
+          "commodityId": "wheat-2024",
+          "yieldTHa": 4.14,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.117875,
+                -33.600077
+              ],
+              [
+                148.124612,
+                -33.600111
+              ],
+              [
+                148.131118,
+                -33.600175
+              ],
+              [
+                148.131217,
+                -33.60981
+              ],
+              [
+                148.124507,
+                -33.6098
+              ],
+              [
+                148.117881,
+                -33.609817
+              ],
+              [
+                148.117875,
+                -33.600077
+              ]
+            ]
+          ],
+          "property": "River Flats"
+        },
+        {
+          "id": "fld-dam-2024",
+          "name": "Dam Paddock",
+          "areaHa": 96,
+          "commodityId": "chickpeas-2024",
+          "yieldTHa": 2.18,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Seamer",
+          "seedRateKgHa": 90,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.099782,
+                -33.610005
+              ],
+              [
+                148.105158,
+                -33.610144
+              ],
+              [
+                148.110421,
+                -33.610102
+              ],
+              [
+                148.110424,
+                -33.618775
+              ],
+              [
+                148.105119,
+                -33.618949
+              ],
+              [
+                148.099757,
+                -33.618886
+              ],
+              [
+                148.099782,
+                -33.610005
+              ]
+            ]
+          ],
+          "property": "River Flats"
+        },
+        {
+          "id": "fld-ironbark-2024",
+          "name": "Ironbark",
+          "areaHa": 148,
+          "commodityId": "barley-2024",
+          "yieldTHa": 4.56,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Compass",
+          "seedRateKgHa": 65,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.110645,
+                -33.610144
+              ],
+              [
+                148.127034,
+                -33.610046
+              ],
+              [
+                148.127097,
+                -33.61887
+              ],
+              [
+                148.118839,
+                -33.618887
+              ],
+              [
+                148.110667,
+                -33.618928
+              ],
+              [
+                148.110645,
+                -33.610144
+              ]
+            ]
+          ],
+          "property": "River Flats"
+        },
+        {
+          "id": "fld-bore-2024",
+          "name": "Bore Paddock",
+          "areaHa": 121,
+          "commodityId": "wheat-2024",
+          "yieldTHa": 4.26,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.127273,
+                -33.610017
+              ],
+              [
+                148.133955,
+                -33.610057
+              ],
+              [
+                148.140708,
+                -33.610023
+              ],
+              [
+                148.140714,
+                -33.618795
+              ],
+              [
+                148.134055,
+                -33.618891
+              ],
+              [
+                148.127426,
+                -33.618917
+              ],
+              [
+                148.127273,
+                -33.610017
+              ]
+            ]
+          ],
+          "property": "River Flats"
+        },
+        {
+          "id": "fld-homestead-2024",
+          "name": "Homestead",
+          "areaHa": 134,
+          "commodityId": "chickpeas-2024",
+          "yieldTHa": 2.14,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Seamer",
+          "seedRateKgHa": 90,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.050123,
+                -33.621425
+              ],
+              [
+                148.058426,
+                -33.621407
+              ],
+              [
+                148.066648,
+                -33.621321
+              ],
+              [
+                148.066722,
+                -33.629383
+              ],
+              [
+                148.058389,
+                -33.629229
+              ],
+              [
+                148.050164,
+                -33.629334
+              ],
+              [
+                148.050123,
+                -33.621425
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        },
+        {
+          "id": "fld-siloblock-2024",
+          "name": "Silo Block",
+          "areaHa": 108,
+          "commodityId": "wheat-2024",
+          "yieldTHa": 4.07,
+          "yieldMode": "recorded",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Scepter",
+          "seedRateKgHa": 70,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.067007,
+                -33.621428
+              ],
+              [
+                148.073534,
+                -33.621323
+              ],
+              [
+                148.08029,
+                -33.621313
+              ],
+              [
+                148.080213,
+                -33.629314
+              ],
+              [
+                148.073528,
+                -33.629334
+              ],
+              [
+                148.067004,
+                -33.629223
+              ],
+              [
+                148.067007,
+                -33.621428
+              ]
+            ]
+          ],
+          "property": "Home Farm"
+        }
+      ],
+      "storages": [],
+      "sales": [
+        {
+          "id": "sale-2024-barley-1",
+          "commodityId": "barley-2024",
+          "buyer": "Coastal Feeds Pty Ltd",
+          "contractNo": "BA-2411",
+          "grade": "BAR1",
+          "tons": 640,
+          "price": 278,
+          "date": "2024-03-12",
+          "location": "Ex farm",
+          "deliveryStart": "2025-01-05",
+          "deliveryEnd": "2025-03-15",
+          "freight": 0,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 640,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2024-barley-2",
+          "commodityId": "barley-2024",
+          "buyer": "Riverina Grain Traders",
+          "contractNo": "BA-2412",
+          "grade": "BAR1",
+          "tons": 560,
+          "price": 295,
+          "date": "2024-06-12",
+          "location": "Ex farm",
+          "deliveryStart": "2025-01-05",
+          "deliveryEnd": "2025-03-28",
+          "freight": 0,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 560,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2024-barley-3",
+          "commodityId": "barley-2024",
+          "buyer": "Northbound Commodities",
+          "contractNo": "BA-2413",
+          "grade": "BAR1",
+          "tons": 400,
+          "price": 274,
+          "date": "2024-09-12",
+          "location": "Ex farm",
+          "deliveryStart": "2025-01-05",
+          "deliveryEnd": "2025-03-28",
+          "freight": 0,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 400,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2024-wheat-1",
+          "commodityId": "wheat-2024",
+          "buyer": "Riverina Grain Traders",
+          "contractNo": "WH-2414",
+          "grade": "APW1",
+          "tons": 1322,
+          "price": 351,
+          "date": "2024-03-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2025-01-05",
+          "deliveryEnd": "2025-03-15",
+          "freight": 21.5,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 1322,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2024-wheat-2",
+          "commodityId": "wheat-2024",
+          "buyer": "Kurrajong Milling Co",
+          "contractNo": "WH-2415",
+          "grade": "APW1",
+          "tons": 1156,
+          "price": 322,
+          "date": "2024-06-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2025-01-05",
+          "deliveryEnd": "2025-03-28",
+          "freight": 21.5,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 1156,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2024-wheat-3",
+          "commodityId": "wheat-2024",
+          "buyer": "Northbound Commodities",
+          "contractNo": "WH-2416",
+          "grade": "APW1",
+          "tons": 827,
+          "price": 336,
+          "date": "2024-09-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2025-01-05",
+          "deliveryEnd": "2025-03-28",
+          "freight": 21.5,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 827,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2024-canola-1",
+          "commodityId": "canola-2024",
+          "buyer": "Meridian Oilseeds",
+          "contractNo": "CA-2417",
+          "grade": "CAN",
+          "tons": 276,
+          "price": 717,
+          "date": "2024-03-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2025-01-05",
+          "deliveryEnd": "2025-03-15",
+          "freight": 33,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 276,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2024-canola-2",
+          "commodityId": "canola-2024",
+          "buyer": "Northbound Commodities",
+          "contractNo": "CA-2418",
+          "grade": "CAN",
+          "tons": 242,
+          "price": 759,
+          "date": "2024-06-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2025-01-05",
+          "deliveryEnd": "2025-03-28",
+          "freight": 33,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 242,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2024-canola-3",
+          "commodityId": "canola-2024",
+          "buyer": "Meridian Oilseeds",
+          "contractNo": "CA-2419",
+          "grade": "CAN",
+          "tons": 174,
+          "price": 727,
+          "date": "2024-09-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2025-01-05",
+          "deliveryEnd": "2025-03-28",
+          "freight": 33,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 174,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2024-chickpeas-1",
+          "commodityId": "chickpeas-2024",
+          "buyer": "Southern Pulse Exporters",
+          "contractNo": "CH-2420",
+          "grade": "No.1 Chickpea",
+          "tons": 198,
+          "price": 656,
+          "date": "2024-03-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2025-01-05",
+          "deliveryEnd": "2025-03-15",
+          "freight": 46,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 198,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2024-chickpeas-2",
+          "commodityId": "chickpeas-2024",
+          "buyer": "Northbound Commodities",
+          "contractNo": "CH-2421",
+          "grade": "No.1 Chickpea",
+          "tons": 173,
+          "price": 688,
+          "date": "2024-06-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2025-01-05",
+          "deliveryEnd": "2025-03-28",
+          "freight": 46,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 173,
+          "deliveryPeriod": ""
+        },
+        {
+          "id": "sale-2024-chickpeas-3",
+          "commodityId": "chickpeas-2024",
+          "buyer": "Southern Pulse Exporters",
+          "contractNo": "CH-2422",
+          "grade": "No.1 Chickpea",
+          "tons": 125,
+          "price": 698,
+          "date": "2024-09-12",
+          "location": "Delivered buyer",
+          "deliveryStart": "2025-01-05",
+          "deliveryEnd": "2025-03-28",
+          "freight": 46,
+          "leviesPct": 0.011,
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 30,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 125,
+          "deliveryPeriod": ""
+        }
+      ],
+      "movements": [],
+      "invoices": [],
+      "overheads": {
+        "finance": 167000,
+        "equipmentRepayments": 193000,
+        "depreciation": 151000,
+        "wages": 137000,
+        "drawings": 108000,
+        "admin": 31000,
+        "energy": 41000,
+        "insurance": 52000,
+        "repairsMaintenance": 86000,
+        "other": 20000
+      }
     }
   },
   "businessDetails": {

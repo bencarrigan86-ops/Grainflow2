@@ -117,9 +117,11 @@ check('"all" sends everything, and is the only thing that does', () => {
 
 check('"year" sends a whole season', () => {
   const out = selectDirtyRows(rows, state, [{ kind: 'year', id: label }]);
-  assert.equal(out.fields.length, rows.fields.length);
-  assert.equal(out.commodities.length, rows.commodities.length);
-  assert.equal(out.movement_legs.length, rows.movement_legs.length);
+  // the sample farm has earlier seasons too: only this season's rows go, not theirs
+  const mine = new Set(year.movements.map((m) => m.id));
+  assert.equal(out.fields.length, year.fields.length);
+  assert.equal(out.commodities.length, year.commodities.length);
+  assert.equal(out.movement_legs.length, rows.movement_legs.filter((r) => mine.has(r.movement_id)).length);
   assert.equal(out.seasons.length, 1);
 });
 

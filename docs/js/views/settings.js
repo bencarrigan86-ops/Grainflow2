@@ -1,34 +1,35 @@
-import { db } from '../storage.js?v=289';
-import { getTheme, setTheme } from '../theme.js?v=289';
-import { num, money, esc, todayLocal } from '../fmt.js?v=289';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=289';
-import { openLoadImportSheet } from './importloads.js?v=289';
-import { openPastSeasonsSheet } from './pastseasons.js?v=289';
-import { openPastSalesSheet } from './pastsales.js?v=289';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=289';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=289';
-import { openDeletedSheet } from './deleted.js?v=289';
-import { APP_VERSION } from '../version.js?v=289';
-import { exportRowsAsCSV } from '../csv.js?v=289';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=289';
-import { endpointLabel } from './movements.js?v=289';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=289';
-import { layersForStorage } from '../outload.js?v=289';
-import { traceLoads, traceText } from '../trace.js?v=289';
-import { holdings, totalHeld } from '../offfarm.js?v=289';
-import { kindLabel, billTotal } from '../payables.js?v=289';
-import { orderState, STATE_LABEL } from '../orders.js?v=289';
-import { fieldHarvest } from '../harvest.js?v=289';
-import { openMySignatureSheet } from './signaturepad.js?v=289';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=289';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=289';
+import { db } from '../storage.js?v=290';
+import { getTheme, setTheme } from '../theme.js?v=290';
+import { num, money, esc, todayLocal } from '../fmt.js?v=290';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=290';
+import { openLoadImportSheet } from './importloads.js?v=290';
+import { openPastSeasonsSheet } from './pastseasons.js?v=290';
+import { openPastSalesSheet } from './pastsales.js?v=290';
+import { openLineupSheet } from './lineup.js?v=290';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=290';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=290';
+import { openDeletedSheet } from './deleted.js?v=290';
+import { APP_VERSION } from '../version.js?v=290';
+import { exportRowsAsCSV } from '../csv.js?v=290';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=290';
+import { endpointLabel } from './movements.js?v=290';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=290';
+import { layersForStorage } from '../outload.js?v=290';
+import { traceLoads, traceText } from '../trace.js?v=290';
+import { holdings, totalHeld } from '../offfarm.js?v=290';
+import { kindLabel, billTotal } from '../payables.js?v=290';
+import { orderState, STATE_LABEL } from '../orders.js?v=290';
+import { fieldHarvest } from '../harvest.js?v=290';
+import { openMySignatureSheet } from './signaturepad.js?v=290';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=290';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=290';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=289';
+} from '../invites.js?v=290';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=289';
+} from '../auth.js?v=290';
 
 let unsub = null;
 
@@ -170,6 +171,7 @@ function paint(root) {
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-loads" style="margin-top:8px">Import truck loads (CSV)&hellip;</button>` : ''}
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-past" style="margin-top:8px">Import past seasons (CSV)&hellip;</button>` : ''}
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-past-sales" style="margin-top:8px">Import past sales (CSV)&hellip;</button>` : ''}
+        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="line-up" style="margin-top:8px">Line up paddock names (CSV)&hellip;</button>` : ''}
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="open-deleted" style="margin-top:8px">Recently deleted&hellip;</button>` : ''}
         <button class="btn danger small" id="reset" style="margin-top:10px">Reset all data</button>
         <input type="file" id="import-file" accept="application/json" style="display:none" />
@@ -312,6 +314,7 @@ function paint(root) {
   root.querySelector('#import-loads')?.addEventListener('click', () => openLoadImportSheet());
   root.querySelector('#import-past')?.addEventListener('click', () => openPastSeasonsSheet());
   root.querySelector('#import-past-sales')?.addEventListener('click', () => openPastSalesSheet());
+  root.querySelector('#line-up')?.addEventListener('click', () => openLineupSheet());
   root.querySelector('#open-deleted')?.addEventListener('click', () => openDeletedSheet());
   root.querySelector('#open-my-signature')?.addEventListener('click', () => openMySignatureSheet());
   const importFile = root.querySelector('#import-file');

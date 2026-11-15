@@ -325,6 +325,95 @@ const invoices = [
 
 const SEASON = 'Sample 2026';
 
+// ---------------------------------------------------------------------------
+// Two earlier seasons, so the screens that need history have some: the rotation
+// grid, yield and price averages, season comparison, the farm map by season.
+// Same twelve paddocks, rotated; yields recorded at harvest; every contract
+// delivered in full, as a farm's past seasons are. Their own generator and
+// their own ids (a record id is a primary key, so 'wheat' cannot repeat across
+// seasons), so adding them moves no number in the current season.
+// ---------------------------------------------------------------------------
+
+let histSeed = 4417;
+const histRnd = () => { histSeed = (histSeed * 1103515245 + 12345) & 0x7fffffff; return histSeed / 0x7fffffff; };
+
+// crop by paddock id, per season; a legume or canola ahead of wheat, wheat ahead of barley
+const HISTORY = [
+  { label: 'Sample 2025', year: 2025, yieldFactor: 0.92, priceFactor: 1.07, crops: {
+    'fld-boundary': 'chickpeas', 'fld-river': 'canola', 'fld-long': 'barley', 'fld-airstrip': 'canola',
+    'fld-stony': 'chickpeas', 'fld-woolshed': 'wheat', 'fld-backcreek': 'canola', 'fld-dam': 'wheat',
+    'fld-ironbark': 'wheat', 'fld-bore': 'barley', 'fld-homestead': 'wheat', 'fld-siloblock': 'barley' },
+  overheadFactor: 0.95 },
+  { label: 'Sample 2024', year: 2024, yieldFactor: 1.06, priceFactor: 0.9, crops: {
+    'fld-boundary': 'barley', 'fld-river': 'wheat', 'fld-long': 'canola', 'fld-airstrip': 'wheat',
+    'fld-stony': 'wheat', 'fld-woolshed': 'canola', 'fld-backcreek': 'wheat', 'fld-dam': 'chickpeas',
+    'fld-ironbark': 'barley', 'fld-bore': 'wheat', 'fld-homestead': 'chickpeas', 'fld-siloblock': 'wheat' },
+  overheadFactor: 0.9 },
+];
+const BUYERS = {
+  wheat: ['Riverina Grain Traders', 'Kurrajong Milling Co', 'Northbound Commodities'],
+  barley: ['Coastal Feeds Pty Ltd', 'Riverina Grain Traders', 'Northbound Commodities'],
+  chickpeas: ['Southern Pulse Exporters', 'Northbound Commodities', 'Southern Pulse Exporters'],
+  canola: ['Meridian Oilseeds', 'Northbound Commodities', 'Meridian Oilseeds'],
+};
+const GRADE = { wheat: 'APW1', barley: 'BAR1', chickpeas: 'No.1 Chickpea', canola: 'CAN' };
+const FREIGHT = { wheat: 21.5, barley: 0, chickpeas: 46, canola: 33 };
+const SHARES = [0.4, 0.35, 0.25];
+
+const pastSeason = (h) => {
+  const tag = String(h.year);
+  const used = [...new Set(Object.values(h.crops))];
+  const pastCommodities = used.map((cid) => {
+    const c = commodities.find((q) => q.id === cid);
+    return { ...c, id: `${cid}-${tag}`, mtmPrice: 0 };
+  });
+  const pastFields = fields.map((f) => {
+    const cid = h.crops[f.id];
+    const c = commodities.find((q) => q.id === cid);
+    const yieldTHa = round(c.defaultYieldTHa * h.yieldFactor * (0.9 + histRnd() * 0.2), 2);
+    return {
+      id: `${f.id}-${tag}`, name: f.name, areaHa: f.areaHa, commodityId: `${cid}-${tag}`,
+      yieldTHa, yieldMode: 'recorded', soilTestNKgHa: 0, ureaRequiredKgHa: 0, ureaApplications: [],
+      seedVariety: f.seedVariety && { wheat: 'Scepter', barley: 'Compass', chickpeas: 'Seamer', canola: 'Hyola 410XX' }[cid],
+      seedRateKgHa: { wheat: 70, barley: 65, chickpeas: 90, canola: 3 }[cid],
+      starterRequiredKgHa: 0, starterAppliedKgHa: 0, targetYieldOverrideTHa: 0, notes: '',
+      boundary: f.boundary, property: f.property,
+    };
+  });
+  const pastSales = [];
+  for (const cid of used) {
+    const c = commodities.find((q) => q.id === cid);
+    const produced = pastFields.filter((f) => f.commodityId === `${cid}-${tag}`).reduce((s, f) => s + f.areaHa * f.yieldTHa, 0);
+    const toSell = Math.floor(produced);
+    let left = toSell;
+    SHARES.forEach((share, i) => {
+      const tons = i === SHARES.length - 1 ? left : Math.floor(toSell * share);
+      left -= tons;
+      if (tons <= 0) return;
+      const price = Math.round(c.mtmPrice * h.priceFactor * (0.95 + histRnd() * 0.1));
+      const month = [3, 6, 9][i];
+      pastSales.push({
+        id: `sale-${tag}-${cid}-${i + 1}`, commodityId: `${cid}-${tag}`, buyer: BUYERS[cid][i],
+        contractNo: `${cid.slice(0, 2).toUpperCase()}-${h.year % 100}${String(pastSales.length + 11).padStart(2, '0')}`,
+        grade: GRADE[cid], tons, price, date: `${h.year}-${String(month).padStart(2, '0')}-12`,
+        location: FREIGHT[cid] ? 'Delivered buyer' : 'Ex farm',
+        deliveryStart: `${h.year + 1}-01-05`, deliveryEnd: `${h.year + 1}-03-${i === 0 ? '15' : '28'}`,
+        freight: FREIGHT[cid], leviesPct: 0.011,
+        premiumDiscount: 0, ginning: 0, paymentTermsDays: 30, tolerancePct: 5,
+        toleranceCapTons: 20, brokerNote: '', buyerAbn: '', buyerAddress: '', notes: '',
+        tonsDelivered: tons, deliveryPeriod: '',
+      });
+    });
+  }
+  const scale = (n) => Math.round(n * h.overheadFactor / 1000) * 1000;
+  const overheads = Object.fromEntries(Object.entries({
+    finance: 186000, equipmentRepayments: 214000, depreciation: 168000,
+    wages: 152000, drawings: 120000, admin: 34000, energy: 46000,
+    insurance: 58000, repairsMaintenance: 96000, other: 22000,
+  }).map(([k, v]) => [k, scale(v)]));
+  return { commodities: pastCommodities, fields: pastFields, storages: [], sales: pastSales, movements: [], invoices: [], overheads };
+};
+
 const state = {
   version: 2,
   currentYear: SEASON,
@@ -337,6 +426,7 @@ const state = {
         insurance: 58000, repairsMaintenance: 96000, other: 22000,
       },
     },
+    ...Object.fromEntries(HISTORY.map((h) => [h.label, pastSeason(h)])),
   },
   businessDetails: {
     farmName: 'Kurrajong Downs',

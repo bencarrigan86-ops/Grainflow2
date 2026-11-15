@@ -18,23 +18,24 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=289';
+import { hydrate } from './hydrate.js?v=290';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=289';
-import { chooseBootState, resolveLegacy } from './boot.js?v=289';
-import { isLegacyDirty } from './dirty.js?v=289';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=289';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=289';
-import { settleLegs, dedupeLegs } from './legs.js?v=289';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=289';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=289';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=289';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=289';
-import { schedulePush, pushOnReconnect } from './sync.js?v=289';
-import { hasParts as hasAddressParts } from './address.js?v=289';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=289';
+} from './local.js?v=290';
+import { chooseBootState, resolveLegacy } from './boot.js?v=290';
+import { isLegacyDirty } from './dirty.js?v=290';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=290';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=290';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=290';
+import { settleLegs, dedupeLegs } from './legs.js?v=290';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=290';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=290';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=290';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=290';
+import { schedulePush, pushOnReconnect } from './sync.js?v=290';
+import { hasParts as hasAddressParts } from './address.js?v=290';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=290';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -610,6 +611,54 @@ export const db = {
     touch('year', String(year).trim());
     persist();
     return true;
+  },
+  /**
+   * Line paddock names up across seasons (see lineup.js): rename, split and join the paddocks of earlier seasons so they
+   * match the names in use now. Loads from a joined paddock are pointed at the one that remains.
+   * @returns {{seasons: number, renamed: number, split: number, joined: number}}
+   */
+  applyLineup(rules) {
+    const labels = Object.keys(data.years);
+    const { groups } = lineupGroups(rules, current().fields);
+    const total = { seasons: 0, renamed: 0, split: 0, joined: 0 };
+    for (const label of labels) {
+      const y = data.years[label];
+      const applies = groupsForSeason(groups, label, labels, data.currentYear);
+      if (!applies.length) continue;
+      const r = lineupSeason(y, applies, uid);
+      if (!r.renamed.length && !r.split.length && !r.joined.length) continue;
+      y.fields = r.fields;
+      y.movements = r.movements;
+      r.touched.forEach((id) => touch('field', id));
+      r.movementsTouched.forEach((id) => touch('movement', id));
+      r.removed.forEach((x) => { tombstone('fields', x.dropId); tombstone('field_agronomy', x.agronomyId); });
+      total.seasons += 1;
+      total.renamed += r.renamed.length;
+      total.split += r.split.length;
+      total.joined += r.joined.length;
+    }
+    if (total.seasons) persist();
+    return total;
+  },
+  /**
+   * Give the paddocks of every other season the outline (and farm) of the paddock of the same name in this season,
+   * where they have none yet. Nothing that already has an outline is changed.
+   * @returns {{seasons: number, paddocks: number}}
+   */
+  copyMapToOtherSeasons() {
+    const now = current().fields;
+    const total = { seasons: 0, paddocks: 0 };
+    for (const [label, y] of Object.entries(data.years)) {
+      if (label === data.currentYear) continue;
+      const r = copyOutlines(y.fields, now);
+      if (!r.touched.length) continue;
+      y.fields = r.fields;
+      r.touched.forEach((id) => touch('field', id));
+      total.seasons += 1;
+      total.paddocks += r.touched.length;
+    }
+    if (total.paddocks) persist();
+    return total;
   },
   deleteYear(year) {
     const years = Object.keys(data.years);
