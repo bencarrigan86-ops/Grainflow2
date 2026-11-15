@@ -62,11 +62,11 @@ export const TABS_BY_ROLE = {
  * commodity setup and the business and bank details, so it stops at manager.
  */
 export const OFF_BAR_BY_ROLE = {
-  owner:       ['settings', 'account'],
-  manager:     ['settings', 'account'],
-  bookkeeper:  ['settings', 'account'],
-  farm_worker: ['account'],
-  driver:      ['account'],
+  owner:       ['settings', 'account', 'help'],
+  manager:     ['settings', 'account', 'help'],
+  bookkeeper:  ['settings', 'account', 'help'],
+  farm_worker: ['account', 'help'],
+  driver:      ['account', 'help'],
 };
 
 const known = (role) => (ROLES.includes(role) ? role : 'driver');

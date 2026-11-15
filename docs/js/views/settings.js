@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=269';
-import { getTheme, setTheme } from '../theme.js?v=269';
-import { num, money, esc, todayLocal } from '../fmt.js?v=269';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=269';
-import { openLoadImportSheet } from './importloads.js?v=269';
-import { openDeletedSheet } from './deleted.js?v=269';
-import { APP_VERSION } from '../version.js?v=269';
-import { exportRowsAsCSV } from '../csv.js?v=269';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=269';
-import { endpointLabel } from './movements.js?v=269';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=269';
-import { layersForStorage } from '../outload.js?v=269';
-import { holdings, totalHeld } from '../offfarm.js?v=269';
-import { kindLabel, billTotal } from '../payables.js?v=269';
-import { orderState, STATE_LABEL } from '../orders.js?v=269';
-import { fieldHarvest } from '../harvest.js?v=269';
-import { openMySignatureSheet } from './signaturepad.js?v=269';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=269';
+import { db } from '../storage.js?v=270';
+import { getTheme, setTheme } from '../theme.js?v=270';
+import { num, money, esc, todayLocal } from '../fmt.js?v=270';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=270';
+import { openLoadImportSheet } from './importloads.js?v=270';
+import { openDeletedSheet } from './deleted.js?v=270';
+import { APP_VERSION } from '../version.js?v=270';
+import { exportRowsAsCSV } from '../csv.js?v=270';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=270';
+import { endpointLabel } from './movements.js?v=270';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=270';
+import { layersForStorage } from '../outload.js?v=270';
+import { holdings, totalHeld } from '../offfarm.js?v=270';
+import { kindLabel, billTotal } from '../payables.js?v=270';
+import { orderState, STATE_LABEL } from '../orders.js?v=270';
+import { fieldHarvest } from '../harvest.js?v=270';
+import { openMySignatureSheet } from './signaturepad.js?v=270';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=270';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=269';
+} from '../invites.js?v=270';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=269';
+} from '../auth.js?v=270';
 
 let unsub = null;
 
@@ -47,6 +47,7 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      <button type="button" class="btn secondary" id="open-help" style="margin-bottom:12px">How to use Grainflow, and who can do what</button>
       <div class="card">
         <h2>Appearance</h2>
         <div class="segmented" id="theme-seg">
@@ -245,6 +246,7 @@ function paint(root) {
     db.updateBusinessDetails({ farmName: getVal(root, 'bd-farm')?.trim() });
   });
 
+  root.querySelector('#open-help')?.addEventListener('click', () => { location.hash = '#/help'; });
   root.querySelector('#show-aircair')?.addEventListener('change', (e) => db.updateBusinessDetails({ showAircair: e.target.checked }));
 
   root.querySelector('#save-business').addEventListener('click', () => {

@@ -9,8 +9,8 @@
 //
 // Pure apart from the two sums it borrows from derived.js.
 
-import { estimateFieldTons, movementTonsFromField, storageLedgerStock } from './derived.js?v=269';
-import { isTransit } from './transit.js?v=269';
+import { estimateFieldTons, movementTonsFromField, storageLedgerStock } from './derived.js?v=270';
+import { isTransit } from './transit.js?v=270';
 
 /**
  * One field.

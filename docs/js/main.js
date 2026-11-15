@@ -1,26 +1,27 @@
-import { db } from './storage.js?v=269';
-import { initTheme } from './theme.js?v=269';
+import { db } from './storage.js?v=270';
+import { initTheme } from './theme.js?v=270';
 initTheme();
-import { renderPosition } from './views/position.js?v=269';
-import { renderProduction } from './views/production.js?v=269';
-import { renderReports } from './views/reports.js?v=269';
-import { renderSales } from './views/sales.js?v=269';
-import { renderMovements } from './views/movements.js?v=269';
-import { renderStorage } from './views/storage.js?v=269';
-import { renderSettings } from './views/settings.js?v=269';
-import { renderLogin } from './views/login.js?v=269';
-import { renderAccount } from './views/account.js?v=269';
+import { renderPosition } from './views/position.js?v=270';
+import { renderProduction } from './views/production.js?v=270';
+import { renderReports } from './views/reports.js?v=270';
+import { renderSales } from './views/sales.js?v=270';
+import { renderMovements } from './views/movements.js?v=270';
+import { renderStorage } from './views/storage.js?v=270';
+import { renderSettings } from './views/settings.js?v=270';
+import { renderLogin } from './views/login.js?v=270';
+import { renderAccount } from './views/account.js?v=270';
+import { renderHelp } from './views/help.js?v=270';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=269';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=269';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=269';
-import { esc } from './fmt.js?v=269';
-import { isSheetOpen, notify } from './ui.js?v=269';
-import { describeMerges } from './ticketmerge.js?v=269';
-import { watchLists } from './band.js?v=269';
-import { APP_VERSION } from './version.js?v=269';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=269';
+} from './auth.js?v=270';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=270';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=270';
+import { esc } from './fmt.js?v=270';
+import { isSheetOpen, notify } from './ui.js?v=270';
+import { describeMerges } from './ticketmerge.js?v=270';
+import { watchLists } from './band.js?v=270';
+import { APP_VERSION } from './version.js?v=270';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=270';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -66,6 +67,7 @@ const ROUTES = [
   ...TABS,
   { id: 'settings', label: 'Settings', icon: SETTINGS_ICON, render: renderSettings },
   { id: 'account', label: 'Account', render: renderAccount },
+  { id: 'help', label: 'Help', render: renderHelp },
 ];
 
 // The signed-in role, held for as long as the session lasts. Everything the

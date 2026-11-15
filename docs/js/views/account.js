@@ -5,12 +5,12 @@
 // navigation per role, and that is when this gets a proper home in the
 // interface. Until then it is reachable at #/account.
 
-import { notify } from '../ui.js?v=269';
+import { notify } from '../ui.js?v=270';
 import {
   getSession, getMembership, signOut, listMyInvitations, acceptInvitation,
-} from '../auth.js?v=269';
-import { roleLabel, expiryText } from '../invites.js?v=269';
-import { esc } from '../fmt.js?v=269';
+} from '../auth.js?v=270';
+import { roleLabel, expiryText } from '../invites.js?v=270';
+import { esc } from '../fmt.js?v=270';
 
 const ROLE_LABELS = {
   owner: 'Owner',
@@ -53,6 +53,7 @@ export async function renderAccount(root) {
       </div>
     </div>
     <div class="view">
+      <button type="button" class="btn secondary" id="open-help" style="margin-bottom:12px">How to use Grainflow</button>
       <div class="card">
         <h2><span class="dot summary"></span>Signed in</h2>
         <div class="row"><span class="label">Email</span><span class="value">${user?.email ?? '—'}</span></div>
@@ -82,6 +83,7 @@ export async function renderAccount(root) {
 
   showPendingInvitations(root, membership);
 
+  root.querySelector('#open-help')?.addEventListener('click', () => { location.hash = '#/help'; });
   root.querySelector('#sign-out').addEventListener('click', async () => {
     await signOut();
     // The auth listener in main.js picks this up and re-renders to the login

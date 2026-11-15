@@ -1,10 +1,32 @@
-import { db } from '../storage.js?v=269';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=269';
-import { num, tons, money, pct, esc } from '../fmt.js?v=269';
-import { payablesCost } from '../payables.js?v=269';
-import { openEofySheet } from './eofy.js?v=269';
+import { db } from '../storage.js?v=270';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=270';
+import { num, tons, money, pct, esc } from '../fmt.js?v=270';
+import { payablesCost } from '../payables.js?v=270';
+import { openEofySheet } from './eofy.js?v=270';
+import { startProgress } from '../helpcontent.js?v=270';
 
 let unsub = null;
+
+const START_HIDDEN = 'grainflow.start.hidden';
+const startHidden = () => { try { return localStorage.getItem(START_HIDDEN) === '1'; } catch { return false; } };
+
+/** The Getting started list: what a new farm still has to set up, ticking itself off as the farm fills in. */
+function startCard() {
+  if (startHidden()) return '';
+  const start = startProgress(db.getRole(), { business: db.getBusinessDetails(), ...db.get() });
+  if (!start.steps.length || start.complete) return '';
+  return `<div class="card input" id="start-card">
+        <h2><span class="dot input"></span>Getting started &middot; ${start.done} of ${start.total}</h2>
+        ${start.steps.map((s) => `<div class="list-item" ${s.canOpen ? `data-start-go="${esc(s.route)}" style="cursor:pointer"` : ''}>
+          <div style="display:flex;align-items:center;gap:10px"><span aria-hidden="true" style="width:22px;height:22px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;${s.done ? 'background:var(--accent-summary);color:#fff' : 'border:1.5px solid var(--border)'}">${s.done ? '&#10003;' : ''}</span>
+            <div><div class="main" style="${s.done ? 'text-decoration:line-through;opacity:.6' : ''}">${esc(s.label)}</div><div class="meta">${esc(s.detail)}</div></div></div>
+        </div>`).join('')}
+        <div class="swipe-actions" style="margin-top:10px">
+          <button type="button" class="btn secondary small" id="start-help">How-to guide</button>
+          <button type="button" class="btn secondary small" id="start-hide">Hide this</button>
+        </div>
+      </div>`;
+}
 
 export function renderPosition(root) {
   if (unsub) unsub();
@@ -29,6 +51,7 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      ${startCard()}
       <button class="btn secondary" id="open-eofy" style="margin-bottom:12px">End of year snapshot</button>
       <div class="stat-grid">
         <div class="stat">
@@ -57,6 +80,9 @@ function paint(root) {
     </div>
   `;
   root.querySelector('#open-eofy').addEventListener('click', openEofySheet);
+  root.querySelectorAll('[data-start-go]').forEach((el) => el.addEventListener('click', () => { location.hash = `#/${el.dataset.startGo}`; }));
+  root.querySelector('#start-help')?.addEventListener('click', () => { location.hash = '#/help'; });
+  root.querySelector('#start-hide')?.addEventListener('click', () => { try { localStorage.setItem(START_HIDDEN, '1'); } catch { /* shown again next time */ } paint(root); });
 }
 
 function farmSummaryCard(totals, overheads, pl, cost) {
