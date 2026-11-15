@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=268';
-import { getTheme, setTheme } from '../theme.js?v=268';
-import { num, money, esc, todayLocal } from '../fmt.js?v=268';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=268';
-import { openLoadImportSheet } from './importloads.js?v=268';
-import { openDeletedSheet } from './deleted.js?v=268';
-import { APP_VERSION } from '../version.js?v=268';
-import { exportRowsAsCSV } from '../csv.js?v=268';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=268';
-import { endpointLabel } from './movements.js?v=268';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=268';
-import { layersForStorage } from '../outload.js?v=268';
-import { holdings, totalHeld } from '../offfarm.js?v=268';
-import { kindLabel, billTotal } from '../payables.js?v=268';
-import { orderState, STATE_LABEL } from '../orders.js?v=268';
-import { fieldHarvest } from '../harvest.js?v=268';
-import { openMySignatureSheet } from './signaturepad.js?v=268';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=268';
+import { db } from '../storage.js?v=269';
+import { getTheme, setTheme } from '../theme.js?v=269';
+import { num, money, esc, todayLocal } from '../fmt.js?v=269';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=269';
+import { openLoadImportSheet } from './importloads.js?v=269';
+import { openDeletedSheet } from './deleted.js?v=269';
+import { APP_VERSION } from '../version.js?v=269';
+import { exportRowsAsCSV } from '../csv.js?v=269';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=269';
+import { endpointLabel } from './movements.js?v=269';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=269';
+import { layersForStorage } from '../outload.js?v=269';
+import { holdings, totalHeld } from '../offfarm.js?v=269';
+import { kindLabel, billTotal } from '../payables.js?v=269';
+import { orderState, STATE_LABEL } from '../orders.js?v=269';
+import { fieldHarvest } from '../harvest.js?v=269';
+import { openMySignatureSheet } from './signaturepad.js?v=269';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=269';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=268';
+} from '../invites.js?v=269';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=268';
+} from '../auth.js?v=269';
 
 let unsub = null;
 
@@ -140,6 +140,9 @@ function paint(root) {
         <div class="field hint" style="margin-bottom:6px">What this place is called in the app and in invitations. The entity on invoices is set under Business details.</div>
         ${field({ label: 'Farm / property name', id: 'bd-farm', value: business.farmName, placeholder: 'e.g. Sunnyridge' })}
         <button class="btn" id="save-farm">Save farm name</button>
+        ${db.getRole() === 'owner' ? `<hr class="sep" />
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:6px 0"><input type="checkbox" id="show-aircair" ${business.showAircair ? 'checked' : ''} style="width:18px;height:18px" /> Offer Aircair's form on spray requests</label>
+        <div class="hint">Off for most farms: a spray request goes out on our own form. Switch on if you send Aircair's own form.</div>` : ''}
       </div>
 
       ${db.getRole() === 'owner' ? '<div class="card" id="people-card"></div>' : ''}
@@ -241,6 +244,8 @@ function paint(root) {
   root.querySelector('#save-farm').addEventListener('click', () => {
     db.updateBusinessDetails({ farmName: getVal(root, 'bd-farm')?.trim() });
   });
+
+  root.querySelector('#show-aircair')?.addEventListener('change', (e) => db.updateBusinessDetails({ showAircair: e.target.checked }));
 
   root.querySelector('#save-business').addEventListener('click', () => {
     db.updateBusinessDetails({

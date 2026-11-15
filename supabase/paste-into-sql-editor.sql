@@ -38,6 +38,10 @@ alter table storages
 alter table movements
   add column if not exists load_destination text;
 
+-- Whether Aircair's own form is offered on a spray request (optional; stored only once it has been switched on)
+alter table farms
+  add column if not exists show_aircair boolean;
+
 -- The time a load was loaded or left, as 24 hour text such as 14:30 (optional; stored only when a time is recorded)
 alter table movements
   add column if not exists load_time text;

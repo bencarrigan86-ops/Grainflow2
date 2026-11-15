@@ -301,5 +301,33 @@ check('the PDF library is only fetched when a request is made, from the vendor h
   assert.ok(read('docs/sw.js').includes("'esm.sh'"));
 });
 
+console.log('\n=== Aircair form is a switch on the farm ===');
+const FARM_ID = '99999999-9999-9999-9999-999999999999';
+const farmState = (b) => ({ currentYear: '2026', nextMovementNo: 1, businessDetails: b, years: { 2026: { commodities: [], fields: [], storages: [], sales: [], movements: [], overheads: {}, invoices: [], payables: [] } } });
+check('a farm that never switched it on sends no such column, so saving works before the database has it', () => {
+  assert.ok(!('show_aircair' in stateToRows(farmState({ farmName: 'X' }), FARM_ID).farms[0]));
+});
+check('switching it on is saved with the farm and comes back', () => {
+  const rows = stateToRows(farmState({ farmName: 'X', showAircair: true }), FARM_ID);
+  assert.equal(rows.farms[0].show_aircair, true);
+  assert.equal(rowsToState(rows).businessDetails.showAircair, true);
+});
+check('switching it off again still reaches the server', () => {
+  const rows = stateToRows(farmState({ farmName: 'X', showAircair: false, __hasAircair: true }), FARM_ID);
+  assert.equal(rows.farms[0].show_aircair, false);
+  assert.equal(rowsToState(rows).businessDetails.showAircair, false);
+});
+check('the spray request offers Aircair only when the farm has it on (or the request already uses it)', () => {
+  const v = read('docs/js/views/spray.js');
+  assert.ok(v.includes("FORMS.filter((f) => f.key !== 'aircair' || business.showAircair || d.form === 'aircair')"));
+  assert.ok(v.includes("if (!existing && d.form === 'aircair' && !business.showAircair) d.form = 'standard';"));
+});
+check('the switch is in Settings for the owner, and the column is in the paste-in file and the migration', () => {
+  const st = read('docs/js/views/settings.js');
+  assert.ok(st.includes('id="show-aircair"') && st.includes("updateBusinessDetails({ showAircair: e.target.checked })"));
+  assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists show_aircair boolean'));
+  assert.ok(read('supabase/migrations/20261115140000_show_aircair.sql').includes('alter table farms'));
+});
+
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
 console.log('\nall passed');

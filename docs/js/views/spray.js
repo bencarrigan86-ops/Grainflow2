@@ -4,18 +4,18 @@
 // spray marked. What is on the form and where is decided in spray.js; the PDF is drawn in spraypdf.js. The job is saved
 // as it is filled in, so a request can be started in the paddock and finished at the desk.
 
-import { db } from '../storage.js?v=268';
-import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=268';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=268';
-import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=268';
+import { db } from '../storage.js?v=269';
+import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=269';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=269';
+import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=269';
 import {
   FORMS, RATE_UNITS, MAX_CHEMICALS, CHECKLIST, sprayDefaults, sprayProblems, sprayTotals, sprayTitle, usedChemicals, plain,
-} from '../spray.js?v=268';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=268';
-import { loadMySignature } from '../mysignature.js?v=268';
-import { signatureSvg } from './signaturepad.js?v=268';
-import { openMapSheet } from './farmmap.js?v=268';
-import { buildSprayPdf } from '../spraypdf.js?v=268';
+} from '../spray.js?v=269';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=269';
+import { loadMySignature } from '../mysignature.js?v=269';
+import { signatureSvg } from './signaturepad.js?v=269';
+import { openMapSheet } from './farmmap.js?v=269';
+import { buildSprayPdf } from '../spraypdf.js?v=269';
 
 export const canSpray = (role) => ['owner', 'manager'].includes(role);
 
@@ -77,6 +77,8 @@ export async function openSprayFormSheet(existing, start = {}) {
   if (start.draft) d = start.draft;
   else if (existing) d = JSON.parse(JSON.stringify(existing));
   else d = sprayDefaults({ business, paddocks: padOf(start.ids || []), today: todayLocal(), jobs, previous: lastJob });
+  // a new request does not start on Aircair's form, because the last one was, on a farm that has switched it off
+  if (!existing && d.form === 'aircair' && !business.showAircair) d.form = 'standard';
   if (!d.chemicals?.length) d.chemicals = [{ name: '', rate: '', unit: 'L' }];
   let ticked = new Set((d.paddocks || []).map((p) => p.id));
   let savedId = existing?.id || d.id || null;
@@ -214,9 +216,9 @@ export async function openSprayFormSheet(existing, start = {}) {
         <datalist id="dl-spray-contractors">${[...new Set(jobs.map((j) => j.contractor).filter(Boolean))].map((n) => `<option value="${esc(n)}"></option>`).join('')}</datalist>
         <div class="card">
           <h2>Who and when</h2>
-          ${field({ label: 'Contractor', id: 'sp-contractor', value: d.contractor, list: 'dl-spray-contractors', placeholder: 'e.g. Aircair' })}
+          ${field({ label: 'Contractor', id: 'sp-contractor', value: d.contractor, list: 'dl-spray-contractors', placeholder: business.showAircair ? 'e.g. Aircair' : 'e.g. your spray contractor' })}
           ${field({ label: 'Their email', id: 'sp-email', type: 'email', value: d.contractorEmail })}
-          ${field({ label: 'Send it on', id: 'sp-form', type: 'select', value: d.form, options: FORMS.map((f) => ({ value: f.key, label: f.label })), hint: d.form === 'aircair' ? "Aircair's own form is filled in and the map added after it." : 'Our own form, with the map after it.' })}
+          ${field({ label: 'Send it on', id: 'sp-form', type: 'select', value: d.form, options: FORMS.filter((f) => f.key !== 'aircair' || business.showAircair || d.form === 'aircair').map((f) => ({ value: f.key, label: f.label })), hint: d.form === 'aircair' ? "Aircair's own form is filled in and the map added after it." : 'Our own form, with the map after it.' })}
           ${field({ label: 'Date required', id: 'sp-date', type: 'date', value: d.dateRequired })}
         </div>
         ${paddockCard()}

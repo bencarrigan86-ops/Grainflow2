@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=268';
-import { cleanOffFarm } from './offfarm.js?v=268';
+import { cleanGradeOptions } from './gradeprice.js?v=269';
+import { cleanOffFarm } from './offfarm.js?v=269';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -245,6 +245,8 @@ export function stateToRows(state, farmId) {
     ...((b.qaProgram || b.qaNumber || b.__hasQa) ? { qa_program: orNull(b.qaProgram), qa_number: orNull(b.qaNumber) } : {}),
     // The property identification code (PIC), the same way.
     ...((b.pic || b.__hasPic) ? { pic: orNull(b.pic) } : {}),
+    // Whether Aircair's own form is offered on a spray request. Off unless switched on, so a farm that never has it needs no column.
+    ...((b.showAircair || b.__hasAircair) ? { show_aircair: !!b.showAircair } : {}),
   });
 
   for (const [label, year] of Object.entries(state.years || {})) {
@@ -864,6 +866,7 @@ export function rowsToState(rows) {
       bsb: farm.bsb ?? '', accountNumber: farm.account_number ?? '',
       ...((farm.qa_program != null || farm.qa_number != null) ? { qaProgram: farm.qa_program ?? '', qaNumber: farm.qa_number ?? '', __hasQa: true } : {}),
       ...(farm.pic != null ? { pic: farm.pic, __hasPic: true } : {}),
+      ...(farm.show_aircair != null ? { showAircair: !!farm.show_aircair, __hasAircair: true } : {}),
     },
   };
 }
