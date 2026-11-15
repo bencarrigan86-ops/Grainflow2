@@ -304,6 +304,12 @@ check('the outlines are matched to the paddocks by name the way the importer doe
   assert.equal(matched.length, season.fields.length);
   assert.equal(unmatched.length, 0);
 });
+check('a sample farm made before it had a map can add the sample map from the map screen', () => {
+  const v = readFileSync(new URL('../docs/js/views/farmmap.js', import.meta.url), 'utf8');
+  assert.ok(v.includes('id="fm-sample"') && v.includes('/^sample/i.test(db.getCurrentYear()'), 'only offered on a sample season');
+  assert.ok(v.includes('./demo/seed.json?v=') && v.includes('matchBoundaries(features, db.get().fields)'), 'matched to its paddocks by name');
+  assert.ok(v.includes('areaHa: 0'), 'it leaves the typed areas alone');
+}); 
 check('the outlines come back from the server with the paddocks', () => {
   const rows = stateToRows(sampleStateFor(raw, 'Test Farm'), '99999999-9999-9999-9999-999999999999');
   const back = rowsToState(rows).years;

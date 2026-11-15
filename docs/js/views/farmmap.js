@@ -4,14 +4,15 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=267';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=267';
-import { esc, num, todayLocal, dmy } from '../fmt.js?v=267';
-import { sharePdf, safeFileName } from '../sharefile.js?v=267';
-import { buildFarmMapPdf } from '../spraypdf.js?v=267';
+import { db } from '../storage.js?v=268';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=268';
+import { esc, num, todayLocal, dmy } from '../fmt.js?v=268';
+import { sharePdf, safeFileName } from '../sharefile.js?v=268';
+import { APP_VERSION } from '../version.js?v=268';
+import { buildFarmMapPdf } from '../spraypdf.js?v=268';
 import {
   readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx, farmLabelPx, commonLabelPx,
-} from '../farmmap.js?v=267';
+} from '../farmmap.js?v=268';
 
 const MAX_ZOOM = 40;
 const MIN_LABEL_PX = 6.5;    // the smallest writing a paddock's name is shown in, on screen
@@ -280,6 +281,9 @@ function wireMap(root, full, layout, open, { groups = [] } = {}) {
 function importView(root, done, haveMap = false) {
   const { fields } = db.get();
   root.innerHTML = `
+    ${!haveMap && /^sample/i.test(db.getCurrentYear() || '') ? `<div class="card input" style="margin-bottom:12px"><h2><span class="dot input"></span>This is the sample farm</h2>
+      <div class="hint">It was set up before the sample had a map. Add the sample map to its paddocks: nothing else changes.</div>
+      <button type="button" class="btn" id="fm-sample">Add the sample map</button></div>` : ''}
     <div class="hint" style="margin-bottom:10px">${haveMap ? 'Choose the file again to update the outlines.' : 'Draw your paddocks on a map.'}
       In John Deere Operations Center export your boundaries as a shapefile, then choose the <strong>.shp</strong> and <strong>.dbf</strong> files together
       (select both at once), or the <strong>.zip</strong> they came in. Paddocks are matched to yours by name.</div>
@@ -291,6 +295,22 @@ function importView(root, done, haveMap = false) {
     <div id="fm-preview"></div>
     ${haveMap ? '<button type="button" class="btn secondary" id="fm-back" style="margin-top:8px">Back to the map</button>' : ''}`;
   root.querySelector('#fm-back')?.addEventListener('click', done);
+  // a sample farm made before the sample had a map: its paddocks take the sample outlines, matched by name
+  root.querySelector('#fm-sample')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget; btn.disabled = true;
+    try {
+      const res = await fetch(`./demo/seed.json?v=${APP_VERSION}`, { cache: 'no-cache' });
+      if (!res.ok) throw new Error(`The sample map could not be fetched (${res.status}).`);
+      const seed = await res.json();
+      const sample = seed.years?.[seed.currentYear]?.fields || [];
+      const features = sample.filter((f) => f.boundary?.length).map((f) => ({ name: f.name, farm: f.property || '', rings: f.boundary }));
+      const { matched } = matchBoundaries(features, db.get().fields);
+      if (!matched.length) { notify('None of these paddocks has a name from the sample farm, so there is no sample map to put on them.'); btn.disabled = false; return; }
+      db.applyFieldBoundaries({ matched: matched.map((m) => ({ id: m.field.id, boundary: m.feature.rings, property: m.feature.farm, areaHa: 0 })) });
+      toast(`Sample map added: ${matched.length} paddock${matched.length === 1 ? '' : 's'}`);
+      done();
+    } catch (err) { notify(err.message || 'The sample map could not be added.'); btn.disabled = false; }
+  });
   const problem = (t) => { root.querySelector('#fm-problem').textContent = t; };
 
   root.querySelector('#fm-files').addEventListener('change', async (e) => {
