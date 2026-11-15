@@ -1,20 +1,21 @@
-import { db } from '../storage.js?v=259';
-import { movementsForEndpoint } from '../derived.js?v=259';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=259';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=259';
-import { compressAndStampImage } from '../img.js?v=259';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=259';
-import { specText, extraSpecKey } from '../outload.js?v=259';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=259';
-import { pickableSilos } from '../silopick.js?v=259';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=259';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=259';
-import { activeSales } from '../paidsales.js?v=259';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=259';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=259';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments } from './loadreport.js?v=259';
-import { nowTime } from '../loadreport.js?v=259';
+import { db } from '../storage.js?v=260';
+import { movementsForEndpoint } from '../derived.js?v=260';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=260';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=260';
+import { compressAndStampImage } from '../img.js?v=260';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=260';
+import { specText, extraSpecKey } from '../outload.js?v=260';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=260';
+import { pickableSilos } from '../silopick.js?v=260';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=260';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=260';
+import { activeSales } from '../paidsales.js?v=260';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=260';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=260';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments } from './loadreport.js?v=260';
+import { nowTime } from '../loadreport.js?v=260';
 
+const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
 
 export function renderMovements(root) {
@@ -562,6 +563,8 @@ export function openMovementSheet(existing, template) {
         </div>
       </div>
       <div id="to-body" style="margin-top:8px"></div>
+      <datalist id="dl-destinations">${[...new Set([...distinctOf(movements, 'destination'), ...distinctOf(db.get().sales, 'location')])].sort((a, b) => a.localeCompare(b)).map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
+      ${field({ label: 'Destination', id: 'destination', value: src?.destination, list: 'dl-destinations', placeholder: DEST_HINT, hint: 'Where this load is going. Shown on the load ticket and report. Leave blank to use the delivery site on the contract.' })}
       <div class="grid-2">
         ${field({ label: 'Truck rego', id: 'truckRego', value: src?.truckRego, list: 'dl-regos' })}
         ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
@@ -730,6 +733,7 @@ export function openMovementSheet(existing, template) {
       // The To side is rebuilt wholesale when the kind flips, so discard any
       // refreshers pointing at DOM that is about to be replaced.
       ctx.refreshers = ctx.refreshers.filter((fn) => !fn.ownedByToBody);
+      root.querySelector('#destination')?.setAttribute('placeholder', DEST_HINT);
       if (toKind === 'sale') {
         const selectedVal = existingSaleTo ? `sale:${existingSaleTo.id}` : '';
         const opts = ctx.saleOpts().map((o) => `<option value="${o.value}" ${String(o.value) === selectedVal ? 'selected' : ''}>${o.label}</option>`).join('');
@@ -750,7 +754,9 @@ export function openMovementSheet(existing, template) {
         const destWrap = toBody.querySelector('#dest-wrap');
         const drawDest = () => {
           const sale = db.get().sales.find((s) => s.id === String(saleSelectEl.value || '').replace(/^sale:/, ''));
-          destWrap.innerHTML = !sale ? '' : (sale.location ? `Destination: <strong>${esc(sale.location)}</strong>` : '<span class="hint">No delivery site on this contract.</span>');
+          destWrap.innerHTML = !sale ? '' : (sale.location ? `Contract delivers to: <strong>${esc(sale.location)}</strong>` : '<span class="hint">No delivery site on this contract.</span>');
+          // the box is blank until something is typed, and shows the contract's site as its hint
+          root.querySelector('#destination')?.setAttribute('placeholder', sale?.location || DEST_HINT);
         };
         saleSelectEl.addEventListener('change', drawDest); drawDest();
         // The orders open against the chosen contract, to say which one this load fills. Nothing shows when it has none.
@@ -947,6 +953,7 @@ export function openMovementSheet(existing, template) {
         // the commodity of the load, when one is chosen: holdings off-farm are kept by commodity and grade
         ...(ctx.commodityId ? { commodityId: ctx.commodityId } : {}),
         loadTime: getVal(root, 'loadTime') || '',
+        destination: getVal(root, 'destination')?.trim() || '',
         externalTicketNo: getVal(root, 'extTicket')?.trim() || '',
         // the order it fills; only a load going to a contract can be against one
         orderId: toKind === 'sale' ? (getVal(root, 'to-order-select') || null) : null,

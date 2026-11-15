@@ -34,6 +34,10 @@ alter table movements
 alter table storages
   add column if not exists retention_pct numeric(6,2);
 
+-- Where a load is going, typed on the load (optional; stored only when something is typed)
+alter table movements
+  add column if not exists load_destination text;
+
 -- The time a load was loaded or left, as 24 hour text such as 14:30 (optional; stored only when a time is recorded)
 alter table movements
   add column if not exists load_time text;

@@ -150,6 +150,26 @@ const state = (movement) => ({
   currentYear: '2026', nextMovementNo: 2, businessDetails: {},
   years: { 2026: { commodities: [], fields: [], sales: [], invoices: [], overheads: {}, storages: [], movements: [{ id: '77777777-7777-7777-7777-777777777777', ticketNo: 1, froms: [], tos: [], tons: 10, ...movement }] } },
 });
+check('a destination typed on the load is what the report and slip show, in place of the contract\'s', () => {
+  const rows = loadReportRows([{ ...moves[0], destination: ' Port Kembla ' }, moves[1]], ctx);
+  assert.equal(rows.find((r) => r.id === 'a').destination, 'Port Kembla');
+  assert.equal(rows.find((r) => r.id === 'b').destination, 'Newcastle terminal', 'none typed: the contract\'s delivery site');
+  const siloLoad = loadReportRows([{ ...moves[3], destination: 'Home farm' }], ctx)[0];
+  assert.equal(siloLoad.destination, 'Home farm', 'a load into a silo can have one too');
+  assert.ok(text(buildLoadTicketPdf(rows.find((r) => r.id === 'a'), {})).includes('(Port Kembla)'));
+});
+check('the typed destination goes to the server and comes back; none sends no column', () => {
+  const rows = stateToRows(state({ destination: 'Port Kembla' }), FARM);
+  assert.equal(rows.movements[0].load_destination, 'Port Kembla');
+  assert.equal(rowsToState(rows).years[2026].movements[0].destination, 'Port Kembla');
+  assert.ok(!('load_destination' in stateToRows(state({}), FARM).movements[0]));
+  assert.ok('load_destination' in stateToRows(state({ destination: '', __hasDestination: true }), FARM).movements[0], 'clearing it reaches the server');
+  assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists load_destination text'));
+  assert.ok(read('supabase/migrations/20261115130000_load_destination.sql').includes('load_destination text'));
+  const m = read('docs/js/views/movements.js');
+  assert.ok(m.includes("id: 'destination'") && m.includes("destination: getVal(root, 'destination')?.trim() || ''") && m.includes('dl-destinations'), 'a box on the load sheet to type it in');
+  assert.ok(read('docs/js/storage.js').includes('if (rec.destination) rec.__hasDestination = true'));
+});
 check('the time goes to the server and comes back', () => {
   const rows = stateToRows(state({ loadTime: '14:30' }), FARM);
   assert.equal(rows.movements[0].load_time, '14:30');
@@ -167,7 +187,7 @@ check('the column is in the paste-in file and the migration', () => {
 });
 check('wired in: the Movement button, the time on the load sheet, and the remembered ticks', () => {
   const m = read('docs/js/views/movements.js');
-  assert.ok(m.includes('id="dest-wrap"') && m.includes('Destination: <strong>'), 'the load sheet shows where the contract delivers');
+  assert.ok(m.includes('id="dest-wrap"') && m.includes('Contract delivers to: <strong>'), 'the load sheet shows where the contract delivers');
   assert.ok(m.includes("from './loadreport.js") && m.includes('id="load-report"') && m.includes('openLoadReportSheet()'));
   assert.ok(m.includes("id: 'loadTime', type: 'time'") && m.includes("loadTime: getVal(root, 'loadTime') || ''"));
   assert.ok(read('docs/js/storage.js').includes('if (rec.loadTime) rec.__hasLoadTime = true'));

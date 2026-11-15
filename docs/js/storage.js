@@ -18,22 +18,22 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=259';
+import { hydrate } from './hydrate.js?v=260';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=259';
-import { chooseBootState, resolveLegacy } from './boot.js?v=259';
-import { isLegacyDirty } from './dirty.js?v=259';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=259';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=259';
-import { settleLegs, dedupeLegs } from './legs.js?v=259';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=259';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=259';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=259';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=259';
-import { schedulePush, pushOnReconnect } from './sync.js?v=259';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=259';
+} from './local.js?v=260';
+import { chooseBootState, resolveLegacy } from './boot.js?v=260';
+import { isLegacyDirty } from './dirty.js?v=260';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=260';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=260';
+import { settleLegs, dedupeLegs } from './legs.js?v=260';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=260';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=260';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=260';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=260';
+import { schedulePush, pushOnReconnect } from './sync.js?v=260';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=260';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -152,6 +152,8 @@ function markOil(rec) {
   if (rec.externalTicketNo) rec.__hasExtTicket = true;
   // and the time of day it was loaded
   if (rec.loadTime) rec.__hasLoadTime = true;
+  // and where it is going, typed on the load
+  if (rec.destination) rec.__hasDestination = true;
   // and the order it was delivered against, so taking a load off an order reaches the server
   if (rec.orderId) rec.__hasOrderId = true;
   // and the freight order it was carted on (a carrier's bill carries the same flag)

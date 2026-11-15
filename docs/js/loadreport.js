@@ -3,8 +3,8 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=259';
-import { dmy } from './fmt.js?v=259';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=260';
+import { dmy } from './fmt.js?v=260';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -63,7 +63,8 @@ export function loadReportRows(movements, ctx, { from = '', to = '', commodityId
       commodity: commodities.find((c) => c.id === m.commodityId)?.name || '',
       goingTo: (m.tos || []).map((t) => endName(t, ctx)).filter(Boolean).join(', '),
       // where the contract delivers to
-      destination: [...new Set((m.tos || []).filter((t) => t.type === 'sale').map((t) => siteOf((ctx.sales || []).find((s) => s.id === t.id))).filter(Boolean))].join(', '),
+      // what was typed on the load, else where its contract delivers to
+      destination: String(m.destination || '').trim() || [...new Set((m.tos || []).filter((t) => t.type === 'sale').map((t) => siteOf((ctx.sales || []).find((s) => s.id === t.id))).filter(Boolean))].join(', '),
       notes: String(m.notes || '').trim(),
       from: (m.froms || []).map((f) => endName(f, ctx)).filter(Boolean).join(', '),
       tons: Number(m.tons) || 0,                       // the net load
