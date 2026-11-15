@@ -8,7 +8,9 @@
 // A location is kept as an ordinary storage record carrying an `offFarm` part: who runs it, and what it held at
 // the start of the season by commodity and grade. Loads in and out are ordinary movements to and from it.
 //
-// Pure, with no imports.
+// Pure. The only import is the storage fee terms, which are kept in the same part (see storagefees.js).
+
+import { cleanFee } from './storagefees.js?v=283';
 
 const norm = (g) => String(g ?? '').trim().toLowerCase();
 const round3 = (n) => Math.round(n * 1000) / 1000;
@@ -20,7 +22,7 @@ export const isOffFarm = (s) => !!s?.offFarm;
 /**
  * An off-farm part as it is saved: the operator trimmed, and the opening holdings each with a commodity,
  * a grade and tonnes above zero, the same commodity and grade added together.
- * @returns {{operator: string, opening: {commodityId: string, grade: string, tons: number}[]}}
+ * @returns {{operator: string, opening: {commodityId: string, grade: string, tons: number}[], fee?: object}} `fee` only when a storage charge is set
  */
 export function cleanOffFarm(v) {
   const operator = String(v?.operator ?? '').trim().slice(0, 60);
@@ -34,7 +36,8 @@ export function cleanOffFarm(v) {
     if (cur) cur.tons = round3(cur.tons + tons);
     else by.set(key, { commodityId, grade: String(o?.grade ?? '').trim().slice(0, 40), tons: round3(tons) });
   }
-  return { operator, opening: [...by.values()] };
+  const fee = cleanFee(v?.fee);
+  return { operator, opening: [...by.values()], ...(fee ? { fee } : {}) };
 }
 
 /**
@@ -110,5 +113,5 @@ export function carryOffFarm(location, movements, ctx, idMap) {
   const opening = holdings(location, movements, ctx)
     .filter((h) => h.tons > EPS && idMap.has(h.commodityId))
     .map((h) => ({ commodityId: idMap.get(h.commodityId), grade: h.grade, tons: h.tons }));
-  return cleanOffFarm({ operator: location.offFarm.operator, opening });
+  return cleanOffFarm({ operator: location.offFarm.operator, opening, fee: location.offFarm.fee });
 }

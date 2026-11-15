@@ -16,7 +16,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-import { environmentFor } from './env.js?v=282';
+import { environmentFor } from './env.js?v=283';
 
 // The live database, or the test copy's when this is the test copy (see env.js).
 export const ENV = environmentFor(globalThis.location?.hostname);

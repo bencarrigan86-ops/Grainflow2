@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=282';
+import { ROLES, canOpen } from './nav.js?v=283';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -190,7 +190,8 @@ export const GUIDES = [
       'Loads into and out of a store move its stock. The quality of the grain in a silo can be recorded on its sheet.',
     ],
     tips: [
-      'Grain held by a third party can be set up as an off-farm store.',
+      'Grain held by a third party can be set up as an off-farm store. The owner, manager and bookkeeper can also enter how the site charges, and the app estimates the storage fee month by month and sets it beside the site\'s bills.',
+      'In Settings, Export CSV for movements has a Paddocks it came from column: the paddocks behind each load, worked out through the silos it passed through.',
     ],
   },
   {

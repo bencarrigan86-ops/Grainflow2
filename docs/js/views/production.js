@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=282';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=282';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=282';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=282';
-import { describeMerge } from '../merge.js?v=282';
-import { renderRelatedMovements } from './movements.js?v=282';
-import { canSeeYield } from '../nav.js?v=282';
-import { wireJumps } from '../jump.js?v=282';
-import { openMapSheet } from './farmmap.js?v=282';
-import { openInputsSheet } from './inputs.js?v=282';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=282';
-import { stockLevels } from '../inputs.js?v=282';
-import { fieldHistory, rotationText, repeatCrops } from '../fieldhistory.js?v=282';
-import { openRotationSheet } from './rotation.js?v=282';
+import { db } from '../storage.js?v=283';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=283';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=283';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=283';
+import { describeMerge } from '../merge.js?v=283';
+import { renderRelatedMovements } from './movements.js?v=283';
+import { canSeeYield } from '../nav.js?v=283';
+import { wireJumps } from '../jump.js?v=283';
+import { openMapSheet } from './farmmap.js?v=283';
+import { openInputsSheet } from './inputs.js?v=283';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=283';
+import { stockLevels } from '../inputs.js?v=283';
+import { fieldHistory, rotationText, repeatCrops } from '../fieldhistory.js?v=283';
+import { openRotationSheet } from './rotation.js?v=283';
 
 let unsub = null;
 
@@ -50,7 +50,7 @@ function paint(root) {
     </div>
     <div class="view">
       ${fields.length ? `<button type="button" class="btn secondary" id="open-map" style="margin-bottom:12px">Farm map${fields.some((f) => f.boundary) ? ` &middot; ${fields.filter((f) => f.boundary).length} of ${fields.length} paddocks mapped` : ' &middot; add your paddock outlines'}</button>` : ''}
-      ${fields.length && db.getYears().length > 1 ? '<button type="button" class="btn secondary" id="open-rotation" style="margin-bottom:12px">Rotation and yield history &middot; every paddock, every season</button>' : ''}
+      ${fields.length ? '<button type="button" class="btn secondary" id="open-rotation" style="margin-bottom:12px">Rotation and yield history &middot; every paddock, every season</button>' : ''}
       ${canSeeInputs ? `<button type="button" class="btn secondary" id="open-inputs" style="margin-bottom:12px">Inputs and stock${inputProducts ? ` &middot; ${inputProducts} product${inputProducts === 1 ? '' : 's'} in stock` : ' &middot; seed, fertiliser, fuel, chemical'}</button>` : ''}
       ${sprayAllowed && fields.length ? `<button type="button" class="btn secondary" id="open-spray" style="margin-bottom:12px">Spray requests${sprayOpen ? ` &middot; ${sprayOpen} open` : ' &middot; send a job to a contractor'}</button>` : ''}
       ${rollup.length === 0 ? '' : `

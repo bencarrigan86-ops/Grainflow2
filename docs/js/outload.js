@@ -48,7 +48,7 @@ export function specOf(rec) {
 }
 
 /** Oldest first: by date, then by ticket number, then by the order given. */
-function inOrder(movements) {
+export function inOrder(movements) {
   return movements
     .map((m, i) => ({ m, i }))
     .sort((a, b) => String(a.m.date ?? '').localeCompare(String(b.m.date ?? ''))

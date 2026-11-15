@@ -1,31 +1,32 @@
-import { db } from '../storage.js?v=282';
-import { getTheme, setTheme } from '../theme.js?v=282';
-import { num, money, esc, todayLocal } from '../fmt.js?v=282';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=282';
-import { openLoadImportSheet } from './importloads.js?v=282';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=282';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=282';
-import { openDeletedSheet } from './deleted.js?v=282';
-import { APP_VERSION } from '../version.js?v=282';
-import { exportRowsAsCSV } from '../csv.js?v=282';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=282';
-import { endpointLabel } from './movements.js?v=282';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=282';
-import { layersForStorage } from '../outload.js?v=282';
-import { holdings, totalHeld } from '../offfarm.js?v=282';
-import { kindLabel, billTotal } from '../payables.js?v=282';
-import { orderState, STATE_LABEL } from '../orders.js?v=282';
-import { fieldHarvest } from '../harvest.js?v=282';
-import { openMySignatureSheet } from './signaturepad.js?v=282';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=282';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=282';
+import { db } from '../storage.js?v=283';
+import { getTheme, setTheme } from '../theme.js?v=283';
+import { num, money, esc, todayLocal } from '../fmt.js?v=283';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=283';
+import { openLoadImportSheet } from './importloads.js?v=283';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=283';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=283';
+import { openDeletedSheet } from './deleted.js?v=283';
+import { APP_VERSION } from '../version.js?v=283';
+import { exportRowsAsCSV } from '../csv.js?v=283';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=283';
+import { endpointLabel } from './movements.js?v=283';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=283';
+import { layersForStorage } from '../outload.js?v=283';
+import { traceLoads, traceText } from '../trace.js?v=283';
+import { holdings, totalHeld } from '../offfarm.js?v=283';
+import { kindLabel, billTotal } from '../payables.js?v=283';
+import { orderState, STATE_LABEL } from '../orders.js?v=283';
+import { fieldHarvest } from '../harvest.js?v=283';
+import { openMySignatureSheet } from './signaturepad.js?v=283';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=283';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=283';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=282';
+} from '../invites.js?v=283';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=282';
+} from '../auth.js?v=283';
 
 let unsub = null;
 
@@ -937,6 +938,7 @@ function exportSalesCSV(year, stamp) {
 function exportMovementsCSV(year, stamp) {
   const data = db.get();
   const { movements } = data;
+  const traced = traceLoads(data.storages, movements);
   exportRowsAsCSV(`grainflow-movements-${year}-${stamp}.csv`, movements, [
     { label: 'Ticket No', get: (m) => m.ticketNo ?? '' },
     { label: 'Their ticket no.', get: (m) => m.externalTicketNo ?? '' },
@@ -952,6 +954,8 @@ function exportMovementsCSV(year, stamp) {
     { label: 'Weight status', get: (m) => m.weightStatus ?? '' },
     // Load by load: this ticket's own grade and measurements
     ...qualityColumns(loadQuality),
+    // Which paddocks the grain on this load came from, worked back through the silos it passed through (a silo emptied last in, first out or the other way)
+    { label: 'Paddocks it came from (t)', get: (m) => traceText(traced.get(m.id), data) },
     { label: 'Comments', get: (m) => m.notes ?? '' },
   ]);
 }

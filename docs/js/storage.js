@@ -18,23 +18,23 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=282';
+import { hydrate } from './hydrate.js?v=283';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=282';
-import { chooseBootState, resolveLegacy } from './boot.js?v=282';
-import { isLegacyDirty } from './dirty.js?v=282';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=282';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=282';
-import { settleLegs, dedupeLegs } from './legs.js?v=282';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=282';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=282';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=282';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=282';
-import { schedulePush, pushOnReconnect } from './sync.js?v=282';
-import { hasParts as hasAddressParts } from './address.js?v=282';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=282';
+} from './local.js?v=283';
+import { chooseBootState, resolveLegacy } from './boot.js?v=283';
+import { isLegacyDirty } from './dirty.js?v=283';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=283';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=283';
+import { settleLegs, dedupeLegs } from './legs.js?v=283';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=283';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=283';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=283';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=283';
+import { schedulePush, pushOnReconnect } from './sync.js?v=283';
+import { hasParts as hasAddressParts } from './address.js?v=283';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=283';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.

@@ -4,14 +4,22 @@
 // into and out of a location are ordinary movements (see the movement form); what a location holds is
 // worked out from them (offfarm.js).
 
-import { db } from '../storage.js?v=282';
-import { openSheet, closeSheet, field, getVal, confirmDelete, toast } from '../ui.js?v=282';
-import { num, esc } from '../fmt.js?v=282';
-import { isOffFarm, holdings, totalHeld, cleanOffFarm } from '../offfarm.js?v=282';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=282';
-import { renderRelatedMovements } from './movements.js?v=282';
+import { db } from '../storage.js?v=283';
+import { openSheet, closeSheet, field, getVal, confirmDelete, toast } from '../ui.js?v=283';
+import { num, esc, money, dmy, todayLocal } from '../fmt.js?v=283';
+import { storageFeesByMonth, feeTermsText, BASES, cleanFee } from '../storagefees.js?v=283';
+import { downloadCSV } from '../csv.js?v=283';
+import { safeFileName } from '../sharefile.js?v=283';
+import { isOffFarm, holdings, totalHeld, cleanOffFarm } from '../offfarm.js?v=283';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=283';
+import { renderRelatedMovements } from './movements.js?v=283';
 
 const OPERATORS = ['GrainCorp', 'Viterra', 'Cargill', 'Emerald Grain', 'Louis Dreyfus', 'Olam', 'Bunge', 'CBH'];
+
+const dollars = (n) => money(n, 2);
+
+// the fees are money: the roles that see bills see them
+const canSeeFees = () => ['owner', 'manager', 'bookkeeper'].includes(db.getRole());
 
 const context = () => { const d = db.get(); return { fields: d.fields, storages: d.storages, sales: d.sales }; };
 
@@ -35,6 +43,8 @@ export function paintOffFarmCard(box) {
   const locations = storages.filter(isOffFarm).sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true }));
   const ctx = context();
   const canEdit = ['owner', 'manager'].includes(db.getRole());
+  const payables = canSeeFees() ? db.getPayables() : [];
+  const today = todayLocal();
   box.innerHTML = `
     <div class="card input">
       <h2><span class="dot input"></span>Off-farm storage</h2>
@@ -50,6 +60,7 @@ export function paintOffFarmCard(box) {
                 <div class="main">${num(totalHeld(rows), 1)} t</div>
               </div>
               ${loc.offFarm.operator ? `<div class="meta">${esc(loc.offFarm.operator)}</div>` : ''}
+              ${canSeeFees() && cleanFee(loc.offFarm.fee) ? `<div class="meta">Storage fee this month, estimated: ${dollars(storageFeesByMonth(loc, movements, payables, { today }).months.find((m) => m.current)?.estimate || 0)} ex GST</div>` : ''}
               ${rows.length ? holdingsLines(rows, commodities) : '<div class="meta">Nothing held</div>'}
             </div>`;
         }).join('')}
@@ -67,6 +78,7 @@ export function openOffFarmSheet(existing) {
   const usedOperators = [...new Set(storages.filter(isOffFarm).map((s) => s.offFarm.operator).filter(Boolean))];
   const operators = [...new Set([...usedOperators, ...OPERATORS])];
   const commodityOptions = commodities.map((c) => ({ value: c.id, label: c.name }));
+  const fee0 = existing?.offFarm?.fee || {};
   const rows = [];   // one { row, commodity select, grade control, tonnes box } per opening holding
   let count = 0;
 
@@ -75,6 +87,22 @@ export function openOffFarmSheet(existing) {
       <datalist id="dl-operators">${operators.map((o) => `<option value="${esc(o)}">`).join('')}</datalist>
       ${field({ label: 'Location', id: 'of-name', value: existing?.name, placeholder: 'e.g. GrainCorp Gunnedah' })}
       ${field({ label: 'Run by', id: 'of-operator', value: existing?.offFarm?.operator, placeholder: 'e.g. GrainCorp', list: 'dl-operators' })}
+      ${canSeeFees() ? `
+      <div class="subhead">Storage charges</div>
+      <div class="field hint" style="margin-bottom:8px">How this site charges you, so the app can estimate each month's fee. Leave the rates blank if there is no charge. Amounts are ex GST.</div>
+      <div class="grid-2">
+        ${field({ label: 'Storage ($/t a month)', id: 'of-fee-rate', type: 'number', step: '0.01', value: fee0.monthlyRate || '' })}
+        ${field({ label: 'Counted on', id: 'of-fee-basis', type: 'select', value: fee0.basis || 'month_end', options: BASES })}
+      </div>
+      <div class="grid-2">
+        ${field({ label: 'Free until', id: 'of-fee-free', type: 'date', value: fee0.freeUntil || '' })}
+        ${field({ label: 'Count from', id: 'of-fee-from', type: 'date', value: fee0.from || '' })}
+      </div>
+      <div class="grid-2">
+        ${field({ label: 'Receival ($/t in)', id: 'of-fee-in', type: 'number', step: '0.01', value: fee0.receivalRate || '' })}
+        ${field({ label: 'Outturn ($/t out)', id: 'of-fee-out', type: 'number', step: '0.01', value: fee0.outturnRate || '' })}
+      </div>
+      ${existing && cleanFee(existing.offFarm?.fee) ? '<button type="button" class="btn secondary small" id="of-fees" style="margin-bottom:10px">Storage fees month by month</button>' : ''}` : ''}
       <div class="subhead">Held at the start of the season</div>
       <div class="field hint" style="margin-bottom:8px">What this location already held, by grade. Loads delivered to it and
         drawn from it after that adjust each grade.</div>
@@ -112,6 +140,8 @@ export function openOffFarmSheet(existing) {
     (existing?.offFarm?.opening || []).forEach(addRow);
     root.querySelector('#of-add').addEventListener('click', () => addRow());
 
+    root.querySelector('#of-fees')?.addEventListener('click', () => openStorageFeesSheet(existing));
+
     if (existing) {
       const { movements } = db.get();
       const now = holdings(existing, movements, context());
@@ -133,6 +163,11 @@ export function openOffFarmSheet(existing) {
       const offFarm = cleanOffFarm({
         operator: getVal(root, 'of-operator'),
         opening: rows.map((r) => ({ commodityId: r.select.value, grade: r.ctl.read(), tons: parseFloat(r.tons.value) })),
+        // a role that is not shown the fees leaves them as they were
+        fee: canSeeFees() ? {
+          monthlyRate: parseFloat(getVal(root, 'of-fee-rate')), basis: getVal(root, 'of-fee-basis'), freeUntil: getVal(root, 'of-fee-free'), from: getVal(root, 'of-fee-from'),
+          receivalRate: parseFloat(getVal(root, 'of-fee-in')), outturnRate: parseFloat(getVal(root, 'of-fee-out')),
+        } : existing?.offFarm?.fee,
       });
       db.upsertStorage({
         id: existing?.id,
@@ -143,6 +178,35 @@ export function openOffFarmSheet(existing) {
       });
       closeSheet();
       toast('Saved');
+    });
+  });
+}
+
+/** The month-by-month estimate for one location, beside what the site has billed, with a CSV for Excel. */
+export function openStorageFeesSheet(location) {
+  const { movements } = db.get();
+  const today = todayLocal();
+  const r = storageFeesByMonth(location, movements, db.getPayables(), { today });
+  openSheet(`Storage fees: ${location.name}`, (root) => {
+    if (!r.terms) { root.innerHTML = '<div class="empty">No storage charge set for this location.</div>'; return; }
+    const diffCell = (m) => (m.difference === null ? '&ndash;' : `<span style="color:var(--${m.difference > 0.005 ? 'warn' : 'text'})">${m.difference > 0 ? '+' : ''}${dollars(m.difference)}</span>`);
+    const body = r.months.map((m) => `<tr><td style="text-align:left">${esc(m.label)}${m.current ? ' <span class="meta">(this month)</span>' : ''}</td><td>${num(m.heldEnd, 1)}</td><td>${dollars(m.estimate)}</td><td>${m.billed === null ? '&ndash;' : dollars(m.billed)}</td><td>${diffCell(m)}</td></tr>`).join('');
+    root.innerHTML = `
+      <div class="hint" style="margin-bottom:8px">${esc(feeTermsText(r.terms, dmy))}. Estimated from the loads in and out; amounts are ex GST. A storage bill recorded in Receivables &amp; payables against this location shows beside its month (by invoice date), with how far it is above or below the estimate.</div>
+      <div class="table-scroll"><table>
+        <thead><tr><th style="text-align:left">Month</th><th>Held at month end (t)</th><th>Estimate</th><th>Billed</th><th>Billed less estimate</th></tr></thead>
+        <tbody>${body}</tbody>
+        <tfoot><tr><td style="text-align:left"><strong>Total</strong></td><td></td><td><strong>${dollars(r.totals.estimate)}</strong></td><td><strong>${dollars(r.totals.billed)}</strong></td><td></td></tr></tfoot>
+      </table></div>
+      <div class="hint" style="margin-top:8px">The current month is estimated for the whole month at today's tonnes. Grain held before the first load is counted from the date in Count from.</div>
+      <button type="button" class="btn secondary" id="fees-csv" style="margin-top:8px">Excel (CSV)</button>`;
+    root.querySelector('#fees-csv').addEventListener('click', () => {
+      const head = ['Month', 'Held at month end (t)', 'Average held (t)', 'Storage ($)', 'Receival ($)', 'Outturn ($)', 'Estimate ($)', 'Billed ($)', 'Billed less estimate ($)'];
+      const lines = [head, ...r.months.map((m) => [m.label, m.heldEnd, m.avgHeld, m.storage, m.receival, m.outturn, m.estimate, m.billed ?? '', m.difference ?? ''])];
+      lines.push(['Total', '', '', '', '', '', r.totals.estimate, r.totals.billed, '']);
+      const cell = (v) => { const t = String(v); return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+      downloadCSV(safeFileName(`grainflow-storage-fees-${location.name}-${today}`, 'csv'), lines.map((l) => l.map(cell).join(',')).join('\r\n'));
+      toast('Downloaded. It opens in Excel.');
     });
   });
 }
