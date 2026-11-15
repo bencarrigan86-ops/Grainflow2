@@ -158,7 +158,7 @@ export const ALLOWED = {
   weightStatus: ['estimate', 'final'],
   storageKind: ['silo', 'bunker', 'tally'],    // tally = counted bales, not tonnes
   fillState: ['peak', 'flat', 'decline'],      // three surfaces, three volume formulas
-  yieldMode: ['estimate', 'actual'],
+  yieldMode: ['estimate', 'actual', 'recorded'],   // recorded: a past season's yield from the farm's own records
   invoiceStatus: ['outstanding', 'paid'],
 };
 

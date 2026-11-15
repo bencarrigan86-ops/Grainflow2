@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=283';
+import { ROLES, canOpen } from './nav.js?v=285';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -327,6 +327,8 @@ export const GUIDES = [
     ],
     tips: [
       'A paddock you will not farm this season can be removed from the new one. The old season keeps it.',
+      'Records from before the app can be brought in as past seasons: in Settings, Import past seasons (CSV). Each row is a paddock in a season with its crop, hectares and yield. Paddocks are matched to your current names so the rotation and yield history lines up.',
+      'Past contracts can come in the same way: Settings, Import past sales (CSV), with a row for each contract (season, crop, tonnes, price, and optionally buyer, contract number, freight, levies and tonnes delivered). Import the season\'s paddocks first, then its contracts, and switching to that season shows what was grown, what was sold and what was left unsold. A season that already has contracts is left alone.',
     ],
   },
   {

@@ -4,10 +4,10 @@
 // each crop's yield by season), so what is exported is what is shown. A role that is not shown yields is not given them
 // here either: `showYield` false leaves out every tonnage and yield and the crop table. Pure: it builds text and bytes.
 
-import { toCSV } from './csv.js?v=283';
-import { Pdf, wrapText, textWidth } from './pdf.js?v=283';
-import { PALETTE } from './farmmap.js?v=283';
-import { cropYields } from './fieldhistory.js?v=283';
+import { toCSV } from './csv.js?v=285';
+import { Pdf, wrapText, textWidth } from './pdf.js?v=285';
+import { PALETTE } from './farmmap.js?v=285';
+import { cropYields } from './fieldhistory.js?v=285';
 
 const round = (n, dp = 2) => { const f = 10 ** dp; return Math.round((Number(n) || 0) * f) / f; };
 

@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=283';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=283';
-import { num, tons, esc } from '../fmt.js?v=283';
-import { field, getVal, getNum } from '../ui.js?v=283';
-import { canSeeYield } from '../nav.js?v=283';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=283';
-import { harvestReport, siloSpace, pctText } from '../harvest.js?v=283';
+import { db } from '../storage.js?v=285';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea } from '../derived.js?v=285';
+import { num, tons, esc } from '../fmt.js?v=285';
+import { field, getVal, getNum } from '../ui.js?v=285';
+import { canSeeYield } from '../nav.js?v=285';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=285';
+import { harvestReport, siloSpace, pctText } from '../harvest.js?v=285';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -570,7 +570,7 @@ function yieldTable(g, movements) {
             <tr>
               <td>${esc(f.name)}</td>
               <td>${num(f.areaHa, 1)}</td>
-              <td><span class="badge ${f.yieldMode === 'actual' ? 'pos' : 'neg'}">${f.yieldMode === 'actual' ? 'Actual' : 'Estimate'}</span></td>
+              <td><span class="badge ${f.yieldMode === 'actual' || f.yieldMode === 'recorded' ? 'pos' : 'neg'}">${f.yieldMode === 'actual' ? 'Actual' : f.yieldMode === 'recorded' ? 'Recorded' : 'Estimate'}</span></td>
               <td>${num(yieldTHa, 2)}</td>
               <td>${num(t, 1)}</td>
             </tr>`).join('')}

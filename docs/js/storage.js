@@ -18,23 +18,23 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=283';
+import { hydrate } from './hydrate.js?v=285';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=283';
-import { chooseBootState, resolveLegacy } from './boot.js?v=283';
-import { isLegacyDirty } from './dirty.js?v=283';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=283';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=283';
-import { settleLegs, dedupeLegs } from './legs.js?v=283';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=283';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=283';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=283';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=283';
-import { schedulePush, pushOnReconnect } from './sync.js?v=283';
-import { hasParts as hasAddressParts } from './address.js?v=283';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=283';
+} from './local.js?v=285';
+import { chooseBootState, resolveLegacy } from './boot.js?v=285';
+import { isLegacyDirty } from './dirty.js?v=285';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=285';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=285';
+import { settleLegs, dedupeLegs } from './legs.js?v=285';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=285';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=285';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=285';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=285';
+import { schedulePush, pushOnReconnect } from './sync.js?v=285';
+import { hasParts as hasAddressParts } from './address.js?v=285';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=285';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -578,6 +578,34 @@ export const db = {
     };
     data.currentYear = label;
     touch('year', label);
+    persist();
+    return true;
+  },
+  /**
+   * Add an earlier season built from the farm's own records (see pastseasons.js): its commodities and paddocks, and
+   * nothing else. The current season stays where it is. A label the farm already has is refused, never overwritten.
+   */
+  addPastSeason(year, { commodities, fields }) {
+    const label = String(year || '').trim();
+    if (!label || data.years[label]) return false;
+    data.years[label] = {
+      commodities, fields, storages: [], sales: [], movements: [],
+      overheads: defaultOverheads(), invoices: [], payables: [], orders: [], freightOrders: [], inputStock: [], sprayJobs: [],
+    };
+    touch('year', label);
+    persist();
+    return true;
+  },
+  /**
+   * Add contracts to an earlier season (see pastsales.js), and any crops the season did not have. A season that is not
+   * here, or that already has contracts, is refused: the import never doubles up and never touches what is there.
+   */
+  addPastSales(year, { sales, commodities = [] }) {
+    const y = data.years[String(year || '').trim()];
+    if (!y || (y.sales || []).length) return false;
+    y.commodities = [...(y.commodities || []), ...commodities];
+    y.sales = [...sales];
+    touch('year', String(year).trim());
     persist();
     return true;
   },

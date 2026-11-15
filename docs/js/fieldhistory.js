@@ -4,7 +4,7 @@
 // season it was in, the crop, the area, the tonnes (the actual loads once the paddock is on actual, otherwise the
 // estimate) and the yield. This is the rotation question: what went where, and how did it do. Pure.
 
-import { fieldTons } from './derived.js?v=283';
+import { fieldTons } from './derived.js?v=285';
 
 const key = (name) => String(name || '').trim().toLowerCase();
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -24,7 +24,7 @@ export function fieldHistory(name, years) {
     const crop = (y.commodities || []).find((c) => c.id === f.commodityId)?.name || '';
     const areaHa = num(f.areaHa);
     const tons = fieldTons(f, y.movements || []);
-    rows.push({ year, crop, areaHa, tons, yieldTHa: areaHa > 0 ? tons / areaHa : 0, actual: f.yieldMode === 'actual' });
+    rows.push({ year, crop, areaHa, tons, yieldTHa: areaHa > 0 ? tons / areaHa : 0, actual: f.yieldMode === 'actual' || f.yieldMode === 'recorded' });
   }
   return rows.sort((a, b) => String(a.year).localeCompare(String(b.year), undefined, { numeric: true }));
 }
@@ -67,7 +67,7 @@ export function rotationGrid(years) {
       const crop = (y.commodities || []).find((c) => c.id === f.commodityId)?.name || '';
       const areaHa = num(f.areaHa);
       const tons = fieldTons(f, y.movements || []);
-      row.cells[year] = { crop, areaHa, tons, yieldTHa: areaHa > 0 ? tons / areaHa : 0, actual: f.yieldMode === 'actual' };
+      row.cells[year] = { crop, areaHa, tons, yieldTHa: areaHa > 0 ? tons / areaHa : 0, actual: f.yieldMode === 'actual' || f.yieldMode === 'recorded' };
     }
   }
   const rows = [...byName.values()].sort((a, b) => natural(a.property, b.property) || natural(a.name, b.name));

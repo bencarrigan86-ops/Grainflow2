@@ -1,32 +1,34 @@
-import { db } from '../storage.js?v=283';
-import { getTheme, setTheme } from '../theme.js?v=283';
-import { num, money, esc, todayLocal } from '../fmt.js?v=283';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=283';
-import { openLoadImportSheet } from './importloads.js?v=283';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=283';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=283';
-import { openDeletedSheet } from './deleted.js?v=283';
-import { APP_VERSION } from '../version.js?v=283';
-import { exportRowsAsCSV } from '../csv.js?v=283';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=283';
-import { endpointLabel } from './movements.js?v=283';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=283';
-import { layersForStorage } from '../outload.js?v=283';
-import { traceLoads, traceText } from '../trace.js?v=283';
-import { holdings, totalHeld } from '../offfarm.js?v=283';
-import { kindLabel, billTotal } from '../payables.js?v=283';
-import { orderState, STATE_LABEL } from '../orders.js?v=283';
-import { fieldHarvest } from '../harvest.js?v=283';
-import { openMySignatureSheet } from './signaturepad.js?v=283';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=283';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=283';
+import { db } from '../storage.js?v=285';
+import { getTheme, setTheme } from '../theme.js?v=285';
+import { num, money, esc, todayLocal } from '../fmt.js?v=285';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=285';
+import { openLoadImportSheet } from './importloads.js?v=285';
+import { openPastSeasonsSheet } from './pastseasons.js?v=285';
+import { openPastSalesSheet } from './pastsales.js?v=285';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=285';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=285';
+import { openDeletedSheet } from './deleted.js?v=285';
+import { APP_VERSION } from '../version.js?v=285';
+import { exportRowsAsCSV } from '../csv.js?v=285';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=285';
+import { endpointLabel } from './movements.js?v=285';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=285';
+import { layersForStorage } from '../outload.js?v=285';
+import { traceLoads, traceText } from '../trace.js?v=285';
+import { holdings, totalHeld } from '../offfarm.js?v=285';
+import { kindLabel, billTotal } from '../payables.js?v=285';
+import { orderState, STATE_LABEL } from '../orders.js?v=285';
+import { fieldHarvest } from '../harvest.js?v=285';
+import { openMySignatureSheet } from './signaturepad.js?v=285';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=285';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=285';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=283';
+} from '../invites.js?v=285';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=283';
+} from '../auth.js?v=285';
 
 let unsub = null;
 
@@ -166,6 +168,8 @@ function paint(root) {
         </div>
         <button class="btn secondary small" id="export-csv" style="margin-top:8px">Export CSV (Excel)&hellip;</button>
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-loads" style="margin-top:8px">Import truck loads (CSV)&hellip;</button>` : ''}
+        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-past" style="margin-top:8px">Import past seasons (CSV)&hellip;</button>` : ''}
+        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-past-sales" style="margin-top:8px">Import past sales (CSV)&hellip;</button>` : ''}
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="open-deleted" style="margin-top:8px">Recently deleted&hellip;</button>` : ''}
         <button class="btn danger small" id="reset" style="margin-top:10px">Reset all data</button>
         <input type="file" id="import-file" accept="application/json" style="display:none" />
@@ -306,6 +310,8 @@ function paint(root) {
   });
   root.querySelector('#export-csv').addEventListener('click', () => openExportCsvSheet());
   root.querySelector('#import-loads')?.addEventListener('click', () => openLoadImportSheet());
+  root.querySelector('#import-past')?.addEventListener('click', () => openPastSeasonsSheet());
+  root.querySelector('#import-past-sales')?.addEventListener('click', () => openPastSalesSheet());
   root.querySelector('#open-deleted')?.addEventListener('click', () => openDeletedSheet());
   root.querySelector('#open-my-signature')?.addEventListener('click', () => openMySignatureSheet());
   const importFile = root.querySelector('#import-file');
@@ -867,7 +873,7 @@ function exportFieldsCSV(year, stamp) {
     { label: 'Name', get: (f) => f.name },
     { label: 'Commodity', get: (f) => commodityName(commodities, f.commodityId) },
     { label: 'Area (ha)', get: (f) => f.areaHa ?? '' },
-    { label: 'Yield mode', get: (f) => f.yieldMode === 'actual' ? 'Actual (from movements)' : 'Estimate' },
+    { label: 'Yield mode', get: (f) => (f.yieldMode === 'actual' ? 'Actual (from movements)' : f.yieldMode === 'recorded' ? 'Recorded (past season)' : 'Estimate') },
     { label: 'Yield (t/ha)', get: (f) => f.yieldTHa ?? '' },
     { label: 'Tonnes', get: (f) => num(fieldTons(f, movements), 2) },
     // Grade and measurements: the weighted average of the loads carted off the field

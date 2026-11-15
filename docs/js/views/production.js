@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=283';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=283';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=283';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=283';
-import { describeMerge } from '../merge.js?v=283';
-import { renderRelatedMovements } from './movements.js?v=283';
-import { canSeeYield } from '../nav.js?v=283';
-import { wireJumps } from '../jump.js?v=283';
-import { openMapSheet } from './farmmap.js?v=283';
-import { openInputsSheet } from './inputs.js?v=283';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=283';
-import { stockLevels } from '../inputs.js?v=283';
-import { fieldHistory, rotationText, repeatCrops } from '../fieldhistory.js?v=283';
-import { openRotationSheet } from './rotation.js?v=283';
+import { db } from '../storage.js?v=285';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=285';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=285';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=285';
+import { describeMerge } from '../merge.js?v=285';
+import { renderRelatedMovements } from './movements.js?v=285';
+import { canSeeYield } from '../nav.js?v=285';
+import { wireJumps } from '../jump.js?v=285';
+import { openMapSheet } from './farmmap.js?v=285';
+import { openInputsSheet } from './inputs.js?v=285';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=285';
+import { stockLevels } from '../inputs.js?v=285';
+import { fieldHistory, rotationText, repeatCrops } from '../fieldhistory.js?v=285';
+import { openRotationSheet } from './rotation.js?v=285';
 
 let unsub = null;
 
@@ -150,7 +150,7 @@ export function openFieldSheet(existing) {
       <div class="field">
         <label>Drive tons from</label>
         <div class="segmented" id="f-mode">
-          <button data-mode="estimate" class="${(existing?.yieldMode || 'estimate') === 'estimate' ? 'active' : ''}">Estimate</button>
+          <button data-mode="estimate" class="${(existing?.yieldMode || 'estimate') !== 'actual' ? 'active' : ''}">Estimate</button>
           <button data-mode="actual" class="${existing?.yieldMode === 'actual' ? 'active' : ''}">Actual (movements)</button>
         </div>
         <div class="actual-callout" id="actual-hint"></div>
