@@ -1,26 +1,26 @@
-import { db } from './storage.js?v=263';
-import { initTheme } from './theme.js?v=263';
+import { db } from './storage.js?v=264';
+import { initTheme } from './theme.js?v=264';
 initTheme();
-import { renderPosition } from './views/position.js?v=263';
-import { renderProduction } from './views/production.js?v=263';
-import { renderReports } from './views/reports.js?v=263';
-import { renderSales } from './views/sales.js?v=263';
-import { renderMovements } from './views/movements.js?v=263';
-import { renderStorage } from './views/storage.js?v=263';
-import { renderSettings } from './views/settings.js?v=263';
-import { renderLogin } from './views/login.js?v=263';
-import { renderAccount } from './views/account.js?v=263';
+import { renderPosition } from './views/position.js?v=264';
+import { renderProduction } from './views/production.js?v=264';
+import { renderReports } from './views/reports.js?v=264';
+import { renderSales } from './views/sales.js?v=264';
+import { renderMovements } from './views/movements.js?v=264';
+import { renderStorage } from './views/storage.js?v=264';
+import { renderSettings } from './views/settings.js?v=264';
+import { renderLogin } from './views/login.js?v=264';
+import { renderAccount } from './views/account.js?v=264';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=263';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=263';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=263';
-import { esc } from './fmt.js?v=263';
-import { isSheetOpen, notify } from './ui.js?v=263';
-import { describeMerges } from './ticketmerge.js?v=263';
-import { watchLists } from './band.js?v=263';
-import { APP_VERSION } from './version.js?v=263';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=263';
+} from './auth.js?v=264';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=264';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=264';
+import { esc } from './fmt.js?v=264';
+import { isSheetOpen, notify } from './ui.js?v=264';
+import { describeMerges } from './ticketmerge.js?v=264';
+import { watchLists } from './band.js?v=264';
+import { APP_VERSION } from './version.js?v=264';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=264';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set

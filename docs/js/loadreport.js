@@ -3,9 +3,9 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=263';
-import { dmy } from './fmt.js?v=263';
-import { SPECS, specOf } from './outload.js?v=263';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=264';
+import { dmy } from './fmt.js?v=264';
+import { SPECS, specOf } from './outload.js?v=264';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -198,7 +198,8 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
 export function buildLoadTicketPdf(row, { business = '', ngr = '', showOrigin = true, showDestination = true, showComments = true, showQuality = true, showSplit = true, madeAt = '' } = {}) {
   const pdf = new Pdf();
   const W = 595.28; const L = 40; const R = W - 40; const CW = R - L;
-  const GREEN = [0.12, 0.37, 0.23]; const WHITE = 1; const CARD = 0.955; const DIM = 0.42;
+  const GREEN = [0.18, 0.49, 0.196];   // the app's green, #2e7d32
+  const WHITE = 1; const CARD = 0.955; const DIM = 0.42;
 
   // heading band
   pdf.rect(0, 0, W, 96, { stroke: null, fill: GREEN });
