@@ -23,6 +23,7 @@ const HEADINGS = {
   testWeightKgHl: 'Test weight (kg/hL)',
   fallingNumber: 'Falling number (s)',
   oilPct: 'Oil (%)',
+  retentionPct: 'Retention (%)',
 };
 
 /** One load's own grade and measurements; anything not recorded is blank, never zero. */

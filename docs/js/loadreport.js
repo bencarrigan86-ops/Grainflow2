@@ -3,8 +3,8 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth } from './pdf.js?v=257';
-import { dmy } from './fmt.js?v=257';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=258';
+import { dmy } from './fmt.js?v=258';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -19,6 +19,12 @@ export function cleanTime(t) {
 /** The time of day now, as the load sheet fills it in for a new load. */
 export function nowTime(d = new Date()) {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** Where a contract delivers to: its delivery site, else its pricing point, else the buyer who is receiving it. */
+export function siteOf(sale) {
+  if (!sale) return '';
+  return String(sale.location || sale.pricingPoint || sale.buyer || '').trim();
 }
 
 /** What a paddock, silo or contract is called on the report. */
@@ -57,7 +63,8 @@ export function loadReportRows(movements, ctx, { from = '', to = '', commodityId
       commodity: commodities.find((c) => c.id === m.commodityId)?.name || '',
       goingTo: (m.tos || []).map((t) => endName(t, ctx)).filter(Boolean).join(', '),
       // where the contract delivers to
-      destination: [...new Set((m.tos || []).filter((t) => t.type === 'sale').map((t) => String((ctx.sales || []).find((s) => s.id === t.id)?.location || '').trim()).filter(Boolean))].join(', '),
+      destination: [...new Set((m.tos || []).filter((t) => t.type === 'sale').map((t) => siteOf((ctx.sales || []).find((s) => s.id === t.id))).filter(Boolean))].join(', '),
+      notes: String(m.notes || '').trim(),
       from: (m.froms || []).map((f) => endName(f, ctx)).filter(Boolean).join(', '),
       tons: Number(m.tons) || 0,
       final: m.weightStatus === 'final',
@@ -159,7 +166,7 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
  * One load on a page of its own, to send with the truck or to a buyer: the same details as a line of the report,
  * laid out as a slip. Portrait A4.
  */
-export function buildLoadTicketPdf(row, { business = '', showOrigin = true, showDestination = true, madeAt = '' } = {}) {
+export function buildLoadTicketPdf(row, { business = '', showOrigin = true, showDestination = true, showComments = true, madeAt = '' } = {}) {
   const pdf = new Pdf();
   const W = 595.28; const L = 48; const R = W - 48;
   pdf.text(L, 48, 'LOAD TICKET', { size: 20, bold: true });
@@ -183,6 +190,17 @@ export function buildLoadTicketPdf(row, { business = '', showOrigin = true, show
     pdf.text(L, y + 2, label, { size: 9, gray: 0.35 });
     pdf.text(L + 170, y, clipText(value || '-', R - L - 170, 14, true), { size: 14, bold: true });
     y += 34; n += 1;
+  }
+  // comments: what was noted on the load, and room to write more
+  if (showComments) {
+    y += 6;
+    pdf.text(L, y, 'Comments', { size: 9, gray: 0.35 });
+    y += 14;
+    pdf.rect(L - 8, y, R - L + 16, 130, { stroke: 0.6, fill: null, lineWidth: 0.8 });
+    if (row.notes) {
+      let ny = y + 8;
+      for (const line of wrapText(row.notes, R - L - 8, 11).slice(0, 8)) { pdf.text(L, ny, line, { size: 11 }); ny += 14; }
+    }
   }
   pdf.text(L, 806, `Made in Grainflow${madeAt ? ` ${madeAt}` : ''}`, { size: 7.5, gray: 0.5 });
   return pdf.bytes();

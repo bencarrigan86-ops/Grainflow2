@@ -27,8 +27,8 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=257';
-import { cleanOffFarm } from './offfarm.js?v=257';
+import { cleanGradeOptions } from './gradeprice.js?v=258';
+import { cleanOffFarm } from './offfarm.js?v=258';
 
 const REF_TYPE_TO_DB = { silo: 'storage', field: 'field', sale: 'sale' };
 const REF_TYPE_FROM_DB = { storage: 'silo', field: 'field', sale: 'sale' };
@@ -59,7 +59,10 @@ const QUALITY_FIELDS = [
   // Canola oil. A later column than the rest, so it is sent on its own: only once an oil figure has been
   // recorded (see __hasOil), never along with a grade or a protein. Otherwise every graded load would be
   // refused until the database had the column.
-  ['oilPct', 'oil_pct', 'num', 'optional'],
+  ['oilPct', 'oil_pct', 'num', 'optional', '__hasOil'],
+  // Barley retention, the same way and with a flag of its own: a farm that has the oil column but not this one
+  // must still be able to save a load with an oil figure.
+  ['retentionPct', 'retention_pct', 'num', 'optional', '__hasRetention'],
 ];
 const LOAD_QUALITY_FIELDS = QUALITY_FIELDS.filter(([key]) => key !== 'cropYear');
 
@@ -117,10 +120,10 @@ export function movementFromRow(m, legs = [], photo = null) {
 function qualityKit(fields) {
   const has = (rec) => fields.some(([key]) => rec[key] !== undefined && rec[key] !== null && rec[key] !== '');
   const columns = (rec) => {
-    if (!has(rec) && !rec.__hasQuality && !rec.__hasOil) return {};
+    if (!has(rec) && !rec.__hasQuality && !fields.some(([, , , optional, flag]) => optional && rec[flag])) return {};
     return Object.fromEntries(fields
       // an optional column is left out until a value has been recorded for it
-      .filter(([key, , , optional]) => !optional || (rec[key] !== undefined && rec[key] !== null && rec[key] !== '') || rec.__hasOil)
+      .filter(([key, , , optional, flag]) => !optional || (rec[key] !== undefined && rec[key] !== null && rec[key] !== '') || rec[flag])
       .map(([key, col, kind]) => [
         col,
         kind === 'num' ? (rec[key] === '' || rec[key] == null ? null : Number(rec[key])) : orNull(rec[key] ?? ''),
@@ -131,10 +134,10 @@ function qualityKit(fields) {
     // out, so a round trip changes nothing.
     if (!fields.some(([, col]) => row[col] !== null && row[col] !== undefined)) return {};
     const out = {};
-    for (const [key, col, kind, optional] of fields) {
+    for (const [key, col, kind, optional, flag] of fields) {
       if (optional && row[col] === undefined) continue;   // the database has no such column yet
       out[key] = kind === 'num' ? (row[col] == null ? null : Number(row[col])) : (row[col] ?? '');
-      if (optional && row[col] != null) out.__hasOil = true;
+      if (optional && row[col] != null) out[flag] = true;
     }
     // only the optional oil recorded: not "quality" in the older sense
     if (fields.some(([, col, , optional]) => !optional && row[col] !== null && row[col] !== undefined)) out.__hasQuality = true;

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadReportRows, loadReportTotals, reportColumns, buildLoadReportPdf, buildLoadTicketPdf, cleanTime, nowTime, rangeText, clipText, endName } from '../docs/js/loadreport.js';
+import { loadReportRows, loadReportTotals, reportColumns, buildLoadReportPdf, buildLoadTicketPdf, siteOf, cleanTime, nowTime, rangeText, clipText, endName } from '../docs/js/loadreport.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
 let failures = 0;
@@ -48,7 +48,11 @@ check('each line carries the details asked for', () => {
   const r = loadReportRows(moves, ctx).find((x) => x.id === 'a');
   assert.equal(r.date, '2026-11-15'); assert.equal(r.time, '14:30'); assert.equal(r.truck, 'ABC123'); assert.equal(r.driver, 'Sam');
   assert.equal(r.goingTo, 'Graincorp #C-77'); assert.equal(r.destination, 'Newcastle terminal');
-  assert.equal(loadReportRows(moves, ctx).find((x) => x.id === 'c').destination, '', 'a contract with no delivery site, or a silo, has none'); assert.equal(r.tons, 30); assert.equal(r.ticketNo, 3); assert.equal(r.from, 'Silo 3'); assert.equal(r.commodity, 'Wheat');
+  assert.equal(loadReportRows(moves, ctx).find((x) => x.id === 'c').destination, 'Louis Dreyfus', 'a contract with no delivery site falls back to its buyer');
+  assert.equal(loadReportRows(moves, ctx).find((x) => x.id === 'd').destination, '', 'a load into a silo has none');
+  assert.equal(siteOf({ location: 'Port', pricingPoint: 'FIS', buyer: 'B' }), 'Port');
+  assert.equal(siteOf({ pricingPoint: 'Newcastle FIS', buyer: 'B' }), 'Newcastle FIS');
+  assert.equal(siteOf(undefined), ''); assert.equal(r.tons, 30); assert.equal(r.ticketNo, 3); assert.equal(r.from, 'Silo 3'); assert.equal(r.commodity, 'Wheat');
   assert.equal(loadReportRows(moves, ctx).find((x) => x.id === 'b').from, 'River Block', 'a paddock or a storage');
   assert.equal(loadReportRows(moves, ctx).find((x) => x.id === 'c').final, true);
 });
@@ -127,6 +131,16 @@ check('a single load makes a slip with the same details, and the origin can be l
   assert.ok(on.includes('/MediaBox [0 0 595.28 841.89]'), 'portrait A4');
 });
 
+check('the slip has a comments box with the load\'s notes, and it can be turned off', () => {
+  const row = { ...loadReportRows(moves, ctx).find((r) => r.id === 'b'), notes: 'Call the weighbridge before arriving' };
+  const on = text(buildLoadTicketPdf(row, { showComments: true }));
+  assert.ok(on.includes('(Comments)') && on.includes('(Call the weighbridge before arriving)'));
+  assert.ok(text(buildLoadTicketPdf({ ...row, notes: '' }, {})).includes('(Comments)'), 'room to write even with no notes');
+  const off = text(buildLoadTicketPdf(row, { showComments: false }));
+  assert.ok(!off.includes('(Comments)') && !off.includes('weighbridge'));
+  assert.equal(loadReportRows([{ ...moves[0], notes: ' hi ' }], ctx)[0].notes, 'hi');
+});
+
 console.log('\n=== saved with the farm ===');
 const FARM = '99999999-9999-9999-9999-999999999999';
 const state = (movement) => ({
@@ -157,6 +171,7 @@ check('wired in: the Movement button, the time on the load sheet, and the rememb
   const v = read('docs/js/views/loadreport.js');
   const m2 = read('docs/js/views/movements.js');
   assert.ok(m2.includes('id="tk-send"') && m2.includes('sendLoadTicket(existing') && m2.includes('saveOrigin(e.target.checked)'), 'a ticket can be sent from its own sheet');
+  assert.ok(m2.includes('id="tk-comments"') && m2.includes('saveComments(e.target.checked)') && m2.includes("showComments: root.querySelector"), 'a tick for the comments');
   assert.ok(v.includes('id="lr-dest"') && m2.includes('id="tk-dest"') && m2.includes('saveDestination(e.target.checked)') && v.includes('showDestination: d.showDestination'), 'a tick for the destination in both places');
   assert.ok(v.includes('id="lr-origin"') && v.includes('showOrigin: d.showOrigin') && v.includes('sharePdf(bytes, fileName'));
 });

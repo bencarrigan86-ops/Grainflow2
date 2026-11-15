@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=257';
-import { movementsForEndpoint } from '../derived.js?v=257';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=257';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=257';
-import { compressAndStampImage } from '../img.js?v=257';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=257';
-import { specText } from '../outload.js?v=257';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=257';
-import { pickableSilos } from '../silopick.js?v=257';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=257';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=257';
-import { activeSales } from '../paidsales.js?v=257';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=257';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=257';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination } from './loadreport.js?v=257';
-import { nowTime } from '../loadreport.js?v=257';
+import { db } from '../storage.js?v=258';
+import { movementsForEndpoint } from '../derived.js?v=258';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=258';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=258';
+import { compressAndStampImage } from '../img.js?v=258';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=258';
+import { specText, extraSpecKey } from '../outload.js?v=258';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=258';
+import { pickableSilos } from '../silopick.js?v=258';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=258';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=258';
+import { activeSales } from '../paidsales.js?v=258';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=258';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=258';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments } from './loadreport.js?v=258';
+import { nowTime } from '../loadreport.js?v=258';
 
 let unsub = null;
 
@@ -582,9 +582,9 @@ export function openMovementSheet(existing, template) {
         </div>
       </div>
       ${existing?.sourceRef ? `<div class="field hint" style="margin-bottom:8px">Movement number from the freight platform: <strong>${esc(existing.sourceRef)}</strong></div>` : ''}
-      <details class="fold" ${existing && (existing.grade || existing.proteinPct != null || existing.moisturePct != null || existing.oilPct != null) ? 'open' : ''}>
+      <details class="fold" ${existing && (existing.grade || existing.proteinPct != null || existing.moisturePct != null || existing.oilPct != null || existing.retentionPct != null) ? 'open' : ''}>
         <summary><div><h2>Load quality</h2>
-          <div class="sub">Grade, moisture, protein, screenings, test weight, falling number, oil</div></div></summary>
+          <div class="sub">Grade, moisture, protein, screenings, test weight, falling number, oil or retention</div></div></summary>
         <div class="field hint" style="margin-bottom:8px">What was on this truck. It lets the storage it went into say what
           each load out of it will carry.</div>
         ${gradeFieldHtml({ id: 'lq-grade', commodity: commodities.find((c) => c.id === ctx.commodityId), value: existing?.grade })}
@@ -598,7 +598,10 @@ export function openMovementSheet(existing, template) {
         </div>
         <div class="grid-2">
           ${field({ label: 'Falling number (seconds)', id: 'lq-fn', type: 'number', step: '1', value: existing?.fallingNumber ?? '' })}
-          ${field({ label: 'Oil (%)', id: 'lq-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '', hint: 'Canola' })}
+          <div id="lq-extra">
+            <div id="lq-oil-wrap">${field({ label: 'Oil (%)', id: 'lq-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '', hint: 'Canola' })}</div>
+            <div id="lq-ret-wrap" hidden>${field({ label: 'Retention (%)', id: 'lq-ret', type: 'number', step: '0.1', value: existing?.retentionPct ?? '', hint: 'Barley: kept above 2.5 mm' })}</div>
+          </div>
         </div>
       </details>
       ${field({ label: 'Notes', id: 'notes', value: src?.notes })}
@@ -617,6 +620,7 @@ export function openMovementSheet(existing, template) {
       ${existing ? `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:6px 0 10px"><input type="checkbox" id="tk-origin" ${readOrigin() ? 'checked' : ''} style="width:18px;height:18px" /> Show where it came from (storage or paddock)</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-dest" ${readDestination() ? 'checked' : ''} style="width:18px;height:18px" /> Show the destination</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-comments" ${readComments() ? 'checked' : ''} style="width:18px;height:18px" /> Comments box (this load's notes, and room to write)</label>
         <button class="btn secondary" id="tk-send" type="button">Send this load as a PDF</button>
         <div class="meta" style="margin-top:6px;font-size:12px">Sends the load as last saved: date, time, truck, driver, contract, estimated weight and ticket number.</div></div>` : ''}
       <div class="save-bar"><div class="total"><div class="l">Net load</div><div class="v" id="load-preview">—</div></div><button class="btn" id="save">Save</button></div>
@@ -636,6 +640,13 @@ export function openMovementSheet(existing, template) {
 
     // the grade dropdown follows the commodity: its published grades and the farm's own
     const gradeCtl = wireGradeField(root, 'lq-grade', () => commodities.find((c) => c.id === ctx.commodityId));
+    // barley takes retention where other grains have oil; a figure already typed stays visible either way
+    const syncExtra = () => {
+      const key = extraSpecKey(commodities.find((c) => c.id === ctx.commodityId)?.name);
+      root.querySelector('#lq-oil-wrap').hidden = !(key === 'oilPct' || getVal(root, 'lq-oil'));
+      root.querySelector('#lq-ret-wrap').hidden = !(key === 'retentionPct' || getVal(root, 'lq-ret'));
+    };
+    syncExtra();
     // What an off-farm location holds of this commodity and grade, against what this load takes out of it, and
     // the grade a load going into one will be held under.
     const offFarmNoteEl = root.querySelector('#offfarm-note');
@@ -666,6 +677,7 @@ export function openMovementSheet(existing, template) {
 
     root.querySelector('#m-commodity').addEventListener('change', (e) => {
       ctx.commodityId = e.target.value;
+      syncExtra();
       ctx.refreshAll();
       recomputeSourcesTotal();
       gradeCtl.refresh();
@@ -952,7 +964,7 @@ export function openMovementSheet(existing, template) {
           return {
             grade: gradeCtl.read() || '',
             moisturePct: n('lq-moisture'), proteinPct: n('lq-protein'), screeningsPct: n('lq-screenings'),
-            testWeightKgHl: n('lq-tw'), fallingNumber: n('lq-fn'), oilPct: n('lq-oil'),
+            testWeightKgHl: n('lq-tw'), fallingNumber: n('lq-fn'), oilPct: n('lq-oil'), retentionPct: n('lq-ret'),
           };
         })(),
         photoDataUrl,
@@ -963,9 +975,10 @@ export function openMovementSheet(existing, template) {
     // the slip is made from the saved load; the tick is remembered with the one on the report
     root.querySelector('#tk-origin')?.addEventListener('change', (e) => saveOrigin(e.target.checked));
     root.querySelector('#tk-dest')?.addEventListener('change', (e) => saveDestination(e.target.checked));
+    root.querySelector('#tk-comments')?.addEventListener('change', (e) => saveComments(e.target.checked));
     root.querySelector('#tk-send')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget; btn.disabled = true;
-      try { await sendLoadTicket(existing, { showOrigin: root.querySelector('#tk-origin').checked, showDestination: root.querySelector('#tk-dest').checked }); }
+      try { await sendLoadTicket(existing, { showOrigin: root.querySelector('#tk-origin').checked, showDestination: root.querySelector('#tk-dest').checked, showComments: root.querySelector('#tk-comments').checked }); }
       catch (err) { notify(`The load ticket could not be made: ${err.message}`); }
       finally { btn.disabled = false; }
     });

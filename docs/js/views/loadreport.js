@@ -1,10 +1,10 @@
 // The load report sheet: pick the dates (and a commodity or contract if wanted), then send the list of loads on as a PDF.
 
-import { db } from '../storage.js?v=257';
-import { num, todayLocal, dmy } from '../fmt.js?v=257';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=257';
-import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=257';
-import { loadReportRows, loadReportTotals, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=257';
+import { db } from '../storage.js?v=258';
+import { num, todayLocal, dmy } from '../fmt.js?v=258';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=258';
+import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=258';
+import { loadReportRows, loadReportTotals, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=258';
 
 // what was chosen last time, remembered on this device
 const KEY = 'grainflow.loadreport';
@@ -14,16 +14,18 @@ const save = (v) => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catc
 /** The show-where-it-came-from choice, shared by the report and a single ticket. */
 export const readOrigin = () => read().showOrigin !== false;
 export const saveOrigin = (showOrigin) => save({ ...read(), showOrigin });
+export const readComments = () => read().showComments !== false;
+export const saveComments = (showComments) => save({ ...read(), showComments });
 export const readDestination = () => read().showDestination !== false;
 export const saveDestination = (showDestination) => save({ ...read(), showDestination });
 
 /** One saved load, made into a slip and sent on (or downloaded). */
-export async function sendLoadTicket(m, { showOrigin = true, showDestination = true, download = false } = {}) {
+export async function sendLoadTicket(m, { showOrigin = true, showDestination = true, showComments = true, download = false } = {}) {
   const { fields, storages, sales, commodities } = db.get();
   const row = loadReportRows([m], { fields, storages, sales, commodities })[0];
   const business = db.getBusinessDetails();
   const name = business.entityName || business.farmName || '';
-  const bytes = buildLoadTicketPdf(row, { business: name, showOrigin, showDestination, madeAt: `${dmy(todayLocal())} ${nowTime()}` });
+  const bytes = buildLoadTicketPdf(row, { business: name, showOrigin, showDestination, showComments, madeAt: `${dmy(todayLocal())} ${nowTime()}` });
   const fileName = safeFileName(`Load ticket ${row.ticketNo === '' ? '' : `${row.ticketNo} `}${dmy(row.date)}`);
   if (download) { downloadFile(bytes, fileName); toast('Downloaded'); return; }
   const subject = `Load ticket${row.ticketNo === '' ? '' : ` #${row.ticketNo}`} ${dmy(row.date)}${name ? ` - ${name}` : ''}`;

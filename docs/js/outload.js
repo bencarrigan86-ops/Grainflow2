@@ -25,7 +25,16 @@ export const SPECS = [
   { key: 'testWeightKgHl', label: 'Test weight', unit: 'kg/hL', dp: 1 },
   { key: 'fallingNumber', label: 'Falling no.', unit: 's', dp: 0 },
   { key: 'oilPct', label: 'Oil', unit: '%', dp: 1 },
+  { key: 'retentionPct', label: 'Retention', unit: '%', dp: 1 },
 ];
+
+/**
+ * The one extra measurement a commodity has: retention (the share kept above the 2.5 mm screen) for barley, oil for
+ * everything else (canola is the one that uses it). Retention takes oil's place when barley is chosen.
+ */
+export function extraSpecKey(commodityName) {
+  return /barley/i.test(String(commodityName || '')) ? 'retentionPct' : 'oilPct';
+}
 
 /** A record's quality as plain numbers and text; blank is null, never zero. */
 export function specOf(rec) {
@@ -294,5 +303,6 @@ export function specText(rec) {
     sp.testWeightKgHl !== null ? `${fmt(sp.testWeightKgHl, 1)} kg/hL` : '',
     sp.fallingNumber !== null ? `FN ${fmt(sp.fallingNumber, 0)}` : '',
     sp.oilPct !== null ? `${fmt(sp.oilPct, 1)}% oil` : '',
+    sp.retentionPct !== null ? `${fmt(sp.retentionPct, 1)}% retention` : '',
   ].filter(Boolean).join(' · ');
 }

@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=257';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=257';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=257';
-import { isTransit } from '../transit.js?v=257';
-import { isOffFarm } from '../offfarm.js?v=257';
-import { paintOffFarmCard } from './offfarm.js?v=257';
-import { gradesFor, allGradeCodes } from '../grades.js?v=257';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=257';
-import { hasStorageQuality } from '../mapping.js?v=257';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=257';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=257';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=257';
-import { renderRelatedMovements } from './movements.js?v=257';
-import { openSiloSetupSheet } from './silosetup.js?v=257';
-import { commodityFills } from '../commodityfill.js?v=257';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker } from '../outload.js?v=257';
+import { db } from '../storage.js?v=258';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=258';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=258';
+import { isTransit } from '../transit.js?v=258';
+import { isOffFarm } from '../offfarm.js?v=258';
+import { paintOffFarmCard } from './offfarm.js?v=258';
+import { gradesFor, allGradeCodes } from '../grades.js?v=258';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=258';
+import { hasStorageQuality } from '../mapping.js?v=258';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=258';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=258';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=258';
+import { renderRelatedMovements } from './movements.js?v=258';
+import { openSiloSetupSheet } from './silosetup.js?v=258';
+import { commodityFills } from '../commodityfill.js?v=258';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=258';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=257';
+} from '../silolayers.js?v=258';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -529,7 +529,8 @@ function qualityFold(existing, commodity) {
         ${field({ label: 'Test weight (kg/hL)', id: 'q-tw', type: 'number', step: '0.1', value: existing?.testWeightKgHl ?? '', hint: 'As measured. Not the volume density below.' })}
       </div>
       ${field({ label: 'Falling number (seconds)', id: 'q-fn', type: 'number', step: '1', value: existing?.fallingNumber ?? '' })}
-      ${field({ label: 'Oil (%)', id: 'q-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '', hint: 'Canola' })}
+      <div id="q-oil-wrap" ${extraSpecKey(commodity?.name) === 'oilPct' || existing?.oilPct != null ? '' : 'hidden'}>${field({ label: 'Oil (%)', id: 'q-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '', hint: 'Canola' })}</div>
+      <div id="q-ret-wrap" ${extraSpecKey(commodity?.name) === 'retentionPct' || existing?.retentionPct != null ? '' : 'hidden'}>${field({ label: 'Retention (%)', id: 'q-ret', type: 'number', step: '0.1', value: existing?.retentionPct ?? '', hint: 'Barley: kept above 2.5 mm' })}</div>
     </details>`;
 }
 
@@ -545,6 +546,7 @@ function readQuality(root, gradeCtl) {
     testWeightKgHl: n('q-tw'),
     fallingNumber: n('q-fn'),
     oilPct: n('q-oil'),
+    retentionPct: n('q-ret'),
   };
 }
 
@@ -556,7 +558,7 @@ function qualityLine(s) {
     pct(s.moisturePct, 'moisture'), pct(s.proteinPct, 'protein'), pct(s.screeningsPct, 'screenings'),
     s.testWeightKgHl != null && s.testWeightKgHl !== '' ? `${num(s.testWeightKgHl, 1)} kg/hL` : '',
     s.fallingNumber != null && s.fallingNumber !== '' ? `FN ${num(s.fallingNumber, 0)}` : '',
-    pct(s.oilPct, 'oil'),
+    pct(s.oilPct, 'oil'), pct(s.retentionPct, 'retention'),
   ].filter(Boolean).map(esc).join(' · ');
 }
 
@@ -1054,7 +1056,14 @@ function openStorageSheet(existing) {
   let gradeCtl = null;
   const wireGrade = (root) => {
     gradeCtl = wireGradeField(root, 'q-grade', () => commodities.find((c) => c.id === getVal(root, 's-commodity')));
-    root.querySelector('#s-commodity')?.addEventListener('change', () => gradeCtl.refresh());
+    root.querySelector('#s-commodity')?.addEventListener('change', () => {
+      gradeCtl.refresh();
+      // barley takes retention where other grains have oil; a figure already typed stays visible
+      const key = extraSpecKey(commodities.find((c) => c.id === getVal(root, 's-commodity'))?.name);
+      const oil = root.querySelector('#q-oil-wrap'); const ret = root.querySelector('#q-ret-wrap');
+      if (oil) oil.hidden = !(key === 'oilPct' || getVal(root, 'q-oil'));
+      if (ret) ret.hidden = !(key === 'retentionPct' || getVal(root, 'q-ret'));
+    });
   };
   const fixedMovementNet = existing ? movementNetForStorage(existing.id, movements) : 0;
   // a storage saved as a silo that is measured like a bunker, or called one, is shown as one (it can be changed below)

@@ -27,6 +27,13 @@ alter table storages
 alter table movements
   add column if not exists external_ticket_no text;
 
+-- Barley retention: the percentage kept above the 2.5 mm screen, on a load and on a silo
+-- (optional; stored only when a retention figure is recorded)
+alter table movements
+  add column if not exists retention_pct numeric(6,2);
+alter table storages
+  add column if not exists retention_pct numeric(6,2);
+
 -- The time a load was loaded or left, as 24 hour text such as 14:30 (optional; stored only when a time is recorded)
 alter table movements
   add column if not exists load_time text;
