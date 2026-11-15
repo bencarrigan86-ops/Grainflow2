@@ -224,7 +224,8 @@ check('wired in: the Movement button, the time on the load sheet, and the rememb
   assert.ok(read('docs/js/storage.js').includes('if (rec.loadTime) rec.__hasLoadTime = true'));
   const v = read('docs/js/views/loadreport.js');
   const m2 = read('docs/js/views/movements.js');
-  assert.ok(m2.includes('id="tk-send"') && m2.includes('sendLoadTicket(existing') && m2.includes('saveOrigin(e.target.checked)'), 'a ticket can be sent from its own sheet');
+  assert.ok(m2.includes("grade: gradeCtl.read() || ''") && m2.includes("proteinPct: num('lq-protein')") && m2.includes("retentionPct: num('lq-ret')") && m2.includes("destination: getVal(root, 'destination')"), 'the slip is made from what is on the screen, saved or not');
+  assert.ok(m2.includes('id="tk-send"') && m2.includes('sendLoadTicket(live') && m2.includes('saveOrigin(e.target.checked)'), 'a ticket can be sent from its own sheet');
   assert.ok(m2.includes('id="tk-comments"') && m2.includes('saveComments(e.target.checked)') && m2.includes("showComments: root.querySelector"), 'a tick for the comments');
   assert.ok(v.includes('id="lr-dest"') && m2.includes('id="tk-dest"') && m2.includes('saveDestination(e.target.checked)') && v.includes('showDestination: d.showDestination'), 'a tick for the destination in both places');
   assert.ok(v.includes('id="lr-origin"') && v.includes('showOrigin: d.showOrigin') && v.includes('sharePdf(bytes, fileName'));

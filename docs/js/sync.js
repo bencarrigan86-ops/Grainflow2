@@ -15,12 +15,12 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=261';
-import { stateToRows } from './mapping.js?v=261';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=261';
-import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=261';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=261';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=261';
+import { supabase } from './supabase.js?v=262';
+import { stateToRows } from './mapping.js?v=262';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=262';
+import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=262';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=262';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=262';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
