@@ -18,23 +18,23 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=285';
+import { hydrate } from './hydrate.js?v=286';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=285';
-import { chooseBootState, resolveLegacy } from './boot.js?v=285';
-import { isLegacyDirty } from './dirty.js?v=285';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=285';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=285';
-import { settleLegs, dedupeLegs } from './legs.js?v=285';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=285';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=285';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=285';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=285';
-import { schedulePush, pushOnReconnect } from './sync.js?v=285';
-import { hasParts as hasAddressParts } from './address.js?v=285';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=285';
+} from './local.js?v=286';
+import { chooseBootState, resolveLegacy } from './boot.js?v=286';
+import { isLegacyDirty } from './dirty.js?v=286';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=286';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=286';
+import { settleLegs, dedupeLegs } from './legs.js?v=286';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=286';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=286';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=286';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=286';
+import { schedulePush, pushOnReconnect } from './sync.js?v=286';
+import { hasParts as hasAddressParts } from './address.js?v=286';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=286';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -573,6 +573,7 @@ export const db = {
     }));
 
     data.years[label] = {
+      __seasonId: uid(),   // the season's own id from the start: without it every send mints a new one, and the second is refused by the server
       commodities, fields, storages, sales: [], movements: [],
       overheads: defaultOverheads(), invoices: [], payables: [], orders: [], freightOrders: [], inputStock: [], sprayJobs: [],   // stock is not carried: it is summed across every season
     };
@@ -589,6 +590,7 @@ export const db = {
     const label = String(year || '').trim();
     if (!label || data.years[label]) return false;
     data.years[label] = {
+      __seasonId: uid(),   // see createYear: a season must keep one id between sends
       commodities, fields, storages: [], sales: [], movements: [],
       overheads: defaultOverheads(), invoices: [], payables: [], orders: [], freightOrders: [], inputStock: [], sprayJobs: [],
     };

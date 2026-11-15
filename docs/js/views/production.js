@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=285';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=285';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=285';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=285';
-import { describeMerge } from '../merge.js?v=285';
-import { renderRelatedMovements } from './movements.js?v=285';
-import { canSeeYield } from '../nav.js?v=285';
-import { wireJumps } from '../jump.js?v=285';
-import { openMapSheet } from './farmmap.js?v=285';
-import { openInputsSheet } from './inputs.js?v=285';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=285';
-import { stockLevels } from '../inputs.js?v=285';
-import { fieldHistory, rotationText, repeatCrops } from '../fieldhistory.js?v=285';
-import { openRotationSheet } from './rotation.js?v=285';
+import { db } from '../storage.js?v=286';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=286';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=286';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=286';
+import { describeMerge } from '../merge.js?v=286';
+import { renderRelatedMovements } from './movements.js?v=286';
+import { canSeeYield } from '../nav.js?v=286';
+import { wireJumps } from '../jump.js?v=286';
+import { openMapSheet } from './farmmap.js?v=286';
+import { openInputsSheet } from './inputs.js?v=286';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=286';
+import { stockLevels } from '../inputs.js?v=286';
+import { fieldHistory, rotationText, repeatCrops } from '../fieldhistory.js?v=286';
+import { openRotationSheet } from './rotation.js?v=286';
 
 let unsub = null;
 

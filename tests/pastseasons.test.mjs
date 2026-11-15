@@ -10,6 +10,8 @@ import { parsePastSeasons, planPastSeasons, matchPaddock, seasonRecords } from '
 import { rotationGrid } from '../docs/js/fieldhistory.js';
 import { fieldTons } from '../docs/js/derived.js';
 import { ALLOWED } from '../docs/js/import.js';
+import { stateToRows } from '../docs/js/mapping.js';
+import { selectDirtyRows } from '../docs/js/dirty.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -144,6 +146,22 @@ check('Settings offers the import, the sheet imports only seasons the farm does 
   const st = read('docs/js/storage.js');
   assert.ok(/addPastSeason\(year, \{ commodities, fields \}\) \{[\s\S]*?if \(!label \|\| data\.years\[label\]\) return false;/.test(st));
   assert.ok(!/addPastSeason[\s\S]{0,400}data\.currentYear = /.test(st), 'the current season does not change');
+});
+
+console.log('\n=== sending to the server ===');
+check('a season keeps one id between sends, so a second send does not try to change the id the server holds', () => {
+  const st = read('docs/js/storage.js');
+  assert.ok(/addPastSeason\(year, \{ commodities, fields \}\) \{[\s\S]*?data\.years\[label\] = \{\s*__seasonId: uid\(\)/.test(st), 'imported seasons get an id when made');
+  assert.ok(/createYear\([\s\S]*?data\.years\[label\] = \{\s*__seasonId: uid\(\)/.test(st), 'new seasons too');
+  const { rows } = parsePastSeasons(CSV);
+  const season = planPastSeasons(rows, { paddocks }).seasons[0];
+  const rec = seasonRecords(season, farmCommodities, makeId);
+  const state = { currentYear: '2025', years: { 2025: { __seasonId: 'cur', commodities: [], fields: [] }, [season.label]: { __seasonId: 'past-id', ...rec, storages: [], sales: [], movements: [] } } };
+  const a = stateToRows(state, '11111111-1111-4111-8111-111111111111').seasons.find((s) => s.label === season.label).id;
+  const b = stateToRows(state, '11111111-1111-4111-8111-111111111111').seasons.find((s) => s.label === season.label).id;
+  assert.equal(a, 'past-id'); assert.equal(a, b);
+  const sent = selectDirtyRows(stateToRows(state, '11111111-1111-4111-8111-111111111111'), state, [{ kind: 'year', id: season.label }]);
+  assert.ok(sent.seasons.some((s) => s.id === 'past-id') && sent.commodities.every((c) => c.season_id === 'past-id'), 'the season row travels with its rows');
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nAll passed');

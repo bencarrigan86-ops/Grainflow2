@@ -4,12 +4,12 @@
 // whether it is on, turns it on for 7 days or off early, and shows the log of what happened. A report sends the build,
 // the role, the sync state and the last few errors, with a message; the words are in supportinfo.js.
 
-import { supabase } from '../supabase.js?v=285';
-import { db } from '../storage.js?v=285';
-import { APP_VERSION } from '../version.js?v=285';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=285';
-import { esc } from '../fmt.js?v=285';
-import { buildReport, reportText, recentErrors, supportStatusText, logLine } from '../supportinfo.js?v=285';
+import { supabase } from '../supabase.js?v=286';
+import { db } from '../storage.js?v=286';
+import { APP_VERSION } from '../version.js?v=286';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=286';
+import { esc } from '../fmt.js?v=286';
+import { buildReport, reportText, recentErrors, supportStatusText, logLine } from '../supportinfo.js?v=286';
 
 const UNAVAILABLE = 'Support access is not available yet. Ask whoever looks after Grainflow to finish setting it up.';
 
