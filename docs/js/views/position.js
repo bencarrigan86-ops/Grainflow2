@@ -1,13 +1,15 @@
-import { db } from '../storage.js?v=290';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=290';
-import { num, tons, money, pct, esc } from '../fmt.js?v=290';
-import { payablesCost } from '../payables.js?v=290';
-import { openEofySheet } from './eofy.js?v=290';
-import { startProgress } from '../helpcontent.js?v=290';
-import { attentionItems } from '../attention.js?v=290';
-import { lastBackup } from '../backup.js?v=290';
-import { todayLocal } from '../fmt.js?v=290';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=290';
+import { db } from '../storage.js?v=291';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=291';
+import { num, tons, money, pct, esc } from '../fmt.js?v=291';
+import { payablesCost } from '../payables.js?v=291';
+import { openEofySheet } from './eofy.js?v=291';
+import { startProgress } from '../helpcontent.js?v=291';
+import { attentionItems } from '../attention.js?v=291';
+import { lastBackup } from '../backup.js?v=291';
+import { todayLocal, dmy } from '../fmt.js?v=291';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=291';
+import { positionPdf } from '../positionpdf.js?v=291';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=291';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -73,7 +75,10 @@ function paint(root) {
     <div class="view">
       ${attentionCard()}
       ${startCard()}
-      <button class="btn secondary" id="open-eofy" style="margin-bottom:12px">End of year snapshot</button>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="btn secondary" id="open-eofy" style="flex:1">End of year snapshot</button>
+        ${rows.length ? `<button class="btn secondary" id="position-pdf" style="flex:1">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>` : ''}
+      </div>
       <div class="stat-grid">
         <div class="stat">
           <div class="n">${tons(totals.productionTons, 0)}</div>
@@ -101,6 +106,7 @@ function paint(root) {
     </div>
   `;
   root.querySelector('#open-eofy').addEventListener('click', openEofySheet);
+  root.querySelector('#position-pdf')?.addEventListener('click', () => exportPdf({ rows, totals, overheads, pl, cost }));
   root.querySelectorAll('[data-start-go]').forEach((el) => el.addEventListener('click', () => { location.hash = `#/${el.dataset.startGo}`; }));
   root.querySelectorAll('[data-attn]').forEach((el) => el.addEventListener('click', () => {
     const go = el.dataset.attn;
@@ -110,6 +116,16 @@ function paint(root) {
   }));
   root.querySelector('#start-help')?.addEventListener('click', () => { location.hash = '#/help'; });
   root.querySelector('#start-hide')?.addEventListener('click', () => { try { localStorage.setItem(START_HIDDEN, '1'); } catch { /* shown again next time */ } paint(root); });
+}
+
+/** The screen as a PDF, shared from the phone's share sheet or downloaded on a computer. */
+async function exportPdf(data) {
+  const business = db.getBusinessDetails().entityName || '';
+  const season = db.getCurrentYear();
+  const bytes = positionPdf(data, { business, season, today: dmy(todayLocal()) });
+  const fileName = safeFileName(`Position ${season} ${dmy(todayLocal())}`);
+  if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
+  await sharePdf(bytes, fileName, { title: `Position ${season}` });
 }
 
 function farmSummaryCard(totals, overheads, pl, cost) {
