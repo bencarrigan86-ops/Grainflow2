@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=274';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=274';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=274';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=274';
-import { describeMerge } from '../merge.js?v=274';
-import { renderRelatedMovements } from './movements.js?v=274';
-import { canSeeYield } from '../nav.js?v=274';
-import { wireJumps } from '../jump.js?v=274';
-import { openMapSheet } from './farmmap.js?v=274';
-import { openInputsSheet } from './inputs.js?v=274';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=274';
-import { stockLevels } from '../inputs.js?v=274';
-import { fieldHistory, rotationText, repeatCrops } from '../fieldhistory.js?v=274';
-import { openRotationSheet } from './rotation.js?v=274';
+import { db } from '../storage.js?v=277';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=277';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=277';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=277';
+import { describeMerge } from '../merge.js?v=277';
+import { renderRelatedMovements } from './movements.js?v=277';
+import { canSeeYield } from '../nav.js?v=277';
+import { wireJumps } from '../jump.js?v=277';
+import { openMapSheet } from './farmmap.js?v=277';
+import { openInputsSheet } from './inputs.js?v=277';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=277';
+import { stockLevels } from '../inputs.js?v=277';
+import { fieldHistory, rotationText, repeatCrops } from '../fieldhistory.js?v=277';
+import { openRotationSheet } from './rotation.js?v=277';
 
 let unsub = null;
 
@@ -32,7 +32,7 @@ function paint(root) {
   const showYield = canSeeYield(db.getRole());
   const { commodities, fields, movements } = db.get();
   // prices are money: the people who see the books see the stock
-  const canSeeInputs = ['owner', 'manager', 'bookkeeper'].includes(db.getRole());
+  const canSeeInputs = ['owner', 'manager', 'bookkeeper', 'farm_worker'].includes(db.getRole());
   const inputProducts = canSeeInputs ? stockLevels(db.getInputMoves()).length : 0;
   const sprayAllowed = canSpray(db.getRole());
   const sprayOpen = sprayAllowed ? db.getSprayJobs().filter((j) => j.status !== 'done').length : 0;

@@ -1,30 +1,31 @@
-import { db } from '../storage.js?v=274';
-import { getTheme, setTheme } from '../theme.js?v=274';
-import { num, money, esc, todayLocal } from '../fmt.js?v=274';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=274';
-import { openLoadImportSheet } from './importloads.js?v=274';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=274';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=274';
-import { openDeletedSheet } from './deleted.js?v=274';
-import { APP_VERSION } from '../version.js?v=274';
-import { exportRowsAsCSV } from '../csv.js?v=274';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=274';
-import { endpointLabel } from './movements.js?v=274';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=274';
-import { layersForStorage } from '../outload.js?v=274';
-import { holdings, totalHeld } from '../offfarm.js?v=274';
-import { kindLabel, billTotal } from '../payables.js?v=274';
-import { orderState, STATE_LABEL } from '../orders.js?v=274';
-import { fieldHarvest } from '../harvest.js?v=274';
-import { openMySignatureSheet } from './signaturepad.js?v=274';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=274';
+import { db } from '../storage.js?v=277';
+import { getTheme, setTheme } from '../theme.js?v=277';
+import { num, money, esc, todayLocal } from '../fmt.js?v=277';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=277';
+import { openLoadImportSheet } from './importloads.js?v=277';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=277';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=277';
+import { openDeletedSheet } from './deleted.js?v=277';
+import { APP_VERSION } from '../version.js?v=277';
+import { exportRowsAsCSV } from '../csv.js?v=277';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=277';
+import { endpointLabel } from './movements.js?v=277';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=277';
+import { layersForStorage } from '../outload.js?v=277';
+import { holdings, totalHeld } from '../offfarm.js?v=277';
+import { kindLabel, billTotal } from '../payables.js?v=277';
+import { orderState, STATE_LABEL } from '../orders.js?v=277';
+import { fieldHarvest } from '../harvest.js?v=277';
+import { openMySignatureSheet } from './signaturepad.js?v=277';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=277';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=277';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=274';
+} from '../invites.js?v=277';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=274';
+} from '../auth.js?v=277';
 
 let unsub = null;
 
@@ -42,7 +43,7 @@ function paint(root) {
   const business = db.getBusinessDetails();
   // Only the owner can change the business details (the server refuses anyone else), and a manager does not see the bank details.
   const canEditBusiness = db.getRole() === 'owner';
-  const seesBank = db.getRole() !== 'manager';
+  const seesBank = ['owner', 'bookkeeper'].includes(db.getRole());
 
   root.innerHTML = `
     <div class="topbar">
@@ -171,6 +172,9 @@ function paint(root) {
 
       <div class="card" id="sync-card"></div>
 
+      ${db.getRole() === 'owner' ? supportCardHtml() : ''}
+      <button type="button" class="btn secondary" id="report-problem" style="margin-bottom:12px">Report a problem</button>
+
       <div class="card">
         <h2>App</h2>
         <div class="row"><span class="label">Version</span><span class="value">${esc(APP_VERSION)}</span></div>
@@ -206,6 +210,8 @@ function paint(root) {
   // actually runs on, and it renders after this point. A fault in the newest
   // card on the page must not take the rest of it with it.
   paintSyncCard(root);
+  wireSupportCard(root);
+  root.querySelector('#report-problem')?.addEventListener('click', () => openReportProblemSheet());
 
   const peopleCard = root.querySelector('#people-card');
   if (peopleCard) {

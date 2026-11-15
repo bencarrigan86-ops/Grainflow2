@@ -1,27 +1,29 @@
-import { db } from './storage.js?v=274';
-import { initTheme } from './theme.js?v=274';
+import { db } from './storage.js?v=277';
+import { supabase, ENV } from './supabase.js?v=277';
+import { installErrorLog } from './supportinfo.js?v=277';
+import { initTheme } from './theme.js?v=277';
 initTheme();
-import { renderPosition } from './views/position.js?v=274';
-import { renderProduction } from './views/production.js?v=274';
-import { renderReports } from './views/reports.js?v=274';
-import { renderSales } from './views/sales.js?v=274';
-import { renderMovements } from './views/movements.js?v=274';
-import { renderStorage } from './views/storage.js?v=274';
-import { renderSettings } from './views/settings.js?v=274';
-import { renderLogin } from './views/login.js?v=274';
-import { renderAccount } from './views/account.js?v=274';
-import { renderHelp } from './views/help.js?v=274';
+import { renderPosition } from './views/position.js?v=277';
+import { renderProduction } from './views/production.js?v=277';
+import { renderReports } from './views/reports.js?v=277';
+import { renderSales } from './views/sales.js?v=277';
+import { renderMovements } from './views/movements.js?v=277';
+import { renderStorage } from './views/storage.js?v=277';
+import { renderSettings } from './views/settings.js?v=277';
+import { renderLogin } from './views/login.js?v=277';
+import { renderAccount } from './views/account.js?v=277';
+import { renderHelp } from './views/help.js?v=277';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=274';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=274';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=274';
-import { esc } from './fmt.js?v=274';
-import { isSheetOpen, notify } from './ui.js?v=274';
-import { describeMerges } from './ticketmerge.js?v=274';
-import { watchLists } from './band.js?v=274';
-import { APP_VERSION } from './version.js?v=274';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=274';
+} from './auth.js?v=277';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=277';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=277';
+import { esc } from './fmt.js?v=277';
+import { isSheetOpen, notify } from './ui.js?v=277';
+import { describeMerges } from './ticketmerge.js?v=277';
+import { watchLists } from './band.js?v=277';
+import { APP_VERSION } from './version.js?v=277';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=277';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -409,6 +411,7 @@ async function boot() {
   try {
     currentRole = membership.role;
     await db.init({ farmId: membership.farmId, role: membership.role });
+    if (currentRole === 'support') noteSupportOpen(membership.farmId);
   } catch (e) {
     app.innerHTML = `<div class="view"><div class="card">
       <h2>Could not load the farm</h2>
@@ -442,6 +445,32 @@ async function boot() {
   renderActiveView();
   renderYearPill();
 }
+
+/**
+ * Support looking at a farm: written to the log the owner can read, and the screen says plainly that it is read only.
+ * Best effort; nothing here may stop the app opening.
+ */
+function noteSupportOpen(farmId) {
+  supabase.rpc('log_support_open', { p_farm_id: farmId }).then(() => {}, () => {});
+  if (document.getElementById('support-banner')) return;
+  const bar = document.createElement('div');
+  bar.id = 'support-banner';
+  bar.setAttribute('role', 'status');
+  bar.style.cssText = 'position:sticky;top:0;z-index:50;padding:6px 12px;text-align:center;font-size:12px;font-weight:700;background:var(--warn);color:#14171a';
+  bar.textContent = 'Support view: read only. Nothing you change here is sent.';
+  document.body.prepend(bar);
+}
+
+// A test copy says so on every screen, so it is never mistaken for the farm's real records.
+if (ENV.name === 'test') {
+  const t = document.createElement('div');
+  t.setAttribute('role', 'status');
+  t.style.cssText = 'position:sticky;top:0;z-index:60;padding:4px 12px;text-align:center;font-size:12px;font-weight:800;background:#b3261e;color:#fff';
+  t.textContent = ENV.configured ? 'TEST COPY. Nothing here is real.' : 'TEST COPY, not set up yet. See STAGING.md.';
+  document.body.prepend(t);
+}
+
+installErrorLog();
 
 // Signing in or out anywhere in the app re-runs the gate rather than trying to
 // patch the current screen into shape.

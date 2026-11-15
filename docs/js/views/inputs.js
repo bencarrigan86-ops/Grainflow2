@@ -4,16 +4,20 @@
 // and Bought, Used and Count record an entry. Seed and fertiliser also show what this season's paddocks call for
 // against what is in the shed. The arithmetic is in inputs.js.
 
-import { db } from '../storage.js?v=274';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=274';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=274';
-import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=274';
-import { isTransit } from '../transit.js?v=274';
-import { isOffFarm } from '../offfarm.js?v=274';
+import { db } from '../storage.js?v=277';
+import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=277';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=277';
+import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=277';
+import { isTransit } from '../transit.js?v=277';
+import { isOffFarm } from '../offfarm.js?v=277';
 import {
   KINDS, UNITS, MOVE_TYPES, kindLabel, defaultUnit, productKey, stockLevels, productMoves, stockValue,
   plannedNeeds, planVsStock, inputProblems, adjustmentFor, moveDelta, qtyText, onHandAt,
-} from '../inputs.js?v=274';
+} from '../inputs.js?v=277';
+
+// A farm worker sees what is on hand and records what is used and counts. The prices are not sent to their phone
+// at all (see the migration); this keeps the screens from showing blanks where a price would be, and from offering a delivery.
+const seesPrices = () => db.getRole() !== 'farm_worker';
 
 const TYPE_LABEL = { buy: 'Bought', use: 'Used', adjust: 'Count' };
 const TYPE_BADGE = { buy: 'pos', use: 'warn', adjust: 'muted' };
@@ -27,6 +31,15 @@ const whereText = (l) => (l.locations.some((x) => x.location)
   ? l.locations.map((x) => `${esc(x.location || 'No place recorded')} ${qtyText(x.onHand, l.unit)}`).join(' &middot; ')
   : '');
 
+/** The Bought / Used / Count buttons; a worker is not offered Bought. */
+function newButtons(priced) {
+  return `<div style="display:grid;grid-template-columns:repeat(${priced ? 3 : 2},1fr);gap:8px;margin:12px 0">
+        ${priced ? '<button type="button" class="btn" data-new="buy">+ Bought</button>' : ''}
+        <button type="button" class="btn${priced ? ' secondary' : ''}" data-new="use">Used</button>
+        <button type="button" class="btn secondary" data-new="adjust">Count</button>
+      </div>`;
+}
+
 /** The stock screen: every product with what is on hand. */
 export function openInputsSheet() {
   openSheet('Inputs and stock', (root) => {
@@ -38,17 +51,14 @@ export function openInputsSheet() {
       levels,
     );
     const value = stockValue(levels);
+    const priced = seesPrices();
 
     root.innerHTML = `
       ${levels.length ? `<div class="stat-grid">
         <div class="stat"><div class="n">${levels.length}</div><div class="l">Product${levels.length === 1 ? '' : 's'} in stock</div></div>
-        <div class="stat"><div class="n">${value > 0 ? money(value, 0) : '-'}</div><div class="l">Stock value${value > 0 ? '' : ' (add prices to see it)'}</div></div>
+        ${priced ? `<div class="stat"><div class="n">${value > 0 ? money(value, 0) : '-'}</div><div class="l">Stock value${value > 0 ? '' : ' (add prices to see it)'}</div></div>` : ''}
       </div>` : ''}
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0">
-        <button type="button" class="btn" data-new="buy">+ Bought</button>
-        <button type="button" class="btn secondary" data-new="use">Used</button>
-        <button type="button" class="btn secondary" data-new="adjust">Count</button>
-      </div>
+      ${newButtons(priced)}
       ${levels.length === 0 ? `<div class="empty" style="padding:10px 0">No stock yet. Tap Bought when a delivery arrives: seed, fertiliser, fuel or chemical.</div>` : KINDS.map((k) => {
         const mine = levels.filter((l) => l.kind === k.key);
         if (!mine.length) return '';
@@ -56,7 +66,7 @@ export function openInputsSheet() {
           <div class="list-item stack" data-product="${esc(l.key)}">
             <div class="li-top"><div class="main">${esc(l.product)}</div><div class="main" ${l.onHand < 0 ? 'style="color:var(--danger)"' : ''}>${qtyText(l.onHand, l.unit)}</div></div>
             ${whereText(l) ? `<div class="meta">${whereText(l)}</div>` : ''}
-            <div class="li-foot"><span class="meta">Bought ${qtyText(l.bought, l.unit)} &middot; used ${qtyText(l.used, l.unit)}${l.avgCost > 0 ? ` &middot; ${money(l.avgCost, 2)} /${esc(l.unit)}` : ''}</span>
+            <div class="li-foot"><span class="meta">Bought ${qtyText(l.bought, l.unit)} &middot; used ${qtyText(l.used, l.unit)}${priced && l.avgCost > 0 ? ` &middot; ${money(l.avgCost, 2)} /${esc(l.unit)}` : ''}</span>
               <span class="badges">${l.onHand < 0 ? '<span class="badge neg">Check count</span>' : l.onHand === 0 ? '<span class="badge muted">None left</span>' : ''}</span></div>
           </div>`).join('')}`;
       }).join('')}
@@ -81,16 +91,13 @@ export function openInputsSheet() {
 function openProductSheet(level) {
   openSheet(level.product, (root) => {
     const moves = productMoves(db.getInputMoves(), level.kind, level.product);
+    const priced = seesPrices();
     root.innerHTML = `
       <div class="stat-grid">
         <div class="stat"><div class="n" ${level.onHand < 0 ? 'style="color:var(--danger)"' : ''}>${qtyText(level.onHand, level.unit)}</div><div class="l">On hand (${esc(kindLabel(level.kind))})</div></div>
-        <div class="stat"><div class="n">${level.avgCost > 0 ? `${money(level.avgCost, 2)}` : '-'}</div><div class="l">Average cost per ${esc(level.unit)}</div></div>
+        ${priced ? `<div class="stat"><div class="n">${level.avgCost > 0 ? `${money(level.avgCost, 2)}` : '-'}</div><div class="l">Average cost per ${esc(level.unit)}</div></div>` : ''}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0">
-        <button type="button" class="btn" data-new="buy">+ Bought</button>
-        <button type="button" class="btn secondary" data-new="use">Used</button>
-        <button type="button" class="btn secondary" data-new="adjust">Count</button>
-      </div>
+      ${newButtons(priced)}
       ${level.locations.some((x) => x.location) ? `<div class="card" style="margin-top:12px">
         <h2>Where it is</h2>
         ${level.locations.map((x) => `<div class="row"><span class="label">${esc(x.location || 'No place recorded')}</span><span class="value" ${x.onHand < 0 ? 'style="color:var(--danger)"' : ''}>${qtyText(x.onHand, level.unit)}</span></div>`).join('')}
@@ -100,13 +107,16 @@ function openProductSheet(level) {
         ${moves.map((m) => `
           <div class="list-item stack" data-edit-move="${esc(m.id)}">
             <div class="li-top"><div class="main">${esc(dmy(m.date) || 'No date')}</div><div class="main">${moveDelta(m) >= 0 ? '+' : '&minus;'}${qtyText(Math.abs(moveDelta(m)), m.unit)}</div></div>
-            <div class="li-foot"><span class="meta">${[m.location, m.supplier, m.reference ? `Ref ${m.reference}` : '', Number(m.unitCost) > 0 ? `${money(m.unitCost, 2)} /${m.unit}` : '', m.notes].filter(Boolean).map(esc).join(' &middot; ')}</span>
+            <div class="li-foot"><span class="meta">${[m.location, m.supplier, priced && m.reference ? `Ref ${m.reference}` : '', priced && Number(m.unitCost) > 0 ? `${money(m.unitCost, 2)} /${m.unit}` : '', m.notes].filter(Boolean).map(esc).join(' &middot; ')}</span>
               <span class="badges"><span class="badge ${TYPE_BADGE[m.type]}">${TYPE_LABEL[m.type]}</span></span></div>
           </div>`).join('')}
       </div>
       <button type="button" class="btn secondary" id="in-back" style="margin-top:10px">All stock</button>`;
     root.querySelectorAll('[data-new]').forEach((b) => b.addEventListener('click', () => openMoveSheet(null, { type: b.dataset.new, kind: level.kind, product: level.product })));
-    root.querySelectorAll('[data-edit-move]').forEach((el) => el.addEventListener('click', () => openMoveSheet(moves.find((m) => m.id === el.dataset.editMove))));
+    root.querySelectorAll('[data-edit-move]').forEach((el) => el.addEventListener('click', () => {
+      const m = moves.find((x) => x.id === el.dataset.editMove);
+      if (m && (priced || m.type !== 'buy')) openMoveSheet(m);   // a worker does not change a delivery: it carries the price
+    }));
     root.querySelector('#in-back').addEventListener('click', () => openInputsSheet());
   });
 }
@@ -117,6 +127,8 @@ function openProductSheet(level) {
  */
 export function openMoveSheet(existing, start = {}) {
   const all = db.getInputMoves();
+  const priced = seesPrices();
+  if (!priced && start.type === 'buy') start = { ...start, type: 'use' };
   const others = existing ? all.filter((m) => m.id !== existing.id) : all;
   const otherLevels = stockLevels(others);
   let d = existing ? { ...existing } : {
@@ -136,7 +148,7 @@ export function openMoveSheet(existing, start = {}) {
       root.innerHTML = `
         <datalist id="dl-products">${names.map((p) => `<option value="${esc(p)}">`).join('')}</datalist>
         ${existing ? '' : `<div class="segmented" id="in-type" style="margin-bottom:10px">
-          ${MOVE_TYPES.map((t) => `<button data-type="${t.key}" class="${d.type === t.key ? 'active' : ''}">${t.label}</button>`).join('')}
+          ${MOVE_TYPES.filter((t) => priced || t.key !== 'buy').map((t) => `<button data-type="${t.key}" class="${d.type === t.key ? 'active' : ''}">${t.label}</button>`).join('')}
         </div>`}
         ${field({ label: 'What is it', id: 'in-kind', type: 'select', value: d.kind, options: KINDS.map((k) => ({ value: k.key, label: k.label })) })}
         ${field({ label: 'Product', id: 'in-product', value: d.product, list: 'dl-products', placeholder: KINDS.find((k) => k.key === d.kind)?.hint || '' })}
@@ -154,7 +166,7 @@ export function openMoveSheet(existing, start = {}) {
           options: [{ value: '', label: 'Not recorded' }, ...(d.location && !places.includes(d.location) ? [d.location] : []), ...places].map((o) => (typeof o === 'string' ? { value: o, label: o } : o)) })
           : '<div class="hint" style="margin:0 0 8px">Set up your silos and sheds under Storage to say where it is kept.</div>'}
         ${field({ label: 'Date', id: 'in-date', type: 'date', value: d.date })}
-        ${d.type === 'buy' ? `
+        ${d.type === 'buy' && priced ? `
         <div class="grid-2">
           ${field({ label: `Price per ${d.unit || 'unit'} ($)`, id: 'in-cost', type: 'number', step: '0.01', value: d.unitCost ?? '' })}
           ${field({ label: 'Invoice no.', id: 'in-ref', value: d.reference })}

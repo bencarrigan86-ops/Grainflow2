@@ -10,9 +10,10 @@
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { Pdf, wrapText } from './pdf.js?v=274';
-import { dmy } from './fmt.js?v=274';
-import { movementTonsToSale } from './derived.js?v=274';
+import { Pdf, wrapText } from './pdf.js?v=277';
+import { dmy } from './fmt.js?v=277';
+import { movementTonsToSale } from './derived.js?v=277';
+import { hasSignature, strokesInBox } from './signature.js?v=277';
 
 export const BASES = [
   { key: 'per_t', label: '$ per tonne' },
@@ -174,9 +175,10 @@ function box(pdf, x, y, w, h, title) {
 
 /**
  * The freight order as a PDF (bytes), for the carrier.
- * @param {{fo: object, sale: object, order?: object|null, commodityName?: string, business: object, issuedBy?: string, date: string}} src
+ * @param {{fo: object, sale: object, order?: object|null, commodityName?: string, business: object, issuedBy?: string, date: string, signature?: {strokes: object[], name?: string}|null}} src
+ * `signature`, when given, is drawn above the issuer's name: the order is then signed by the person who sends it.
  */
-export function freightOrderPdf({ fo, sale, order = null, commodityName = '', business = {}, issuedBy = '', date }) {
+export function freightOrderPdf({ fo, sale, order = null, commodityName = '', business = {}, issuedBy = '', date, signature = null }) {
   const pdf = new Pdf();
   const W = pdf.width - M * 2;
   pdf.text(M, 30, 'FREIGHT ORDER', { size: 18, bold: true });
@@ -234,7 +236,13 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
     ny += h + 12;
   }
   pdf.paragraph(M, ny, 'Please quote this freight order number on your tax invoice, and keep the weighbridge or receival ticket for each load. Contact us before loading if anything here does not match your booking.', W, { size: 8.5, lineHeight: 11, gray: 0.25 });
-  if (clean(issuedBy)) pdf.text(M, ny + 36, `Issued by ${issuedBy}`, { size: 9, bold: true });
+  const signed = !!signature && hasSignature(signature.strokes);
+  if (signed) {
+    for (const stroke of strokesInBox(signature.strokes, M, ny + 30, 120, 40)) pdf.polyline(stroke, { width: 1.1, gray: 0.1 });
+    pdf.line(M, ny + 72, M + 150, ny + 72, { width: 0.6, gray: 0.5 });
+  }
+  const by = signed ? ny + 78 : ny + 36;
+  if (clean(issuedBy)) pdf.text(M, by, `Issued by ${issuedBy}${signed && date ? `, ${dmy(date)}` : ''}`, { size: 9, bold: true });
   pdf.text(pdf.width / 2, pdf.height - 28, 'Prepared in Grainflow.', { size: 7, align: 'center', gray: 0.5 });
   return pdf.bytes();
 }

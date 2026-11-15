@@ -16,10 +16,14 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-export const SUPABASE_URL = 'https://mvrlvytoplpwglgkxqpp.supabase.co';
+import { environmentFor } from './env.js?v=277';
+
+// The live database, or the test copy's when this is the test copy (see env.js).
+export const ENV = environmentFor(globalThis.location?.hostname);
+export const SUPABASE_URL = ENV.url;
 
 // Publishable — safe in the browser. See the note above.
-export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_v8t04o3uoNx-Dt9VMVvyow_2Q17cG6V';
+export const SUPABASE_PUBLISHABLE_KEY = ENV.key;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {

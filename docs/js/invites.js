@@ -121,6 +121,7 @@ export function canEditMember(member, meId) {
 }
 
 export function roleLabel(role) {
+  if (role === 'support') return 'Support (read only)';
   return INVITABLE_ROLES.find((r) => r.value === role)?.label ?? role;
 }
 

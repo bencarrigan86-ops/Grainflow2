@@ -15,12 +15,12 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=274';
-import { stateToRows } from './mapping.js?v=274';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=274';
-import { selectDirtyRows, isLegacyDirty } from './dirty.js?v=274';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=274';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=274';
+import { supabase } from './supabase.js?v=277';
+import { stateToRows } from './mapping.js?v=277';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=277';
+import { selectDirtyRows, isLegacyDirty, pushRowsFor } from './dirty.js?v=277';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=277';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=277';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -54,7 +54,8 @@ const WRITABLE = {
             'sale_documents', 'orders', 'freight_orders', 'input_stock', 'spray_jobs', 'record_documents', 'invoices', 'payables',
             'movements', 'movement_legs', 'movement_photos'],
   bookkeeper: ['sales', 'sale_terms', 'sale_documents', 'orders', 'freight_orders', 'input_stock', 'invoices', 'overheads', 'payables', 'record_documents'],
-  farm_worker: ['fields', 'field_agronomy', 'movements', 'movement_legs', 'movement_photos'],
+  // a worker records what is used and counts, never a delivery (which carries the price): see pushRowsFor()
+  farm_worker: ['fields', 'field_agronomy', 'movements', 'movement_legs', 'movement_photos', 'input_stock'],
   driver: ['movements', 'movement_legs', 'movement_photos'],
 };
 
@@ -172,11 +173,22 @@ export async function push(state, farmId, role = 'owner') {
         return result;
       }
       result.tables.farms = 1;
+      // the bank details go to a table of their own (only the owner can write it)
+      // (all four blank is never sent: a read of that table that failed would otherwise wipe what the farm has saved)
+      const bank = rows.farm_bank?.[0];
+      if (bank && (bank.bank_name || bank.account_name || bank.bsb || bank.account_number)) {
+        const { error: bankError } = await supabase.from('farm_bank').upsert(rows.farm_bank[0], { onConflict: 'farm_id' });
+        if (bankError) {
+          result.errors.push({ table: 'farm_bank', message: bankError.message });
+          return result;
+        }
+        result.tables.farm_bank = 1;
+      }
     }
 
     for (const table of ORDER) {
       if (!tables.includes(table)) { result.skippedTables.push(table); continue; }
-      const list = rows[table] || [];
+      const list = pushRowsFor(table, role, rows[table] || []);
       if (list.length === 0) continue;
       for (const part of chunk(list)) {
         const onConflict = CONFLICT_KEY[table] || 'id';

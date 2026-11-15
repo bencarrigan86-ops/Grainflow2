@@ -5,12 +5,13 @@
 // navigation per role, and that is when this gets a proper home in the
 // interface. Until then it is reachable at #/account.
 
-import { notify } from '../ui.js?v=274';
+import { notify } from '../ui.js?v=277';
 import {
   getSession, getMembership, signOut, listMyInvitations, acceptInvitation,
-} from '../auth.js?v=274';
-import { roleLabel, expiryText } from '../invites.js?v=274';
-import { esc } from '../fmt.js?v=274';
+} from '../auth.js?v=277';
+import { roleLabel, expiryText } from '../invites.js?v=277';
+import { esc } from '../fmt.js?v=277';
+import { openReportProblemSheet } from './support.js?v=277';
 
 const ROLE_LABELS = {
   owner: 'Owner',
@@ -18,6 +19,7 @@ const ROLE_LABELS = {
   bookkeeper: 'Bookkeeper',
   farm_worker: 'Farm worker',
   driver: 'Driver',
+  support: 'Support (read only)',
 };
 
 export async function renderAccount(root) {
@@ -77,12 +79,14 @@ export async function renderAccount(root) {
 
       <div id="pending-invites"></div>
 
+      <button type="button" class="btn secondary" id="report-problem" style="margin-top:12px">Report a problem</button>
       <button class="btn secondary" id="sign-out" style="margin-top:12px">Sign out</button>
     </div>
   `;
 
   showPendingInvitations(root, membership);
 
+  root.querySelector('#report-problem')?.addEventListener('click', () => openReportProblemSheet());
   root.querySelector('#open-help')?.addEventListener('click', () => { location.hash = '#/help'; });
   root.querySelector('#sign-out').addEventListener('click', async () => {
     await signOut();

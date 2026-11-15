@@ -27,9 +27,9 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=274';
-import { cleanOffFarm } from './offfarm.js?v=274';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=274';
+import { cleanGradeOptions } from './gradeprice.js?v=277';
+import { cleanOffFarm } from './offfarm.js?v=277';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=277';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -228,6 +228,7 @@ export function stateToRows(state, farmId) {
     farms: [], seasons: [], commodities: [], fields: [], field_agronomy: [],
     storages: [], sales: [], sale_terms: [], movements: [], movement_legs: [],
     movement_photos: [], invoices: [], overheads: [], sale_documents: [], payables: [], orders: [], freight_orders: [], input_stock: [], spray_jobs: [], record_documents: [],
+    farm_bank: [],
   };
 
   const b = state.businessDetails || {};
@@ -244,8 +245,7 @@ export function stateToRows(state, farmId) {
     contact_name: orNull(b.contactName), phone: orNull(b.phone),
     email: orNull(b.email), address: orNull(b.address),
     payment_terms_days: b.paymentTermsDays ?? 14,
-    bank_name: orNull(b.bankName), account_name: orNull(b.accountName),
-    bsb: orNull(b.bsb), account_number: orNull(b.accountNumber),
+    // The bank details are not in this row: every member of the farm can read it. They go to farm_bank, below.
     // The quality assurance program named on a vendor declaration. Optional like the other later columns: sent once
     // it has been filled in, and kept after that so clearing it reaches the server.
     ...((b.qaProgram || b.qaNumber || b.__hasQa) ? { qa_program: orNull(b.qaProgram), qa_number: orNull(b.qaNumber) } : {}),
@@ -255,6 +255,13 @@ export function stateToRows(state, farmId) {
     ...((b.showAircair || b.__hasAircair) ? { show_aircair: !!b.showAircair } : {}),
     // The address in its parts (line 1, line 2, town, state, postcode), beside the joined line in `address`. Optional in the same way.
     ...(partsOut(b.addressParts, b.__hasAddressParts) ? { address_parts: partsOut(b.addressParts, b.__hasAddressParts).v } : {}),
+  });
+
+  // The bank details: a row of their own that only the owner and the bookkeeper can read (see the migration).
+  out.farm_bank.push({
+    farm_id: farmId,
+    bank_name: orNull(b.bankName), account_name: orNull(b.accountName),
+    bsb: orNull(b.bsb), account_number: orNull(b.accountNumber),
   });
 
   for (const [label, year] of Object.entries(state.years || {})) {
@@ -618,6 +625,8 @@ export function stateToRows(state, farmId) {
 
 export function rowsToState(rows) {
   const farm = (rows.farms || [])[0] || {};
+  // bank details: their own table now; a farm row from before that still carries them
+  const bank = (rows.farm_bank || [])[0] || farm;
   const byId = (list, key) => {
     const m = new Map();
     for (const r of list || []) m.set(r[key], r);
@@ -876,8 +885,8 @@ export function rowsToState(rows) {
       contactName: farm.contact_name ?? '', phone: farm.phone ?? '',
       email: farm.email ?? '', address: farm.address ?? '',
       paymentTermsDays: farm.payment_terms_days ?? 14,
-      bankName: farm.bank_name ?? '', accountName: farm.account_name ?? '',
-      bsb: farm.bsb ?? '', accountNumber: farm.account_number ?? '',
+      bankName: bank.bank_name ?? '', accountName: bank.account_name ?? '',
+      bsb: bank.bsb ?? '', accountNumber: bank.account_number ?? '',
       ...((farm.qa_program != null || farm.qa_number != null) ? { qaProgram: farm.qa_program ?? '', qaNumber: farm.qa_number ?? '', __hasQa: true } : {}),
       ...(farm.pic != null ? { pic: farm.pic, __hasPic: true } : {}),
       ...(farm.show_aircair != null ? { showAircair: !!farm.show_aircair, __hasAircair: true } : {}),

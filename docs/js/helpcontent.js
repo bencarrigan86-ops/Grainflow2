@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=274';
+import { ROLES, canOpen } from './nav.js?v=277';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ export const LEVELS = {
   full: { label: 'Add and change', short: 'Full' },
   view: { label: 'See only', short: 'See' },
   own: { label: 'Add loads, change open ones', short: 'Loads' },
+  used: { label: 'See stock, record use and counts (no prices)', short: 'Use' },
   none: { label: 'Not available', short: '—' },
 };
 
@@ -33,7 +34,7 @@ export const ROLE_INFO = [
   },
   {
     role: 'farm_worker', label: 'Farm worker',
-    summary: 'Paddocks, silos and loads. No contract prices, no invoices, no Position tab and no yields.',
+    summary: 'Paddocks, silos and loads, and the stock of seed, fertiliser, fuel and chemical with no prices. No contract prices, no invoices, no Position tab and no yields.',
     only: 'Can add loads and change loads that are still open. An owner can also let a worker record production (urea, seed and paddock details) when they are added under People.',
   },
   {
@@ -77,10 +78,11 @@ export const ACCESS = [
   { area: 'Spray requests', hint: 'Spray form and map for a contractor',
     owner: 'full', manager: 'full', bookkeeper: 'none', farm_worker: 'none', driver: 'none' },
   { area: 'Inputs and stock', hint: 'Seed, fertiliser, fuel and chemical on hand',
-    owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'none', driver: 'none' },
+    owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'used', driver: 'none',
+    note: 'A worker sees what is on hand and records what is used and counts. Prices are never sent to their phone.' },
   { area: 'Settings', hint: 'Commodities, seasons, grades, business details',
     owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'none', driver: 'none',
-    note: 'Commodities are changed by the owner and manager; overheads by the owner and bookkeeper; business and bank details by the owner only. Workers and drivers have Account only, for signing out.' },
+    note: 'Commodities are changed by the owner and manager; overheads by the owner and bookkeeper; business and bank details by the owner only (the bookkeeper can see the bank details; a manager cannot). Workers and drivers have Account only, for signing out.' },
   { area: 'People', hint: 'Invite, change and remove people',
     owner: 'full', manager: 'none', bookkeeper: 'none', farm_worker: 'none', driver: 'none' },
 ];

@@ -18,23 +18,23 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=274';
+import { hydrate } from './hydrate.js?v=277';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=274';
-import { chooseBootState, resolveLegacy } from './boot.js?v=274';
-import { isLegacyDirty } from './dirty.js?v=274';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=274';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=274';
-import { settleLegs, dedupeLegs } from './legs.js?v=274';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=274';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=274';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=274';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=274';
-import { schedulePush, pushOnReconnect } from './sync.js?v=274';
-import { hasParts as hasAddressParts } from './address.js?v=274';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=274';
+} from './local.js?v=277';
+import { chooseBootState, resolveLegacy } from './boot.js?v=277';
+import { isLegacyDirty } from './dirty.js?v=277';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=277';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=277';
+import { settleLegs, dedupeLegs } from './legs.js?v=277';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=277';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=277';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=277';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=277';
+import { schedulePush, pushOnReconnect } from './sync.js?v=277';
+import { hasParts as hasAddressParts } from './address.js?v=277';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=277';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -201,7 +201,9 @@ function persist() {
   // The push is a different question, and it does need to know where the data
   // goes. With no farm yet, the work is still recorded as owed so it leaves on
   // the first push after signing in, rather than being forgotten.
-  if (farmId) schedulePush(() => data, farmId, role, { touches });
+  // Support looks and does not change: nothing a support login does on screen is ever queued for the server.
+  if (role === 'support') { /* read only */ }
+  else if (farmId) schedulePush(() => data, farmId, role, { touches });
   else markDirty(touches).catch((e) => console.error('Could not queue for the server', e));
   // A view that throws while re-rendering must not take the write down with
   // it. The save has already happened by this point; letting the exception out
@@ -287,7 +289,7 @@ export const db = {
     let serverReachable = false;
     if (navigator.onLine) {
       try {
-        const { state } = await hydrate(farmId);
+        const { state } = await hydrate(farmId, role);
         serverState = state;
         serverReachable = true;
       } catch (e) {
@@ -452,7 +454,7 @@ export const db = {
       const editsAtStart = localEdits;
 
       let serverState;
-      try { ({ state: serverState } = await hydrate(farmId)); }
+      try { ({ state: serverState } = await hydrate(farmId, role)); }
       catch { return { refreshed: false, why: 'could not reach the server' }; }
       if (!serverState || Object.keys(serverState.years || {}).length === 0) {
         return { refreshed: false, why: 'the server has nothing for this farm' };

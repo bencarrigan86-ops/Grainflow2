@@ -67,7 +67,7 @@ check('what the money tables send is what the guide says can see them', () => {
   assert.deepEqual(sees('payables').sort(), who(area('Bills'), 'full', 'view').sort());
   assert.deepEqual(sees('sale_terms').sort(), ['bookkeeper', 'owner'], 'prices are owner and bookkeeper only');
   assert.deepEqual(sees('spray_jobs').sort(), who(area('Spray requests'), 'full', 'view').sort());
-  assert.deepEqual(sees('input_stock').sort(), who(area('Inputs and stock'), 'full', 'view').sort());
+  assert.deepEqual(sees('input_stock').sort(), who(area('Inputs and stock'), 'full', 'view', 'used').sort());
   assert.deepEqual(sees('freight_orders').sort(), who(area('Grain orders and freight orders'), 'full', 'view').sort());
 });
 check('who can add things is who the guide says can add and change', () => {
@@ -75,7 +75,7 @@ check('who can add things is who the guide says can add and change', () => {
   assert.deepEqual(ins.get('invoices').sort(), who(area('Invoices'), 'full').sort());
   assert.deepEqual(ins.get('payables').sort(), who(area('Bills'), 'full').sort());
   assert.deepEqual(ins.get('spray_jobs').sort(), who(area('Spray requests'), 'full').sort());
-  assert.deepEqual(ins.get('input_stock').sort(), who(area('Inputs and stock'), 'full').sort());
+  assert.deepEqual(ins.get('input_stock').sort(), who(area('Inputs and stock'), 'full', 'used').sort());
   assert.deepEqual(ins.get('storages').sort(), who(area('Storage'), 'full').sort());
   assert.deepEqual(ins.get('freight_orders').sort(), who(area('Grain orders and freight orders'), 'full').sort());
   assert.deepEqual(ins.get('movements').sort(), who(area('Loads and tickets'), 'full', 'own').sort());
@@ -141,7 +141,7 @@ check('the invite screen does not say a manager is kept from what they can do', 
 });
 check('only the owner edits the business details; a manager is not shown the bank details', () => {
   const s = read('docs/js/views/settings.js');
-  assert.ok(s.includes("const canEditBusiness = db.getRole() === 'owner';") && s.includes("const seesBank = db.getRole() !== 'manager';"));
+  assert.ok(s.includes("const canEditBusiness = db.getRole() === 'owner';") && s.includes("const seesBank = ['owner', 'bookkeeper'].includes(db.getRole());"));
   assert.ok(s.includes("${seesBank ? `<hr class=\"sep\" />") && s.includes("id=\"save-business\">Save business details</button>' : ''"));
   assert.ok(/farms_update on farms for update\s+using \(app_role\(id\) = 'owner'\)/.test(read('supabase/migrations/20260831130000_rls_policies.sql')), 'the server lets only the owner edit the farm');
   assert.ok(area('Settings').note.includes('business and bank details by the owner only'));

@@ -1,13 +1,13 @@
-import { db } from '../storage.js?v=274';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=274';
-import { num, tons, money, pct, esc } from '../fmt.js?v=274';
-import { payablesCost } from '../payables.js?v=274';
-import { openEofySheet } from './eofy.js?v=274';
-import { startProgress } from '../helpcontent.js?v=274';
-import { attentionItems } from '../attention.js?v=274';
-import { lastBackup } from '../backup.js?v=274';
-import { todayLocal } from '../fmt.js?v=274';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=274';
+import { db } from '../storage.js?v=277';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=277';
+import { num, tons, money, pct, esc } from '../fmt.js?v=277';
+import { payablesCost } from '../payables.js?v=277';
+import { openEofySheet } from './eofy.js?v=277';
+import { startProgress } from '../helpcontent.js?v=277';
+import { attentionItems } from '../attention.js?v=277';
+import { lastBackup } from '../backup.js?v=277';
+import { todayLocal } from '../fmt.js?v=277';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=277';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 

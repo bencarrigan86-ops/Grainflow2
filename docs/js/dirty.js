@@ -47,6 +47,7 @@ const TABLES = [
   'farms', 'seasons', 'commodities', 'fields', 'field_agronomy', 'storages',
   'sales', 'sale_terms', 'sale_documents', 'movements', 'movement_legs',
   'movement_photos', 'invoices', 'overheads', 'payables', 'orders', 'freight_orders', 'input_stock', 'spray_jobs', 'record_documents',
+  'farm_bank',   // the bank details: one row a farm, sent with the business details
 ];
 
 // child table -> [column holding the parent's id, parent table]
@@ -79,10 +80,11 @@ export function selectDirtyRows(rows, state, dirty) {
   }
 
   const want = Object.fromEntries(TABLES.map((t) => [t, new Set()]));   // ids of rows to send
+  let wantBank = false;
   const seasonIdOfLabel = (label) => (rows.seasons || []).find((s) => s.label === label)?.id;
 
   for (const d of list) {
-    if (d.kind === 'business') { (rows.farms || []).forEach((r) => want.farms.add(r.id)); continue; }
+    if (d.kind === 'business') { (rows.farms || []).forEach((r) => want.farms.add(r.id)); wantBank = true; continue; }
     if (d.kind === 'season') {
       const id = seasonIdOfLabel(d.id);
       if (id) want.seasons.add(id);
@@ -116,7 +118,7 @@ export function selectDirtyRows(rows, state, dirty) {
     .filter((r) => want.orders.has(r.parent_id) || want.invoices.has(r.parent_id) || want.payables.has(r.parent_id))
     .forEach((r) => want.record_documents.add(r.id));
 
-  for (const t of TABLES) out[t] = (rows[t] || []).filter((r) => want[t].has(r.id));
+  for (const t of TABLES) out[t] = t === 'farm_bank' ? (wantBank ? [...(rows.farm_bank || [])] : []) : (rows[t] || []).filter((r) => want[t].has(r.id));
 
   // A row whose season the server has never heard of cannot be inserted. A
   // season only needs sending alongside its rows when the app has not yet been
@@ -147,4 +149,13 @@ export function touchKey(t) { return `${t.kind}:${t.id ?? ''}`; }
  */
 export function isLegacyDirty(item) {
   return item?.type === 'dirty' && !item.kind;
+}
+
+/**
+ * What a role sends for a table. A farm worker's copy of the stock has the prices blanked, so a delivery in it is not
+ * theirs to send: they send only use and count entries.
+ */
+export function pushRowsFor(table, role, list) {
+  if (table === 'input_stock' && role === 'farm_worker') return list.filter((r) => r.move_type === 'use' || r.move_type === 'adjust');
+  return list;
 }

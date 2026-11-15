@@ -11,8 +11,8 @@
 // remapIds() reissues every one on import and two trial accounts never collide
 // on a primary key.
 
-import { DEFAULT_BUSINESS_DETAILS } from './import.js?v=274';
-import { APP_VERSION } from './version.js?v=274';
+import { DEFAULT_BUSINESS_DETAILS } from './import.js?v=277';
+import { APP_VERSION } from './version.js?v=277';
 
 const WANTED_KEY = 'grainflow.seedSample';
 

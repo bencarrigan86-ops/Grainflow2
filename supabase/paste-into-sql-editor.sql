@@ -964,3 +964,377 @@ $$;
 
 revoke all on function soft_delete_row(text, uuid) from public;
 grant execute on function soft_delete_row(text, uuid) to authenticated;
+
+-- ==== bank details to owner and bookkeeper only; workers see stock without prices (build 276) ====
+-- Two security fixes. Safe to run more than once.
+--
+-- 1. Bank details. They sat in the farms row, and every member of a farm can read that row, so a driver's phone held the
+--    farm's account number. They now live in farm_bank, which only the owner and the bookkeeper can read, and only the
+--    owner can write. The old columns stay (an older copy of the app still names them) but are emptied, and a trigger
+--    moves anything an older copy writes there into farm_bank.
+--
+-- 2. Inputs and stock for farm workers. A worker can now see what is on hand and record what is used and counts, with
+--    no prices. input_stock still holds the prices, so a worker reads it only through a function that blanks them, and
+--    can write only 'use' and 'adjust' entries, which carry no price.
+
+-- ---------------------------------------------------------------------------
+-- 1. farm_bank
+-- ---------------------------------------------------------------------------
+
+create table if not exists farm_bank (
+  farm_id        uuid primary key references farms(id) on delete cascade,
+  bank_name      text,
+  account_name   text,
+  bsb            text,
+  account_number text,
+  updated_at     timestamptz not null default now(),
+  updated_by     uuid default auth.uid()
+);
+
+alter table farm_bank enable row level security;
+
+drop policy if exists farm_bank_select on farm_bank;
+create policy farm_bank_select on farm_bank for select
+  using (app_role(farm_id) in ('owner', 'bookkeeper'));
+
+drop policy if exists farm_bank_insert on farm_bank;
+create policy farm_bank_insert on farm_bank for insert
+  with check (app_role(farm_id) = 'owner');
+
+drop policy if exists farm_bank_update on farm_bank;
+create policy farm_bank_update on farm_bank for update
+  using (app_role(farm_id) = 'owner')
+  with check (app_role(farm_id) = 'owner');
+
+grant select, insert, update on farm_bank to authenticated;
+
+drop trigger if exists farm_bank_set_updated_at on farm_bank;
+create trigger farm_bank_set_updated_at before update on farm_bank
+  for each row execute function set_updated_at();
+
+-- what is already there moves across
+insert into farm_bank (farm_id, bank_name, account_name, bsb, account_number)
+select id, bank_name, account_name, bsb, account_number
+  from farms
+ where bank_name is not null or account_name is not null or bsb is not null or account_number is not null
+on conflict (farm_id) do nothing;
+
+-- an older copy of the app still writes the bank details to the farms row: keep them out of it
+create or replace function farms_move_bank()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.bank_name is not null or new.account_name is not null or new.bsb is not null or new.account_number is not null then
+    insert into farm_bank (farm_id, bank_name, account_name, bsb, account_number)
+    values (new.id, new.bank_name, new.account_name, new.bsb, new.account_number)
+    on conflict (farm_id) do update
+      set bank_name = excluded.bank_name, account_name = excluded.account_name,
+          bsb = excluded.bsb, account_number = excluded.account_number;
+  end if;
+  new.bank_name := null;
+  new.account_name := null;
+  new.bsb := null;
+  new.account_number := null;
+  return new;
+end;
+$$;
+
+drop trigger if exists farms_move_bank_trg on farms;
+create trigger farms_move_bank_trg before insert or update on farms
+  for each row execute function farms_move_bank();
+
+-- empty the old columns (the trigger above does it for every row it touches; this touches them all once)
+update farms set bank_name = bank_name
+ where bank_name is not null or account_name is not null or bsb is not null or account_number is not null;
+
+-- ---------------------------------------------------------------------------
+-- 2. Inputs and stock for farm workers
+-- ---------------------------------------------------------------------------
+
+-- A worker sees the entries that carry no price (use and count). Every entry, with the prices blanked, is read
+-- through input_stock_for_worker() below.
+drop policy if exists input_stock_select on input_stock;
+create policy input_stock_select on input_stock for select
+  using ((app_role(farm_id) in ('owner', 'manager', 'bookkeeper')
+          or (app_role(farm_id) = 'farm_worker' and move_type in ('use', 'adjust')))
+         and deleted_at is null);
+
+drop policy if exists input_stock_insert on input_stock;
+create policy input_stock_insert on input_stock for insert
+  with check (app_role(farm_id) in ('owner', 'manager', 'bookkeeper')
+              or (app_role(farm_id) = 'farm_worker' and move_type in ('use', 'adjust') and unit_cost is null));
+
+drop policy if exists input_stock_update on input_stock;
+create policy input_stock_update on input_stock for update
+  using (app_role(farm_id) in ('owner', 'manager', 'bookkeeper')
+         or (app_role(farm_id) = 'farm_worker' and move_type in ('use', 'adjust')))
+  with check (app_role(farm_id) in ('owner', 'manager', 'bookkeeper')
+              or (app_role(farm_id) = 'farm_worker' and move_type in ('use', 'adjust') and unit_cost is null));
+
+-- Every entry on the farm with the prices, the supplier and the invoice number left out. Only a farm worker gets
+-- rows: everyone else reads the table itself.
+create or replace function input_stock_for_worker(p_farm_id uuid)
+returns table (
+  id uuid, farm_id uuid, season_id uuid, kind text, product text, unit text, move_type text, qty numeric,
+  unit_cost numeric, move_date date, supplier text, reference text, notes text, location text,
+  created_at timestamptz, updated_at timestamptz, created_by uuid, updated_by uuid
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select s.id, s.farm_id, s.season_id, s.kind, s.product, s.unit, s.move_type, s.qty,
+         null::numeric, s.move_date, null::text, null::text, s.notes, s.location,
+         s.created_at, s.updated_at, s.created_by, s.updated_by
+    from input_stock s
+   where s.farm_id = p_farm_id
+     and s.deleted_at is null
+     and app_role(p_farm_id) = 'farm_worker'
+$$;
+
+revoke all on function input_stock_for_worker(uuid) from public;
+grant execute on function input_stock_for_worker(uuid) to authenticated;
+
+-- ==== support tools: read-only support access, report a problem (build 277) ====
+-- Support tools. Safe to run more than once.
+--
+-- 1. Support access: the owner can give the person who looks after the app a read-only view of the farm for
+--    7 days. It switches itself off: the membership carries an expiry, and app_role() (which every policy asks)
+--    stops seeing it once the time has passed. Granting, taking away and every time support opens the farm are
+--    written to a log the owner can read.
+--
+-- 2. Report a problem: a member sends a short message with what the app knows (build, role, sync state, recent
+--    errors). Read in the Supabase table editor.
+--
+-- Support is one person's login, named once by whoever runs this (see the last statement at the foot of this file).
+
+-- ---------------------------------------------------------------------------
+-- 1. Support access
+-- ---------------------------------------------------------------------------
+
+alter table farm_users
+  add column if not exists expires_at timestamptz;
+
+-- a role of 'support' is allowed on a membership (an invitation is never for support)
+alter table farm_users drop constraint if exists farm_users_role_check;
+alter table farm_users add constraint farm_users_role_check
+  check (role in ('owner', 'manager', 'bookkeeper', 'farm_worker', 'driver', 'support'));
+
+-- every policy resolves through this: a membership past its expiry is no membership
+create or replace function app_role(p_farm uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select role
+    from farm_users
+   where farm_id = p_farm
+     and user_id = auth.uid()
+     and deleted_at is null
+     and (expires_at is null or expires_at > now())
+   limit 1
+$$;
+
+-- who the support person is: one login, set once. No client can read or write this table.
+create table if not exists support_settings (
+  user_id uuid primary key references auth.users(id) on delete cascade
+);
+alter table support_settings enable row level security;
+
+-- what happened, for the owner to read
+create table if not exists support_access_log (
+  id          uuid primary key default gen_random_uuid(),
+  farm_id     uuid not null references farms(id) on delete cascade,
+  action      text not null check (action in ('granted', 'revoked', 'opened')),
+  by_user     uuid default auth.uid(),
+  expires_at  timestamptz,
+  at          timestamptz not null default now()
+);
+create index if not exists support_access_log_farm_idx on support_access_log (farm_id, at desc);
+alter table support_access_log enable row level security;
+
+drop policy if exists support_access_log_select on support_access_log;
+create policy support_access_log_select on support_access_log for select
+  using (app_role(farm_id) = 'owner');
+
+grant select on support_access_log to authenticated;
+
+-- The owner gives support a read-only view for a number of days (7 by default, never more than 14).
+create or replace function grant_support_access(p_farm_id uuid, p_days int default 7)
+returns timestamptz
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_support uuid;
+  v_until timestamptz;
+begin
+  if auth.uid() is null or app_role(p_farm_id) is distinct from 'owner' then
+    raise exception 'only the owner can give support access';
+  end if;
+  select user_id into v_support from support_settings limit 1;
+  if v_support is null then
+    raise exception 'support access has not been set up yet';
+  end if;
+  if v_support = auth.uid() then
+    raise exception 'that is your own login';
+  end if;
+  v_until := now() + make_interval(days => greatest(1, least(coalesce(p_days, 7), 14)));
+
+  insert into farm_users (id, farm_id, user_id, role, can_write_production, expires_at, created_by)
+  values (gen_random_uuid(), p_farm_id, v_support, 'support', false, v_until, auth.uid())
+  on conflict (farm_id, user_id) do update
+    set role = 'support', expires_at = v_until, deleted_at = null, can_write_production = false;
+
+  insert into support_access_log (farm_id, action, expires_at) values (p_farm_id, 'granted', v_until);
+  return v_until;
+end;
+$$;
+
+revoke all on function grant_support_access(uuid, int) from public;
+grant execute on function grant_support_access(uuid, int) to authenticated;
+
+-- The owner takes it away early.
+create or replace function revoke_support_access(p_farm_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or app_role(p_farm_id) is distinct from 'owner' then
+    raise exception 'only the owner can take support access away';
+  end if;
+  update farm_users set deleted_at = now()
+   where farm_id = p_farm_id and role = 'support' and deleted_at is null;
+  insert into support_access_log (farm_id, action) values (p_farm_id, 'revoked');
+end;
+$$;
+
+revoke all on function revoke_support_access(uuid) from public;
+grant execute on function revoke_support_access(uuid) to authenticated;
+
+-- Until when support can look, or nothing when it cannot. The owner's Settings asks this.
+create or replace function support_access_until(p_farm_id uuid)
+returns timestamptz
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select max(expires_at)
+    from farm_users
+   where farm_id = p_farm_id and role = 'support' and deleted_at is null and expires_at > now()
+     and app_role(p_farm_id) = 'owner'
+$$;
+
+revoke all on function support_access_until(uuid) from public;
+grant execute on function support_access_until(uuid) to authenticated;
+
+-- Support opening the farm is written down.
+create or replace function log_support_open(p_farm_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if app_role(p_farm_id) = 'support' then
+    insert into support_access_log (farm_id, action, expires_at)
+    select p_farm_id, 'opened', fu.expires_at
+      from farm_users fu
+     where fu.farm_id = p_farm_id and fu.user_id = auth.uid() and fu.deleted_at is null;
+  end if;
+end;
+$$;
+
+revoke all on function log_support_open(uuid) from public;
+grant execute on function log_support_open(uuid) to authenticated;
+
+-- the people list does not show an expired support login
+create or replace function farm_members(p_farm uuid)
+returns table (
+  user_id              uuid,
+  email                text,
+  role                 text,
+  can_write_production boolean,
+  joined_at            timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public, auth
+as $$
+  select fu.user_id, u.email::text, fu.role, fu.can_write_production, fu.created_at
+    from farm_users fu
+    join auth.users u on u.id = fu.user_id
+   where fu.farm_id = p_farm
+     and fu.deleted_at is null
+     and (fu.expires_at is null or fu.expires_at > now())
+     and app_role(p_farm) in ('owner', 'manager')
+   order by fu.created_at;
+$$;
+
+-- Support can read what the farm holds, and write nothing: a read policy on each table, no insert or update policy.
+-- The bank details are not on the list.
+do $$
+declare
+  t text;
+  has_deleted boolean;
+begin
+  foreach t in array array[
+    'seasons', 'commodities', 'fields', 'field_agronomy', 'storages', 'sales', 'sale_terms', 'sale_documents',
+    'movements', 'movement_legs', 'movement_photos', 'invoices', 'overheads', 'payables', 'orders',
+    'freight_orders', 'input_stock', 'spray_jobs', 'record_documents'
+  ] loop
+    if to_regclass('public.' || t) is not null then
+      select exists (
+        select 1 from information_schema.columns
+         where table_schema = 'public' and table_name = t and column_name = 'deleted_at'
+      ) into has_deleted;
+      execute format('drop policy if exists %I on %I', 'support_read_' || t, t);
+      execute format('create policy %I on %I for select using (app_role(farm_id) = ''support''%s)',
+                     'support_read_' || t, t, case when has_deleted then ' and deleted_at is null' else '' end);
+    end if;
+  end loop;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 2. Report a problem
+-- ---------------------------------------------------------------------------
+
+create table if not exists problem_reports (
+  id         uuid primary key default gen_random_uuid(),
+  farm_id    uuid references farms(id) on delete cascade,
+  user_id    uuid default auth.uid(),
+  role       text,
+  build      text,
+  message    text,
+  details    jsonb,
+  created_at timestamptz not null default now()
+);
+alter table problem_reports enable row level security;
+
+drop policy if exists problem_reports_insert on problem_reports;
+create policy problem_reports_insert on problem_reports for insert
+  with check (user_id = auth.uid() and (farm_id is null or app_is_member(farm_id)));
+
+grant insert on problem_reports to authenticated;
+
+notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------------
+-- ONE LAST STEP, done once by whoever runs the app's support. It is not part of this file because it names a
+-- person. Run this on its own, with the email you sign in to Grainflow with:
+--
+--   insert into support_settings (user_id) select id from auth.users where email = 'you@example.com'
+--   on conflict do nothing;
+-- ---------------------------------------------------------------------------

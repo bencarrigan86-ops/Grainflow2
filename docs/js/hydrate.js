@@ -11,9 +11,9 @@
 // hydration has to produce a working state object with those parts simply
 // absent. Throwing there would mean the app only runs for owners.
 
-import { supabase } from './supabase.js?v=274';
-import { rowsToState } from './mapping.js?v=274';
-import { stampBase } from './ticketmerge.js?v=274';
+import { supabase } from './supabase.js?v=277';
+import { rowsToState } from './mapping.js?v=277';
+import { stampBase } from './ticketmerge.js?v=277';
 
 // Scoped by farm_id; the child tables hang off their parents. Everything a push writes has to be read back
 // here too (tests/hydrate.test.mjs checks it): movement_photos was missing, so photos were uploaded and then
@@ -22,15 +22,20 @@ const FARM_SCOPED = [
   'farms', 'seasons', 'commodities', 'fields', 'field_agronomy',
   'storages', 'sales', 'sale_terms', 'sale_documents', 'movements', 'movement_legs', 'movement_photos',
   'invoices', 'overheads', 'payables', 'orders', 'freight_orders', 'input_stock', 'spray_jobs', 'record_documents',
+  'farm_bank',                                // bank details: only the owner and the bookkeeper are sent a row
 ];
 
-async function fetchTable(table, farmId) {
+async function fetchTable(table, farmId, role) {
   const column = table === 'farms' ? 'id' : 'farm_id';
-  const { data, error } = await supabase
-    .from(table)
-    .select('*')
-    .eq(column, farmId)
-    .is('deleted_at', null);
+  // A farm worker is not sent the prices: stock comes through a function that blanks them. Until the database has
+  // that function the plain read is tried, which gives a worker only the entries with no price on them.
+  if (table === 'input_stock' && role === 'farm_worker') {
+    const viaFunction = await supabase.rpc('input_stock_for_worker', { p_farm_id: farmId });
+    if (!viaFunction.error) return { table, rows: viaFunction.data ?? [], denied: false };
+  }
+  let query = supabase.from(table).select('*').eq(column, farmId);
+  if (table !== 'farm_bank') query = query.is('deleted_at', null);   // the bank row has no deleted_at
+  const { data, error } = await query;
 
   if (error) {
     // Denied is an expected outcome for the restricted tables, not a fault.
@@ -44,8 +49,8 @@ async function fetchTable(table, farmId) {
  * Also returns which tables came back denied, which is useful diagnostically —
  * a driver seeing three denials is the security model working, not a bug.
  */
-export async function fetchFarmRows(farmId) {
-  const results = await Promise.all(FARM_SCOPED.map((t) => fetchTable(t, farmId)));
+export async function fetchFarmRows(farmId, role = null) {
+  const results = await Promise.all(FARM_SCOPED.map((t) => fetchTable(t, farmId, role)));
 
   const rows = {};
   const denied = [];
@@ -60,8 +65,8 @@ export async function fetchFarmRows(farmId) {
  * The farm as the app wants it: the same nested {years, businessDetails, …}
  * object storage.js has always held in memory.
  */
-export async function hydrate(farmId) {
-  const { rows, denied } = await fetchFarmRows(farmId);
+export async function hydrate(farmId, role = null) {
+  const { rows, denied } = await fetchFarmRows(farmId, role);
   const state = rowsToState(rows);
   // Each ticket remembers what it looked like when the server last agreed with it, so a
   // later send can tell which parts this device changed and which another device did.

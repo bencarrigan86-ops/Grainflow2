@@ -18,11 +18,13 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=274';
-import { openSheet } from '../ui.js?v=274';
-import { esc, num, money } from '../fmt.js?v=274';
-import { addressLinesOf } from '../address.js?v=274';
-import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=274';
+import { db } from '../storage.js?v=277';
+import { openSheet } from '../ui.js?v=277';
+import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=277';
+import { addressLinesOf } from '../address.js?v=277';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=277';
+import { signToggleHtml, wireSignToggle } from './signtoggle.js?v=277';
+import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=277';
 
 const DASH = '—';
 
@@ -73,7 +75,7 @@ const term = (label, value) => {
     : '';
 };
 
-export function contractDocHTML(sale, business, commodity) {
+export function contractDocHTML(sale, business, commodity, signed = null) {
   const unit = commodity?.unit === 'bale' ? 'bales' : 't';
   const perUnit = commodity?.unit === 'bale' ? 'bale' : 'tonne';
 
@@ -150,9 +152,10 @@ export function contractDocHTML(sale, business, commodity) {
       <div class="invoice-parties" style="margin-top:18px">
         <div class="invoice-block">
           <h3>Seller</h3>
+          ${signed && canSign(signed.sig) ? signedBlockHTML(signed.sig, { date: signed.date }) : `
           <div class="line" style="margin-top:22px">Signed ............................................</div>
           <div class="line" style="margin-top:12px">Name ..............................................</div>
-          <div class="line" style="margin-top:12px">Date ...............................................</div>
+          <div class="line" style="margin-top:12px">Date ...............................................</div>`}
         </div>
         <div class="invoice-block">
           <h3>Buyer</h3>
@@ -191,11 +194,15 @@ export function openContractDocSheet(sale) {
           <h2><span class="dot input"></span>Before you send this</h2>
           <div class="hint">Still to fill in: ${esc(gaps.join('; '))}.</div>
         </div>` : ''}
-      ${contractDocHTML(sale, business, commodity)}
+      <div class="doc-actions">${signToggleHtml('sign-doc', 'Sign it as the seller with my signature')}</div>
+      <div id="doc-holder">${contractDocHTML(sale, business, commodity)}</div>
       <div class="doc-actions">
         <button class="btn" id="print-contract" style="margin-top:14px">Print / Save as PDF</button>
       </div>
     `;
+    wireSignToggle(root, 'sign-doc', (sig) => {
+      root.querySelector('#doc-holder').innerHTML = contractDocHTML(sale, business, commodity, sig ? { sig, date: dmy(todayLocal()) } : null);
+    });
     root.querySelector('#print-contract').addEventListener('click', () => window.print());
   });
 }

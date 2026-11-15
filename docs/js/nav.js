@@ -52,6 +52,8 @@ export const TABS_BY_ROLE = {
   // what it is worth.
   farm_worker: ['production', 'movement', 'storage', 'reports'],
   driver:      ['movement'],
+  // support: the person the owner has let look at the farm, read only. Sees what an owner sees, writes nothing.
+  support:     ['position', 'production', 'sales', 'movement', 'storage', 'reports'],
 };
 
 /**
@@ -67,9 +69,10 @@ export const OFF_BAR_BY_ROLE = {
   bookkeeper:  ['settings', 'account', 'help'],
   farm_worker: ['account', 'help'],
   driver:      ['account', 'help'],
+  support:     ['settings', 'account', 'help'],
 };
 
-const known = (role) => (ROLES.includes(role) ? role : 'driver');
+const known = (role) => (ROLES.includes(role) || role === 'support' ? role : 'driver');
 
 /** Tab ids for the bar, in order. Unknown roles get the narrowest bar there is. */
 export function tabsForRole(role) {
