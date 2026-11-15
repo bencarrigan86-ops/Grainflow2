@@ -1,17 +1,18 @@
-import { db } from '../storage.js?v=287';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=287';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=287';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=287';
-import { describeMerge } from '../merge.js?v=287';
-import { renderRelatedMovements } from './movements.js?v=287';
-import { canSeeYield } from '../nav.js?v=287';
-import { wireJumps } from '../jump.js?v=287';
-import { openMapSheet } from './farmmap.js?v=287';
-import { openInputsSheet } from './inputs.js?v=287';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=287';
-import { stockLevels } from '../inputs.js?v=287';
-import { fieldHistory, rotationText, repeatCrops } from '../fieldhistory.js?v=287';
-import { openRotationSheet } from './rotation.js?v=287';
+import { db } from '../storage.js?v=288';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=288';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=288';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=288';
+import { describeMerge } from '../merge.js?v=288';
+import { renderRelatedMovements } from './movements.js?v=288';
+import { canSeeYield } from '../nav.js?v=288';
+import { wireJumps } from '../jump.js?v=288';
+import { openMapSheet } from './farmmap.js?v=288';
+import { openInputsSheet } from './inputs.js?v=288';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=288';
+import { stockLevels } from '../inputs.js?v=288';
+import { fieldHistory, rotationText, repeatCrops } from '../fieldhistory.js?v=288';
+import { openRotationSheet } from './rotation.js?v=288';
+import { openAveragesSheet } from './averages.js?v=288';
 
 let unsub = null;
 
@@ -51,6 +52,7 @@ function paint(root) {
     <div class="view">
       ${fields.length ? `<button type="button" class="btn secondary" id="open-map" style="margin-bottom:12px">Farm map${fields.some((f) => f.boundary) ? ` &middot; ${fields.filter((f) => f.boundary).length} of ${fields.length} paddocks mapped` : ' &middot; add your paddock outlines'}</button>` : ''}
       ${fields.length ? '<button type="button" class="btn secondary" id="open-rotation" style="margin-bottom:12px">Rotation and yield history &middot; every paddock, every season</button>' : ''}
+      ${showYield ? '<button type="button" class="btn secondary" id="open-averages" style="margin-bottom:12px">Averages by commodity &middot; yield and price, every season</button>' : ''}
       ${canSeeInputs ? `<button type="button" class="btn secondary" id="open-inputs" style="margin-bottom:12px">Inputs and stock${inputProducts ? ` &middot; ${inputProducts} product${inputProducts === 1 ? '' : 's'} in stock` : ' &middot; seed, fertiliser, fuel, chemical'}</button>` : ''}
       ${sprayAllowed && fields.length ? `<button type="button" class="btn secondary" id="open-spray" style="margin-bottom:12px">Spray requests${sprayOpen ? ` &middot; ${sprayOpen} open` : ' &middot; send a job to a contractor'}</button>` : ''}
       ${rollup.length === 0 ? '' : `
@@ -98,6 +100,7 @@ function paint(root) {
   root.querySelector('#add-field').addEventListener('click', () => openFieldSheet(null));
   root.querySelector('#open-inputs')?.addEventListener('click', () => openInputsSheet());
   root.querySelector('#open-rotation')?.addEventListener('click', () => openRotationSheet());
+  root.querySelector('#open-averages')?.addEventListener('click', () => openAveragesSheet());
   root.querySelector('#open-map')?.addEventListener('click', () => openMapSheet({
     onOpenField: openFieldSheet,
     onSpray: canSpray(db.getRole()) ? (ids) => openSprayFormSheet(null, { ids }) : undefined,
