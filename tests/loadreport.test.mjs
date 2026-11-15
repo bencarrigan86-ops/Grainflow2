@@ -106,7 +106,7 @@ check('the destination can be turned off on the report and on the slip', () => {
   const off = text(buildLoadReportPdf(rows, { showDestination: false }));
   assert.ok(!off.includes('(Destination)') && !off.includes('(Newcastle terminal)'));
   const slip = text(buildLoadTicketPdf(rows.find((r) => r.id === 'b'), { showDestination: false }));
-  assert.ok(!slip.includes('(Destination)') && !slip.includes('(Newcastle terminal)'));
+  assert.ok(!slip.includes('(DESTINATION)') && !slip.includes('(Newcastle terminal)'));
 });
 check('with the origin off, where a load came from is not on the report', () => {
   const pdf = text(buildLoadReportPdf(loadReportRows(moves, ctx), { showOrigin: false }));
@@ -127,20 +127,51 @@ console.log('\n=== one load ===');
 check('a single load makes a slip with the same details, and the origin can be left off', () => {
   const row = loadReportRows(moves, ctx).find((r) => r.id === 'b');
   const on = text(buildLoadTicketPdf(row, { business: 'Carrigan Farming', showOrigin: true }));
-  assert.ok(on.includes('(LOAD TICKET)') && on.includes('(Ticket #2)') && on.includes('(08:05)') && on.includes('(ABC123)') && on.includes('(Sam)') && on.includes('(Graincorp #C-77)') && on.includes('(45.00 t)') && on.includes('(15.00 t)') && on.includes('(Gross weight)') && on.includes('(Tare weight)') && on.includes('(Net weight)') && on.includes('(30.00 t  \\(estimate\\))') && on.includes('(Newcastle terminal)'));
-  assert.ok(on.includes('(From)') && on.includes('(River Block)'));
+  assert.ok(on.includes('(LOAD TICKET)') && on.includes('(#2)') && on.includes('(08:05)') && on.includes('(ABC123)') && on.includes('(Sam)') && on.includes('(Graincorp #C-77)') && on.includes('(45.00 t)') && on.includes('(15.00 t)') && on.includes('(30.00 t)') && on.includes('(GROSS)') && on.includes('(TARE)') && on.includes('(NET)') && on.includes('(estimate)') && on.includes('(DESTINATION)') && on.includes('(Newcastle terminal)'));
+  assert.ok(on.includes('(FROM)') && on.includes('(River Block)'));
   const off = text(buildLoadTicketPdf(row, { showOrigin: false }));
-  assert.ok(!off.includes('(From)') && !off.includes('(River Block)'));
+  assert.ok(!off.includes('(FROM)') && !off.includes('(River Block)') && off.includes('(GOING TO)'));
   assert.ok(on.includes('/MediaBox [0 0 595.28 841.89]'), 'portrait A4');
 });
 
+check('grade and what was tested on the load are on the slip and the report, and the results can be hidden', () => {
+  const tested = { ...moves[1], grade: 'APH1', proteinPct: 11.8, moisturePct: 11.2, testWeightKgHl: 79.5, fallingNumber: 410, retentionPct: 82.4 };
+  const rows = loadReportRows([tested, moves[0]], ctx);
+  const r = rows.find((x) => x.id === 'b');
+  assert.equal(r.grade, 'APH1');
+  assert.deepEqual(r.quality.map((q) => `${q.label} ${q.text}`), ['Protein 11.8%', 'Moisture 11.2%', 'Test weight 79.5 kg/hL', 'Falling no. 410 s', 'Retention 82.4%']);
+  assert.deepEqual(rows.find((x) => x.id === 'a').quality, [], 'nothing for a load not tested');
+  const slip = text(buildLoadTicketPdf(r, {}));
+  assert.ok(slip.includes('(GRADE)') && slip.includes('(APH1)') && slip.includes('(QUALITY TESTED ON THIS LOAD)') && slip.includes('(11.8%)') && slip.includes('(79.5 kg/hL)') && slip.includes('(82.4%)'));
+  const hidden = text(buildLoadTicketPdf(r, { showQuality: false }));
+  assert.ok(hidden.includes('(APH1)') && !hidden.includes('QUALITY TESTED') && !hidden.includes('(11.8%)'), 'grade stays, results go');
+  assert.ok(!text(buildLoadTicketPdf(rows.find((x) => x.id === 'a'), {})).includes('QUALITY TESTED'), 'no box when nothing was tested');
+  const rep = text(buildLoadReportPdf(rows, {}));
+  assert.ok(rep.includes('(Grade)') && rep.includes('Tested:') && rep.includes('Protein 11.8%'));
+  const repHidden = text(buildLoadReportPdf(rows, { showQuality: false }));
+  assert.ok(repHidden.includes('(Grade)') && !repHidden.includes('Tested:'));
+  const noGrade = text(buildLoadReportPdf(loadReportRows([moves[0]], ctx), {}));
+  assert.ok(!noGrade.includes('(Grade)'), 'no grade column when no load has one');
+  const m2 = read('docs/js/views/movements.js'); const v = read('docs/js/views/loadreport.js');
+  assert.ok(m2.includes('id="tk-quality"') && m2.includes('saveQuality(e.target.checked)') && v.includes('id="lr-quality"') && v.includes('showQuality: d.showQuality'), 'a tick for the results in both places');
+});
+check('the slip and the report carry the trading name and the NGR', () => {
+  const row = loadReportRows(moves, ctx).find((r) => r.id === 'b');
+  const slip = text(buildLoadTicketPdf(row, { business: 'Carrigan Farming Pty Ltd', ngr: '12345678' }));
+  assert.ok(slip.includes('(Carrigan Farming Pty Ltd)') && slip.includes('(NGR 12345678)'));
+  assert.ok(!text(buildLoadTicketPdf(row, { business: 'Carrigan Farming Pty Ltd' })).includes('(NGR'), 'no NGR line when none is set');
+  const rep = text(buildLoadReportPdf(loadReportRows(moves, ctx), { business: 'Carrigan Farming Pty Ltd', ngr: '12345678' }));
+  assert.ok(rep.includes('NGR 12345678'));
+  const v = read('docs/js/views/loadreport.js');
+  assert.ok(v.includes("ngr: business.ngr || ''"), 'taken from the business details');
+});
 check('the slip has a comments box with the load\'s notes, and it can be turned off', () => {
   const row = { ...loadReportRows(moves, ctx).find((r) => r.id === 'b'), notes: 'Call the weighbridge before arriving' };
   const on = text(buildLoadTicketPdf(row, { showComments: true }));
-  assert.ok(on.includes('(Comments)') && on.includes('(Call the weighbridge before arriving)'));
-  assert.ok(text(buildLoadTicketPdf({ ...row, notes: '' }, {})).includes('(Comments)'), 'room to write even with no notes');
+  assert.ok(on.includes('(COMMENTS)') && on.includes('(Call the weighbridge before arriving)'));
+  assert.ok(text(buildLoadTicketPdf({ ...row, notes: '' }, {})).includes('(COMMENTS)'), 'room to write even with no notes');
   const off = text(buildLoadTicketPdf(row, { showComments: false }));
-  assert.ok(!off.includes('(Comments)') && !off.includes('weighbridge'));
+  assert.ok(!off.includes('(COMMENTS)') && !off.includes('weighbridge'));
   assert.equal(loadReportRows([{ ...moves[0], notes: ' hi ' }], ctx)[0].notes, 'hi');
 });
 

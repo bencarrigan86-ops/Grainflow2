@@ -3,8 +3,9 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=260';
-import { dmy } from './fmt.js?v=260';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=261';
+import { dmy } from './fmt.js?v=261';
+import { SPECS, specOf } from './outload.js?v=261';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -25,6 +26,16 @@ export function nowTime(d = new Date()) {
 export function siteOf(sale) {
   if (!sale) return '';
   return String(sale.location || sale.pricingPoint || sale.buyer || '').trim();
+}
+
+/** What was tested on a load, as label and text pairs (protein 11.8%, test weight 79.5 kg/hL...); nothing for what was not recorded. */
+export function testedOn(m) {
+  const sp = specOf(m);
+  return SPECS.filter(({ key }) => sp[key] !== null).map(({ key, label, unit, dp }) => ({
+    key,
+    label: key === 'fallingNumber' ? 'Falling no.' : label,
+    text: `${Number(sp[key].toFixed(dp))}${unit === '%' ? '%' : ` ${unit}`}`,
+  }));
 }
 
 /** What a paddock, silo or contract is called on the report. */
@@ -66,6 +77,8 @@ export function loadReportRows(movements, ctx, { from = '', to = '', commodityId
       // what was typed on the load, else where its contract delivers to
       destination: String(m.destination || '').trim() || [...new Set((m.tos || []).filter((t) => t.type === 'sale').map((t) => siteOf((ctx.sales || []).find((s) => s.id === t.id))).filter(Boolean))].join(', '),
       notes: String(m.notes || '').trim(),
+      grade: String(m.grade || '').trim(),
+      quality: testedOn(m),
       from: (m.froms || []).map((f) => endName(f, ctx)).filter(Boolean).join(', '),
       tons: Number(m.tons) || 0,                       // the net load
       gross: m.grossWeight === null || m.grossWeight === undefined || m.grossWeight === '' ? null : Number(m.grossWeight),
@@ -100,14 +113,15 @@ const PAGE = { width: 841.89, height: 595.28 };   // A4 landscape
 const MARGIN = 36;
 
 /** The columns, left to right, with their widths; the going-to column takes up the slack. */
-export function reportColumns({ showOrigin = true, showCommodity = true, showDestination = false, showGrossTare = true } = {}) {
+export function reportColumns({ showOrigin = true, showCommodity = true, showDestination = false, showGrossTare = true, showGrade = false } = {}) {
   const cols = [
     { key: 'date', head: 'Date', w: 56 },
     { key: 'time', head: 'Time', w: 34 },
     { key: 'ticketNo', head: 'Ticket', w: 40 },
-    { key: 'truck', head: 'Truck', w: 62 },
-    { key: 'driver', head: 'Driver', w: 74 },
-    ...(showCommodity ? [{ key: 'commodity', head: 'Commodity', w: 56 }] : []),
+    { key: 'truck', head: 'Truck', w: 58 },
+    { key: 'driver', head: 'Driver', w: 66 },
+    ...(showCommodity ? [{ key: 'commodity', head: 'Commodity', w: 52 }] : []),
+    ...(showGrade ? [{ key: 'grade', head: 'Grade', w: 36 }] : []),
     { key: 'goingTo', head: 'Contract / going to', w: 0 },
     ...(showDestination ? [{ key: 'destination', head: 'Destination', w: 90 }] : []),
     ...(showGrossTare ? [{ key: 'gross', head: 'Gross (t)', w: 48, right: true }, { key: 'tare', head: 'Tare (t)', w: 46, right: true }] : []),
@@ -122,9 +136,9 @@ export function reportColumns({ showOrigin = true, showCommodity = true, showDes
 }
 
 /** The report as a landscape A4 PDF, as many pages as the loads need. */
-export function buildLoadReportPdf(rows, { title = 'Load report', business = '', from = '', to = '', showOrigin = true, showDestination = true, madeAt = '' } = {}) {
+export function buildLoadReportPdf(rows, { title = 'Load report', business = '', ngr = '', from = '', to = '', showOrigin = true, showDestination = true, showQuality = true, madeAt = '' } = {}) {
   const pdf = new Pdf({ width: PAGE.width, height: PAGE.height });
-  const cols = reportColumns({ showOrigin, showCommodity: new Set(rows.map((r) => r.commodity).filter(Boolean)).size > 0, showDestination: showDestination && rows.some((r) => r.destination), showGrossTare: rows.some((r) => r.gross !== null || r.tare !== null) });
+  const cols = reportColumns({ showOrigin, showCommodity: new Set(rows.map((r) => r.commodity).filter(Boolean)).size > 0, showDestination: showDestination && rows.some((r) => r.destination), showGrossTare: rows.some((r) => r.gross !== null || r.tare !== null), showGrade: rows.some((r) => r.grade) });
   const totals = loadReportTotals(rows);
   const ROW = 17; const BOTTOM = PAGE.height - 40;
   const cell = (c, r) => {
@@ -138,7 +152,7 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
   const header = (page) => {
     pdf.text(MARGIN, 30, title.toUpperCase(), { size: 18, bold: true });
     pdf.text(PAGE.width - MARGIN, 36, `${totals.loads} load${totals.loads === 1 ? '' : 's'}, ${plain(totals.tons)} t`, { size: 11, bold: true, align: 'right' });
-    pdf.text(MARGIN, 56, [business, rangeText(from, to)].filter(Boolean).join('   ·   '), { size: 9.5, gray: 0.2 });
+    pdf.text(MARGIN, 56, [business, ngr ? `NGR ${ngr}` : '', rangeText(from, to)].filter(Boolean).join('   ·   '), { size: 9.5, gray: 0.2 });
     let y = 80;
     pdf.rect(MARGIN, y, PAGE.width - 2 * MARGIN, 18, { stroke: null, fill: 0.88 });
     for (const c of cols) pdf.text(c.right ? c.x + c.w - 4 : c.x + 4, y + 5, c.head, { size: 8.5, bold: true, align: c.right ? 'right' : 'left' });
@@ -149,13 +163,17 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
 
   let page = 1; let y = header(page); let n = 0;
   for (const r of rows) {
-    if (y + ROW > BOTTOM) { pdf.addPage(); page += 1; y = header(page); n = 0; }
-    if (n % 2) pdf.rect(MARGIN, y, PAGE.width - 2 * MARGIN, ROW, { stroke: null, fill: 0.96 });
+    // a load that was tested has its results on a line of their own under it
+    const qline = showQuality && r.quality?.length ? clipText(`Tested:  ${r.quality.map((q) => `${q.label} ${q.text}`).join('   ·   ')}`, PAGE.width - 2 * MARGIN - 8, 7.5) : '';
+    const rowH = qline ? ROW + 10 : ROW;
+    if (y + rowH > BOTTOM) { pdf.addPage(); page += 1; y = header(page); n = 0; }
+    if (n % 2) pdf.rect(MARGIN, y, PAGE.width - 2 * MARGIN, rowH, { stroke: null, fill: 0.96 });
     for (const c of cols) {
       const s = clipText(cell(c, r), c.w - 8, 9, false);
       pdf.text(c.right ? c.x + c.w - 4 : c.x + 4, y + 4.5, s, { size: 9, align: c.right ? 'right' : 'left' });
     }
-    y += ROW; n += 1;
+    if (qline) pdf.text(MARGIN + 4, y + ROW - 3, qline, { size: 7.5, gray: 0.4 });
+    y += rowH; n += 1;
   }
   if (!rows.length) pdf.text(MARGIN + 4, y + 5, 'No loads match.', { size: 10, gray: 0.4 });
   else {
@@ -171,47 +189,108 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
 }
 
 /**
- * One load on a page of its own, to send with the truck or to a buyer: the same details as a line of the report,
- * laid out as a slip. Portrait A4.
+ * One load on a page of its own, to send with the truck or to a buyer. A coloured heading with the ticket number, the
+ * details in cards, where it came from and where it is going, the weights (the net picked out), and a ruled box for
+ * comments. Portrait A4.
  */
-export function buildLoadTicketPdf(row, { business = '', showOrigin = true, showDestination = true, showComments = true, madeAt = '' } = {}) {
+export function buildLoadTicketPdf(row, { business = '', ngr = '', showOrigin = true, showDestination = true, showComments = true, showQuality = true, madeAt = '' } = {}) {
   const pdf = new Pdf();
-  const W = 595.28; const L = 48; const R = W - 48;
-  pdf.text(L, 48, 'LOAD TICKET', { size: 20, bold: true });
-  if (row.ticketNo !== '') pdf.text(R, 52, `Ticket #${row.ticketNo}`, { size: 14, bold: true, align: 'right' });
-  if (business) pdf.text(L, 76, business, { size: 10.5, gray: 0.2 });
-  pdf.line(L, 94, R, 94, { width: 1 });
-  const lines = [
-    ['Date', row.date ? dmy(row.date) : ''],
-    ['Time', row.time],
-    ['Truck', row.truck],
-    ['Driver', row.driver],
-    ['Commodity', row.commodity],
-    ['Contract / going to', row.goingTo],
-    ...(showDestination && row.destination ? [['Destination', row.destination]] : []),
-    ['Gross weight', row.gross === null ? '' : `${plain(row.gross)} t`],
-    ['Tare weight', row.tare === null ? '' : `${plain(row.tare)} t`],
-    ['Net weight', row.tons ? `${plain(row.tons)} t  (${row.final ? 'final' : 'estimate'})` : ''],
-    ...(showOrigin ? [['From', row.from]] : []),
-  ];
-  let y = 112; let n = 0;
-  for (const [label, value] of lines) {
-    if (n % 2 === 0) pdf.rect(L - 8, y - 6, R - L + 16, 34, { stroke: null, fill: 0.95 });
-    pdf.text(L, y + 2, label, { size: 9, gray: 0.35 });
-    pdf.text(L + 170, y, clipText(value || '-', R - L - 170, 14, true), { size: 14, bold: true });
-    y += 34; n += 1;
+  const W = 595.28; const L = 40; const R = W - 40; const CW = R - L;
+  const GREEN = [0.12, 0.37, 0.23]; const WHITE = 1; const CARD = 0.955; const DIM = 0.42;
+
+  // heading band
+  pdf.rect(0, 0, W, 96, { stroke: null, fill: GREEN });
+  pdf.text(L, 30, 'LOAD TICKET', { size: 22, bold: true, gray: WHITE });
+  // the trading name and the grower's NGR
+  if (business) pdf.text(L, 58, clipText(business, CW * 0.6, 12, true), { size: 12, bold: true, gray: 0.95 });
+  if (ngr) pdf.text(L, 75, `NGR ${ngr}`, { size: 9.5, gray: 0.85 });
+  if (row.ticketNo !== '') {
+    pdf.text(R, 24, 'TICKET', { size: 8, bold: true, gray: 0.85, align: 'right' });
+    pdf.text(R, 36, `#${row.ticketNo}`, { size: 28, bold: true, gray: WHITE, align: 'right' });
   }
-  // comments: what was noted on the load, and room to write more
+
+  // a labelled card: the label small and grey, the value large
+  const card = (x, y, w, h, label, value, { size = 15, fill = CARD, ink = 0, labelInk = DIM } = {}) => {
+    pdf.rect(x, y, w, h, { stroke: null, fill });
+    pdf.text(x + 12, y + 10, label, { size: 7.5, bold: true, gray: labelInk });
+    pdf.text(x + 12, y + 26, clipText(value || '-', w - 24, size, true), { size, bold: true, gray: ink });
+  };
+  const GAP = 12;
+  let y = 116;
+
+  // when, and what, with its grade
+  const quarter = (CW - 3 * GAP) / 4;
+  card(L, y, quarter, 56, 'DATE', row.date ? dmy(row.date) : '', { size: 14 });
+  card(L + quarter + GAP, y, quarter, 56, 'TIME', row.time, { size: 14 });
+  card(L + 2 * (quarter + GAP), y, quarter, 56, 'COMMODITY', row.commodity, { size: 14 });
+  card(L + 3 * (quarter + GAP), y, quarter, 56, 'GRADE', row.grade, { size: 14 });
+  y += 56 + GAP;
+
+  // who
+  const half = (CW - GAP) / 2;
+  card(L, y, half, 56, 'TRUCK', row.truck);
+  card(L + half + GAP, y, half, 56, 'DRIVER', row.driver);
+  y += 56 + GAP + 6;
+
+  // where: from, an arrow, then the contract and the destination
+  const fromW = showOrigin ? (CW - 34) * 0.42 : 0;
+  const toX = showOrigin ? L + fromW + 34 : L;
+  const toW = R - toX;
+  const routeH = 78;
+  if (showOrigin) {
+    card(L, y, fromW, routeH, 'FROM', row.from);
+    const ay = y + routeH / 2;
+    pdf.line(L + fromW + 6, ay, L + fromW + 26, ay, { width: 2, gray: GREEN });
+    pdf.polyline([[L + fromW + 20, ay - 6], [L + fromW + 27, ay], [L + fromW + 20, ay + 6]], { width: 2, gray: GREEN });
+  }
+  pdf.rect(toX, y, toW, routeH, { stroke: null, fill: CARD });
+  pdf.text(toX + 12, y + 10, 'GOING TO', { size: 7.5, bold: true, gray: DIM });
+  pdf.text(toX + 12, y + 26, clipText(row.goingTo || '-', toW - 24, 15, true), { size: 15, bold: true });
+  if (showDestination && row.destination) {
+    pdf.text(toX + 12, y + 50, 'DESTINATION', { size: 7.5, bold: true, gray: DIM });
+    pdf.text(toX + 12, y + 61, clipText(row.destination, toW - 24, 11, true), { size: 11, bold: true, gray: GREEN });
+  }
+  y += routeH + GAP + 6;
+
+  // weights: gross, tare and the net picked out
+  const w3 = (CW - 2 * GAP) / 3;
+  const weight = (v) => (v === null || v === undefined ? '' : `${plain(v)} t`);
+  card(L, y, w3, 70, 'GROSS', weight(row.gross), { size: 20 });
+  card(L + w3 + GAP, y, w3, 70, 'TARE', weight(row.tare), { size: 20 });
+  card(L + 2 * (w3 + GAP), y, w3, 70, 'NET', row.tons ? weight(row.tons) : '', { size: 20, fill: GREEN, ink: WHITE, labelInk: 0.85 });
+  if (row.tons) pdf.text(L + 2 * (w3 + GAP) + 12, y + 54, row.final ? 'final weight' : 'estimate', { size: 8, gray: 0.9 });
+  y += 70 + GAP + 10;
+
+  // what was tested on the load, when anything was
+  if (showQuality && row.quality?.length) {
+    const n = row.quality.length; const per = Math.min(4, n); const rowsQ = Math.ceil(n / per);
+    const qh = 22 + rowsQ * 34;
+    pdf.rect(L, y, CW, qh, { stroke: null, fill: CARD });
+    pdf.text(L + 12, y + 10, 'QUALITY TESTED ON THIS LOAD', { size: 7.5, bold: true, gray: DIM });
+    const cw = (CW - 24) / per;
+    row.quality.forEach((q, i) => {
+      const qx = L + 12 + (i % per) * cw; const qy = y + 24 + Math.floor(i / per) * 34;
+      pdf.text(qx, qy, q.label.toUpperCase(), { size: 7, bold: true, gray: DIM });
+      pdf.text(qx, qy + 10, clipText(q.text, cw - 8, 13, true), { size: 13, bold: true });
+    });
+    y += qh + GAP + 10;
+  }
+
+  // comments: what was noted on the load, with ruled lines to write more
   if (showComments) {
-    y += 6;
-    pdf.text(L, y, 'Comments', { size: 9, gray: 0.35 });
+    pdf.text(L, y, 'COMMENTS', { size: 7.5, bold: true, gray: DIM });
     y += 14;
-    pdf.rect(L - 8, y, R - L + 16, 130, { stroke: 0.6, fill: null, lineWidth: 0.8 });
+    const boxH = 168;
+    pdf.rect(L, y, CW, boxH, { stroke: 0.7, fill: null, lineWidth: 0.8 });
+    for (let ly = y + 36; ly < y + boxH - 6; ly += 26) pdf.line(L + 10, ly, R - 10, ly, { width: 0.4, gray: 0.8 });
     if (row.notes) {
-      let ny = y + 8;
-      for (const line of wrapText(row.notes, R - L - 8, 11).slice(0, 8)) { pdf.text(L, ny, line, { size: 11 }); ny += 14; }
+      let ny = y + 22;
+      for (const line of wrapText(row.notes, CW - 24, 11).slice(0, 5)) { pdf.text(L + 12, ny, line, { size: 11 }); ny += 26; }
     }
   }
-  pdf.text(L, 806, `Made in Grainflow${madeAt ? ` ${madeAt}` : ''}`, { size: 7.5, gray: 0.5 });
+
+  // foot
+  pdf.line(L, 800, R, 800, { width: 0.5, gray: 0.8 });
+  pdf.text(L, 809, `Made in Grainflow${madeAt ? ` ${madeAt}` : ''}`, { size: 7.5, gray: 0.5 });
   return pdf.bytes();
 }

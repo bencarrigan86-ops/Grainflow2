@@ -1,10 +1,10 @@
 // The load report sheet: pick the dates (and a commodity or contract if wanted), then send the list of loads on as a PDF.
 
-import { db } from '../storage.js?v=260';
-import { num, todayLocal, dmy } from '../fmt.js?v=260';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=260';
-import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=260';
-import { loadReportRows, loadReportTotals, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=260';
+import { db } from '../storage.js?v=261';
+import { num, todayLocal, dmy } from '../fmt.js?v=261';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=261';
+import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=261';
+import { loadReportRows, loadReportTotals, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=261';
 
 // what was chosen last time, remembered on this device
 const KEY = 'grainflow.loadreport';
@@ -14,18 +14,20 @@ const save = (v) => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catc
 /** The show-where-it-came-from choice, shared by the report and a single ticket. */
 export const readOrigin = () => read().showOrigin !== false;
 export const saveOrigin = (showOrigin) => save({ ...read(), showOrigin });
+export const readQuality = () => read().showQuality !== false;
+export const saveQuality = (showQuality) => save({ ...read(), showQuality });
 export const readComments = () => read().showComments !== false;
 export const saveComments = (showComments) => save({ ...read(), showComments });
 export const readDestination = () => read().showDestination !== false;
 export const saveDestination = (showDestination) => save({ ...read(), showDestination });
 
 /** One saved load, made into a slip and sent on (or downloaded). */
-export async function sendLoadTicket(m, { showOrigin = true, showDestination = true, showComments = true, download = false } = {}) {
+export async function sendLoadTicket(m, { showOrigin = true, showDestination = true, showComments = true, showQuality = true, download = false } = {}) {
   const { fields, storages, sales, commodities } = db.get();
   const row = loadReportRows([m], { fields, storages, sales, commodities })[0];
   const business = db.getBusinessDetails();
   const name = business.entityName || business.farmName || '';
-  const bytes = buildLoadTicketPdf(row, { business: name, showOrigin, showDestination, showComments, madeAt: `${dmy(todayLocal())} ${nowTime()}` });
+  const bytes = buildLoadTicketPdf(row, { business: name, ngr: business.ngr || '', showOrigin, showDestination, showComments, showQuality, madeAt: `${dmy(todayLocal())} ${nowTime()}` });
   const fileName = safeFileName(`Load ticket ${row.ticketNo === '' ? '' : `${row.ticketNo} `}${dmy(row.date)}`);
   if (download) { downloadFile(bytes, fileName); toast('Downloaded'); return; }
   const subject = `Load ticket${row.ticketNo === '' ? '' : ` #${row.ticketNo}`} ${dmy(row.date)}${name ? ` - ${name}` : ''}`;
@@ -42,7 +44,7 @@ export function openLoadReportSheet() {
   const { fields, storages, sales, commodities, movements } = db.get();
   const ctx = { fields, storages, sales, commodities };
   const saved = read();
-  const d = { from: todayLocal(), to: todayLocal(), commodityId: '', saleId: '', showOrigin: saved.showOrigin !== false, showDestination: saved.showDestination !== false, email: saved.email || '' };
+  const d = { from: todayLocal(), to: todayLocal(), commodityId: '', saleId: '', showOrigin: saved.showOrigin !== false, showDestination: saved.showDestination !== false, showQuality: saved.showQuality !== false, email: saved.email || '' };
   const inUse = commodities.filter((c) => movements.some((m) => m.commodityId === c.id));
   const toSales = sales.filter((s) => movements.some((m) => (m.tos || []).some((t) => t.type === 'sale' && t.id === s.id)));
   const saleLabel = (s) => [commodities.find((c) => c.id === s.commodityId)?.name, s.buyer, s.contractNo ? `#${s.contractNo}` : ''].filter(Boolean).join(' · ') || 'Contract';
@@ -58,6 +60,7 @@ export function openLoadReportSheet() {
       ${toSales.length ? field({ label: 'Contract', id: 'lr-sale', type: 'select', value: d.saleId, options: [{ value: '', label: 'All contracts and silos' }, ...toSales.map((s) => ({ value: s.id, label: saleLabel(s) }))] }) : ''}
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:4px 0 10px"><input type="checkbox" id="lr-origin" ${d.showOrigin ? 'checked' : ''} style="width:18px;height:18px" /> Show where each load came from (storage or paddock)</label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="lr-dest" ${d.showDestination ? 'checked' : ''} style="width:18px;height:18px" /> Show the destination when a load is going to a contract</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="lr-quality" ${d.showQuality ? 'checked' : ''} style="width:18px;height:18px" /> Show quality results where a load was tested</label>
       ${field({ label: 'Send to (email, optional)', id: 'lr-email', value: d.email, placeholder: 'name@example.com' })}
       <div class="row"><span class="label">On the report</span><span class="value" id="lr-count">-</span></div>
       <button class="btn" id="lr-send" type="button" style="margin-top:10px">Send as PDF</button>
@@ -68,6 +71,7 @@ export function openLoadReportSheet() {
       d.commodityId = getVal(root, 'lr-commodity') || ''; d.saleId = getVal(root, 'lr-sale') || '';
       d.showOrigin = root.querySelector('#lr-origin').checked;
       d.showDestination = root.querySelector('#lr-dest').checked;
+      d.showQuality = root.querySelector('#lr-quality').checked;
       d.email = (getVal(root, 'lr-email') || '').trim();
     };
     const rows = () => loadReportRows(movements, ctx, d);
@@ -83,12 +87,12 @@ export function openLoadReportSheet() {
       collect();
       const r = rows();
       if (!r.length) { notify('No loads fall in those dates. Widen the dates or clear the commodity or contract.'); return; }
-      save({ showOrigin: d.showOrigin, showDestination: d.showDestination, email: d.email });
+      save({ showOrigin: d.showOrigin, showDestination: d.showDestination, showQuality: d.showQuality, email: d.email });
       const business = db.getBusinessDetails();
       const btns = [...root.querySelectorAll('button')]; btns.forEach((b) => { b.disabled = true; });
       try {
         const name = business.entityName || business.farmName || '';
-        const bytes = buildLoadReportPdf(r, { business: name, from: d.from, to: d.to, showOrigin: d.showOrigin, showDestination: d.showDestination, madeAt: `${dmy(todayLocal())} ${nowTime()}` });
+        const bytes = buildLoadReportPdf(r, { business: name, ngr: business.ngr || '', from: d.from, to: d.to, showOrigin: d.showOrigin, showDestination: d.showDestination, showQuality: d.showQuality, madeAt: `${dmy(todayLocal())} ${nowTime()}` });
         const fileName = safeFileName(`Load report ${rangeText(d.from, d.to)}`);
         if (!andSend) { downloadFile(bytes, fileName); toast('Downloaded'); return; }
         const t = loadReportTotals(r);

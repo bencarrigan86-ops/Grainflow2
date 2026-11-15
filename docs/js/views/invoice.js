@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=260';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice } from '../derived.js?v=260';
-import { num, money, esc, dmy } from '../fmt.js?v=260';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=260';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=260';
+import { db } from '../storage.js?v=261';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice } from '../derived.js?v=261';
+import { num, money, esc, dmy } from '../fmt.js?v=261';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=261';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm } from '../ui.js?v=261';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {

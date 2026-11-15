@@ -1,15 +1,15 @@
-import { db } from '../storage.js?v=260';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=260';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=260';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=260';
-import { describeMerge } from '../merge.js?v=260';
-import { renderRelatedMovements } from './movements.js?v=260';
-import { canSeeYield } from '../nav.js?v=260';
-import { wireJumps } from '../jump.js?v=260';
-import { openMapSheet } from './farmmap.js?v=260';
-import { openInputsSheet } from './inputs.js?v=260';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=260';
-import { stockLevels } from '../inputs.js?v=260';
+import { db } from '../storage.js?v=261';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=261';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=261';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=261';
+import { describeMerge } from '../merge.js?v=261';
+import { renderRelatedMovements } from './movements.js?v=261';
+import { canSeeYield } from '../nav.js?v=261';
+import { wireJumps } from '../jump.js?v=261';
+import { openMapSheet } from './farmmap.js?v=261';
+import { openInputsSheet } from './inputs.js?v=261';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=261';
+import { stockLevels } from '../inputs.js?v=261';
 
 let unsub = null;
 

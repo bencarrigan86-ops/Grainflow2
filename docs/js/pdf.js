@@ -40,6 +40,11 @@ const encode = (str) => Array.from(String(str ?? '').replace(/[\r\n\t]+/g, ' '))
 const escapeText = (s) => s.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 const f2 = (n) => (Math.round(n * 100) / 100).toString();
 
+// A colour is a gray level (0 black to 1 white) or [r, g, b], each 0 to 1. `kind` is 'fill' (text and shapes) or 'stroke' (lines).
+const colorOp = (v, kind) => (Array.isArray(v)
+  ? `${v.map(f2).join(' ')} ${kind === 'fill' ? 'rg' : 'RG'}`
+  : `${f2(v)} ${kind === 'fill' ? 'g' : 'G'}`);
+
 /** How wide a string is, in points, at a font size. */
 export function textWidth(str, size = 10, bold = false) {
   const table = bold ? W_BOLD : W_REG;
@@ -97,7 +102,7 @@ export class Pdf {
     const w = textWidth(str, size, bold);
     const left = align === 'right' ? x - w : align === 'center' ? x - w / 2 : x;
     const baseline = this.height - (y + size * 0.8);
-    this.ops.push(`${f2(gray)} g BT /${bold ? 'F2' : 'F1'} ${f2(size)} Tf ${f2(left)} ${f2(baseline)} Td (${escapeText(encode(str))}) Tj ET 0 g`);
+    this.ops.push(`${colorOp(gray, 'fill')} BT /${bold ? 'F2' : 'F1'} ${f2(size)} Tf ${f2(left)} ${f2(baseline)} Td (${escapeText(encode(str))}) Tj ET 0 g`);
     return w;
   }
 
@@ -112,7 +117,7 @@ export class Pdf {
   }
 
   line(x1, y1, x2, y2, { width = 0.75, gray = 0 } = {}) {
-    this.ops.push(`${f2(gray)} G ${f2(width)} w ${f2(x1)} ${f2(this.height - y1)} m ${f2(x2)} ${f2(this.height - y2)} l S 0 G`);
+    this.ops.push(`${colorOp(gray, 'stroke')} ${f2(width)} w ${f2(x1)} ${f2(this.height - y1)} m ${f2(x2)} ${f2(this.height - y2)} l S 0 G`);
     return this;
   }
 
@@ -121,15 +126,15 @@ export class Pdf {
     if (!points || !points.length) return this;
     const pts = points.length === 1 ? [points[0], [points[0][0] + 0.2, points[0][1]]] : points;
     const path = pts.map((p, i) => `${f2(p[0])} ${f2(this.height - p[1])} ${i ? 'l' : 'm'}`).join(' ');
-    this.ops.push(`${f2(gray)} G ${f2(width)} w 1 J 1 j ${path} S 0 G 0 J 0 j`);
+    this.ops.push(`${colorOp(gray, 'stroke')} ${f2(width)} w 1 J 1 j ${path} S 0 G 0 J 0 j`);
     return this;
   }
 
   /** A rectangle with its top left at (x, y). `fill` and `stroke` are gray levels (0 black to 1 white), or null. */
   rect(x, y, w, h, { stroke = 0, fill = null, lineWidth = 0.75 } = {}) {
     const parts = [];
-    if (fill !== null) parts.push(`${f2(fill)} g`);
-    if (stroke !== null) parts.push(`${f2(stroke)} G ${f2(lineWidth)} w`);
+    if (fill !== null) parts.push(colorOp(fill, 'fill'));
+    if (stroke !== null) parts.push(`${colorOp(stroke, 'stroke')} ${f2(lineWidth)} w`);
     parts.push(`${f2(x)} ${f2(this.height - y - h)} ${f2(w)} ${f2(h)} re`);
     parts.push(fill !== null && stroke !== null ? 'B' : fill !== null ? 'f' : 'S');
     parts.push('0 g 0 G');

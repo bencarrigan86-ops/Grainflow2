@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=260';
-import { movementsForEndpoint } from '../derived.js?v=260';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=260';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=260';
-import { compressAndStampImage } from '../img.js?v=260';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=260';
-import { specText, extraSpecKey } from '../outload.js?v=260';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=260';
-import { pickableSilos } from '../silopick.js?v=260';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=260';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=260';
-import { activeSales } from '../paidsales.js?v=260';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=260';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=260';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments } from './loadreport.js?v=260';
-import { nowTime } from '../loadreport.js?v=260';
+import { db } from '../storage.js?v=261';
+import { movementsForEndpoint } from '../derived.js?v=261';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=261';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=261';
+import { compressAndStampImage } from '../img.js?v=261';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=261';
+import { specText, extraSpecKey } from '../outload.js?v=261';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=261';
+import { pickableSilos } from '../silopick.js?v=261';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=261';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=261';
+import { activeSales } from '../paidsales.js?v=261';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=261';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=261';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality } from './loadreport.js?v=261';
+import { nowTime } from '../loadreport.js?v=261';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -624,6 +624,7 @@ export function openMovementSheet(existing, template) {
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:6px 0 10px"><input type="checkbox" id="tk-origin" ${readOrigin() ? 'checked' : ''} style="width:18px;height:18px" /> Show where it came from (storage or paddock)</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-dest" ${readDestination() ? 'checked' : ''} style="width:18px;height:18px" /> Show the destination</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-comments" ${readComments() ? 'checked' : ''} style="width:18px;height:18px" /> Comments box (this load's notes, and room to write)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-quality" ${readQuality() ? 'checked' : ''} style="width:18px;height:18px" /> Quality results (if the load was tested)</label>
         <button class="btn secondary" id="tk-send" type="button">Send this load as a PDF</button>
         <div class="meta" style="margin-top:6px;font-size:12px">Sends the load as last saved: date, time, truck, driver, contract, estimated weight and ticket number.</div></div>` : ''}
       <div class="save-bar"><div class="total"><div class="l">Net load</div><div class="v" id="load-preview">—</div></div><button class="btn" id="save">Save</button></div>
@@ -983,9 +984,10 @@ export function openMovementSheet(existing, template) {
     root.querySelector('#tk-origin')?.addEventListener('change', (e) => saveOrigin(e.target.checked));
     root.querySelector('#tk-dest')?.addEventListener('change', (e) => saveDestination(e.target.checked));
     root.querySelector('#tk-comments')?.addEventListener('change', (e) => saveComments(e.target.checked));
+    root.querySelector('#tk-quality')?.addEventListener('change', (e) => saveQuality(e.target.checked));
     root.querySelector('#tk-send')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget; btn.disabled = true;
-      try { await sendLoadTicket(existing, { showOrigin: root.querySelector('#tk-origin').checked, showDestination: root.querySelector('#tk-dest').checked, showComments: root.querySelector('#tk-comments').checked }); }
+      try { await sendLoadTicket(existing, { showOrigin: root.querySelector('#tk-origin').checked, showDestination: root.querySelector('#tk-dest').checked, showComments: root.querySelector('#tk-comments').checked, showQuality: root.querySelector('#tk-quality').checked }); }
       catch (err) { notify(`The load ticket could not be made: ${err.message}`); }
       finally { btn.disabled = false; }
     });
