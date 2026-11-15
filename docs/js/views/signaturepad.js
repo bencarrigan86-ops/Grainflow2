@@ -4,10 +4,10 @@
 // typed is not lost); openMySignatureSheet() is the same thing on a screen of its own, for Settings.
 // The strokes are kept as lines, see signature.js; where they are saved is mysignature.js.
 
-import { openSheet, field, getVal, toast } from '../ui.js?v=252';
-import { esc } from '../fmt.js?v=252';
-import { ASPECT, cleanStrokes, hasSignature, strokesToSvgPath } from '../signature.js?v=252';
-import { loadMySignature, saveMySignature, clearMySignature } from '../mysignature.js?v=252';
+import { openSheet, field, getVal, toast } from '../ui.js?v=253';
+import { esc } from '../fmt.js?v=253';
+import { ASPECT, cleanStrokes, hasSignature, strokesToSvgPath } from '../signature.js?v=253';
+import { loadMySignature, saveMySignature, clearMySignature } from '../mysignature.js?v=253';
 
 /** The saved signature as a picture, for showing on screen. */
 export function signatureSvg(strokes, width = 150) {

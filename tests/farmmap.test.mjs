@@ -9,7 +9,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateRawSync } from 'node:zlib';
 import {
-  parseDbf, parseShp, readBoundaries, unzipFiles, simplifyRing, simplifyRings, ringsAreaHa, normName, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx,
+  parseDbf, parseShp, readBoundaries, unzipFiles, simplifyRing, simplifyRings, ringsAreaHa, normName, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx, farmLabelPx,
 } from '../docs/js/farmmap.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
@@ -257,6 +257,10 @@ await check('a name is written as large as its paddock allows: it grows as you z
   assert.ok(labelFontPx(60, 24, 8, 2) < labelFontPx(60, 24, 8, 1), 'the area under the name takes room, so the writing is smaller');
   assert.equal(labelFontPx(14, 10, 8, 1), 0, 'left out when even the smallest writing would not fit');
   assert.equal(labelFontPx(100, 100, 0, 1), 0);
+  assert.ok(labelFontPx(40, 40, 2, 1) < 15.5, 'a short name in a modest paddock is not blown up to fill it');
+  assert.ok(farmLabelPx(90, 8) > farmLabelPx(60, 8), 'a farm name grows with the farm');
+  assert.equal(farmLabelPx(20, 12), 0, 'and goes when the farm is too small on screen to carry it');
+  assert.ok(farmLabelPx(2000, 8) === 16);
   const v = read('docs/js/views/farmmap.js');
   assert.ok(v.includes('data-w=') && v.includes('labelFontPx(wPx, hPx, chars, lines'));
 });

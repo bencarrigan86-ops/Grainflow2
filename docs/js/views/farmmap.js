@@ -4,18 +4,18 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=252';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=252';
-import { esc, num, todayLocal, dmy } from '../fmt.js?v=252';
-import { sharePdf, safeFileName } from '../sharefile.js?v=252';
-import { buildFarmMapPdf } from '../spraypdf.js?v=252';
+import { db } from '../storage.js?v=253';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=253';
+import { esc, num, todayLocal, dmy } from '../fmt.js?v=253';
+import { sharePdf, safeFileName } from '../sharefile.js?v=253';
+import { buildFarmMapPdf } from '../spraypdf.js?v=253';
 import {
-  readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx,
-} from '../farmmap.js?v=252';
+  readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx, farmLabelPx,
+} from '../farmmap.js?v=253';
 
 const MAX_ZOOM = 40;
 const MIN_LABEL_PX = 6.5;    // the smallest writing a paddock's name is shown in, on screen
-const MAX_LABEL_PX = 20;     // the largest
+const MAX_LABEL_PX = 18;     // the largest
 
 // what is written on the paddocks, remembered on this device
 const SHOW_KEY = 'grainflow.farmmap.show';
@@ -66,7 +66,7 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
           <svg id="fm-svg" viewBox="0 0 ${vb.w} ${vb.h}" style="display:block;width:100%;height:auto;max-height:68vh" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of the paddocks">
             ${layout.items.map((i) => `<path data-id="${esc(i.id)}" data-farm="${esc(i.farm || NO_FARM)}" d="${i.d}" fill="${chosen.has(i.id) ? RED : i.color}" fill-opacity="${chosen.has(i.id) ? 0.85 : pick ? 0.3 : 0.55}" fill-rule="evenodd" stroke="var(--text)" stroke-opacity="0.55" stroke-width="1" vector-effect="non-scaling-stroke" style="cursor:pointer"><title>${esc(i.name)}</title></path>`).join('')}
             ${layout.items.map((i) => `<text data-label="${esc(i.id)}" data-farm="${esc(i.farm || NO_FARM)}" data-area="${Math.round(i.areaHa * 10000)}" data-w="${Math.round(i.bbox[2] - i.bbox[0])}" data-h="${Math.round(i.bbox[3] - i.bbox[1])}" x="${Math.round(i.cx)}" y="${Math.round(i.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="3" paint-order="stroke" pointer-events="none" style="font-weight:600"><tspan class="fm-n" x="${Math.round(i.cx)}">${esc(i.name)}</tspan><tspan class="fm-a" x="${Math.round(i.cx)}" dy="1.15em" style="font-weight:500">${num(Number(mapped.find((f) => f.id === i.id)?.areaHa) || i.areaHa, 1)} ha</tspan></text>`).join('')}
-            ${hasFarms ? groups.filter((g) => g.name !== NO_FARM).map((g) => `<text data-farm-label="${esc(g.name)}" x="${Math.round(g.cx)}" y="${Math.round(g.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="4" paint-order="stroke" pointer-events="none" style="font-weight:800;letter-spacing:.05em;text-transform:uppercase">${esc(g.name)}</text>`).join('') : ''}
+            ${hasFarms ? groups.filter((g) => g.name !== NO_FARM).map((g) => `<text data-farm-label="${esc(g.name)}" data-w="${Math.round(g.bbox[2] - g.bbox[0])}" x="${Math.round(g.cx)}" y="${Math.round(g.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="4" paint-order="stroke" pointer-events="none" style="font-weight:800;letter-spacing:.05em;text-transform:uppercase">${esc(g.name)}</text>`).join('') : ''}
           </svg>
           <div style="position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px">
             <button type="button" class="btn secondary small" id="fm-in" aria-label="Zoom in" style="width:40px;padding:6px 0">+</button>
@@ -186,9 +186,11 @@ function wireMap(root, full, layout, open, { groups = [] } = {}) {
       t.setAttribute('stroke-width', Math.max(1.5, px * 0.28) * unit);
     });
     svg.querySelectorAll('text[data-farm-label]').forEach((t) => {
-      t.style.display = show.farmNames !== false && !hidden.has(t.dataset.farmLabel) ? '' : 'none';
-      t.setAttribute('font-size', 15 * unit);
-      t.setAttribute('stroke-width', 4 * unit);
+      // a farm's name grows and shrinks with the farm, and goes when the farm is too small on screen to carry it
+      const px = farmLabelPx(Number(t.dataset.w) / unit, t.textContent.length);
+      t.style.display = show.farmNames !== false && !hidden.has(t.dataset.farmLabel) && px ? '' : 'none';
+      t.setAttribute('font-size', px * unit);
+      t.setAttribute('stroke-width', Math.max(2, px * 0.25) * unit);
     });
   };
   const nameBox = root.querySelector('#fm-names'); const areaBox = root.querySelector('#fm-areas');

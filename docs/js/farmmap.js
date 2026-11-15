@@ -284,6 +284,19 @@ export function visibleBox(items, hidden = []) {
  */
 export function labelFontPx(wPx, hPx, chars, lines, { min = 6.5, max = 15 } = {}) {
   if (!chars || !lines) return 0;
-  const px = Math.min(max, (wPx * 0.78) / (chars * 0.58), (hPx * 0.8) / (lines * 1.25));
+  // within its width, and never more than a share of the paddock's smaller side, so a short name in a modest paddock
+  // is not blown up to fill it
+  const px = Math.min(max, (wPx * 0.7) / (chars * 0.58), Math.min(wPx, hPx) * (lines > 1 ? 0.26 : 0.38));
+  return px >= min ? px : 0;
+}
+
+/**
+ * How big to write a farm's name, in pixels: wide enough to read but in proportion to the farm (its box is `wPx` wide on
+ * screen), so zoomed out the farm names shrink with the farms and do not swamp the paddocks. 0 when it would be
+ * smaller than `min`.
+ */
+export function farmLabelPx(wPx, chars, { min = 8, max = 16 } = {}) {
+  if (!chars) return 0;
+  const px = Math.min(max, (wPx * 1.05) / (chars * 0.78));
   return px >= min ? px : 0;
 }
