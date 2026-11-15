@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=277';
+import { ROLES, canOpen } from './nav.js?v=279';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -117,6 +117,7 @@ export const GUIDES = [
     tips: [
       'The sample farm on a trial account is there to look around. Nothing in it is real.',
       'The Getting started list on Position ticks itself off as you add things.',
+      'Once you are going, the Needs attention list at the top of Position says what to look at today (see Needs attention).',
     ],
   },
   {
@@ -159,6 +160,9 @@ export const GUIDES = [
       'Production shows what each paddock produced and what it is worth against its costs.',
     ],
     tips: [
+      'Once the farm has more than one season, Rotation and yield history (top of Production) shows every paddock against every season: the crop, its yield, and an outline where the same crop was grown two seasons running. Its PDF button (portrait or landscape, laid out like the load report) and Excel (CSV) button save what is on the sheet. Open a paddock and its History fold says the same for that paddock alone.',
+      'The paddock list has a % of area column: how much of the farm each commodity covers.',
+      'Open a paddock or a contract and tap Add a movement to start a load already filled in with that paddock or contract.',
       'Yields are hidden from farm workers. A worker can change paddocks only if the owner has allowed it under People.',
       'Merge two paddocks into one from the paddock sheet if you have combined them.',
     ],
@@ -196,7 +200,9 @@ export const GUIDES = [
       'Open Sales and tap + (the owner or bookkeeper adds contracts; a manager sees them without prices).',
       'Enter the buyer, commodity, grade, tonnes and price, then the delivery period and payment terms.',
       'Open the Advanced folds for tolerance, carry and Multigrade (a premium or discount for each grade the buyer takes).',
-      'Use the Confirmation of sale button for a printable confirmation to sign and send.',
+      'Say how it is delivered: the buyer calls it, or it is spread evenly over the delivery period. An evenly spread contract shows the tonnes a week or a month on Deliveries to go, and feeds the forecast in the cash flow.',
+      'Type the buyer\'s address in its parts (line 1, line 2, town, state and postcode). Documents print it a line each, and the Xero export fills its postal address.',
+      'Use the Confirmation of sale button for a printable confirmation. Tick the signing box to put your own signature on it as the seller, then print or save it as a PDF to send.',
       'Loads recorded against the contract count as delivered. The Sales tab shows what is still to go.',
     ],
     tips: [
@@ -209,13 +215,14 @@ export const GUIDES = [
     steps: [
       'Open a contract and tap Invoices, then New invoice.',
       'Tick the loads to include. Add a manual tonnage line or custom items (a premium or a deduction) if needed.',
-      'The totals are worked out and can be adjusted to match a broker\'s rounding. Create the invoice, then Print / Save as PDF.',
+      'The totals are worked out and can be adjusted to match a broker\'s rounding. Create the invoice, then Print / Save as PDF. Tick the signing box first if you want it signed.',
       'Mark it paid when the money arrives.',
       'Under the invoice, enter the buyer\'s RCTI number and total. It says Agrees, or shows how far apart the two are; the list flags a difference.',
     ],
     tips: [
       'The RCTI check is for you and is not printed on the invoice.',
       'Editing an invoice changes it in place and keeps its number.',
+      'The payment details on an invoice are only printed for the owner and the bookkeeper. A manager prints an invoice without them.',
     ],
   },
   {
@@ -225,9 +232,12 @@ export const GUIDES = [
       'Grain orders: the buyer\'s orders against a contract, with a date to deliver by and what is left.',
       'Deliveries to go: contracts with tonnes still to deliver and how close their delivery period is to ending.',
       'Receivables and payables: invoices you are owed and the bills you owe. Bills (brokerage, freight, storage) are entered by the owner, manager or bookkeeper.',
-      'Freight orders: the trucks booked to move a contract\'s grain.',
+      'On Receivables and payables, By month shows when the money lands: what is invoiced, what is expected from grain not yet invoiced (a forecast, in italics), and the bills going out, with a running balance. By buyer lists what each buyer owes, with a Send statement button that makes a PDF statement.',
+      'Freight orders: the trucks booked to move a contract\'s grain. A freight order can be signed with your own signature before it is sent to the carrier.',
     ],
-    tips: [],
+    tips: [
+      'The forecast is only as good as the delivery pattern on each contract. A contract with none set is treated as called by the buyer, so its grain shows as Not yet scheduled.',
+    ],
   },
   {
     id: 'spray', title: 'Spray requests', roles: ['owner', 'manager'], open: 'production', openLabel: 'Open Production',
@@ -242,14 +252,68 @@ export const GUIDES = [
     ],
   },
   {
-    id: 'inputs', title: 'Inputs and stock', roles: OFFICE, open: 'production', openLabel: 'Open Production',
+    id: 'inputs', title: 'Inputs and stock', roles: [...OFFICE, 'farm_worker'], open: 'production', openLabel: 'Open Production',
     blurb: 'Seed, fertiliser, fuel and chemical on hand.',
     steps: [
       'On Production, open Inputs and stock.',
       'Record what you buy, what you use, and counts that adjust the stock. Say which shed or silo it is in.',
       'Stock is added up across all seasons, and compared with what the paddock plans need.',
     ],
-    tips: [],
+    tips: [
+      'A farm worker sees what is on hand and records what is used and counts. They are never sent prices, suppliers or invoice numbers, and cannot record a delivery.',
+    ],
+  },
+  {
+    id: 'attention', title: 'Needs attention', roles: OFFICE, open: 'position', openLabel: 'Open Position',
+    blurb: 'The short list at the top of Position: what to look at today.',
+    steps: [
+      'Open Position. If anything needs you, a Needs attention card sits at the top, worst first.',
+      'Each line says what and how much: invoices or bills overdue, contracts past their end with grain still to go, orders that missed their date, and grain delivered but not yet invoiced.',
+      'Tap a line to open the screen that deals with it (Receivables and payables, Deliveries to go, or Settings).',
+      'A line goes when the thing is fixed. With nothing to do, the card is not shown.',
+    ],
+    tips: [
+      'It reads what the app already knows. Nothing is entered here.',
+    ],
+  },
+  {
+    id: 'signing', title: 'Signing documents', roles: OFFICE, open: 'settings', openLabel: 'Open Settings',
+    blurb: 'Your own signature on confirmations, invoices, freight orders and vendor declarations.',
+    steps: [
+      'In Settings, open My signature and draw it with a finger or a pen. Type the name to print under it.',
+      'On a confirmation of sale, an invoice or a freight order, tick the box that signs it. Your signature goes on it with the date.',
+      'Print or send the document as usual.',
+    ],
+    tips: [
+      'A signature belongs to the person. Nobody else on the farm can see or use yours, and it works on any farm you work on.',
+      'It is kept on the phone too, so you can sign without signal.',
+    ],
+  },
+  {
+    id: 'safety', title: 'Backups and keeping data safe', roles: OFFICE, open: 'settings', openLabel: 'Open Settings',
+    blurb: 'How to keep a copy, and who can see what.',
+    steps: [
+      'In Settings, Export backup saves the whole farm to a file. Do it now and then, and keep the file somewhere other than the phone.',
+      'Settings shows when the last backup was made, and Position adds a line to Needs attention when one is due.',
+      'Import backup puts a backup back. Export CSV gives spreadsheets.',
+      'Recently deleted (owner and manager) brings back something removed by mistake.',
+    ],
+    tips: [
+      'Bank details are held apart from the rest of the farm. Only the owner and the bookkeeper can read them, and only the owner can change them.',
+    ],
+  },
+  {
+    id: 'help', title: 'Getting help', roles: ALL, open: 'account', openLabel: 'Open Account',
+    blurb: 'Tell us what went wrong, and let support look if it needs it.',
+    steps: [
+      'On Account (or Settings), tap Report a problem. Say what happened and what you were doing, then Send.',
+      'The report carries the app build, your role, whether you are online, what is waiting to send and the last few errors. None of the farm\'s records are sent.',
+      'If it cannot be sent, tap Copy instead and send the text another way.',
+      'The owner can also let support look at the farm for 7 days, read only, from Support access in Settings. It switches itself off, the owner can take it away sooner, and the log shows when support looked.',
+    ],
+    tips: [
+      'Support cannot change anything and cannot see the bank details.',
+    ],
   },
   {
     id: 'season', title: 'Starting a new season', roles: ['owner', 'manager'], open: 'settings', openLabel: 'Open Settings',
@@ -275,6 +339,7 @@ export const GUIDES = [
     ],
     tips: [
       'You cannot change or remove yourself, so there is always an owner.',
+      'Bank details are kept in a table that only the owner and the bookkeeper can read, so a manager, worker or driver is never sent them.',
     ],
   },
   {

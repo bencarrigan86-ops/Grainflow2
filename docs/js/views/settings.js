@@ -1,31 +1,31 @@
-import { db } from '../storage.js?v=277';
-import { getTheme, setTheme } from '../theme.js?v=277';
-import { num, money, esc, todayLocal } from '../fmt.js?v=277';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=277';
-import { openLoadImportSheet } from './importloads.js?v=277';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=277';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=277';
-import { openDeletedSheet } from './deleted.js?v=277';
-import { APP_VERSION } from '../version.js?v=277';
-import { exportRowsAsCSV } from '../csv.js?v=277';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=277';
-import { endpointLabel } from './movements.js?v=277';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=277';
-import { layersForStorage } from '../outload.js?v=277';
-import { holdings, totalHeld } from '../offfarm.js?v=277';
-import { kindLabel, billTotal } from '../payables.js?v=277';
-import { orderState, STATE_LABEL } from '../orders.js?v=277';
-import { fieldHarvest } from '../harvest.js?v=277';
-import { openMySignatureSheet } from './signaturepad.js?v=277';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=277';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=277';
+import { db } from '../storage.js?v=279';
+import { getTheme, setTheme } from '../theme.js?v=279';
+import { num, money, esc, todayLocal } from '../fmt.js?v=279';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=279';
+import { openLoadImportSheet } from './importloads.js?v=279';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=279';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=279';
+import { openDeletedSheet } from './deleted.js?v=279';
+import { APP_VERSION } from '../version.js?v=279';
+import { exportRowsAsCSV } from '../csv.js?v=279';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=279';
+import { endpointLabel } from './movements.js?v=279';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=279';
+import { layersForStorage } from '../outload.js?v=279';
+import { holdings, totalHeld } from '../offfarm.js?v=279';
+import { kindLabel, billTotal } from '../payables.js?v=279';
+import { orderState, STATE_LABEL } from '../orders.js?v=279';
+import { fieldHarvest } from '../harvest.js?v=279';
+import { openMySignatureSheet } from './signaturepad.js?v=279';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=279';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=279';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=277';
+} from '../invites.js?v=279';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=277';
+} from '../auth.js?v=279';
 
 let unsub = null;
 

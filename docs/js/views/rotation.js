@@ -1,14 +1,23 @@
 // Rotation and yield history: every paddock against every season, with the crop and its yield in each cell, and the
 // farm's yield for each crop by season underneath. Built from the seasons the farm already holds; nothing is entered here.
 
-import { db } from '../storage.js?v=277';
-import { num, esc } from '../fmt.js?v=277';
-import { openSheet } from '../ui.js?v=277';
-import { canSeeYield } from '../nav.js?v=277';
-import { PALETTE } from '../farmmap.js?v=277';
-import { rotationGrid, cropYields } from '../fieldhistory.js?v=277';
+import { db } from '../storage.js?v=279';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=279';
+import { openSheet, toast } from '../ui.js?v=279';
+import { canSeeYield } from '../nav.js?v=279';
+import { PALETTE } from '../farmmap.js?v=279';
+import { rotationGrid, cropYields } from '../fieldhistory.js?v=279';
+import { rotationCsv, rotationPdf, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=279';
+import { nowTime } from '../loadreport.js?v=279';
+import { downloadCSV } from '../csv.js?v=279';
+import { sharePdf, safeFileName } from '../sharefile.js?v=279';
+
+const ORIENT_KEY = 'grainflow.rotation.orientation';
+const lastOrientation = () => { try { return orientationOf(localStorage.getItem(ORIENT_KEY)); } catch { return 'landscape'; } };
+const rememberOrientation = (v) => { try { localStorage.setItem(ORIENT_KEY, v); } catch { /* not kept; it still works */ } };
 
 export function openRotationSheet() {
+  let orientation = lastOrientation();
   const showYield = canSeeYield(db.getRole());
   const years = Object.fromEntries(db.getYears().map((y) => [y, db.getYearData(y)]));
   const grid = rotationGrid(years);
@@ -49,6 +58,34 @@ export function openRotationSheet() {
       <div class="table-scroll"><table>
         <thead>${yieldHead}</thead>
         <tbody>${yieldBody}</tbody>
-      </table></div>` : ''}`;
+      </table></div>` : ''}
+      <div class="subhead" style="margin-top:14px">Save or send</div>
+      <div class="segmented" id="rot-orient" style="margin-bottom:8px">
+        ${ORIENTATIONS.map((x) => `<button data-orient="${x.value}" class="${x.value === orientation ? 'active' : ''}">${x.label}</button>`).join('')}
+      </div>
+      <div class="grid-2">
+        <button type="button" class="btn secondary" id="rot-pdf">PDF to print or send</button>
+        <button type="button" class="btn secondary" id="rot-csv">Excel (CSV)</button>
+      </div>`;
+    const stamp = todayLocal();
+    const business = db.getBusinessDetails();
+    root.querySelector('#rot-orient').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-orient]');
+      if (!b) return;
+      orientation = orientationOf(b.dataset.orient);
+      rememberOrientation(orientation);
+      root.querySelectorAll('#rot-orient button').forEach((x) => x.classList.toggle('active', x === b));
+    });
+    root.querySelector('#rot-csv').addEventListener('click', () => {
+      downloadCSV(safeFileName(`grainflow-rotation-${stamp}`, 'csv'), rotationCsv(grid, { showYield }));
+      toast('Downloaded. It opens in Excel.');
+    });
+    root.querySelector('#rot-pdf').addEventListener('click', async () => {
+      const bytes = rotationPdf(grid, {
+        orientation, showYield, business: business.entityName || business.farmName || '', ngr: business.ngr || '',
+        today: dmy(stamp), madeAt: `${dmy(stamp)} ${nowTime()}`,
+      });
+      await sharePdf(bytes, `Rotation and yield history ${stamp}`, { title: 'Rotation and yield history', text: `Rotation and yield history, ${business.farmName || business.entityName || ''}`.trim() });
+    });
   });
 }
