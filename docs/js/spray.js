@@ -10,9 +10,9 @@
 // it works out what goes where, as plain data, and spraypdf.js draws it. That keeps the layout testable without a
 // PDF library or a browser.
 
-import { textWidth, wrapText } from './pdf.js?v=312';
-import { dmy } from './fmt.js?v=312';
-import { labelFontPx } from './farmmap.js?v=312';
+import { textWidth, wrapText } from './pdf.js?v=313';
+import { dmy } from './fmt.js?v=313';
+import { labelFontPx } from './farmmap.js?v=313';
 
 export const FORMS = [
   { key: 'standard', label: 'Our own form' },

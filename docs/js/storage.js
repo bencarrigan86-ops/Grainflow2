@@ -18,27 +18,27 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=312';
+import { hydrate } from './hydrate.js?v=313';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=312';
-import { chooseBootState, resolveLegacy } from './boot.js?v=312';
-import { isLegacyDirty } from './dirty.js?v=312';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=312';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=312';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=312';
-import { settleLegs, dedupeLegs } from './legs.js?v=312';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=312';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=312';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=312';
-import { setCommodityOrder } from './commodityorder.js?v=312';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=312';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=312';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=312';
-import { schedulePush, pushOnReconnect } from './sync.js?v=312';
-import { hasParts as hasAddressParts } from './address.js?v=312';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=312';
+} from './local.js?v=313';
+import { chooseBootState, resolveLegacy } from './boot.js?v=313';
+import { isLegacyDirty } from './dirty.js?v=313';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=313';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=313';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=313';
+import { settleLegs, dedupeLegs } from './legs.js?v=313';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=313';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=313';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=313';
+import { setCommodityOrder } from './commodityorder.js?v=313';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=313';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=313';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=313';
+import { schedulePush, pushOnReconnect } from './sync.js?v=313';
+import { hasParts as hasAddressParts } from './address.js?v=313';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=313';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -688,6 +688,23 @@ export const db = {
     }
     if (total.paddocks) persist();
     return total;
+  },
+  /**
+   * A trial owner starts their own farm: a blank season goes in, then every other season is deleted the ordinary way (so the server
+   * is told to drop each row). The name of the farm stays; the invented business details are cleared by the caller.
+   * @returns {boolean} false when it is not the owner, or the season name is empty or already there
+   */
+  startOwnFarm({ season } = {}) {
+    if (role !== 'owner') return false;
+    const label = String(season || '').trim();
+    if (!label || data.years[label]) return false;
+    const old = Object.keys(data.years);
+    data.years[label] = { ...defaultYear(), __seasonId: uid() };
+    data.currentYear = label;
+    touch('year', label);
+    for (const y of old) db.deleteYear(y);
+    persist();
+    return true;
   },
   deleteYear(year) {
     // the owner only: the Settings button is not offered to anyone else, and the server refuses it too, but a

@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { APP_VERSION } from '../docs/js/version.js';
 const stamp = APP_VERSION.split('.').pop();
-const { validEmail, trialInviteMessage, farmLabel, standingText, trialNoticeText, trialSampleText } = await import(`../docs/js/trialtext.js?v=${stamp}`);
+const { validEmail, trialInviteMessage, farmLabel, standingText, trialNoticeText, trialSampleText, ownSeasonGuess, startOwnWarning, startedLine } = await import(`../docs/js/trialtext.js?v=${stamp}`);
 const { standingStatus } = await import('../docs/js/supportinfo.js');
 
 let failures = 0;
@@ -80,6 +80,24 @@ check('it is wired: Settings has the support login\'s card, owners see the notic
   assert.ok(read('docs/js/views/login.js').includes('hasTrialInvite()'));
   const main = read('docs/js/main.js');
   assert.ok(main.includes("noteSupportOpen(membership.farmId, membership.farmName)") && main.includes('Switch farm'));
+});
+
+check('starting their own farm: the words, the flag line, and what is wired', () => {
+  assert.equal(ownSeasonGuess(new Date('2026-11-16T00:00:00')), '2026');
+  assert.ok(/clears the sample/i.test(startOwnWarning()) && /cannot be brought back/.test(startOwnWarning()));
+  assert.equal(startedLine({}), '');
+  assert.ok(/^started their own farm 1[56] Nov$/.test(startedLine({ started_at: '2026-11-16T03:00:00Z' })), startedLine({ started_at: '2026-11-16T03:00:00Z' }));
+  const tf = read('docs/js/views/trialfarms.js');
+  assert.ok(tf.includes('recordStartOwn(') && tf.includes('db.startOwnFarm({ season })'));
+  assert.ok(tf.indexOf('recordStartOwn(') < tf.indexOf('db.startOwnFarm({ season })'), 'the server is told first, so a failure clears nothing');
+  assert.ok(tf.includes('navigator.onLine'), 'needs a connection');
+  const se = read('docs/js/views/settings.js');
+  assert.ok(se.includes("db.getRole() === 'owner' ? trialOwnSlotHtml()") && se.includes('wireTrialOwner(root)'));
+  assert.ok(read('docs/js/storage.js').includes('startOwnFarm({ season } = {})'));
+  const sql = read('supabase/migrations/20261118800000_trial_start_own.sql');
+  assert.ok(sql.includes('function trial_start_own(') && sql.includes("app_role(p_farm_id) is distinct from 'owner'") && sql.includes('this is not a trial farm'));
+  assert.ok(sql.includes('started_at = coalesce(started_at, now())'), 'recorded once');
+  assert.ok(read('supabase/paste-into-sql-editor.sql').includes('function trial_start_own('));
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

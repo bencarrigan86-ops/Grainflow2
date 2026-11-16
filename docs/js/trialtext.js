@@ -37,6 +37,24 @@ export function trialSampleText() {
   return 'Your trial starts with a sample farm to look around: an invented property in a season called "Sample 2026". Nothing in it is real.';
 }
 
+/** The season name offered for their own farm: this year's, by the calendar. */
+export function ownSeasonGuess(now = new Date()) {
+  return String(now.getFullYear());
+}
+
+/** The confirm text before the sample is cleared. */
+export function startOwnWarning() {
+  return 'This clears the sample farm (the invented paddocks, silos, contracts and loads) and gives you a blank season to start your own. Nothing real is lost. It cannot be brought back.';
+}
+
+/** One line in the support login's list: who has started their own, and when. */
+export function startedLine(row, locale = 'en-AU') {
+  if (!row?.started_at) return '';
+  let when = '';
+  try { when = new Date(row.started_at).toLocaleDateString(locale, { day: 'numeric', month: 'short' }); } catch { /* no date */ }
+  return `started their own farm${when ? ` ${when}` : ''}`;
+}
+
 /** The sentence a new trial owner reads before they create the farm. */
 export function trialNoticeText() {
   return 'You were invited to try this. Your farm is yours alone. The person who invited you can look at it, read only, to help you; you can switch that off in Settings.';

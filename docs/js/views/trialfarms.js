@@ -1,13 +1,13 @@
 // Settings > Trial farms: only for the support login. Invite somebody to try the app, and open any trial farm (or go back to your own).
 
-import { db } from '../storage.js?v=312';
-import { setPreferredFarm } from '../auth.js?v=312';
-import { toast, notify } from '../ui.js?v=312';
-import { esc } from '../fmt.js?v=312';
+import { db } from '../storage.js?v=313';
+import { setPreferredFarm } from '../auth.js?v=313';
+import { toast, notify, openSheet, closeSheet, field, getVal } from '../ui.js?v=313';
+import { esc } from '../fmt.js?v=313';
 import {
   isSupportAdmin, createTrialInvite, withdrawTrialInvite, listTrialInvites, listSupportFarms,
-  trialInviteMessage, farmLabel, validEmail,
-} from '../trials.js?v=312';
+  trialInviteMessage, farmLabel, validEmail, trialFarmStatus, recordStartOwn, ownSeasonGuess, startOwnWarning, startedLine,
+} from '../trials.js?v=313';
 
 // Settings repaints on every change; who the support login is does not change, so it is asked once (a "no" is asked again after a while).
 let adminAnswer = null;
@@ -44,12 +44,14 @@ export async function wireTrialFarms(root) {
     if (!body.isConnected) return;
     const current = db.getFarmId();
     const open = invites.filter((i) => !i.used_at);
+    const started = invites.filter((i) => i.started_at);
     const when = (iso) => { try { return new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); } catch { return ''; } };
     body.innerHTML = `
       ${open.length ? `<div class="subhead">Waiting to sign up</div>${open.map((i) => `<div class="row" style="align-items:center"><span class="label">${esc(i.email)}${i.note ? `<br><span class="meta">${esc(i.note)} &middot; invited ${esc(when(i.created_at))}</span>` : `<br><span class="meta">invited ${esc(when(i.created_at))}</span>`}</span>
         <span class="value" style="display:flex;gap:6px"><button type="button" class="btn secondary small" data-tf-copy="${esc(i.email)}">Copy message</button><button type="button" class="btn secondary small" data-tf-withdraw="${esc(i.id)}">Withdraw</button></span></div>`).join('')}` : ''}
+      ${started.length ? `<div class="subhead" style="margin-top:10px">Started their own farm</div>${started.map((i) => `<div class="row"><span class="label">${esc(i.email)}<br><span class="meta">${esc(startedLine(i))}${farms.some((f) => f.farm_id === i.farm_id) ? '' : ' &middot; you no longer have access'}</span></span></div>`).join('')}` : ''}
       <div class="subhead" style="margin-top:10px">Farms you can open</div>
-      ${farms.length === 0 ? '<div class="meta">None yet.</div>' : farms.map((f) => `<div class="row" style="align-items:center"><span class="label">${esc(farmLabel(f))}<br><span class="meta">${f.role === 'support' ? 'trial farm, read only' : 'your farm'}${f.farm_id === current ? ' &middot; open now' : ''}</span></span>
+      ${farms.length === 0 ? '<div class="meta">None yet.</div>' : farms.map((f) => `<div class="row" style="align-items:center"><span class="label">${esc(farmLabel(f))}<br><span class="meta">${f.role === 'support' ? 'trial farm, read only' : 'your farm'}${f.started_at ? ` &middot; ${esc(startedLine(f))}` : ''}${f.farm_id === current ? ' &middot; open now' : ''}</span></span>
         <span class="value">${f.farm_id === current ? '' : `<button type="button" class="btn secondary small" data-tf-open="${esc(f.farm_id)}">Open</button>`}</span></div>`).join('')}`;
     body.querySelectorAll('[data-tf-copy]').forEach((b) => b.addEventListener('click', () => copyMessage(b.dataset.tfCopy)));
     body.querySelectorAll('[data-tf-withdraw]').forEach((b) => b.addEventListener('click', async () => {
@@ -88,4 +90,48 @@ export async function wireTrialFarms(root) {
   });
 
   paint();
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// The trial owner's side: "Start your own farm", shown only on a trial farm that has not started yet.
+
+export const trialOwnSlotHtml = () => '<div id="trial-own-slot"></div>';
+
+export async function wireTrialOwner(root) {
+  const slot = root.querySelector('#trial-own-slot');
+  if (!slot || db.getRole() !== 'owner') return;
+  const status = await trialFarmStatus(db.getFarmId());
+  if (!status.trial || status.startedAt || !slot.isConnected) return;
+  slot.innerHTML = `<div class="card input" id="trial-own-card">
+    <h2><span class="dot input"></span>Start your own farm</h2>
+    <div class="hint" style="margin-bottom:8px">You are trying Commodity Mate on a sample farm. When you are ready, clear the sample and start your own. Your account and login stay the same.</div>
+    <button type="button" class="btn" id="trial-own-btn">I am ready to start my own farm</button>
+  </div>`;
+  slot.querySelector('#trial-own-btn').addEventListener('click', () => openStartOwnSheet());
+}
+
+function openStartOwnSheet() {
+  openSheet('Start your own farm', (root) => {
+    root.innerHTML = `
+      <div class="hint" style="margin-bottom:10px">${esc(startOwnWarning())}</div>
+      ${field({ label: 'Name of your first season', id: 'own-season', value: ownSeasonGuess(), placeholder: 'e.g. 2026' })}
+      ${field({ label: 'Keep the person who set up your trial able to look at your farm?', id: 'own-keep', type: 'select', value: 'no',
+        options: [{ value: 'no', label: 'No, switch it off' }, { value: 'yes', label: 'Yes, read only' }],
+        hint: 'Your farm will have your real records in it. You can change this later in Support access.' })}
+      <button class="btn danger" id="own-go">Clear the sample and start</button>`;
+    root.querySelector('#own-go').addEventListener('click', async () => {
+      const season = (getVal(root, 'own-season') || '').trim();
+      if (!season) { root.querySelector('#own-season').focus(); return; }
+      if (db.getYears().includes(season)) { notify(`You already have a season called "${season}". Pick another name.`); return; }
+      // the server is told first, and it needs a connection: better to stop here than to clear the sample and fail to say so
+      if (!navigator.onLine) { notify('You need a connection for this, so that it can be recorded. Try again when you have signal.'); return; }
+      try { await recordStartOwn(db.getFarmId(), getVal(root, 'own-keep') === 'yes'); }
+      catch (e) { notify(`Could not do that: ${e.message}`); return; }
+      if (!db.startOwnFarm({ season })) { notify('Could not start the new season. Nothing was cleared.'); return; }
+      // the invented business details that came with the sample
+      db.updateBusinessDetails({ entityName: '', abn: '', ngr: '', contactName: '', address: '', paymentTermsDays: 14 });
+      closeSheet();
+      toast('Your own farm is ready');
+    });
+  });
 }

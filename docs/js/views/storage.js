@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=312';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=312';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=312';
-import { isTransit } from '../transit.js?v=312';
-import { isOffFarm } from '../offfarm.js?v=312';
-import { paintOffFarmCard } from './offfarm.js?v=312';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=312';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=312';
-import { hasStorageQuality } from '../mapping.js?v=312';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=312';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=312';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=312';
-import { renderRelatedMovements } from './movements.js?v=312';
-import { openSiloSetupSheet } from './silosetup.js?v=312';
-import { commodityFills } from '../commodityfill.js?v=312';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=312';
+import { db } from '../storage.js?v=313';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=313';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=313';
+import { isTransit } from '../transit.js?v=313';
+import { isOffFarm } from '../offfarm.js?v=313';
+import { paintOffFarmCard } from './offfarm.js?v=313';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=313';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=313';
+import { hasStorageQuality } from '../mapping.js?v=313';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=313';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=313';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=313';
+import { renderRelatedMovements } from './movements.js?v=313';
+import { openSiloSetupSheet } from './silosetup.js?v=313';
+import { commodityFills } from '../commodityfill.js?v=313';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=313';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=312';
+} from '../silolayers.js?v=313';
 
 let unsub = null;
 let listMode = 'commodity';

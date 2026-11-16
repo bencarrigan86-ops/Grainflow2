@@ -4,10 +4,10 @@
 // for somebody to sign up and create their farm, and when they do, the support login is added to that farm, read only, with no end
 // date. Nothing here can give anybody access; it only asks the functions that can.
 
-import { supabase } from './supabase.js?v=312';
+import { supabase } from './supabase.js?v=313';
 
-import { asText, validEmail } from './trialtext.js?v=312';
-export { validEmail, trialInviteMessage, farmLabel, standingText, trialNoticeText, trialSampleText } from './trialtext.js?v=312';
+import { asText, validEmail } from './trialtext.js?v=313';
+export { validEmail, trialInviteMessage, farmLabel, standingText, trialNoticeText, trialSampleText, ownSeasonGuess, startOwnWarning, startedLine } from './trialtext.js?v=313';
 
 /** Is the signed-in person the support login? Anything that goes wrong is a no. */
 export async function isSupportAdmin() {
@@ -55,4 +55,23 @@ export async function trialWatched(farmId) {
     const { data, error } = await supabase.rpc('support_standing', { p_farm_id: farmId });
     return !error && data === true;
   } catch { return false; }
+}
+
+/**
+ * Is this a trial farm, and has its owner already started their own? Owners only; anything else (or no answer) reads as not a trial,
+ * so the button is simply not offered.
+ * @returns {Promise<{trial: boolean, startedAt: string|null}>}
+ */
+export async function trialFarmStatus(farmId) {
+  try {
+    const { data, error } = await supabase.rpc('trial_farm_status', { p_farm_id: farmId });
+    const row = Array.isArray(data) ? data[0] : data;
+    return !error && row?.trial === true ? { trial: true, startedAt: row.started_at ?? null } : { trial: false, startedAt: null };
+  } catch { return { trial: false, startedAt: null }; }
+}
+
+/** Record that the owner started their own farm, and whether support keeps its read-only view. */
+export async function recordStartOwn(farmId, keepSupport) {
+  const { error } = await supabase.rpc('trial_start_own', { p_farm_id: farmId, p_keep_support: !!keepSupport });
+  if (error) throw new Error(error.message);
 }
