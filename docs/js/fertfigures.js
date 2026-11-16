@@ -4,7 +4,7 @@
 // tonnes), the nitrogen available and the yield it can carry; then a total row (the kg/ha figures area-weighted, the soil
 // and target figures a plain mean as on the screen). Starter fertiliser: required, applied and left. Pure.
 
-import { fieldUrea, ureaAppliedKgHaFor, fieldSeed, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, maxYieldFromUrea } from './derived.js?v=302';
+import { fieldUrea, ureaAppliedKgHaFor, fieldSeed, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, maxYieldFromUrea } from './derived.js?v=303';
 
 const n = (v) => Number(v) || 0;
 

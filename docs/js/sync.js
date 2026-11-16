@@ -15,12 +15,13 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=302';
-import { stateToRows } from './mapping.js?v=302';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=302';
-import { selectDirtyRows, isLegacyDirty, pushRowsFor } from './dirty.js?v=302';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=302';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=302';
+import { supabase } from './supabase.js?v=303';
+import { stateToRows } from './mapping.js?v=303';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=303';
+import { selectDirtyRows, isLegacyDirty, pushRowsFor } from './dirty.js?v=303';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=303';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=303';
+import { readAllIn } from './pages.js?v=303';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -141,12 +142,12 @@ export async function push(state, farmId, role = 'owner') {
       try {
         notices = await reconcileTickets(state, ticketIds, {
           movements: async (list) => {
-            const { data, error } = await supabase.from('movements').select('*').in('id', list);
+            const { data, error } = await readAllIn((slice) => supabase.from('movements').select('*').in('id', slice), list);
             if (error) throw error;
             return data ?? [];
           },
           legs: async (list) => {
-            const { data, error } = await supabase.from('movement_legs').select('*').in('movement_id', list);
+            const { data, error } = await readAllIn((slice) => supabase.from('movement_legs').select('*').in('movement_id', slice), list);
             if (error) throw error;
             return data ?? [];
           },

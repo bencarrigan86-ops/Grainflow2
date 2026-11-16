@@ -11,9 +11,10 @@
 // hydration has to produce a working state object with those parts simply
 // absent. Throwing there would mean the app only runs for owners.
 
-import { supabase } from './supabase.js?v=302';
-import { rowsToState } from './mapping.js?v=302';
-import { stampBase } from './ticketmerge.js?v=302';
+import { supabase } from './supabase.js?v=303';
+import { rowsToState } from './mapping.js?v=303';
+import { stampBase } from './ticketmerge.js?v=303';
+import { readAllPages } from './pages.js?v=303';
 
 // Scoped by farm_id; the child tables hang off their parents. Everything a push writes has to be read back
 // here too (tests/hydrate.test.mjs checks it): movement_photos was missing, so photos were uploaded and then
@@ -30,12 +31,16 @@ async function fetchTable(table, farmId, role) {
   // A farm worker is not sent the prices: stock comes through a function that blanks them. Until the database has
   // that function the plain read is tried, which gives a worker only the entries with no price on them.
   if (table === 'input_stock' && role === 'farm_worker') {
-    const viaFunction = await supabase.rpc('input_stock_for_worker', { p_farm_id: farmId });
+    const viaFunction = await readAllPages(() => supabase.rpc('input_stock_for_worker', { p_farm_id: farmId }));
     if (!viaFunction.error) return { table, rows: viaFunction.data ?? [], denied: false };
   }
-  let query = supabase.from(table).select('*').eq(column, farmId);
-  if (table !== 'farm_bank') query = query.is('deleted_at', null);   // the bank row has no deleted_at
-  const { data, error } = await query;
+  const build = () => {
+    const query = supabase.from(table).select('*').eq(column, farmId);
+    return table !== 'farm_bank' ? query.is('deleted_at', null) : query;   // the bank row has no deleted_at
+  };
+  // The bank row is one row with no id column. Every other table is read a page at a time, because the server
+  // stops at 1,000 rows without saying so, and a farm's loads and their legs are more than that.
+  const { data, error } = table === 'farm_bank' ? await build() : await readAllPages(build);
 
   if (error) {
     // Denied is an expected outcome for the restricted tables, not a fault.
