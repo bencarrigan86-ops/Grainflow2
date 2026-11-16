@@ -4,13 +4,13 @@
 // matched, then apply. Nothing is saved until the last step. The reading and the rules are in deliveryimport.js, where they are
 // tested; this file is the screen.
 
-import { db } from '../storage.js?v=310';
-import { openSheet, closeSheet, notify, toast, field, getVal } from '../ui.js?v=310';
-import { esc, num, shortDate, todayLocal, dmy } from '../fmt.js?v=310';
+import { db } from '../storage.js?v=311';
+import { openSheet, closeSheet, notify, toast, field, getVal } from '../ui.js?v=311';
+import { esc, num, shortDate, todayLocal, dmy } from '../fmt.js?v=311';
 import {
   readTable, guessMapping, mappingProblems, extractRows, matchDeliveries, deliveryPatch, makeFormat, saveFormat, removeFormat, findFormat, DELIVERY_FIELDS,
-} from '../deliveryimport.js?v=310';
-import { seasonYY } from '../outloadno.js?v=310';
+} from '../deliveryimport.js?v=311';
+import { seasonYY } from '../outloadno.js?v=311';
 
 const isOwner = () => db.getRole() === 'owner';
 

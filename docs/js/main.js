@@ -1,32 +1,32 @@
-import { db } from './storage.js?v=310';
-import { supabase, ENV } from './supabase.js?v=310';
-import { installErrorLog } from './supportinfo.js?v=310';
-import { loadMySeries, rememberedSeries } from './outloadseries.js?v=310';
-import { initTheme } from './theme.js?v=310';
+import { db } from './storage.js?v=311';
+import { supabase, ENV } from './supabase.js?v=311';
+import { installErrorLog } from './supportinfo.js?v=311';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=311';
+import { initTheme } from './theme.js?v=311';
 initTheme();
-import { renderPosition } from './views/position.js?v=310';
-import { renderProduction } from './views/production.js?v=310';
-import { renderReports } from './views/reports.js?v=310';
-import { renderSales } from './views/sales.js?v=310';
-import { renderMovements } from './views/movements.js?v=310';
-import { renderStorage } from './views/storage.js?v=310';
-import { renderSettings } from './views/settings.js?v=310';
-import { renderLogin } from './views/login.js?v=310';
-import { renderAccount } from './views/account.js?v=310';
-import { renderHelp } from './views/help.js?v=310';
+import { renderPosition } from './views/position.js?v=311';
+import { renderProduction } from './views/production.js?v=311';
+import { renderReports } from './views/reports.js?v=311';
+import { renderSales } from './views/sales.js?v=311';
+import { renderMovements } from './views/movements.js?v=311';
+import { renderStorage } from './views/storage.js?v=311';
+import { renderSettings } from './views/settings.js?v=311';
+import { renderLogin } from './views/login.js?v=311';
+import { renderAccount } from './views/account.js?v=311';
+import { renderHelp } from './views/help.js?v=311';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=310';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=310';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=310';
-import { esc } from './fmt.js?v=310';
-import { isSheetOpen, notify } from './ui.js?v=310';
-import { describeMerges } from './ticketmerge.js?v=310';
-import { watchLists } from './band.js?v=310';
-import { APP_VERSION } from './version.js?v=310';
-import { startUpdateCheck } from './updatecheck.js?v=310';
-import { installWatch, requestPersistence } from './pwa.js?v=310';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=310';
+} from './auth.js?v=311';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=311';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=311';
+import { esc } from './fmt.js?v=311';
+import { isSheetOpen, notify } from './ui.js?v=311';
+import { describeMerges } from './ticketmerge.js?v=311';
+import { watchLists } from './band.js?v=311';
+import { APP_VERSION } from './version.js?v=311';
+import { startUpdateCheck } from './updatecheck.js?v=311';
+import { installWatch, requestPersistence } from './pwa.js?v=311';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=311';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -420,7 +420,7 @@ async function boot() {
     loadMySeries(myId, membership.farmId).then((n) => db.setOutloadSeries(n)).catch(() => {});
     // Ask the phone to keep what is saved on it. Best effort, and quiet: the answer is shown on Account.
     requestPersistence().catch(() => {});
-    if (currentRole === 'support') noteSupportOpen(membership.farmId);
+    if (currentRole === 'support') noteSupportOpen(membership.farmId, membership.farmName);
   } catch (e) {
     app.innerHTML = `<div class="view"><div class="card">
       <h2>Could not load the farm</h2>
@@ -459,14 +459,20 @@ async function boot() {
  * Support looking at a farm: written to the log the owner can read, and the screen says plainly that it is read only.
  * Best effort; nothing here may stop the app opening.
  */
-function noteSupportOpen(farmId) {
+function noteSupportOpen(farmId, farmName = '') {
   supabase.rpc('log_support_open', { p_farm_id: farmId }).then(() => {}, () => {});
   if (document.getElementById('support-banner')) return;
   const bar = document.createElement('div');
   bar.id = 'support-banner';
   bar.setAttribute('role', 'status');
   bar.style.cssText = 'position:sticky;top:0;z-index:50;padding:6px 12px;text-align:center;font-size:12px;font-weight:700;background:var(--warn);color:#14171a';
-  bar.textContent = 'Support view: read only. Nothing you change here is sent.';
+  bar.textContent = `Support view${farmName ? ` of ${farmName}` : ''}: read only. Nothing you change here is sent. `;
+  // the support login moves between its trial farms from Settings
+  const sw = document.createElement('a');
+  sw.href = '#/settings';
+  sw.textContent = 'Switch farm';
+  sw.style.cssText = 'color:inherit;text-decoration:underline';
+  bar.appendChild(sw);
   document.body.prepend(bar);
 }
 

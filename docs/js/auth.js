@@ -9,9 +9,9 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase } from './supabase.js?v=310';
-import { pickMembership, recallMembership } from './membership.js?v=310';
-import { newToken, expiryFrom } from './invites.js?v=310';
+import { supabase } from './supabase.js?v=311';
+import { pickMembership, recallMembership } from './membership.js?v=311';
+import { newToken, expiryFrom } from './invites.js?v=311';
 
 /** The signed-in user, or null. */
 export async function getUser() {
@@ -117,6 +117,9 @@ function readPreferredFarm() {
 function writePreferredFarm(farmId) {
   try { localStorage.setItem(PREFERRED_FARM_KEY, farmId); } catch { /* private mode */ }
 }
+
+/** The support login picks which trial farm (or its own) to open; the app reloads onto it. */
+export function setPreferredFarm(farmId) { writePreferredFarm(farmId); }
 
 export async function signIn(email, password) {
   const { error } = await supabase.auth.signInWithPassword({

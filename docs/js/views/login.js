@@ -5,8 +5,9 @@
 // rather than new styling, so it looks like the rest of Commodity Mate rather than
 // a login page bolted onto the front of it.
 
-import { signIn, signUp, createFarm } from '../auth.js?v=310';
-import { wantSampleData } from '../demo.js?v=310';
+import { signIn, signUp, createFarm } from '../auth.js?v=311';
+import { wantSampleData } from '../demo.js?v=311';
+import { hasTrialInvite, trialNoticeText } from '../trials.js?v=311';
 
 export function renderLogin(root, { mode = 'signin', onDone, invited = false } = {}) {
   let busy = false;
@@ -171,6 +172,16 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false } =
   function wireFarm() {
     const nameEl = root.querySelector('#farm-name');
     const btn = root.querySelector('#create-farm');
+    // Somebody invited to try the app is told, before they create the farm, that the person who invited them can look at it.
+    hasTrialInvite().then((yes) => {
+      if (!yes || !btn.isConnected || root.querySelector('#trial-notice')) return;
+      const note = document.createElement('div');
+      note.id = 'trial-notice';
+      note.className = 'hint';
+      note.style.cssText = 'margin:0 0 12px';
+      note.textContent = trialNoticeText();
+      btn.before(note);
+    });
 
     async function submit() {
       if (busy) return;

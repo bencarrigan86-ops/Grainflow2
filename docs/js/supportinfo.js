@@ -101,6 +101,9 @@ export function supportStatusText(until, now = new Date()) {
   return { on: true, text: `Support can look at your farm, read only, until ${whenText(end.toISOString())}. It switches itself off then.` };
 }
 
+/** The owner's status line when support was given standing access as part of a trial: no end date, and it can be switched off. */
+export function standingStatus(text) { return { on: true, text }; }
+
 const ACTION = { granted: 'Access given', revoked: 'Access taken away', opened: 'Support looked at the farm' };
 /** One line of the access log. */
 export function logLine(row) {
