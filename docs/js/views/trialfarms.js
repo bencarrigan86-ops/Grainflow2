@@ -1,13 +1,13 @@
 // Settings > Trial farms: only for the support login. Invite somebody to try the app, and open any trial farm (or go back to your own).
 
-import { db } from '../storage.js?v=311';
-import { setPreferredFarm } from '../auth.js?v=311';
-import { toast, notify } from '../ui.js?v=311';
-import { esc } from '../fmt.js?v=311';
+import { db } from '../storage.js?v=312';
+import { setPreferredFarm } from '../auth.js?v=312';
+import { toast, notify } from '../ui.js?v=312';
+import { esc } from '../fmt.js?v=312';
 import {
   isSupportAdmin, createTrialInvite, withdrawTrialInvite, listTrialInvites, listSupportFarms,
   trialInviteMessage, farmLabel, validEmail,
-} from '../trials.js?v=311';
+} from '../trials.js?v=312';
 
 // Settings repaints on every change; who the support login is does not change, so it is asked once (a "no" is asked again after a while).
 let adminAnswer = null;

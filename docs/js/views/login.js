@@ -5,9 +5,9 @@
 // rather than new styling, so it looks like the rest of Commodity Mate rather than
 // a login page bolted onto the front of it.
 
-import { signIn, signUp, createFarm } from '../auth.js?v=311';
-import { wantSampleData } from '../demo.js?v=311';
-import { hasTrialInvite, trialNoticeText } from '../trials.js?v=311';
+import { signIn, signUp, createFarm } from '../auth.js?v=312';
+import { wantSampleData } from '../demo.js?v=312';
+import { hasTrialInvite, trialNoticeText, trialSampleText } from '../trials.js?v=312';
 
 export function renderLogin(root, { mode = 'signin', onDone, invited = false } = {}) {
   let busy = false;
@@ -181,6 +181,13 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false } =
       note.style.cssText = 'margin:0 0 12px';
       note.textContent = trialNoticeText();
       btn.before(note);
+      // A trial is always the sample farm: no "Empty farm" choice for somebody who was invited to look around.
+      const seed = root.querySelector('#farm-seed');
+      if (seed) {
+        seed.value = 'sample';
+        const field = seed.closest('.field');
+        if (field) field.innerHTML = `<div class="hint" id="trial-sample">${trialSampleText()}</div><select id="farm-seed" style="display:none"><option value="sample" selected>sample</option></select>`;
+      }
     });
 
     async function submit() {

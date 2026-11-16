@@ -32,6 +32,11 @@ export function standingText() {
   return 'The person who set up your trial can look at your farm, read only, to help you. They cannot change anything and cannot see your bank details. You can switch it off.';
 }
 
+/** What a trial owner is told in place of the "Start with" choice: a trial is always the sample farm. */
+export function trialSampleText() {
+  return 'Your trial starts with a sample farm to look around: an invented property in a season called "Sample 2026". Nothing in it is real.';
+}
+
 /** The sentence a new trial owner reads before they create the farm. */
 export function trialNoticeText() {
   return 'You were invited to try this. Your farm is yours alone. The person who invited you can look at it, read only, to help you; you can switch that off in Settings.';

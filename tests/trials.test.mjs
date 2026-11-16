@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { APP_VERSION } from '../docs/js/version.js';
 const stamp = APP_VERSION.split('.').pop();
-const { validEmail, trialInviteMessage, farmLabel, standingText, trialNoticeText } = await import(`../docs/js/trialtext.js?v=${stamp}`);
+const { validEmail, trialInviteMessage, farmLabel, standingText, trialNoticeText, trialSampleText } = await import(`../docs/js/trialtext.js?v=${stamp}`);
 const { standingStatus } = await import('../docs/js/supportinfo.js');
 
 let failures = 0;
@@ -45,6 +45,13 @@ check('the owner is told in words, before and after: read only, can be switched 
   assert.ok(/read only/.test(standingText()) && /switch it off/.test(standingText()));
   assert.ok(/yours alone/.test(trialNoticeText()) && /read only/.test(trialNoticeText()) && /switch that off/.test(trialNoticeText()));
   assert.deepEqual(standingStatus('x'), { on: true, text: 'x' }, 'the card shows the take-away button while it is on');
+});
+
+check('a trial is always the sample farm: the empty choice is taken away from somebody who was invited', () => {
+  assert.ok(/sample farm/.test(trialSampleText()) && /Sample 2026/.test(trialSampleText()));
+  const lg = read('docs/js/views/login.js');
+  assert.ok(lg.includes('trialSampleText()') && lg.includes("seed.value = 'sample'"));
+  assert.ok(lg.includes("root.querySelector('#farm-seed')?.value !== 'empty'"), 'the sign-up still reads the choice the same way, so the sample is what is loaded');
 });
 
 check('the SQL: invitations are reachable only through the support login, and the farm is made theirs alone', () => {

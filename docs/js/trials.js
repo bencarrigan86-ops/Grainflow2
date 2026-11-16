@@ -4,10 +4,10 @@
 // for somebody to sign up and create their farm, and when they do, the support login is added to that farm, read only, with no end
 // date. Nothing here can give anybody access; it only asks the functions that can.
 
-import { supabase } from './supabase.js?v=311';
+import { supabase } from './supabase.js?v=312';
 
-import { asText, validEmail } from './trialtext.js?v=311';
-export { validEmail, trialInviteMessage, farmLabel, standingText, trialNoticeText } from './trialtext.js?v=311';
+import { asText, validEmail } from './trialtext.js?v=312';
+export { validEmail, trialInviteMessage, farmLabel, standingText, trialNoticeText, trialSampleText } from './trialtext.js?v=312';
 
 /** Is the signed-in person the support login? Anything that goes wrong is a no. */
 export async function isSupportAdmin() {
