@@ -1,16 +1,16 @@
 // Rotation and yield history: every paddock against every season, with the crop and its yield in each cell, and the
 // farm's yield for each crop by season underneath. Built from the seasons the farm already holds; nothing is entered here.
 
-import { db } from '../storage.js?v=299';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=299';
-import { openSheet, toast } from '../ui.js?v=299';
-import { canSeeYield } from '../nav.js?v=299';
-import { PALETTE } from '../farmmap.js?v=299';
-import { rotationGrid, rotationFarms, withoutFarms } from '../fieldhistory.js?v=299';
-import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=299';
-import { nowTime } from '../loadreport.js?v=299';
-import { downloadCSV } from '../csv.js?v=299';
-import { sharePdf, safeFileName } from '../sharefile.js?v=299';
+import { db } from '../storage.js?v=300';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=300';
+import { openSheet, toast } from '../ui.js?v=300';
+import { canSeeYield } from '../nav.js?v=300';
+import { PALETTE } from '../farmmap.js?v=300';
+import { rotationGrid, rotationFarms, withoutFarms, withoutSeasons } from '../fieldhistory.js?v=300';
+import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=300';
+import { nowTime } from '../loadreport.js?v=300';
+import { downloadCSV } from '../csv.js?v=300';
+import { sharePdf, safeFileName } from '../sharefile.js?v=300';
 
 const ORIENT_KEY = 'grainflow.rotation.orientation';
 const lastOrientation = () => { try { return orientationOf(localStorage.getItem(ORIENT_KEY)); } catch { return 'landscape'; } };
@@ -30,6 +30,10 @@ const readHidden = () => { try { const h = JSON.parse(localStorage.getItem(HIDDE
 const OPEN_KEY = 'grainflow.rotation.farmsopen';
 const readOpen = () => { try { return localStorage.getItem(OPEN_KEY) !== '0'; } catch { return true; } };
 const saveOpen = (open) => { try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch { /* not remembered */ } };
+// seasons switched off on the report, remembered on this device
+const HIDDEN_SEASONS_KEY = 'grainflow.rotation.hiddenSeasons';
+const readHiddenSeasons = () => { try { const h = JSON.parse(localStorage.getItem(HIDDEN_SEASONS_KEY) || '[]'); return Array.isArray(h) ? h : []; } catch { return []; } };
+const saveHiddenSeasons = (list) => { try { localStorage.setItem(HIDDEN_SEASONS_KEY, JSON.stringify(list)); } catch { /* not remembered */ } };
 const saveHidden = (list) => { try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(list)); } catch { /* not remembered */ } };
 
 export function openRotationSheet() {
@@ -40,7 +44,10 @@ export function openRotationSheet() {
   const fullGrid = rotationGrid(years);
   const farms = rotationFarms(fullGrid);
   const hidden = new Set(readHidden().filter((n) => farms.some((f) => f.name === n)));
-  let grid = withoutFarms(fullGrid, hidden);
+  const hiddenSeasons = new Set(readHiddenSeasons().filter((l) => fullGrid.seasons.includes(l)));
+  // the farms and the seasons switched on: what the screen and both files show
+  const filtered = () => withoutSeasons(withoutFarms(fullGrid, hidden), hiddenSeasons);
+  let grid = filtered();
   const tint = (crop) => { const i = grid.allCrops.indexOf(crop); return i < 0 ? '' : PALETTE[i % PALETTE.length]; };
   const cell = (c, repeat) => {
     if (!c) return '<td class="meta" style="text-align:center">&ndash;</td>';
@@ -72,6 +79,7 @@ export function openRotationSheet() {
       return `<td style="${y.total ? 'font-weight:700;' : ''}">${haText(b.areaHa)} ha${showYield && b.tons > 0 ? `<div class="meta" style="font-size:11px">${num(b.yieldTHa, 2)} t/ha</div>` : ''}</td>`;
     };
     const yieldBody = yields.map((y) => `<tr><td style="text-align:left;${y.total ? 'font-weight:700;' : ''}">${esc(y.crop)}</td>${grid.seasons.map((s) => yieldCell(y, s)).join('')}</tr>`).join('');
+    if (!grid.seasons.length) { root.querySelector('#rot-body').innerHTML = '<div class="empty">No seasons switched on. Tick a season above.</div>'; return; }
     if (!grid.rows.length) { root.querySelector('#rot-body').innerHTML = '<div class="empty">No farms switched on. Tick a farm above.</div>'; return; }
     root.querySelector('#rot-body').innerHTML = `
       <div class="hint" style="margin-bottom:8px">Each paddock in each season, found by its name. Colours are crops. ${showYield ? 'Yield is tonnes per hectare: the actual loads once a paddock is on actual, otherwise the estimate. ' : ''}An outlined cell is the same crop as the season before.</div>
@@ -89,7 +97,11 @@ export function openRotationSheet() {
     };
     const farmRow = (f) => `<label class="row" style="cursor:pointer"><span class="label"><input type="checkbox" class="rot-farm" data-farm="${esc(f.name)}" ${hidden.has(f.name) ? '' : 'checked'} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />${esc(f.name || 'No farm name')}</span><span class="value">${f.paddocks} paddock${f.paddocks === 1 ? '' : 's'}</span></label>`;
     const farmsSub = () => `${farms.length} farms, ${hidden.size ? `${farms.length - hidden.size} showing` : 'all showing'}`;
+    const seasonsSub = () => (hiddenSeasons.size ? `${fullGrid.seasons.length - hiddenSeasons.size} of ${fullGrid.seasons.length} showing` : 'all showing');
     root.innerHTML = `
+      ${fullGrid.seasons.length > 1 ? `<div class="card" style="margin-bottom:10px"><h2>Seasons</h2><div class="sub" id="rot-seasonsub">${seasonsSub()}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0">${fullGrid.seasons.map((l) => `<label style="cursor:pointer"><input type="checkbox" class="rot-season" value="${esc(l)}" ${hiddenSeasons.has(l) ? '' : 'checked'} style="width:18px;height:18px;vertical-align:middle;margin-right:5px" />${esc(l)}</label>`).join('')}</div>
+        <div style="display:flex;gap:8px"><button type="button" class="btn secondary" id="rot-seasons-all">Select all</button><button type="button" class="btn secondary" id="rot-seasons-none">Clear all</button></div></div>` : ''}
       ${farms.length > 1 ? `<div class="card" style="margin-bottom:10px"><details class="fold" id="rot-farms" style="margin-top:0;border-top:none" ${readOpen() ? 'open' : ''}><summary><div><h2>Farms</h2><div class="sub" id="rot-farmsub">${farmsSub()}</div></div></summary>
         <div style="display:flex;gap:8px;margin:8px 0"><button type="button" class="btn secondary" id="rot-all">Select all</button><button type="button" class="btn secondary" id="rot-none">Clear all</button></div>
         ${farms.map(farmRow).join('')}</details></div>` : ''}
@@ -107,7 +119,7 @@ export function openRotationSheet() {
     root.querySelector('#rot-farms')?.addEventListener('toggle', (e) => saveOpen(e.currentTarget.open));
     const setHidden = () => {
       saveHidden([...hidden]);
-      grid = withoutFarms(fullGrid, hidden);
+      grid = filtered();
       root.querySelectorAll('.rot-farm').forEach((b) => { b.checked = !hidden.has(b.dataset.farm); });
       const sub = root.querySelector('#rot-farmsub'); if (sub) sub.textContent = farmsSub();
       paintBody();
@@ -115,6 +127,16 @@ export function openRotationSheet() {
     root.querySelectorAll('.rot-farm').forEach((b) => b.addEventListener('change', () => { if (b.checked) hidden.delete(b.dataset.farm); else hidden.add(b.dataset.farm); setHidden(); }));
     root.querySelector('#rot-all')?.addEventListener('click', () => { hidden.clear(); setHidden(); });
     root.querySelector('#rot-none')?.addEventListener('click', () => { farms.forEach((f) => hidden.add(f.name)); setHidden(); });
+    const setSeasons = () => {
+      saveHiddenSeasons([...hiddenSeasons]);
+      grid = filtered();
+      root.querySelectorAll('.rot-season').forEach((b) => { b.checked = !hiddenSeasons.has(b.value); });
+      const sub = root.querySelector('#rot-seasonsub'); if (sub) sub.textContent = seasonsSub();
+      paintBody();
+    };
+    root.querySelectorAll('.rot-season').forEach((b) => b.addEventListener('change', () => { if (b.checked) hiddenSeasons.delete(b.value); else hiddenSeasons.add(b.value); setSeasons(); }));
+    root.querySelector('#rot-seasons-all')?.addEventListener('click', () => { hiddenSeasons.clear(); setSeasons(); });
+    root.querySelector('#rot-seasons-none')?.addEventListener('click', () => { fullGrid.seasons.forEach((l) => hiddenSeasons.add(l)); setSeasons(); });
     root.querySelector('#rot-yield')?.addEventListener('change', (e) => { showYield = e.currentTarget.checked; rememberYield(showYield); paintBody(); });
     const stamp = todayLocal();
     const business = db.getBusinessDetails();
@@ -125,11 +147,14 @@ export function openRotationSheet() {
       rememberOrientation(orientation);
       root.querySelectorAll('#rot-orient button').forEach((x) => x.classList.toggle('active', x === b));
     });
+    const nothingOn = () => { if (grid.seasons.length && grid.rows.length) return false; toast('Switch on a season and a farm first.'); return true; };
     root.querySelector('#rot-csv').addEventListener('click', () => {
+      if (nothingOn()) return;
       downloadCSV(safeFileName(`grainflow-rotation-${stamp}`, 'csv'), rotationCsv(grid, { showYield }));
       toast('Downloaded. It opens in Excel.');
     });
     root.querySelector('#rot-pdf').addEventListener('click', async () => {
+      if (nothingOn()) return;
       const bytes = rotationPdf(grid, {
         orientation, showYield, business: business.entityName || business.farmName || '', ngr: business.ngr || '',
         today: dmy(stamp), madeAt: `${dmy(stamp)} ${nowTime()}`,

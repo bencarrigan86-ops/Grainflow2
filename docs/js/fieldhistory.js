@@ -4,7 +4,7 @@
 // season it was in, the crop, the area, the tonnes (the actual loads once the paddock is on actual, otherwise the
 // estimate) and the yield. This is the rotation question: what went where, and how did it do. Pure.
 
-import { fieldTons } from './derived.js?v=299';
+import { fieldTons } from './derived.js?v=300';
 
 const key = (name) => String(name || '').trim().toLowerCase();
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -93,6 +93,21 @@ export function withoutFarms(grid, hidden) {
   const allCrops = grid.allCrops || grid.crops;
   const used = new Set(rows.flatMap((r) => Object.values(r.cells).map((c) => c.crop)));
   return { ...grid, rows, allCrops, crops: allCrops.filter((c) => used.has(c)) };
+}
+
+/**
+ * The grid with some seasons left out. A "same crop as the season before" pair is kept only when both seasons are still
+ * shown, and `crops` is only the crops grown in the seasons shown (`allCrops` keeps the full list, so colours do not move).
+ */
+export function withoutSeasons(grid, hidden) {
+  const off = hidden instanceof Set ? hidden : new Set(hidden || []);
+  const seasons = grid.seasons.filter((s) => !off.has(s));
+  // a paddock that was only in the seasons left out has nothing to show
+  const rows = grid.rows.filter((r) => seasons.some((s) => r.cells[s]))
+    .map((r) => ({ ...r, repeats: r.repeats.filter(([a, b]) => !off.has(a) && !off.has(b)) }));
+  const allCrops = grid.allCrops || grid.crops;
+  const used = new Set(rows.flatMap((r) => seasons.map((s) => r.cells[s]?.crop)));
+  return { ...grid, seasons, rows, allCrops, crops: allCrops.filter((c) => used.has(c)) };
 }
 
 /**

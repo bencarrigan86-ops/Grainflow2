@@ -1,13 +1,14 @@
-import { db } from '../storage.js?v=299';
-import { ureaFigures, starterFigures } from '../fertfigures.js?v=299';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=299';
-import { fertPdf } from '../fertpdf.js?v=299';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=299';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=299';
-import { field, getVal, getNum } from '../ui.js?v=299';
-import { canSeeYield } from '../nav.js?v=299';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=299';
-import { harvestReport, siloSpace, pctText } from '../harvest.js?v=299';
+import { db } from '../storage.js?v=300';
+import { ureaFigures, starterFigures, seedFigures } from '../fertfigures.js?v=300';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=300';
+import { fertPdf } from '../fertpdf.js?v=300';
+import { seedPdf } from '../seedpdf.js?v=300';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=300';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=300';
+import { field, getVal, getNum } from '../ui.js?v=300';
+import { canSeeYield } from '../nav.js?v=300';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=300';
+import { harvestReport, siloSpace, pctText } from '../harvest.js?v=300';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -344,21 +345,26 @@ function paintSeed(root) {
   const body = root.querySelector('#reports-body');
 
   body.innerHTML = `
+    ${groups.length === 0 ? '' : `<button type="button" class="btn secondary" id="seed-pdf" style="margin-bottom:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>`}
     <div class="card report">
       <h2><span class="dot report"></span>Seed</h2>
       ${groups.length === 0 ? `<div class="empty">Add fields with a seed rate in the Production tab.</div>` : groups.map((g) => seedTable(g)).join('')}
     </div>
   `;
+  body.querySelector('#seed-pdf')?.addEventListener('click', () => exportSeedPdf(groups));
+}
+
+/** The Seed report as a PDF: the same figures as the tables, shared where the phone can share and downloaded elsewhere. */
+async function exportSeedPdf(groups) {
+  const season = db.getCurrentYear();
+  const bytes = seedPdf(groups.map((g) => seedFigures(g)), { business: db.getBusinessDetails().entityName || '', season, today: dmy(todayLocal()), bufferPct: SEED_BUFFER_PCT });
+  const fileName = safeFileName(`Seed ${season} ${dmy(todayLocal())}`);
+  if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
+  await sharePdf(bytes, fileName, { title: `Seed ${season}` });
 }
 
 function seedTable(g) {
-  const rows = g.fields.map((f) => ({ f, s: fieldSeed(f) }));
-  const totals = rows.reduce((acc, { f, s }) => ({
-    area: acc.area + (Number(f.areaHa) || 0),
-    requiredT: acc.requiredT + s.requiredTons,
-    bufferedT: acc.bufferedT + s.bufferedTons,
-  }), { area: 0, requiredT: 0, bufferedT: 0 });
-  const rateKgHa = totals.area > 0 ? (totals.requiredT * 1000) / totals.area : 0;
+  const { rows, total } = seedFigures(g);
 
   return `
     <div class="group-label"><span>${esc(g.name)}</span></div>
@@ -366,23 +372,23 @@ function seedTable(g) {
       <table>
         <thead><tr><th>Field</th><th>Variety</th><th>Area</th><th>Rate kg/ha</th><th>Required t</th><th>+${num(SEED_BUFFER_PCT, 0)}% t</th></tr></thead>
         <tbody>
-          ${rows.map(({ f, s }) => `
+          ${rows.map((r) => `
             <tr>
-              <td>${esc(f.name)}</td>
-              <td>${esc(f.seedVariety || '—')}</td>
-              <td>${num(f.areaHa, 1)}</td>
-              <td>${num(f.seedRateKgHa || 0, 0)}</td>
-              <td>${num(s.requiredTons, 2)}</td>
-              <td>${num(s.bufferedTons, 2)}</td>
+              <td>${esc(r.name)}</td>
+              <td>${esc(r.variety || '—')}</td>
+              <td>${num(r.area, 1)}</td>
+              <td>${num(r.rate, 0)}</td>
+              <td>${num(r.requiredT, 2)}</td>
+              <td>${num(r.bufferedT, 2)}</td>
             </tr>`).join('')}
         </tbody>
         <tfoot><tr>
           <td>Total</td>
           <td></td>
-          <td>${num(totals.area, 1)}</td>
-          <td>${num(rateKgHa, 0)}</td>
-          <td>${num(totals.requiredT, 2)}</td>
-          <td>${num(totals.bufferedT, 2)}</td>
+          <td>${num(total.area, 1)}</td>
+          <td>${num(total.rate, 0)}</td>
+          <td>${num(total.requiredT, 2)}</td>
+          <td>${num(total.bufferedT, 2)}</td>
         </tr></tfoot>
       </table>
     </div>

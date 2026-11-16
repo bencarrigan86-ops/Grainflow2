@@ -4,7 +4,7 @@
 // tonnes), the nitrogen available and the yield it can carry; then a total row (the kg/ha figures area-weighted, the soil
 // and target figures a plain mean as on the screen). Starter fertiliser: required, applied and left. Pure.
 
-import { fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, maxYieldFromUrea } from './derived.js?v=299';
+import { fieldUrea, ureaAppliedKgHaFor, fieldSeed, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, maxYieldFromUrea } from './derived.js?v=300';
 
 const n = (v) => Number(v) || 0;
 
@@ -59,4 +59,16 @@ export function starterFigures(g) {
   const perHa = (key) => (area > 0 ? (sum(key) * 1000) / area : 0);
   const total = { name: 'Total', area, req: perHa('reqT'), app: perHa('appT'), left: perHa('leftT'), reqT: sum('reqT'), appT: sum('appT'), leftT: sum('leftT') };
   return { name: g.name, rows, total };
+}
+
+/** Seed: per paddock the variety, area, rate and the tonnes needed (and with the buffer on top); the total's rate is tonnes over area. */
+export function seedFigures(g) {
+  const rows = g.fields.map((f) => {
+    const s = fieldSeed(f);
+    return { name: f.name, variety: f.seedVariety || '', area: n(f.areaHa), rate: n(f.seedRateKgHa), requiredT: s.requiredTons, bufferedT: s.bufferedTons };
+  });
+  const area = rows.reduce((a, r) => a + r.area, 0);
+  const requiredT = rows.reduce((a, r) => a + r.requiredT, 0);
+  const bufferedT = rows.reduce((a, r) => a + r.bufferedT, 0);
+  return { name: g.name, rows, total: { name: 'Total', variety: '', area, rate: area > 0 ? (requiredT * 1000) / area : 0, requiredT, bufferedT } };
 }
