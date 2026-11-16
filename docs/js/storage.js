@@ -18,24 +18,25 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=303';
+import { hydrate } from './hydrate.js?v=306';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=303';
-import { chooseBootState, resolveLegacy } from './boot.js?v=303';
-import { isLegacyDirty } from './dirty.js?v=303';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=303';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=303';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=303';
-import { settleLegs, dedupeLegs } from './legs.js?v=303';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=303';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=303';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=303';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=303';
-import { schedulePush, pushOnReconnect } from './sync.js?v=303';
-import { hasParts as hasAddressParts } from './address.js?v=303';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=303';
+} from './local.js?v=306';
+import { chooseBootState, resolveLegacy } from './boot.js?v=306';
+import { isLegacyDirty } from './dirty.js?v=306';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=306';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=306';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=306';
+import { settleLegs, dedupeLegs } from './legs.js?v=306';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=306';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=306';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=306';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=306';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=306';
+import { schedulePush, pushOnReconnect } from './sync.js?v=306';
+import { hasParts as hasAddressParts } from './address.js?v=306';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=306';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -1046,6 +1047,20 @@ export const db = {
     persist();
     return inv;
   },
+  /** An adjustment note against an invoice: no invoice number (those stay unbroken), a note number of its own, in whichever season is open. */
+  createAdjustment(note) {
+    const all = Object.values(data.years).flatMap((y) => y.invoices || []);
+    // applied to its invoice, the note is settled from the start: its amount is in the invoice's total, not owed on top of it
+    const inv = { ...note, id: uid(), invoiceNo: null, noteNo: nextNoteNo(all), status: note.appliedToInvoice ? 'paid' : 'outstanding', paidDate: note.appliedToInvoice ? note.issueDate : null };
+    current().invoices.push(inv);
+    touch('invoice', inv.id);
+    if (inv.appliedToInvoice) {
+      const original = current().invoices.find((i) => i.id === inv.adjustsInvoiceId);
+      if (original) { Object.assign(original, applyAdjustment(original, inv)); touch('invoice', original.id); }
+    }
+    persist();
+    return inv;
+  },
   setInvoiceStatus(id, status) {
     const c = current();
     const idx = c.invoices.findIndex((inv) => inv.id === id);
@@ -1071,8 +1086,19 @@ export const db = {
     tombstone(table, id);
   },
   deleteInvoice(id) {
+    const gone = current().invoices.find((inv) => inv.id === id);
+    // a note that was applied to its invoice takes its line and its amount back off it
+    if (gone && isAdjustment(gone) && gone.appliedToInvoice) {
+      const original = current().invoices.find((i) => i.id === gone.adjustsInvoiceId);
+      const patch = original ? withoutAdjustment(original, gone) : null;
+      if (patch && Object.keys(patch).length) { Object.assign(original, patch); touch('invoice', original.id); }
+    }
+    // an invoice takes its notes with it: a note with no invoice would be owed to nobody
+    const notes = gone && !isAdjustment(gone) ? current().invoices.filter((i) => isAdjustment(i) && i.adjustsInvoiceId === id) : [];
+    for (const n of notes) tombstone('invoices', n.id);
     tombstone('invoices', id);
-    current().invoices = current().invoices.filter((inv) => inv.id !== id);
+    const drop = new Set([id, ...notes.map((n) => n.id)]);
+    current().invoices = current().invoices.filter((inv) => !drop.has(inv.id));
     persist();
   },
 

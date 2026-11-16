@@ -2,11 +2,11 @@
 // (Business > Invoices > Import for sales invoices, Business > Bills to pay > Import for bills). The account codes
 // are the accountant's, so they are asked for here and remembered on this device. The files are made in xero.js.
 
-import { db } from '../storage.js?v=303';
-import { openSheet, field, getVal } from '../ui.js?v=303';
-import { esc, todayLocal } from '../fmt.js?v=303';
-import { downloadCSV } from '../csv.js?v=303';
-import { xeroInvoices, xeroBills, xeroCsv, DEFAULT_CODES, financialYearStart } from '../xero.js?v=303';
+import { db } from '../storage.js?v=306';
+import { openSheet, field, getVal } from '../ui.js?v=306';
+import { esc, todayLocal } from '../fmt.js?v=306';
+import { downloadCSV } from '../csv.js?v=306';
+import { xeroInvoices, xeroAdjustments, xeroBills, xeroCsv, DEFAULT_CODES, financialYearStart } from '../xero.js?v=306';
 
 const CODES_KEY = 'grainflow.xero.codes';
 const loadCodes = () => { try { return { ...DEFAULT_CODES, ...JSON.parse(localStorage.getItem(CODES_KEY) || '{}') }; } catch { return { ...DEFAULT_CODES }; } };
@@ -23,6 +23,7 @@ export function openXeroSheet() {
       const { sales, commodities, invoices } = db.get();
       return {
         inv: xeroInvoices({ invoices, sales, commodities, from, to, codes }),
+        adj: xeroAdjustments({ invoices, sales, from, to, codes }),
         bills: xeroBills({ payables: db.getPayables(), from, to, codes }),
       };
     };
@@ -32,8 +33,8 @@ export function openXeroSheet() {
       saveCodes(codes);
     };
     const paint = () => {
-      const { inv, bills } = make();
-      const warnings = [...inv.warnings, ...bills.warnings];
+      const { inv, adj, bills } = make();
+      const warnings = [...inv.warnings, ...adj.warnings, ...bills.warnings];
       root.innerHTML = `
         <div class="hint" style="margin-bottom:8px">Two files for Xero's import: sales invoices, and bills. Invoices and bills are picked by their own date.</div>
         <div class="grid-2">
@@ -50,6 +51,8 @@ export function openXeroSheet() {
         </div>
         ${field({ label: 'Other bills', id: 'xr-other', value: codes.other })}
         <button class="btn" id="xr-inv" ${inv.count ? '' : 'disabled'} style="margin-top:8px">Sales invoices (${inv.count})</button>
+        ${adj.count ? `<button class="btn secondary" id="xr-adj" style="margin-top:8px">Adjustment notes (${adj.count})</button>
+        <div class="hint" style="margin-top:4px">Adjustment notes are not in the invoices file. Credits go into Xero as credit notes: compare this file with the template in Xero (Sales, Credit notes, Import) before using it.</div>` : ''}
         <button class="btn" id="xr-bills" ${bills.count ? '' : 'disabled'} style="margin-top:8px">Bills (${bills.count})</button>
         ${warnings.length ? `<div class="hint" style="margin-top:10px;color:var(--danger)">Check before importing:<br>${warnings.slice(0, 8).map(esc).join('<br>')}${warnings.length > 8 ? `<br>and ${warnings.length - 8} more` : ''}</div>` : ''}
         <div class="hint" style="margin-top:10px">Levies and freight the buyer takes off are lines of their own, without GST, so each invoice comes to what Commodity Mate says is payable. Amounts are before GST; Xero adds it.</div>`;
@@ -57,6 +60,7 @@ export function openXeroSheet() {
       root.querySelector('#xr-from').addEventListener('change', () => { from = getVal(root, 'xr-from') || from; readCodes(); paint(); });
       root.querySelector('#xr-to').addEventListener('change', () => { to = getVal(root, 'xr-to') || to; readCodes(); paint(); });
       root.querySelector('#xr-inv').addEventListener('click', () => { readCodes(); downloadCSV(`Xero sales invoices ${from} to ${to}.csv`, xeroCsv(make().inv.rows)); });
+      root.querySelector('#xr-adj')?.addEventListener('click', () => { readCodes(); downloadCSV(`Xero adjustment notes ${from} to ${to}.csv`, xeroCsv(make().adj.rows)); });
       root.querySelector('#xr-bills').addEventListener('click', () => { readCodes(); downloadCSV(`Xero bills ${from} to ${to}.csv`, xeroCsv(make().bills.rows)); });
       for (const k of Object.keys(DEFAULT_CODES)) root.querySelector(`#xr-${k}`).addEventListener('change', () => { readCodes(); });
     };

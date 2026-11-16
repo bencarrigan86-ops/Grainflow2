@@ -7,11 +7,12 @@
 //
 // Pure: the sheet (views/xero.js) supplies the data and downloads the files.
 
-import { invoiceTotals } from './derived.js?v=303';
-import { kindLabel } from './payables.js?v=303';
-import { emailIn } from './vendordec.js?v=303';
-import { toCSV } from './csv.js?v=303';
-import { partsOf, hasParts } from './address.js?v=303';
+import { invoiceTotals } from './derived.js?v=306';
+import { kindLabel } from './payables.js?v=306';
+import { emailIn } from './vendordec.js?v=306';
+import { toCSV } from './csv.js?v=306';
+import { partsOf, hasParts } from './address.js?v=306';
+import { isAdjustment, noteLabel } from './adjustment.js?v=306';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -58,7 +59,8 @@ export function xeroInvoices({ invoices = [], sales = [], commodities = [], from
   const rows = [];
   const warnings = [];
   let count = 0;
-  const chosen = invoices.filter((i) => inRange(i.issueDate, from, to))
+  // adjustment notes are not sales invoices: Xero takes them as credit notes, so they have a file of their own (xeroAdjustments)
+  const chosen = invoices.filter((i) => !isAdjustment(i) && inRange(i.issueDate, from, to))
     .sort((a, b) => String(a.issueDate || '').localeCompare(String(b.issueDate || '')) || num(a.invoiceNo) - num(b.invoiceNo));
   for (const inv of chosen) {
     const sale = sales.find((s) => s.id === inv.saleId);
@@ -88,7 +90,8 @@ export function xeroInvoices({ invoices = [], sales = [], commodities = [], from
         const bits = [commodity || 'Grain', l.ticketNo ? `ticket ${l.ticketNo}` : (l.rego && l.rego !== '—' ? l.rego : ''), l.date ? xeroDate(l.date) : '', clean(l.grade)].filter(Boolean);
         add(bits.join(' '), round4(tons), round4(num(l.rate)), codes.sales, TAX.income);
       } else if (num(l.subtotal) !== 0) {
-        add(clean(l.description || l.rego) || 'Adjustment', 1, round2(num(l.subtotal)), codes.sales, TAX.income);
+        // an adjustment note applied to the invoice is a line of its own; one with no GST is BAS Excluded
+        add(clean(l.description || l.rego) || 'Adjustment', 1, round2(num(l.subtotal)), codes.sales, l.isAdjustmentLine && num(l.gst) === 0 ? TAX.free : TAX.income);
       }
     }
     if (num(totals.levies) > 0) add('Grain levies deducted', 1, -round2(totals.levies), codes.sales, TAX.free);
@@ -96,6 +99,42 @@ export function xeroInvoices({ invoices = [], sales = [], commodities = [], from
     count += 1;
   }
   return { rows, count, warnings };
+}
+
+/**
+ * The adjustment notes dated from `from` to `to`, in the same columns as the invoices: one line each, at the amount before
+ * GST, negative for a credit. Xero takes a credit through its own credit note import (Sales > Credit notes), whose template
+ * should be compared with this file before it is used; the note number is the number, and the line says which invoice it
+ * adjusts.
+ * @returns {{rows: object[], count: number, warnings: string[]}}
+ */
+export function xeroAdjustments({ invoices = [], sales = [], from = '', to = '', codes = DEFAULT_CODES }) {
+  const rows = [];
+  const warnings = [];
+  // a note applied to its invoice is on the invoice already, as a line, so it is not sent twice
+  const chosen = invoices.filter((i) => isAdjustment(i) && !i.appliedToInvoice && inRange(i.issueDate, from, to))
+    .sort((a, b) => String(a.issueDate || '').localeCompare(String(b.issueDate || '')) || num(a.noteNo) - num(b.noteNo));
+  for (const note of chosen) {
+    const sale = sales.find((s) => s.id === note.saleId);
+    const buyer = clean(sale?.buyer);
+    if (!buyer) warnings.push(`${noteLabel(note)} has no buyer name`);
+    const date = note.issueDate || to;
+    rows.push({
+      ...blankRow(),
+      '*ContactName': buyer || 'Unknown buyer',
+      EmailAddress: emailIn(sale?.buyerContact),
+      ...postalAddress(sale),
+      '*InvoiceNumber': noteLabel(note),
+      Reference: note.adjustsInvoiceNo != null ? `Adjusts invoice ${note.adjustsInvoiceNo}` : clean(sale?.contractNo),
+      '*InvoiceDate': xeroDate(date),
+      '*DueDate': xeroDate(note.dueDate || date),
+      '*Description': clean(note.reason) || 'Adjustment',
+      '*Quantity': 1, '*UnitAmount': round2(num(note.subtotalExGST)),
+      '*AccountCode': codes.sales, '*TaxType': num(note.gst) !== 0 ? TAX.income : TAX.free,
+      Currency: 'AUD',
+    });
+  }
+  return { rows, count: rows.length, warnings };
 }
 
 /**

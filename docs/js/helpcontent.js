@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=303';
+import { ROLES, canOpen } from './nav.js?v=306';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -219,9 +219,12 @@ export const GUIDES = [
       'The totals are worked out and can be adjusted to match a broker\'s rounding. Create the invoice, then Print / Save as PDF. Tick the signing box first if you want it signed.',
       'Mark it paid when the money arrives.',
       'Under the invoice, enter the buyer\'s RCTI number and total. It says Agrees, or shows how far apart the two are; the list flags a difference.',
+      'If they differ, tap Make an adjustment note for the difference. The invoice stays as it was sent; the note (AN-1, AN-2 and so on) says what changed and why, names the invoice, and prints on its own page.',
     ],
     tips: [
       'The RCTI check is for you and is not printed on the invoice.',
+      'An adjustment note counts in what the buyer owes: a credit takes its amount off, an extra charge adds it. Mark the note settled when the books are squared, for instance when the buyer pays the invoice less the credit.',
+      'Untick "GST applies" on a note for a levy or freight difference, which carry no GST.',
       'Editing an invoice changes it in place and keeps its number.',
       'The payment details on an invoice are only printed for the owner and the bookkeeper. A manager prints an invoice without them.',
     ],

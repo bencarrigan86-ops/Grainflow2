@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=303';
-import { movementsForEndpoint } from '../derived.js?v=303';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=303';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=303';
-import { compressAndStampImage } from '../img.js?v=303';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=303';
-import { specText, extraSpecKey } from '../outload.js?v=303';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=303';
-import { pickableSilos } from '../silopick.js?v=303';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=303';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=303';
-import { activeSales } from '../paidsales.js?v=303';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=303';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=303';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=303';
-import { nowTime } from '../loadreport.js?v=303';
+import { db } from '../storage.js?v=306';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=306';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=306';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=306';
+import { compressAndStampImage } from '../img.js?v=306';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=306';
+import { specText, extraSpecKey } from '../outload.js?v=306';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=306';
+import { pickableSilos } from '../silopick.js?v=306';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=306';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=306';
+import { activeSales } from '../paidsales.js?v=306';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=306';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=306';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=306';
+import { nowTime } from '../loadreport.js?v=306';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -48,7 +48,9 @@ function dayHeading(iso) {
 
 function paint(root) {
   const { storages, commodities, movements } = db.get();
-  const inUse = commodities.filter((c) => movements.some((m) => m.commodityId === c.id));
+  // the commodities with loads, the one with the most tonnes moved first
+  const movedOf = (c) => movements.reduce((sum, m) => sum + (m.commodityId === c.id ? Number(m.tons) || 0 : 0), 0);
+  const inUse = commodities.filter((c) => movements.some((m) => m.commodityId === c.id)).sort(bigFirst(movedOf, (c) => c.name));
   if (listFilter.commodityId && !inUse.some((c) => c.id === listFilter.commodityId)) listFilter.commodityId = '';
   const finishCount = toFinish(movements, storages).length;
   if (listFilter.toFinish && finishCount === 0) listFilter.toFinish = false;

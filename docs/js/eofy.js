@@ -9,10 +9,11 @@
 // after it counts as still owed. The result is plain data; eofyPdf() lays it out as the file to keep, which is the frozen
 // copy: the figures on screen move on as the books do, the file does not.
 
-import { Pdf } from './pdf.js?v=303';
-import { positionRows, saleEconomics } from './derived.js?v=303';
-import { uninvoiced, receivables } from './outstanding.js?v=303';
-import { dmy } from './fmt.js?v=303';
+import { Pdf } from './pdf.js?v=306';
+import { positionRows, saleEconomics } from './derived.js?v=306';
+import { uninvoiced, receivables } from './outstanding.js?v=306';
+import { dmy } from './fmt.js?v=306';
+import { refLabel } from './adjustment.js?v=306';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -169,7 +170,7 @@ export function eofyPdf(snap, { businessName = '', commodities = [] } = {}) {
 
   table('Invoiced, not yet paid', 'What buyers owed on this day, GST included.', [
     { label: 'Contract', w: 0.46 }, { label: 'Invoice', w: 0.12, align: 'right' }, { label: 'Due', w: 0.2, align: 'right' }, { label: 'Amount', w: 0.22, align: 'right' },
-  ], snap.unpaid.rows.map((r) => [r.sale ? contractText(r.sale, commodities) : 'Invoice', r.invoice.invoiceNo ? `#${r.invoice.invoiceNo}` : '', r.dueDate ? dmy(r.dueDate) : '', dollars(r.amount)]),
+  ], snap.unpaid.rows.map((r) => [r.sale ? contractText(r.sale, commodities) : 'Invoice', refLabel(r.invoice), r.dueDate ? dmy(r.dueDate) : '', dollars(r.amount)]),
   ['Total', `${snap.unpaid.count}`, '', dollars(snap.unpaid.total)]);
 
   pdf.text(pdf.width / 2, pdf.height - 28, `Snapshot as at ${dmy(snap.asAt)}, prepared in Commodity Mate. Contracts, loads and invoices dated after that day are left out.`, { size: 7.5, align: 'center', gray: GREY });

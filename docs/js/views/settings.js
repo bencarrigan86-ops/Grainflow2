@@ -1,38 +1,39 @@
-import { db } from '../storage.js?v=303';
-import { getTheme, setTheme } from '../theme.js?v=303';
-import { num, money, esc, todayLocal } from '../fmt.js?v=303';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=303';
-import { openLoadImportSheet } from './importloads.js?v=303';
-import { openPastSeasonsSheet } from './pastseasons.js?v=303';
-import { openPastSalesSheet } from './pastsales.js?v=303';
-import { openLineupSheet } from './lineup.js?v=303';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=303';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=303';
-import { openDangerSheet } from './dangerconfirm.js?v=303';
-import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=303';
-import { seasonContents, contentsText } from '../seasondelete.js?v=303';
-import { openDeletedSheet } from './deleted.js?v=303';
-import { APP_VERSION } from '../version.js?v=303';
-import { exportRowsAsCSV } from '../csv.js?v=303';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=303';
-import { endpointLabel } from './movements.js?v=303';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=303';
-import { layersForStorage } from '../outload.js?v=303';
-import { traceLoads, traceText } from '../trace.js?v=303';
-import { holdings, totalHeld } from '../offfarm.js?v=303';
-import { kindLabel, billTotal } from '../payables.js?v=303';
-import { orderState, STATE_LABEL } from '../orders.js?v=303';
-import { fieldHarvest } from '../harvest.js?v=303';
-import { openMySignatureSheet } from './signaturepad.js?v=303';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=303';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=303';
+import { db } from '../storage.js?v=306';
+import { getTheme, setTheme } from '../theme.js?v=306';
+import { num, money, esc, todayLocal } from '../fmt.js?v=306';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=306';
+import { openLoadImportSheet } from './importloads.js?v=306';
+import { openPastSeasonsSheet } from './pastseasons.js?v=306';
+import { openPastSalesSheet } from './pastsales.js?v=306';
+import { openLineupSheet } from './lineup.js?v=306';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=306';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=306';
+import { openDangerSheet } from './dangerconfirm.js?v=306';
+import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=306';
+import { seasonContents, contentsText } from '../seasondelete.js?v=306';
+import { openDeletedSheet } from './deleted.js?v=306';
+import { APP_VERSION } from '../version.js?v=306';
+import { exportRowsAsCSV } from '../csv.js?v=306';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=306';
+import { endpointLabel } from './movements.js?v=306';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=306';
+import { layersForStorage } from '../outload.js?v=306';
+import { traceLoads, traceText } from '../trace.js?v=306';
+import { holdings, totalHeld } from '../offfarm.js?v=306';
+import { kindLabel, billTotal } from '../payables.js?v=306';
+import { orderState, STATE_LABEL } from '../orders.js?v=306';
+import { fieldHarvest } from '../harvest.js?v=306';
+import { openMySignatureSheet } from './signaturepad.js?v=306';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=306';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=306';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=306';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=303';
+} from '../invites.js?v=306';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=303';
+} from '../auth.js?v=306';
 
 let unsub = null;
 
@@ -1076,7 +1077,12 @@ function exportInvoicesCSV(year, stamp) {
     return [commodityName(commodities, s.commodityId), s.buyer, s.contractNo ? `#${s.contractNo}` : null].filter(Boolean).join(' · ');
   };
   exportRowsAsCSV(`grainflow-invoices-${year}-${stamp}.csv`, invoices, [
-    { label: 'Invoice No', get: (i) => i.invoiceNo ?? '' },
+    { label: 'Invoice No', get: (i) => (isAdjustment(i) ? '' : i.invoiceNo ?? '') },
+    // an adjustment note has a number of its own and says which invoice it adjusts
+    { label: 'Adjustment note', get: (i) => (isAdjustment(i) ? noteLabel(i) : '') },
+    { label: 'Adjusts invoice', get: (i) => (isAdjustment(i) ? (i.adjustsInvoiceNo ?? '') : '') },
+    { label: 'Reason', get: (i) => (isAdjustment(i) ? i.reason ?? '' : '') },
+    { label: 'Already in the invoice total', get: (i) => (isAdjustment(i) && i.appliedToInvoice ? 'Yes' : '') },
     { label: 'Issue date', get: (i) => i.issueDate ?? '' },
     { label: 'Due date', get: (i) => i.dueDate ?? '' },
     { label: 'Sale', get: (i) => saleLabel(i.saleId) },

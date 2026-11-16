@@ -9,8 +9,8 @@
 //
 // Pure apart from the two sums it borrows from derived.js.
 
-import { estimateFieldTons, movementTonsFromField, storageLedgerStock } from './derived.js?v=303';
-import { isTransit } from './transit.js?v=303';
+import { estimateFieldTons, movementTonsFromField, storageLedgerStock, bigFirst } from './derived.js?v=306';
+import { isTransit } from './transit.js?v=306';
 
 /**
  * One field.
@@ -69,6 +69,7 @@ export function harvestReport(commodities, fields, movements) {
     groups.push({ id, name, rows, totals: totalsOf(rows) });
   };
   for (const c of commodities || []) add(c.id, c.name, (fields || []).filter((f) => f.commodityId === c.id));
+  groups.sort(bigFirst((g) => g.totals.expectedT));   // the commodity with the most tonnes first; fields with no commodity stay last
   add(null, 'No commodity', (fields || []).filter((f) => !(commodities || []).some((c) => c.id === f.commodityId)));
   const all = groups.flatMap((g) => g.rows);
   return { groups, farm: totalsOf(all) };

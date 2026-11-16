@@ -1,10 +1,10 @@
 // The load report sheet: pick the dates (and a commodity or contract if wanted), then send the list of loads on as a PDF.
 
-import { db } from '../storage.js?v=303';
-import { num, todayLocal, dmy } from '../fmt.js?v=303';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=303';
-import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=303';
-import { loadReportRows, loadReportTotals, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=303';
+import { db } from '../storage.js?v=306';
+import { num, todayLocal, dmy } from '../fmt.js?v=306';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=306';
+import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=306';
+import { loadReportRows, loadReportTotals, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=306';
 
 // what was chosen last time, remembered on this device
 const KEY = 'grainflow.loadreport';

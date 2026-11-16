@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=303';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne } from '../derived.js?v=303';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=303';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=303';
-import { describeMerge } from '../merge.js?v=303';
-import { renderRelatedMovements } from './movements.js?v=303';
-import { canSeeYield } from '../nav.js?v=303';
-import { wireJumps } from '../jump.js?v=303';
-import { openMapSheet } from './farmmap.js?v=303';
-import { openInputsSheet } from './inputs.js?v=303';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=303';
-import { stockLevels } from '../inputs.js?v=303';
-import { fieldHistory, rotationText, repeatCrops } from '../fieldhistory.js?v=303';
-import { openRotationSheet } from './rotation.js?v=303';
-import { openAveragesSheet } from './averages.js?v=303';
+import { db } from '../storage.js?v=306';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=306';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=306';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=306';
+import { describeMerge } from '../merge.js?v=306';
+import { renderRelatedMovements } from './movements.js?v=306';
+import { canSeeYield } from '../nav.js?v=306';
+import { wireJumps } from '../jump.js?v=306';
+import { openMapSheet } from './farmmap.js?v=306';
+import { openInputsSheet } from './inputs.js?v=306';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=306';
+import { stockLevels } from '../inputs.js?v=306';
+import { fieldHistory, rotationText, repeatCrops } from '../fieldhistory.js?v=306';
+import { openRotationSheet } from './rotation.js?v=306';
+import { openAveragesSheet } from './averages.js?v=306';
 
 let unsub = null;
 
@@ -37,7 +37,7 @@ function paint(root) {
   const inputProducts = canSeeInputs ? stockLevels(db.getInputMoves()).length : 0;
   const sprayAllowed = canSpray(db.getRole());
   const sprayOpen = sprayAllowed ? db.getSprayJobs().filter((j) => j.status !== 'done').length : 0;
-  const rollup = productionByCommodity(commodities, fields, movements).filter((r) => r.fieldCount > 0);
+  const rollup = productionByCommodity(commodities, fields, movements).filter((r) => r.fieldCount > 0).sort(bigFirst((r) => r.tons, (r) => r.commodity.name));   // most tonnes first
   const groups = groupFieldsByCommodity(commodities, fields, movements);
   const productionTotals = rollup.reduce((acc, r) => ({ area: acc.area + r.area, tons: acc.tons + r.tons }), { area: 0, tons: 0 });
   productionTotals.yieldTHa = productionTotals.area > 0 ? productionTotals.tons / productionTotals.area : 0;

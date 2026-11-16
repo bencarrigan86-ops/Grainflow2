@@ -4,7 +4,7 @@
 // tonnes), the nitrogen available and the yield it can carry; then a total row (the kg/ha figures area-weighted, the soil
 // and target figures a plain mean as on the screen). Starter fertiliser: required, applied and left. Pure.
 
-import { fieldUrea, ureaAppliedKgHaFor, fieldSeed, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, maxYieldFromUrea } from './derived.js?v=303';
+import { fieldUrea, ureaAppliedKgHaFor, fieldSeed, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, maxYieldFromUrea, fieldTons } from './derived.js?v=306';
 
 const n = (v) => Number(v) || 0;
 
@@ -71,4 +71,20 @@ export function seedFigures(g) {
   const requiredT = rows.reduce((a, r) => a + r.requiredT, 0);
   const bufferedT = rows.reduce((a, r) => a + r.bufferedT, 0);
   return { name: g.name, rows, total: { name: 'Total', variety: '', area, rate: area > 0 ? (requiredT * 1000) / area : 0, requiredT, bufferedT } };
+}
+
+/**
+ * Yield: per paddock the area, how the yield was reached (actual, recorded or estimate), the yield in t/ha and the tonnes;
+ * the total row is the area, the yield over the whole area, and the tonnes.
+ * @param {{name: string, fields: object[]}} g  one commodity's group from groupFieldsByCommodity()
+ */
+export function yieldFigures(g, movements) {
+  const rows = g.fields.map((f) => {
+    const tons = fieldTons(f, movements);
+    const area = n(f.areaHa);
+    return { name: f.name, area, mode: f.yieldMode === 'actual' ? 'Actual' : f.yieldMode === 'recorded' ? 'Recorded' : 'Estimate', yieldTHa: area > 0 ? tons / area : 0, tons };
+  });
+  const area = rows.reduce((a, r) => a + r.area, 0);
+  const tons = rows.reduce((a, r) => a + r.tons, 0);
+  return { name: g.name, rows, total: { name: 'Total', area, mode: '', yieldTHa: area > 0 ? tons / area : 0, tons } };
 }

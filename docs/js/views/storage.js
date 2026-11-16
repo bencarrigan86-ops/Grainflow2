@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=303';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=303';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=303';
-import { isTransit } from '../transit.js?v=303';
-import { isOffFarm } from '../offfarm.js?v=303';
-import { paintOffFarmCard } from './offfarm.js?v=303';
-import { gradesFor, allGradeCodes } from '../grades.js?v=303';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=303';
-import { hasStorageQuality } from '../mapping.js?v=303';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=303';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=303';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=303';
-import { renderRelatedMovements } from './movements.js?v=303';
-import { openSiloSetupSheet } from './silosetup.js?v=303';
-import { commodityFills } from '../commodityfill.js?v=303';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=303';
+import { db } from '../storage.js?v=306';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=306';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=306';
+import { isTransit } from '../transit.js?v=306';
+import { isOffFarm } from '../offfarm.js?v=306';
+import { paintOffFarmCard } from './offfarm.js?v=306';
+import { gradesFor, allGradeCodes } from '../grades.js?v=306';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=306';
+import { hasStorageQuality } from '../mapping.js?v=306';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=306';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=306';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=306';
+import { renderRelatedMovements } from './movements.js?v=306';
+import { openSiloSetupSheet } from './silosetup.js?v=306';
+import { commodityFills } from '../commodityfill.js?v=306';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=306';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=303';
+} from '../silolayers.js?v=306';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -228,7 +228,7 @@ function paintStorageParts(root) {
   const chipsEl = root.querySelector('#storage-chips');
   let shown = found;
   if (listMode === 'commodity') {
-    const tabs = commodityTabs(found, commodities);
+    const tabs = commodityTabs(found, commoditiesByStock(commodities, storages, movements));
     // A tab that has nothing left in it (after a search, or once its last silo moved) is not a place to be stuck.
     if (commodityTab && !tabs.some((t) => t.id === commodityTab)) commodityTab = '';
     chipsEl.innerHTML = `<div class="chips" role="tablist">
@@ -428,7 +428,18 @@ function storageTonsByCommodity(commodities, storages, movements) {
       const trackedTons = rows.reduce((sum, s) => sum + storageLedgerStock(s, movements), 0);
       return { name: c.name, measuredTons, trackedTons, count: rows.length };
     })
-    .filter((r) => r.count > 0);
+    .filter((r) => r.count > 0)
+    .sort(bigFirst((r) => r.trackedTons || r.measuredTons));   // the most grain held first
+}
+
+/** The commodities, the one with the most grain in the silos first (what the books say, then the dip). */
+function commoditiesByStock(commodities, storages, movements) {
+  const held = new Map(commodities.map((c) => {
+    const rows = storages.filter((s) => s.commodityId === c.id);
+    const tracked = rows.reduce((sum, s) => sum + storageLedgerStock(s, movements), 0);
+    return [c.id, tracked || rows.reduce((sum, s) => sum + computeStorageTons(s, commodities).tons, 0)];
+  }));
+  return [...commodities].sort(bigFirst((c) => held.get(c.id), (c) => c.name));
 }
 
 /** The two columns down the right edge, labelled once above the list. */
@@ -464,7 +475,7 @@ function renderStorageList(storages, commodities, movements) {
   };
 
   if (listMode === 'commodity') {
-    const groups = commodities
+    const groups = commoditiesByStock(commodities, storages, movements)
       .map((c) => ({ name: c.name, rows: sortBy(storages.filter((s) => s.commodityId === c.id)) }))
       .filter((g) => g.rows.length > 0);
     const noCommodity = storages.filter((s) => !commodities.some((c) => c.id === s.commodityId));

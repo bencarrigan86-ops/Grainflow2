@@ -4,8 +4,9 @@
 // buyer gets their unpaid invoices with how overdue they are, the grain delivered but not yet on an invoice, and the
 // total of both. This is the page to send a buyer who says "what do I owe you?". Pure; the PDF is drawn by statementPdf.
 
-import { receivables, uninvoiced } from './outstanding.js?v=303';
-import { Pdf, wrapText } from './pdf.js?v=303';
+import { receivables, uninvoiced } from './outstanding.js?v=306';
+import { Pdf, wrapText } from './pdf.js?v=306';
+import { refLabel } from './adjustment.js?v=306';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const round3 = (n) => Math.round(n * 1000) / 1000;
@@ -74,7 +75,7 @@ export function statementPdf(st, { businessName = '', abn = '', today, contractN
       if (y > 760) { pdf.addPage(); y = 50; }
       const late = r.overdue ? `${r.daysOver} days overdue` : '';
       const name = wrapText(r.sale ? contractName(r.sale) : 'Unknown contract', 180, 9)[0] || '';
-      row([[L, `#${r.invoice.invoiceNo ?? ''}`], [110, name], [300, dmy(r.invoice.issueDate)], [370, `${dmy(r.dueDate) || 'no date'}${late ? `  (${late})` : ''}`], [R, money(r.amount), 'right']], { gray: r.overdue ? 0.1 : 0 });
+      row([[L, refLabel(r.invoice)], [110, name], [300, dmy(r.invoice.issueDate)], [370, `${dmy(r.dueDate) || 'no date'}${late ? `  (${late})` : ''}`], [R, money(r.amount), 'right']], { gray: r.overdue ? 0.1 : 0 });
     }
     rule(); row([[L, 'Unpaid invoices'], [R, money(st.unpaidTotal), 'right']], { bold: true });
     if (st.overdueTotal) row([[L, 'of which overdue'], [R, money(st.overdueTotal), 'right']]);

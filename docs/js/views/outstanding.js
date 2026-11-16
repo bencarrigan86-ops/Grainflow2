@@ -4,20 +4,21 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=303';
-import { openSheet } from '../ui.js?v=303';
-import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=303';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=303';
-import { windowText } from '../orders.js?v=303';
-import { openOrderSheet } from './orders.js?v=303';
-import { openInvoiceListSheet } from './invoice.js?v=303';
-import { renderPayables, returnToAfterBill } from './payables.js?v=303';
-import { openXeroSheet } from './xero.js?v=303';
-import { cashflow } from '../cashflow.js?v=303';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=303';
-import { buyerStatements, statementPdf } from '../statement.js?v=303';
-import { sharePdf } from '../sharefile.js?v=303';
-import { emailIn } from '../vendordec.js?v=303';
+import { db } from '../storage.js?v=306';
+import { openSheet } from '../ui.js?v=306';
+import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=306';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=306';
+import { windowText } from '../orders.js?v=306';
+import { openOrderSheet } from './orders.js?v=306';
+import { openInvoiceListSheet } from './invoice.js?v=306';
+import { renderPayables, returnToAfterBill } from './payables.js?v=306';
+import { openXeroSheet } from './xero.js?v=306';
+import { cashflow } from '../cashflow.js?v=306';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=306';
+import { buyerStatements, statementPdf } from '../statement.js?v=306';
+import { sharePdf } from '../sharefile.js?v=306';
+import { emailIn } from '../vendordec.js?v=306';
+import { invoiceLabel } from '../adjustment.js?v=306';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -157,7 +158,7 @@ export function openMoneySheet() {
           return `
           <div class="list-item stack" ${r.sale ? `data-open-invoices="${esc(r.sale.id)}"` : ''}>
             <div class="li-top"><div class="main">${esc(r.sale ? contractLabel(r.sale, commodities) : 'Unknown contract')}</div><div class="main">${money(r.amount, 2)}</div></div>
-            <div class="meta">Invoice #${esc(r.invoice.invoiceNo ?? '')}${r.invoice.issueDate ? ` · issued ${esc(shortDate(r.invoice.issueDate))}` : ''}</div>
+            <div class="meta">${esc(invoiceLabel(r.invoice))}${r.invoice.issueDate ? ` · issued ${esc(shortDate(r.invoice.issueDate))}` : ''}</div>
             <div class="li-foot"><span class="meta">${r.dueDate ? `Due ${esc(shortDate(r.dueDate))}` : 'No due date'}</span><span class="badges"><span class="badge ${badge}">${esc(dueText(r.daysOver))}</span></span></div>
           </div>`;
         }).join('')}`}

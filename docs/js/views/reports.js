@@ -1,14 +1,16 @@
-import { db } from '../storage.js?v=303';
-import { ureaFigures, starterFigures, seedFigures } from '../fertfigures.js?v=303';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=303';
-import { fertPdf } from '../fertpdf.js?v=303';
-import { seedPdf } from '../seedpdf.js?v=303';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=303';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=303';
-import { field, getVal, getNum } from '../ui.js?v=303';
-import { canSeeYield } from '../nav.js?v=303';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=303';
-import { harvestReport, siloSpace, pctText } from '../harvest.js?v=303';
+import { db } from '../storage.js?v=306';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures } from '../fertfigures.js?v=306';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=306';
+import { fertPdf } from '../fertpdf.js?v=306';
+import { seedPdf } from '../seedpdf.js?v=306';
+import { yieldPdf } from '../yieldpdf.js?v=306';
+import { harvestPdf } from '../harvestpdf.js?v=306';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=306';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=306';
+import { field, getVal, getNum } from '../ui.js?v=306';
+import { canSeeYield } from '../nav.js?v=306';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=306';
+import { harvestReport, siloSpace, pctText } from '../harvest.js?v=306';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -429,6 +431,8 @@ function paintHarvest(root, showYield = true) {
     return;
   }
   const nameOf = (id) => commodities.find((c) => c.id === id)?.name || 'No commodity';
+  const pdfButton = `<button type="button" class="btn secondary" id="harvest-pdf" style="margin-bottom:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>`;
+  const wirePdf = () => body.querySelector('#harvest-pdf')?.addEventListener('click', () => exportHarvestPdf({ groups, farm, space, minRoom, nameOf, showYield }));
   // what a role that is not shown yields sees: how much ground is cut and what is left, and the room in the silos. A tonne
   // figure beside a hectare figure is a yield, and the estimate and what is still to come are built from yields.
   const haPct = (done, area) => (area > 0 ? `${Math.round((done / area) * 100)}%` : '-');
@@ -437,8 +441,9 @@ function paintHarvest(root, showYield = true) {
       <summary>${summary}</summary>
       ${inner}
     </details>`;
-  if (!showYield) { body.innerHTML = harvestNoYieldHtml({ groups, farm, space, minRoom, t1, haPct, fold, nameOf }); wireHarvest(root, body, showYield); return; }
+  if (!showYield) { body.innerHTML = pdfButton + harvestNoYieldHtml({ groups, farm, space, minRoom, t1, haPct, fold, nameOf }); wireHarvest(root, body, showYield); wirePdf(); return; }
   body.innerHTML = `
+    ${pdfButton}
     <div class="card report">
       <h2><span class="dot report"></span>Whole farm</h2>
       <div class="stat-grid">
@@ -499,6 +504,16 @@ function paintHarvest(root, showYield = true) {
     }).join('')}`;
 
   wireHarvest(root, body, showYield);
+  wirePdf();
+}
+
+/** The Harvest report as a PDF: the report's own figures, with no tonnes for a role that is not shown yields. */
+async function exportHarvestPdf({ groups, farm, space, minRoom, nameOf, showYield }) {
+  const season = db.getCurrentYear();
+  const bytes = harvestPdf({ groups, farm, space, minRoom, nameOf, showYield, business: db.getBusinessDetails().entityName || '', season, today: dmy(todayLocal()) });
+  const fileName = safeFileName(`Harvest ${season} ${dmy(todayLocal())}`);
+  if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
+  await sharePdf(bytes, fileName, { title: `Harvest ${season}` });
 }
 
 /** The minimum-room box and the folds, for either version of the harvest report. */
@@ -576,6 +591,7 @@ function paintYield(root) {
   const grandYieldTHa = grandArea > 0 ? grandTons / grandArea : 0;
 
   body.innerHTML = `
+    ${groups.length > 0 ? `<button type="button" class="btn secondary" id="yield-pdf" style="margin-bottom:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>` : ''}
     ${groups.length > 0 ? sensitivityCard() : ''}
     <div class="card report">
       <h2><span class="dot report"></span>Yield by commodity, by field</h2>
@@ -587,19 +603,23 @@ function paintYield(root) {
     </div>
   `;
   bindSensitivity(body);
+  body.querySelector('#yield-pdf')?.addEventListener('click', () => exportYieldPdf(groups, movements));
+}
+
+/** The Yield report as a PDF: the same figures as the tables, shared where the phone can share and downloaded elsewhere. */
+async function exportYieldPdf(groups, movements) {
+  const season = db.getCurrentYear();
+  const bytes = yieldPdf(groups.map((g) => yieldFigures(g, movements)), { business: db.getBusinessDetails().entityName || '', season, today: dmy(todayLocal()) });
+  const fileName = safeFileName(`Yield ${season} ${dmy(todayLocal())}`);
+  if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
+  await sharePdf(bytes, fileName, { title: `Yield ${season}` });
 }
 
 function yieldTable(g, movements) {
-  const rows = g.fields.map((f) => {
-    const t = fieldTons(f, movements);
-    const yieldTHa = f.areaHa > 0 ? t / f.areaHa : 0;
-    return { f, t, yieldTHa };
-  });
-  const totals = rows.reduce((acc, { f, t }) => ({
-    area: acc.area + (Number(f.areaHa) || 0),
-    tons: acc.tons + t,
-  }), { area: 0, tons: 0 });
-  const avgYieldTHa = totals.area > 0 ? totals.tons / totals.area : 0;
+  const { rows: figures, total } = yieldFigures(g, movements);
+  const rows = figures.map((r, i) => ({ f: g.fields[i], t: r.tons, yieldTHa: r.yieldTHa }));
+  const totals = { area: total.area, tons: total.tons };
+  const avgYieldTHa = total.yieldTHa;
 
   return `
     <div class="group-label"><span>${esc(g.name)}</span><span class="n">${tons(totals.tons)}</span></div>

@@ -11,10 +11,10 @@
 // hydration has to produce a working state object with those parts simply
 // absent. Throwing there would mean the app only runs for owners.
 
-import { supabase } from './supabase.js?v=303';
-import { rowsToState } from './mapping.js?v=303';
-import { stampBase } from './ticketmerge.js?v=303';
-import { readAllPages } from './pages.js?v=303';
+import { supabase } from './supabase.js?v=306';
+import { rowsToState } from './mapping.js?v=306';
+import { stampBase } from './ticketmerge.js?v=306';
+import { readAllPages } from './pages.js?v=306';
 
 // Scoped by farm_id; the child tables hang off their parents. Everything a push writes has to be read back
 // here too (tests/hydrate.test.mjs checks it): movement_photos was missing, so photos were uploaded and then
@@ -31,11 +31,11 @@ async function fetchTable(table, farmId, role) {
   // A farm worker is not sent the prices: stock comes through a function that blanks them. Until the database has
   // that function the plain read is tried, which gives a worker only the entries with no price on them.
   if (table === 'input_stock' && role === 'farm_worker') {
-    const viaFunction = await readAllPages(() => supabase.rpc('input_stock_for_worker', { p_farm_id: farmId }));
+    const viaFunction = await readAllPages(() => supabase.rpc('input_stock_for_worker', { p_farm_id: farmId }, { count: 'exact' }));
     if (!viaFunction.error) return { table, rows: viaFunction.data ?? [], denied: false };
   }
   const build = () => {
-    const query = supabase.from(table).select('*').eq(column, farmId);
+    const query = supabase.from(table).select('*', { count: 'exact' }).eq(column, farmId);
     return table !== 'farm_bank' ? query.is('deleted_at', null) : query;   // the bank row has no deleted_at
   };
   // The bank row is one row with no id column. Every other table is read a page at a time, because the server

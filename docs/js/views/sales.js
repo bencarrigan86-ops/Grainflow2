@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=303';
+import { db } from '../storage.js?v=306';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=303';
-import { salesByCommodity, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=303';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=303';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=303';
-import { PATTERNS } from '../deliveryplan.js?v=303';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=303';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=303';
-import { renderRelatedMovements } from './movements.js?v=303';
-import { openInvoiceListSheet } from './invoice.js?v=303';
-import { openContractDocSheet } from './contract.js?v=303';
-import { wireJumps } from '../jump.js?v=303';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=303';
-import { renderContractFreight } from './freightorders.js?v=303';
-import { activeSales, paidSales } from '../paidsales.js?v=303';
-import { openVendorDecSheet } from './vendordec.js?v=303';
-import { summarise as summariseOrders } from '../orders.js?v=303';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=303';
-import { deliveries, moneyPosition } from '../outstanding.js?v=303';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=303';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=303';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=303';
-import { standardFor } from '../grades.js?v=303';
+} from '../documents.js?v=306';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=306';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=306';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=306';
+import { PATTERNS } from '../deliveryplan.js?v=306';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=306';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=306';
+import { renderRelatedMovements } from './movements.js?v=306';
+import { openInvoiceListSheet } from './invoice.js?v=306';
+import { openContractDocSheet } from './contract.js?v=306';
+import { wireJumps } from '../jump.js?v=306';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=306';
+import { renderContractFreight } from './freightorders.js?v=306';
+import { activeSales, paidSales } from '../paidsales.js?v=306';
+import { openVendorDecSheet } from './vendordec.js?v=306';
+import { summarise as summariseOrders } from '../orders.js?v=306';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=306';
+import { deliveries, moneyPosition } from '../outstanding.js?v=306';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=306';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=306';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=306';
+import { standardFor } from '../grades.js?v=306';
 
 let unsub = null;
 
@@ -34,7 +34,7 @@ export function renderSales(root) {
 
 function paint(root) {
   const { commodities, sales, movements } = db.get();
-  const rollup = salesByCommodity(commodities, sales, movements).filter((r) => r.contractCount > 0);
+  const rollup = salesByCommodity(commodities, sales, movements).filter((r) => r.contractCount > 0).sort(bigFirst((r) => r.tons, (r) => r.commodity.name));   // most tonnes contracted first
   const groups = groupSalesByCommodity(commodities, activeSales(sales), movements);
   const paidList = paidSales(sales);
   // what is owed, for the Payables button
@@ -262,9 +262,10 @@ function groupSalesByCommodity(commodities, sales, movements) {
   const groups = commodities
     .map((c) => {
       const rows = sales.filter((s) => s.commodityId === c.id).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-      return { id: c.id, name: c.name, sales: rows, totalValue: rows.reduce((sum, s) => sum + saleEconomics(s, movements).totalValue, 0) };
+      return { id: c.id, name: c.name, sales: rows, tons: rows.reduce((sum, s) => sum + (Number(s.tons) || 0), 0), totalValue: rows.reduce((sum, s) => sum + saleEconomics(s, movements).totalValue, 0) };
     })
-    .filter((g) => g.sales.length > 0);
+    .filter((g) => g.sales.length > 0)
+    .sort(bigFirst((g) => g.tons));   // the commodity with the most tonnes contracted first
 
   const noCommodity = sales.filter((s) => !commodities.some((c) => c.id === s.commodityId))
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''));

@@ -1,7 +1,7 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=303';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=303';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=306';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=306';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -361,6 +361,12 @@ function byName(a, b) {
   return (a.name || '').localeCompare(b.name || '');
 }
 
+/**
+ * A sort for commodity lists: the most tonnes first, and the same tonnes in name order, so the order is the same every
+ * time and does not depend on the order the commodities were saved in. `volume` and `name` say how to read a row.
+ */
+export const bigFirst = (volume, name = (r) => r.name) => (a, b) => (Number(volume(b)) || 0) - (Number(volume(a)) || 0) || String(name(a) || '').localeCompare(String(name(b) || ''));
+
 /** Fields grouped under each commodity (plus a trailing "No commodity" group), sorted by name. */
 export function groupFieldsByCommodity(commodities, fields, movements = []) {
   const groups = commodities
@@ -368,7 +374,8 @@ export function groupFieldsByCommodity(commodities, fields, movements = []) {
       const rows = fields.filter((f) => f.commodityId === c.id).sort(byName);
       return { id: c.id, name: c.name, fields: rows, totalTons: rows.reduce((s, f) => s + fieldTons(f, movements), 0) };
     })
-    .filter((g) => g.fields.length > 0);
+    .filter((g) => g.fields.length > 0)
+    .sort(bigFirst((g) => g.totalTons));   // the commodity with the most tonnes first
 
   const noCommodity = fields.filter((f) => !commodities.some((c) => c.id === f.commodityId)).sort(byName);
   if (noCommodity.length > 0) {
@@ -447,7 +454,7 @@ export function position(commodities, fields, sales, movements = []) {
       grossMargin,
       grossMarginPct,
     };
-  });
+  }).sort(bigFirst((r) => Math.max(r.productionTons, r.soldTons), (r) => r.commodity.name));
 }
 
 /**

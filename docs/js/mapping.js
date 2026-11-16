@@ -27,9 +27,9 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=303';
-import { cleanOffFarm } from './offfarm.js?v=303';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=303';
+import { cleanGradeOptions } from './gradeprice.js?v=306';
+import { cleanOffFarm } from './offfarm.js?v=306';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=306';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -91,7 +91,9 @@ const LOAD_QUALITY_FIELDS = QUALITY_FIELDS.filter(([key]) => key !== 'cropYear')
 // What an invoice carries that has no column of its own: when it was issued and is due, and its figures. Kept in the
 // row's `totals` under this key, so they come back with the invoice.
 const INVOICE_KEY = '__invoice';
-const INVOICE_EXTRAS = ['issueDate', 'dueDate', 'totalTons', 'subtotalExGST', 'freightTotal', 'levies', 'gst', 'totalPayable', 'rctiNo', 'rctiTotal'];
+const INVOICE_EXTRAS = ['issueDate', 'dueDate', 'totalTons', 'subtotalExGST', 'freightTotal', 'levies', 'gst', 'totalPayable', 'rctiNo', 'rctiTotal',
+  // an adjustment note (adjustment.js) is an invoice record with these as well, so it needs no table of its own
+  'kind', 'adjustsInvoiceId', 'adjustsInvoiceNo', 'noteNo', 'reason', 'appliedToInvoice'];
 function invoiceExtras(inv) {
   const out = {};
   for (const k of INVOICE_EXTRAS) if (inv[k] !== undefined) out[k] = inv[k];
