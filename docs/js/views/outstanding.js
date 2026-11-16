@@ -4,20 +4,20 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=293';
-import { openSheet } from '../ui.js?v=293';
-import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=293';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=293';
-import { windowText } from '../orders.js?v=293';
-import { openOrderSheet } from './orders.js?v=293';
-import { openInvoiceListSheet } from './invoice.js?v=293';
-import { renderPayables, returnToAfterBill } from './payables.js?v=293';
-import { openXeroSheet } from './xero.js?v=293';
-import { cashflow } from '../cashflow.js?v=293';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=293';
-import { buyerStatements, statementPdf } from '../statement.js?v=293';
-import { sharePdf } from '../sharefile.js?v=293';
-import { emailIn } from '../vendordec.js?v=293';
+import { db } from '../storage.js?v=294';
+import { openSheet } from '../ui.js?v=294';
+import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=294';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=294';
+import { windowText } from '../orders.js?v=294';
+import { openOrderSheet } from './orders.js?v=294';
+import { openInvoiceListSheet } from './invoice.js?v=294';
+import { renderPayables, returnToAfterBill } from './payables.js?v=294';
+import { openXeroSheet } from './xero.js?v=294';
+import { cashflow } from '../cashflow.js?v=294';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=294';
+import { buyerStatements, statementPdf } from '../statement.js?v=294';
+import { sharePdf } from '../sharefile.js?v=294';
+import { emailIn } from '../vendordec.js?v=294';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);

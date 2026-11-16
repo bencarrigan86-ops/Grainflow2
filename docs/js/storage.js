@@ -18,24 +18,24 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=293';
+import { hydrate } from './hydrate.js?v=294';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=293';
-import { chooseBootState, resolveLegacy } from './boot.js?v=293';
-import { isLegacyDirty } from './dirty.js?v=293';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=293';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=293';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=293';
-import { settleLegs, dedupeLegs } from './legs.js?v=293';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=293';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=293';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=293';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=293';
-import { schedulePush, pushOnReconnect } from './sync.js?v=293';
-import { hasParts as hasAddressParts } from './address.js?v=293';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=293';
+} from './local.js?v=294';
+import { chooseBootState, resolveLegacy } from './boot.js?v=294';
+import { isLegacyDirty } from './dirty.js?v=294';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=294';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=294';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=294';
+import { settleLegs, dedupeLegs } from './legs.js?v=294';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=294';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=294';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=294';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=294';
+import { schedulePush, pushOnReconnect } from './sync.js?v=294';
+import { hasParts as hasAddressParts } from './address.js?v=294';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=294';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -661,6 +661,9 @@ export const db = {
     return total;
   },
   deleteYear(year) {
+    // the owner only: the Settings button is not offered to anyone else, and the server refuses it too, but a
+    // season takes everything in it, so the data layer says no as well rather than trust the screen
+    if (role !== 'owner') return false;
     const years = Object.keys(data.years);
     if (years.length <= 1 || !data.years[year]) return false;
 
@@ -1255,6 +1258,7 @@ export const db = {
   },
 
   resetAll() {
+    if (role !== 'owner') return;             // wipes every season: the owner only, as the Settings button is
     data = defaultData();
     touch('all');
     persist();

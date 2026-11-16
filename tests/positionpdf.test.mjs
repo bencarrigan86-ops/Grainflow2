@@ -5,7 +5,8 @@
 // whole-farm lines follow, and an empty farm and a loss are handled.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { positionPdf, POSITION_COLUMNS } from '../docs/js/positionpdf.js';
+import { positionPdf, POSITION_COLUMNS, BODY, HEAD, PAD } from '../docs/js/positionpdf.js';
+import { textWidth } from '../docs/js/pdf.js';
 import { positionRows, positionTotals, farmProfitLoss } from '../docs/js/derived.js';
 
 let failures = 0;
@@ -55,6 +56,69 @@ check('each commodity is a row, with its produced, sold and unsold tonnes and it
 check('the columns fit the page: their widths add up to the table width, no more', () => {
   const sum = POSITION_COLUMNS.reduce((a, c) => a + c.w, 0);
   assert.ok(Math.abs(sum - 1) < 0.0005, `columns add up to ${sum.toFixed(3)} of the width`);
+});
+
+check('every figure and heading fits its column, even on a farm forty times the size', () => {
+  const rows = positionRows(commodities, fields, sales, []).map((r) => ({
+    ...r, area: r.area * 40, productionTons: r.productionTons * 40, soldTons: r.soldTons * 40, unsoldTons: r.unsoldTons * 40,
+    soldValue: r.soldValue * 40, unsoldValue: r.unsoldValue * 40, totalValue: r.totalValue * 40, grossMarginCost: r.grossMarginCost * 40,
+    grossMargin: r.grossMargin * 40, commodity: { ...r.commodity, name: 'Chickpeas' },
+  }));
+  const totals = positionTotals(rows);
+  const W = 841.89 - 72;
+  POSITION_COLUMNS.forEach((c, i) => {
+    const heading = textWidth(c.label, HEAD, true);
+    const body = Math.max(...[...rows.map((r) => c.cell(r)), c.total(totals)].map((s) => textWidth(String(s), BODY, true)));
+    const room = c.w * W - PAD;
+    assert.ok(heading <= room + 4 && body <= room, `${c.label}: needs ${Math.max(heading, body).toFixed(1)} of ${room.toFixed(1)}`);
+  });
+});
+
+check('cost and cost per hectare sit just before the gross margin', () => {
+  const labels = POSITION_COLUMNS.map((c) => c.label);
+  const at = labels.indexOf('Gross margin');
+  assert.deepEqual(labels.slice(at - 2, at), ['Cost', 'Cost $/ha']);
+  const data = build();
+  const wheat = data.rows.find((r) => r.commodity.name === 'Wheat');
+  const costCol = POSITION_COLUMNS[at - 2];
+  const perHa = POSITION_COLUMNS[at - 1];
+  assert.equal(costCol.cell(wheat), '$100,000');
+  assert.equal(perHa.cell(wheat), '$500');                       // 100,000 over 200 ha
+  assert.equal(costCol.total(data.totals), '$150,000');
+  assert.equal(perHa.total(data.totals), '$500');                // 150,000 over 300 ha
+  const s = text(positionPdf(data));
+  for (const w of ['(Cost)', '(Cost $/ha)', '($100,000)', '($500)']) assert.ok(s.includes(w), `missing ${w}`);
+});
+
+check('a commodity with no cost entered shows a dash, not a nought', () => {
+  const free = { ...positionRows(commodities, fields, sales, [])[0], grossMarginCost: 0 };
+  const at = POSITION_COLUMNS.findIndex((c) => c.label === 'Cost');
+  assert.equal(POSITION_COLUMNS[at].cell(free), '-');
+  assert.equal(POSITION_COLUMNS[at + 1].cell(free), '-');
+  assert.equal(POSITION_COLUMNS[at + 1].cell({ ...free, grossMarginCost: 500, area: 0 }), '-', 'no hectares: no per-hectare cost');
+});
+
+check('it wears the app green, as the load ticket does: a band on top, a green table heading, tinted bands between', () => {
+  const s = text(positionPdf(build()));
+  assert.ok(s.includes('0.18 0.49 0.2 rg'), 'no green fill');
+  const fills = [...s.matchAll(/([\d.]+) ([\d.]+) ([\d.]+) rg/g)].map((m) => m[0]);
+  const count = (c) => fills.filter((f) => f === c).length;
+  assert.ok(count('0.18 0.49 0.2 rg') >= 3, 'the title band, the table heading and the tile edges should all be green');
+  assert.ok(count('0.93 0.96 0.93 rg') >= 3, 'no banded rows');
+  assert.ok(s.includes('0.82 0.9 0.83 rg'), 'the total row is not shaded');
+});
+
+check('every second commodity row is banded, starting with the second', () => {
+  const more = [{ id: 'b', name: 'Barley', mtmPrice: 300, grossMarginCost: 1000 }, { id: 'p', name: 'Pulses', mtmPrice: 700, grossMarginCost: 1000 }];
+  const cs = [...commodities, ...more];
+  const fs = [...fields, { id: 'f3', name: 'East', areaHa: 50, commodityId: 'b', yieldTHa: 4, yieldMode: 'estimate' }, { id: 'f4', name: 'West', areaHa: 50, commodityId: 'p', yieldTHa: 1.5, yieldMode: 'estimate' }];
+  const rows = positionRows(cs, fs, [], []);
+  assert.equal(rows.length, 4);
+  const totals = positionTotals(rows);
+  const s = text(positionPdf({ rows, totals, overheads: {}, pl: farmProfitLoss(totals.grossMargin, {}, 0, 0), cost: {} }));
+  // a banded row is one tint-filled rectangle spanning the table: two of four rows, and none for an empty list
+  const wide = [...s.matchAll(/0\.93 0\.96 0\.93 rg\s+36 [\d.]+ 769\.89 18 re f/g)].length;
+  assert.equal(wide, 2, `${wide} banded rows`);
 });
 
 check('the total row adds the commodities up', () => {

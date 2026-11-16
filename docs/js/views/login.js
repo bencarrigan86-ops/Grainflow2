@@ -5,8 +5,8 @@
 // rather than new styling, so it looks like the rest of Grainflow rather than
 // a login page bolted onto the front of it.
 
-import { signIn, signUp, createFarm } from '../auth.js?v=293';
-import { wantSampleData } from '../demo.js?v=293';
+import { signIn, signUp, createFarm } from '../auth.js?v=294';
+import { wantSampleData } from '../demo.js?v=294';
 
 export function renderLogin(root, { mode = 'signin', onDone, invited = false } = {}) {
   let busy = false;

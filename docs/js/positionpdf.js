@@ -5,16 +5,29 @@
 // sold, the prices, the values and the gross margin. Under it the whole farm: gross margin, overheads, bills and the
 // profit or loss. Pure: it builds bytes and touches nothing else.
 
-import { Pdf } from './pdf.js?v=293';
+import { Pdf } from './pdf.js?v=294';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;
 const GREY = 0.4;
+// the app's green, #2e7d32, as on the load ticket, with a light tint of it for banding and a deeper one for totals
+const GREEN = [0.18, 0.49, 0.196];
+const BAND = [0.93, 0.96, 0.93];
+const TOTAL = [0.82, 0.9, 0.83];
+const LINE = [0.78, 0.86, 0.78];
+const LOSS = [0.72, 0.18, 0.15];
+/** The commodity table's type sizes, and the room a figure keeps clear of its column's right edge. */
+export const BODY = 8.5;
+export const HEAD = 7.5;
+export const PAD = 9;
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const group = (n, dp = 0) => Math.abs(num(n)).toLocaleString('en-AU', { minimumFractionDigits: dp, maximumFractionDigits: dp });
 const tonnes = (v) => `${group(v, 0)} t`;
 const dollars = (v) => `${num(v) < 0 ? '-' : ''}$${group(v, 0)}`;
 const price = (v) => (num(v) ? `$${group(v, 0)}` : '-');
+/** The cost entered for a commodity: a dash where none is entered, so it is not read as a free crop. */
+const cost = (v) => (num(v) ? dollars(v) : '-');
+const costPerHa = (total, ha) => (num(total) && num(ha) > 0 ? `$${group(num(total) / num(ha), 0)}` : '-');
 const percent = (v) => `${Math.round(num(v) * 100)}%`;
 /** A cost taken off a result: always shown as a deduction, whatever the sign it was kept with. */
 const takeOff = (v) => `-$${group(v, 0)}`;
@@ -27,19 +40,21 @@ const OVERHEADS = [
 
 /** The commodity table's columns: header, share of the width, and how a row's cell is written. */
 export const POSITION_COLUMNS = [
-  { label: 'Commodity', w: 0.095, cell: (r) => r.commodity.name, total: () => 'Total' },
-  { label: 'Area (ha)', w: 0.065, cell: (r) => group(r.area, 0), total: (t) => group(t.area, 0) },
-  { label: 'Yield t/ha', w: 0.065, cell: (r) => group(r.yieldTHa, 2), total: () => '' },
-  { label: 'Produced', w: 0.075, cell: (r) => tonnes(r.productionTons), total: (t) => tonnes(t.productionTons) },
-  { label: 'Sold', w: 0.07, cell: (r) => tonnes(r.soldTons), total: (t) => tonnes(t.soldTons) },
-  { label: 'Unsold', w: 0.07, cell: (r) => tonnes(r.unsoldTons), total: (t) => tonnes(t.unsoldTons) },
-  { label: '% sold', w: 0.055, cell: (r) => percent(r.pctSold), total: (t) => (t.productionTons > 0 ? percent(t.soldTons / t.productionTons) : '') },
-  { label: 'Avg sold', w: 0.06, cell: (r) => price(r.avgSoldPrice), total: (t) => (t.soldTons > 0 ? price(t.soldValue / t.soldTons) : '-') },
-  { label: 'MTM', w: 0.055, cell: (r) => price(r.mtmPrice), total: () => '' },
-  { label: 'Sold value', w: 0.095, cell: (r) => dollars(r.soldValue), total: (t) => dollars(t.soldValue) },
-  { label: 'Unsold value', w: 0.095, cell: (r) => dollars(r.unsoldValue), total: (t) => dollars(t.unsoldValue) },
-  { label: 'Position value', w: 0.1, cell: (r) => dollars(r.totalValue), total: (t) => dollars(t.totalValue) },
-  { label: 'Gross margin', w: 0.1, cell: (r) => dollars(r.grossMargin), total: (t) => dollars(t.grossMargin) },
+  { label: 'Commodity', w: 0.07, cell: (r) => r.commodity.name, total: () => 'Total' },
+  { label: 'Area (ha)', w: 0.055, cell: (r) => group(r.area, 0), total: (t) => group(t.area, 0) },
+  { label: 'Yield t/ha', w: 0.055, cell: (r) => group(r.yieldTHa, 2), total: () => '' },
+  { label: 'Produced', w: 0.065, cell: (r) => tonnes(r.productionTons), total: (t) => tonnes(t.productionTons) },
+  { label: 'Sold', w: 0.062, cell: (r) => tonnes(r.soldTons), total: (t) => tonnes(t.soldTons) },
+  { label: 'Unsold', w: 0.062, cell: (r) => tonnes(r.unsoldTons), total: (t) => tonnes(t.unsoldTons) },
+  { label: '% sold', w: 0.05, cell: (r) => percent(r.pctSold), total: (t) => (t.productionTons > 0 ? percent(t.soldTons / t.productionTons) : '') },
+  { label: 'Avg sold', w: 0.054, cell: (r) => price(r.avgSoldPrice), total: (t) => (t.soldTons > 0 ? price(t.soldValue / t.soldTons) : '-') },
+  { label: 'MTM', w: 0.045, cell: (r) => price(r.mtmPrice), total: () => '' },
+  { label: 'Sold value', w: 0.082, cell: (r) => dollars(r.soldValue), total: (t) => dollars(t.soldValue) },
+  { label: 'Unsold value', w: 0.082, cell: (r) => dollars(r.unsoldValue), total: (t) => dollars(t.unsoldValue) },
+  { label: 'Position value', w: 0.09, cell: (r) => dollars(r.totalValue), total: (t) => dollars(t.totalValue) },
+  { label: 'Cost', w: 0.075, cell: (r) => cost(r.grossMarginCost), total: (t) => cost(t.grossMarginCost) },
+  { label: 'Cost $/ha', w: 0.055, cell: (r) => costPerHa(r.grossMarginCost, r.area), total: (t) => costPerHa(t.grossMarginCost, t.area) },
+  { label: 'Gross margin', w: 0.098, cell: (r) => dollars(r.grossMargin), total: (t) => dollars(t.grossMargin) },
 ];
 
 /**
@@ -57,13 +72,15 @@ export function positionPdf({ rows = [], totals = {}, overheads = {}, pl = {}, c
 
   const footer = () => pdf.text(M, PAGE.height - 22,
     'Made in Grainflow. Unsold grain is valued at the mark-to-market (MTM) price; sold grain at the contract prices.', { size: 7.5, gray: GREY });
+  // the green band across the top of every page, as on the load ticket
   const header = () => {
-    pdf.text(M, 30, 'POSITION', { size: 18, bold: true });
-    pdf.text(PAGE.width - M, 36, season, { size: 11, bold: true, align: 'right' });
+    pdf.rect(0, 0, PAGE.width, 68, { stroke: null, fill: GREEN });
+    pdf.text(M, 16, 'POSITION', { size: 20, bold: true, gray: 1 });
+    pdf.text(PAGE.width - M, 20, season, { size: 12, bold: true, align: 'right', gray: 1 });
     const who = [business, today ? `Printed ${today}` : ''].filter(Boolean).join('   ·   ');
-    if (who) pdf.text(M, 56, who, { size: 9.5, gray: 0.2 });
-    if (page > 1) pdf.text(PAGE.width - M, 56, `page ${page}`, { size: 8, gray: GREY, align: 'right' });
-    return 76;
+    if (who) pdf.text(M, 44, who, { size: 9.5, gray: 0.92 });
+    if (page > 1) pdf.text(PAGE.width - M, 46, `page ${page}`, { size: 8, gray: 0.85, align: 'right' });
+    return 88;
   };
   const ensure = (h) => {
     if (y + h <= BOTTOM) return;
@@ -81,9 +98,10 @@ export function positionPdf({ rows = [], totals = {}, overheads = {}, pl = {}, c
   const tileW = (W - 3 * 10) / tiles.length;
   tiles.forEach(([label, value], i) => {
     const x = M + i * (tileW + 10);
-    pdf.rect(x, y, tileW, 46, { stroke: 0.8, fill: 0.96 });
-    pdf.text(x + 10, y + 9, label.toUpperCase(), { size: 7.5, bold: true, gray: GREY });
-    pdf.text(x + 10, y + 23, value, { size: 15, bold: true });
+    pdf.rect(x, y, tileW, 48, { stroke: LINE, fill: BAND, lineWidth: 0.6 });
+    pdf.rect(x, y, 4, 48, { stroke: null, fill: GREEN });
+    pdf.text(x + 14, y + 9, label.toUpperCase(), { size: 7.5, bold: true, gray: GREEN });
+    pdf.text(x + 14, y + 24, value, { size: 15, bold: true });
   });
   y += 64;
 
@@ -98,26 +116,27 @@ export function positionPdf({ rows = [], totals = {}, overheads = {}, pl = {}, c
   const edges = widths.reduce((a, w, i) => { a.push(a[i] + w); return a; }, [0]);
   const cell = (i, str, opts = {}) => {
     const left = M + edges[i];
-    if (i === 0) pdf.text(left + 4, y, String(str).slice(0, Math.floor(widths[i] / 4.8)), { size: 9, ...opts });
-    else pdf.text(left + widths[i] - 5, y, String(str), { size: 9, align: 'right', ...opts });
+    if (i === 0) pdf.text(left + 4, y, String(str).slice(0, Math.floor(widths[i] / 4.8)), { size: BODY, ...opts });
+    else pdf.text(left + widths[i] - 5, y, String(str), { size: BODY, align: 'right', ...opts });
   };
   const headRow = () => {
-    pdf.rect(M, y - 4, W, 17, { stroke: null, fill: 0.88 });
-    POSITION_COLUMNS.forEach((c, i) => cell(i, c.label, { bold: true, size: 8 }));
-    y += 18;
+    pdf.rect(M, y - 5, W, 19, { stroke: null, fill: GREEN });
+    POSITION_COLUMNS.forEach((c, i) => cell(i, c.label, { bold: true, size: HEAD, gray: 1 }));
+    y += 20;
   };
   headRow();
-  for (const r of rows) {
+  // banded rows: every second one tinted, so the eye can follow a commodity across the page
+  rows.forEach((r, n) => {
     if (y + 20 > BOTTOM) { footer(); pdf.addPage(); page += 1; y = header(); headRow(); }
+    if (n % 2 === 1) pdf.rect(M, y - 5, W, 18, { stroke: null, fill: BAND });
     POSITION_COLUMNS.forEach((c, i) => cell(i, c.cell(r), i === 0 ? { bold: true } : {}));
-    y += 16;
-    pdf.line(M, y - 4, M + W, y - 4, { width: 0.4, gray: 0.8 });
-  }
-  ensure(24);
-  pdf.line(M, y - 4, M + W, y - 4, { width: 0.9 });
-  y += 2;
+    y += 18;
+  });
+  ensure(26);
+  pdf.rect(M, y - 5, W, 19, { stroke: null, fill: TOTAL });
+  pdf.line(M, y - 5, M + W, y - 5, { width: 1.2, gray: GREEN });
   POSITION_COLUMNS.forEach((c, i) => cell(i, c.total(totals), { bold: true }));
-  y += 26;
+  y += 34;
 
   // the whole farm
   const lines = [
@@ -135,42 +154,43 @@ export function positionPdf({ rows = [], totals = {}, overheads = {}, pl = {}, c
   const billLines = [['Brokerage', cost.brokerage], ['Freight, above or below the contract estimate', cost.freight], ['Storage', cost.storage], ['Other', cost.other]]
     .map(([l, v]) => [l, num(v)]).filter(([, v]) => v);
   const colW = (W - 30) / 2;
-  const need = 22 + Math.max(lines.length, 0) * 16 + 8;
-  ensure(Math.max(need, 30 + Math.max(overheadLines.length, 1) * 14));
+  const need = 28 + lines.length * 18 + 8;
+  ensure(Math.max(need, 28 + (Math.max(overheadLines.length, 1) + 1) * 15));
 
   // left: the result; right: where the overheads and the bills went
   const top = y;
-  pdf.text(M, y, 'Whole farm', { size: 12, bold: true });
-  let ly = y + 20;
-  for (const [label, value, strong] of lines) {
-    pdf.text(M, ly, label, { size: 10, bold: !!strong });
-    pdf.text(M + colW, ly, value, { size: 10, bold: !!strong, align: 'right' });
-    ly += 16;
-    if (strong) pdf.line(M, ly - 5, M + colW, ly - 5, { width: 0.5, gray: 0.7 });
-  }
+  // a section heading: green, with a rule under it the width of its column
+  const heading = (x, at, label) => {
+    pdf.text(x, at, label, { size: 12, bold: true, gray: GREEN });
+    pdf.line(x, at + 17, x + colW, at + 17, { width: 1, gray: GREEN });
+  };
+  // banded lines under a heading; returns the y below them
+  const bandedLines = (x, at, list, { size = 9, step = 15 } = {}) => {
+    list.forEach(([label, value, strong, ink], n) => {
+      if (n % 2 === 0) pdf.rect(x, at - 4, colW, step, { stroke: null, fill: BAND });
+      pdf.text(x + 5, at, label, { size, bold: !!strong, gray: ink || 0 });
+      pdf.text(x + colW - 5, at, value, { size, bold: !!strong, align: 'right', gray: ink || 0 });
+      at += step;
+    });
+    return at;
+  };
+
+  heading(M, top, 'Whole farm');
+  const profitInk = num(pl.profitLoss) >= 0 ? GREEN : LOSS;
+  bandedLines(M, top + 28, lines.map(([label, value, strong]) => [label, value, strong, strong ? profitInk : 0]), { size: 10, step: 18 });
+
   const rx = M + colW + 30;
   let ry = top;
-  pdf.text(rx, ry, 'Overheads', { size: 12, bold: true });
-  ry += 20;
-  if (!overheadLines.length) { pdf.text(rx, ry, 'None entered', { size: 9, gray: GREY }); ry += 14; }
-  for (const [label, v] of overheadLines) {
-    pdf.text(rx, ry, label, { size: 9 });
-    pdf.text(rx + colW, ry, dollars(v), { size: 9, align: 'right' });
-    ry += 14;
-  }
-  pdf.line(rx, ry - 4, rx + colW, ry - 4, { width: 0.5, gray: 0.7 });
-  pdf.text(rx, ry, 'Total overheads', { size: 9, bold: true });
-  pdf.text(rx + colW, ry, dollars(pl.overheadsTotal), { size: 9, bold: true, align: 'right' });
-  ry += 22;
+  heading(rx, ry, 'Overheads');
+  ry += 28;
+  if (!overheadLines.length) { pdf.text(rx + 5, ry, 'None entered', { size: 9, gray: GREY }); ry += 15; }
+  ry = bandedLines(rx, ry, [...overheadLines.map(([l, v]) => [l, dollars(v)]), ['Total overheads', dollars(pl.overheadsTotal), true]]);
+  ry += 12;
   if (billLines.length) {
-    if (ry + 20 + billLines.length * 14 > BOTTOM) { footer(); pdf.addPage(); page += 1; ry = header(); }
-    pdf.text(rx, ry, 'Bills taken off profit', { size: 12, bold: true });
-    ry += 20;
-    for (const [label, v] of billLines) {
-      pdf.text(rx, ry, label, { size: 9 });
-      pdf.text(rx + colW, ry, dollars(v), { size: 9, align: 'right' });
-      ry += 14;
-    }
+    if (ry + 28 + billLines.length * 15 > BOTTOM) { footer(); pdf.addPage(); page += 1; ry = header(); }
+    heading(rx, ry, 'Bills taken off profit');
+    ry += 28;
+    bandedLines(rx, ry, billLines.map(([l, v]) => [l, dollars(v)]));
   }
 
   footer();

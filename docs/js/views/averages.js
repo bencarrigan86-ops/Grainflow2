@@ -2,13 +2,13 @@
 // underneath. Built from the seasons the farm already holds; nothing is entered here. Owner, manager and bookkeeper only
 // (it is yields and prices, the same line as Position).
 
-import { db } from '../storage.js?v=293';
-import { num, esc, money, todayLocal } from '../fmt.js?v=293';
-import { openSheet, toast } from '../ui.js?v=293';
-import { canSeeYield } from '../nav.js?v=293';
-import { exportRowsAsCSV } from '../csv.js?v=293';
-import { safeFileName } from '../sharefile.js?v=293';
-import { seasonAverages, finishedSeasons, averagesRows, AVERAGES_COLUMNS } from '../seasonaverages.js?v=293';
+import { db } from '../storage.js?v=294';
+import { num, esc, money, todayLocal } from '../fmt.js?v=294';
+import { openSheet, toast } from '../ui.js?v=294';
+import { canSeeYield } from '../nav.js?v=294';
+import { exportRowsAsCSV } from '../csv.js?v=294';
+import { safeFileName } from '../sharefile.js?v=294';
+import { seasonAverages, finishedSeasons, averagesRows, AVERAGES_COLUMNS } from '../seasonaverages.js?v=294';
 
 const KEY = 'grainflow.averages.seasons';
 const readPicked = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return Array.isArray(v) ? v : null; } catch { return null; } };

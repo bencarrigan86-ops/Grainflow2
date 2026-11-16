@@ -1,35 +1,37 @@
-import { db } from '../storage.js?v=293';
-import { getTheme, setTheme } from '../theme.js?v=293';
-import { num, money, esc, todayLocal } from '../fmt.js?v=293';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=293';
-import { openLoadImportSheet } from './importloads.js?v=293';
-import { openPastSeasonsSheet } from './pastseasons.js?v=293';
-import { openPastSalesSheet } from './pastsales.js?v=293';
-import { openLineupSheet } from './lineup.js?v=293';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=293';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=293';
-import { openDeletedSheet } from './deleted.js?v=293';
-import { APP_VERSION } from '../version.js?v=293';
-import { exportRowsAsCSV } from '../csv.js?v=293';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=293';
-import { endpointLabel } from './movements.js?v=293';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=293';
-import { layersForStorage } from '../outload.js?v=293';
-import { traceLoads, traceText } from '../trace.js?v=293';
-import { holdings, totalHeld } from '../offfarm.js?v=293';
-import { kindLabel, billTotal } from '../payables.js?v=293';
-import { orderState, STATE_LABEL } from '../orders.js?v=293';
-import { fieldHarvest } from '../harvest.js?v=293';
-import { openMySignatureSheet } from './signaturepad.js?v=293';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=293';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=293';
+import { db } from '../storage.js?v=294';
+import { getTheme, setTheme } from '../theme.js?v=294';
+import { num, money, esc, todayLocal } from '../fmt.js?v=294';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=294';
+import { openLoadImportSheet } from './importloads.js?v=294';
+import { openPastSeasonsSheet } from './pastseasons.js?v=294';
+import { openPastSalesSheet } from './pastsales.js?v=294';
+import { openLineupSheet } from './lineup.js?v=294';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=294';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=294';
+import { openDangerSheet } from './dangerconfirm.js?v=294';
+import { seasonContents, contentsText } from '../seasondelete.js?v=294';
+import { openDeletedSheet } from './deleted.js?v=294';
+import { APP_VERSION } from '../version.js?v=294';
+import { exportRowsAsCSV } from '../csv.js?v=294';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=294';
+import { endpointLabel } from './movements.js?v=294';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=294';
+import { layersForStorage } from '../outload.js?v=294';
+import { traceLoads, traceText } from '../trace.js?v=294';
+import { holdings, totalHeld } from '../offfarm.js?v=294';
+import { kindLabel, billTotal } from '../payables.js?v=294';
+import { orderState, STATE_LABEL } from '../orders.js?v=294';
+import { fieldHarvest } from '../harvest.js?v=294';
+import { openMySignatureSheet } from './signaturepad.js?v=294';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=294';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=294';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=293';
+} from '../invites.js?v=294';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=293';
+} from '../auth.js?v=294';
 
 let unsub = null;
 
@@ -73,7 +75,7 @@ function paint(root) {
           <button class="btn secondary small" id="rename-year">Rename "${esc(currentYear)}"&hellip;</button>
           <button class="btn secondary small" id="new-year">Start new year&hellip;</button>
         </div>
-        ${years.length > 1 ? `<button class="btn danger small" id="delete-year" style="margin-top:8px">Delete "${esc(currentYear)}" season</button>` : ''}
+        ${years.length > 1 && db.getRole() === 'owner' ? `<button class="btn danger small" id="delete-year" style="margin-top:8px">Delete "${esc(currentYear)}" season&hellip;</button>` : ''}
       </div>
 
       <div class="card input">
@@ -173,7 +175,7 @@ function paint(root) {
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-past-sales" style="margin-top:8px">Import past sales (CSV)&hellip;</button>` : ''}
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="line-up" style="margin-top:8px">Line up paddock names (CSV)&hellip;</button>` : ''}
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="open-deleted" style="margin-top:8px">Recently deleted&hellip;</button>` : ''}
-        <button class="btn danger small" id="reset" style="margin-top:10px">Reset all data</button>
+        ${db.getRole() === 'owner' ? '<button class="btn danger small" id="reset" style="margin-top:10px">Reset all data&hellip;</button>' : ''}
         <input type="file" id="import-file" accept="application/json" style="display:none" />
       </div>
 
@@ -299,8 +301,14 @@ function paint(root) {
   const deleteYearBtn = root.querySelector('#delete-year');
   if (deleteYearBtn) {
     deleteYearBtn.addEventListener('click', () => {
-      confirmDelete(`Delete the "${currentYear}" season? Its fields, silos, sales and movements will be gone for good. Other seasons aren't affected.`, () => {
-        db.deleteYear(currentYear);
+      openDangerSheet({
+        title: 'Delete a season',
+        warning: `You are about to delete the <strong>${esc(currentYear)}</strong> season. Other seasons are not touched.`,
+        contents: contentsText(seasonContents(db.getYearData(currentYear))),
+        name: currentYear,
+        confirmLabel: `Delete ${currentYear} for good`,
+        done: `Deleted ${currentYear}`,
+        onConfirm: () => db.deleteYear(currentYear),
       });
     });
   }
@@ -346,8 +354,21 @@ function paint(root) {
       notify(`Import refused.\n\n${e.message}`);
     }
   });
-  root.querySelector('#reset').addEventListener('click', () => {
-    confirmDelete('Reset all data? This cannot be undone.', () => db.resetAll());
+  root.querySelector('#reset')?.addEventListener('click', () => {
+    const seasons = db.getYears();
+    openDangerSheet({
+      title: 'Reset all data',
+      warning: `This wipes the <strong>whole farm</strong>: every season (${seasons.length}), with everything in them.`,
+      contents: contentsText(seasonContents(seasons.reduce((all, l) => {
+        const y = db.getYearData(l);
+        for (const k of Object.keys(y)) if (Array.isArray(y[k])) all[k] = [...(all[k] || []), ...y[k]];
+        return all;
+      }, {}))),
+      name: 'reset',
+      confirmLabel: 'Reset everything for good',
+      done: 'Everything was reset',
+      onConfirm: () => db.resetAll(),
+    });
   });
 
   root.querySelector('#force-refresh').addEventListener('click', async () => {
