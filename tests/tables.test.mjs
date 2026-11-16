@@ -140,11 +140,25 @@ check('the columns Ben asked for are still in the order he asked for', () => {
   // "move the max t/ha column to last", then "and N available to 2nd last".
   const src = readFileSync(join(VIEWS, 'reports.js'), 'utf8');
   // the report has more than one table with a Field column (the sensitivity what-if is another): take the urea one
-  const rows = [...src.matchAll(/<th>Field<\/th>[\s\S]*?<\/tr>/g)].map((m) => [...m[0].matchAll(/<th>(.*?)<\/th>/g)].map((x) => x[1]));
+  const rows = [...src.matchAll(/<th>Field<\/th>[\s\S]*?<\/tr>/g)].map((m) => [...m[0].matchAll(/<th(?: [^>]*)?>(.*?)<\/th>/g)].map((x) => x[1]));
   const headers = rows.find((r) => r.includes('Soil equiv kg/ha')) || [];
   assert.equal(headers[headers.length - 1], 'Max t/ha', `last column is ${headers[headers.length - 1]}`);
   assert.equal(headers[headers.length - 2], 'N avail kg/ha', `second last is ${headers[headers.length - 2]}`);
   assert.equal(headers[0], 'Field', 'the frozen first column is no longer Field');
+});
+
+check('nitrogen and urea equivalent columns are marked in the head, body and totals alike', () => {
+  const src = readFileSync(join(VIEWS, 'reports.js'), 'utf8');
+  const marks = (chunk, cell) => [...chunk.matchAll(new RegExp(`<${cell}(?: class="([nu])")?>`, 'g'))].map((m) => m[1] || '-').join('');
+  const head = src.slice(src.indexOf('<thead><tr><th>Field</th><th>Area</th><th class="n">'));
+  const headMarks = marks(head.slice(0, head.indexOf('</tr>')), 'th');
+  // Field, Area, Soil N, Soil equiv, Target, Req, App, Left, Req t, App t, Left t, N avail, Max
+  assert.equal(headMarks, '--nu-uuuuuun-',`head marks are ${headMarks}`);
+  const body = src.slice(src.indexOf('<td>${esc(f.name)}</td>\n              <td>${num(f.areaHa, 1)}</td>\n              <td class="n">'));
+  assert.equal(marks(body.slice(0, body.indexOf('</tr>')), 'td'), headMarks, 'body marks differ from the head');
+  const foot = src.slice(src.indexOf('<td>Total</td>\n          <td>${num(totals.area, 1)}</td>\n          <td class="n">'));
+  assert.equal(marks(foot.slice(0, foot.indexOf('</tr>')), 'td'), headMarks, 'totals marks differ from the head');
+  assert.ok(src.includes('Urea equivalent (N'), 'no key saying which colour is which');
 });
 
 console.log('');

@@ -176,5 +176,28 @@ check('the sheet has both buttons, a portrait or landscape choice, and the roles
   assert.ok(v.includes('sharePdf(') && v.includes('downloadCSV('));
 });
 
+check('yields can be turned off on the sheet, which is remembered, changes the screen and both files, and only roles that see yields are offered it', () => {
+  const v = read('docs/js/views/rotation.js');
+  assert.ok(v.includes('let showYield = canYield && lastYield()'), 'a role that cannot see yields could be given them');
+  assert.ok(/\$\{canYield \? ?`<label[^`]*id="rot-yield"/.test(v), 'the tick is not offered to the roles that see yields');
+  assert.ok(/#rot-yield'\)\?\.addEventListener\('change'[\s\S]*?showYield = e\.currentTarget\.checked;[\s\S]*?rememberYield\(showYield\);[\s\S]*?paintBody\(\)/.test(v), 'the tick does not change the screen and get remembered');
+});
+
+check('with yields off the CSV and the PDF carry no tonnes or yields, with them on they do', () => {
+  const grid = rotationGrid({ 2025: { commodities: [{ id: 'w', name: 'Wheat' }], fields: [{ id: 'f', name: 'North', areaHa: 100, commodityId: 'w', yieldTHa: 3, yieldMode: 'estimate' }], movements: [] } });
+  assert.ok(/tonnes/.test(rotationCsv(grid, { showYield: true })) && !/tonnes|yield \(t\/ha\)/.test(rotationCsv(grid, { showYield: false })), 'CSV yield columns do not follow the switch');
+  const pdf = (showYield) => Buffer.from(rotationPdf(grid, { showYield })).toString('latin1');
+  assert.ok(pdf(true).includes('t/ha') && !pdf(false).includes('t/ha est') && !pdf(false).includes('Yield is tonnes per hectare'), 'PDF yield text does not follow the switch');
+});
+
+check('the paddock column and the season row are locked on both tables of the sheet', () => {
+  const v = read('docs/js/views/rotation.js');
+  assert.equal((v.match(/class="table-scroll rot-scroll"/g) || []).length, 2, 'a table is not in the locked box');
+  const css = read('docs/css/styles.css');
+  assert.ok(/\.rot-scroll th:first-child, \.rot-scroll td:first-child \{ position: sticky; left: 0;/.test(css), 'first column not locked');
+  assert.ok(/\.rot-scroll thead th \{ position: sticky; top: 0;/.test(css), 'season row not locked');
+  assert.ok(/\.table-scroll\.rot-scroll \{[^}]*max-height/.test(css), 'no height, so the header cannot pin');
+});
+
 console.log(failures ? `\n${failures} FAILED` : '\nAll passed');
 process.exit(failures ? 1 : 0);

@@ -2,13 +2,14 @@
 // underneath. Built from the seasons the farm already holds; nothing is entered here. Owner, manager and bookkeeper only
 // (it is yields and prices, the same line as Position).
 
-import { db } from '../storage.js?v=297';
-import { num, esc, money, todayLocal } from '../fmt.js?v=297';
-import { openSheet, toast } from '../ui.js?v=297';
-import { canSeeYield } from '../nav.js?v=297';
-import { exportRowsAsCSV } from '../csv.js?v=297';
-import { safeFileName } from '../sharefile.js?v=297';
-import { seasonAverages, finishedSeasons, averagesRows, AVERAGES_COLUMNS } from '../seasonaverages.js?v=297';
+import { db } from '../storage.js?v=298';
+import { num, esc, money, todayLocal, dmy } from '../fmt.js?v=298';
+import { openSheet, toast } from '../ui.js?v=298';
+import { canSeeYield } from '../nav.js?v=298';
+import { exportRowsAsCSV } from '../csv.js?v=298';
+import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=298';
+import { averagesPdf } from '../averagespdf.js?v=298';
+import { seasonAverages, finishedSeasons, averagesRows, AVERAGES_COLUMNS } from '../seasonaverages.js?v=298';
 
 const KEY = 'grainflow.averages.seasons';
 const readPicked = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return Array.isArray(v) ? v : null; } catch { return null; } };
@@ -60,7 +61,7 @@ export function openAveragesSheet() {
         <div style="display:flex;gap:8px"><button type="button" class="btn secondary" id="av-all">Select all</button><button type="button" class="btn secondary" id="av-done">Finished seasons</button></div>
       </div>
       <div id="av-body"></div>
-      <div class="save-bar solo"><button type="button" class="btn" id="av-csv">Excel (CSV)</button></div>`;
+      <div class="save-bar"><button type="button" class="btn secondary" id="av-csv" style="flex:1;padding-left:12px;padding-right:12px">Excel (CSV)</button><button type="button" class="btn" id="av-pdf" style="flex:1;padding-left:12px;padding-right:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button></div>`;
 
     const set = (list) => { picked.clear(); list.forEach((l) => picked.add(l)); root.querySelectorAll('.av-season').forEach((b) => { b.checked = picked.has(b.value); }); savePicked([...picked]); paint(); };
     root.querySelectorAll('.av-season').forEach((b) => b.addEventListener('change', () => { if (b.checked) picked.add(b.value); else picked.delete(b.value); savePicked([...picked]); paint(); }));
@@ -70,6 +71,16 @@ export function openAveragesSheet() {
       const chosen = labels.filter((l) => picked.has(l));
       exportRowsAsCSV(safeFileName(`grainflow-averages-${todayLocal()}`, 'csv'), averagesRows(seasonAverages(years, chosen)), AVERAGES_COLUMNS(true));
       toast('Downloaded. It opens in Excel.');
+    });
+    root.querySelector('#av-pdf').addEventListener('click', async () => {
+      const chosen = labels.filter((l) => picked.has(l));
+      const result = seasonAverages(years, chosen);
+      if (!chosen.length || !result.commodities.length) { toast('Tick a season with something grown or sold first.'); return; }
+      const bytes = averagesPdf(result, { business: db.getBusinessDetails().entityName || '', today: dmy(todayLocal()) });
+      const span = `${chosen[0]}${chosen.length > 1 ? ` to ${chosen[chosen.length - 1]}` : ''}`;
+      const fileName = safeFileName(`Averages ${span} ${dmy(todayLocal())}`);
+      if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
+      await sharePdf(bytes, fileName, { title: `Averages ${span}` });
     });
     paint();
   });
