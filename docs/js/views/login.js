@@ -5,11 +5,11 @@
 // rather than new styling, so it looks like the rest of Commodity Mate rather than
 // a login page bolted onto the front of it.
 
-import { signIn, signUp, createFarm } from '../auth.js?v=315';
-import { wantSampleData } from '../demo.js?v=315';
-import { hasTrialInvite, trialNoticeText, trialSampleText } from '../trials.js?v=315';
+import { signIn, signUp, createFarm } from '../auth.js?v=316';
+import { wantSampleData } from '../demo.js?v=316';
+import { hasTrialInvite, trialNoticeText, trialSampleText } from '../trials.js?v=316';
 
-export function renderLogin(root, { mode = 'signin', onDone, invited = false } = {}) {
+export function renderLogin(root, { mode = 'signin', onDone, invited = false, trialEmail = null } = {}) {
   let busy = false;
 
   // Someone arriving on an invitation link has no account, so the useful screen
@@ -19,6 +19,8 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false } =
   // carries nothing about who it is for, so nobody who finds the link can learn
   // whose it is.
   if (invited && mode === 'signin') mode = 'signup';
+  // a trial link: open on Create account, with the address the trial was set up for
+  if (trialEmail && !invited && mode === 'signin') mode = 'signup';
 
   function draw(current, message, messageKind) {
     const isSignUp = current === 'signup';
@@ -39,6 +41,11 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false } =
             <h2><span class="dot input"></span>You have been invited to a farm</h2>
             <div class="hint">Use the email address the invitation was sent to — it only
               works for that address. Already have an account on it? Sign in instead.</div>
+          </div>` : ''}
+        ${trialEmail && !invited && !isFarm ? `
+          <div class="card input">
+            <h2><span class="dot input"></span>You are invited to try Commodity Mate</h2>
+            <div class="hint">Use this email address: <b>${trialEmail.replace(/[<>&"]/g, '')}</b>. It is the one the trial was set up for. Already have an account? Sign in instead.</div>
           </div>` : ''}
         <div class="card">
           ${isFarm ? farmForm() : credentialsForm(isSignUp)}
@@ -121,6 +128,7 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false } =
   function wireCredentials(isSignUp) {
     const emailEl = root.querySelector('#email');
     const passEl = root.querySelector('#password');
+    if (trialEmail && !emailEl.value) emailEl.value = trialEmail;
     const btn = root.querySelector('#submit');
 
     async function submit() {

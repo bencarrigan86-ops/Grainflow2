@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { APP_VERSION } from '../docs/js/version.js';
 const stamp = APP_VERSION.split('.').pop();
-const { validEmail, trialInviteMessage, farmLabel, standingText, trialNoticeText, trialSampleText, ownSeasonGuess, startOwnWarning, startedLine } = await import(`../docs/js/trialtext.js?v=${stamp}`);
+const { validEmail, trialInviteMessage, farmLabel, standingText, trialNoticeText, trialSampleText, ownSeasonGuess, startOwnWarning, startedLine, trialLink, emailFromTrialHash } = await import(`../docs/js/trialtext.js?v=${stamp}`);
 const { standingStatus } = await import('../docs/js/supportinfo.js');
 
 let failures = 0;
@@ -30,7 +30,7 @@ check('the message says where to go, which address to use, to keep the sample, a
   const m = trialInviteMessage(' Sam@Farm.com.au ', 'https://example.test');
   assert.ok(m.includes('https://example.test'));
   assert.ok(m.includes('sam@farm.com.au'), 'the address they must sign up with, lower case');
-  assert.ok(m.includes('A sample farm'));
+  assert.ok(/sample farm/.test(m));
   assert.ok(/nobody else I invite can see it/i.test(m));
   assert.ok(/read only/i.test(m) && /switch that off/i.test(m));
 });
@@ -98,6 +98,24 @@ check('starting their own farm: the words, the flag line, and what is wired', ()
   assert.ok(sql.includes('function trial_start_own(') && sql.includes("app_role(p_farm_id) is distinct from 'owner'") && sql.includes('this is not a trial farm'));
   assert.ok(sql.includes('started_at = coalesce(started_at, now())'), 'recorded once');
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('function trial_start_own('));
+});
+
+check('the trial link opens sign-up with their email in it, and the email comes back out of it', () => {
+  const link = trialLink(' Sam@Farm.com.au ', 'https://example.test/app');
+  assert.equal(link, 'https://example.test/app/#/try/sam%40farm.com.au');
+  assert.equal(emailFromTrialHash('#/try/sam%40farm.com.au'), 'sam@farm.com.au');
+  assert.equal(emailFromTrialHash(new URL(link).hash), 'sam@farm.com.au');
+  assert.equal(emailFromTrialHash('#/try/not-an-email'), null);
+  assert.equal(emailFromTrialHash('#/try/%E0%A4%A'), null, 'a broken escape is no email');
+  assert.equal(emailFromTrialHash('#/join/abcdefghijklmnopqrstuv'), null, 'an invitation link is not a trial link');
+  assert.equal(emailFromTrialHash(''), null);
+  assert.ok(trialInviteMessage('sam@farm.com.au', 'https://example.test/').includes('https://example.test/#/try/sam%40farm.com.au'), 'the message carries the link');
+  const main = read('docs/js/main.js');
+  assert.ok(main.includes('stashTrialFromHash();') && main.includes('trialEmail: readTrialEmail()') && main.includes('clearTrialEmail();'));
+  const lg = read('docs/js/views/login.js');
+  assert.ok(lg.includes('trialEmail && !invited && mode ===') && lg.includes('emailEl.value = trialEmail'));
+  const tf = read('docs/js/views/trialfarms.js');
+  assert.ok(tf.includes('Copy link only') && tf.includes('Nothing has been sent to them yet'), 'honest that the app does not send it');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

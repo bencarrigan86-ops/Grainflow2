@@ -7,15 +7,30 @@ export function validEmail(email) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(asText(email));
 }
 
+/** The link to send: opens the app on the sign-up screen with their email already in it. The email is a convenience, not a key: the server matches the address they actually sign up with. */
+export function trialLink(email, url = 'https://grainflow2.bencarrigan86.workers.dev/') {
+  const base = String(url).replace(/#.*$/, '').replace(/\/*$/, '/');
+  return `${base}#/try/${encodeURIComponent(asText(email).toLowerCase())}`;
+}
+
+/** The email back out of a trial link's address-bar hash, or null. */
+export function emailFromTrialHash(hash) {
+  const m = String(hash || '').match(/#\/try\/([^/?#]+)/);
+  if (!m) return null;
+  let email = '';
+  try { email = decodeURIComponent(m[1]); } catch { return null; }
+  return validEmail(email) ? email.toLowerCase() : null;
+}
+
 /** What to send to the person: where to go, what to pick, and what they will be told about who can see the farm. */
-export function trialInviteMessage(email, url = 'https://grainflow2.bencarrigan86.workers.dev') {
+export function trialInviteMessage(email, url = 'https://grainflow2.bencarrigan86.workers.dev/') {
   return [
     'You are invited to try Commodity Mate.',
     '',
-    `1. Open ${url}`,
-    `2. Choose Create account and use this email address: ${asText(email).toLowerCase()}`,
+    `1. Open this link: ${trialLink(email, url)}`,
+    `2. It opens Create account with your email already filled in (${asText(email).toLowerCase()}). Choose a password. Use that same email address, because it is what links you to the trial.`,
     '3. Confirm the email we send you, then sign in.',
-    '4. Name your farm and leave "A sample farm" chosen to start with some made-up numbers to look at. You can delete it and start your own whenever you like.',
+    '4. Name your farm. It starts with a sample farm of made-up numbers to look at, reports to open and things to change. When you are ready, you can clear it and start your own.',
     '',
     'Your trial farm is yours alone: nobody else I invite can see it. I can look at it, read only, to help if you get stuck. You can switch that off any time in Settings.',
   ].join('\n');

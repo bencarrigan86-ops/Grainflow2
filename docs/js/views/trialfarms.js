@@ -1,13 +1,13 @@
 // Settings > Trial farms: only for the support login. Invite somebody to try the app, and open any trial farm (or go back to your own).
 
-import { db } from '../storage.js?v=315';
-import { setPreferredFarm } from '../auth.js?v=315';
-import { toast, notify, openSheet, closeSheet, field, getVal } from '../ui.js?v=315';
-import { esc } from '../fmt.js?v=315';
+import { db } from '../storage.js?v=316';
+import { setPreferredFarm } from '../auth.js?v=316';
+import { toast, notify, openSheet, closeSheet, field, getVal } from '../ui.js?v=316';
+import { esc } from '../fmt.js?v=316';
 import {
   isSupportAdmin, createTrialInvite, withdrawTrialInvite, listTrialInvites, listSupportFarms,
-  trialInviteMessage, farmLabel, validEmail, trialFarmStatus, recordStartOwn, ownSeasonGuess, startOwnWarning, startedLine,
-} from '../trials.js?v=315';
+  trialInviteMessage, trialLink, farmLabel, validEmail, trialFarmStatus, recordStartOwn, ownSeasonGuess, startOwnWarning, startedLine,
+} from '../trials.js?v=316';
 
 // Settings repaints on every change; who the support login is does not change, so it is asked once (a "no" is asked again after a while).
 let adminAnswer = null;
@@ -60,11 +60,12 @@ export async function wireTrialFarms(root) {
     body.querySelectorAll('[data-tf-open]').forEach((b) => b.addEventListener('click', () => openFarm(b.dataset.tfOpen)));
   };
 
-  async function copyMessage(email) {
-    const text = trialInviteMessage(email);
-    try { await navigator.clipboard.writeText(text); toast('Message copied'); }
+  // Copy what to send. If the phone will not let the page copy, the text is put in a box to select instead.
+  async function copyText(text, done) {
+    try { await navigator.clipboard.writeText(text); toast(done); }
     catch { sent.innerHTML = `<textarea readonly rows="9" style="width:100%;margin-top:8px">${esc(text)}</textarea>`; }
   }
+  const copyMessage = (email) => copyText(trialInviteMessage(email), 'Message copied');
 
   // The farm on this phone is replaced by the one chosen, so anything not yet sent would be left behind: wait until it has gone.
   async function openFarm(farmId) {
@@ -83,7 +84,10 @@ export async function wireTrialFarms(root) {
     try {
       await createTrialInvite(email, slot.querySelector('#tf-note').value);
       slot.querySelector('#tf-email').value = ''; slot.querySelector('#tf-note').value = '';
-      sent.innerHTML = `<div class="hint" style="margin-top:8px">Invited. Send them this, or tap Copy message below.</div><textarea readonly rows="9" style="width:100%;margin-top:6px">${esc(trialInviteMessage(email))}</textarea>`;
+      sent.innerHTML = `<div class="hint" style="margin-top:8px">Invited. Nothing has been sent to them yet: copy this and send it yourself by text or email.</div>
+        <div style="display:flex;gap:8px;margin-top:6px"><button type="button" class="btn secondary small" id="tf-copy-msg" style="flex:1">Copy message</button><button type="button" class="btn secondary small" id="tf-copy-link" style="flex:1">Copy link only</button></div>`;
+      sent.querySelector('#tf-copy-msg').addEventListener('click', () => copyMessage(email));
+      sent.querySelector('#tf-copy-link').addEventListener('click', () => copyText(trialLink(email), 'Link copied'));
       paint();
     } catch (e) { notify(e.message); }
     busy = false;

@@ -1,32 +1,33 @@
-import { db } from './storage.js?v=315';
-import { supabase, ENV } from './supabase.js?v=315';
-import { installErrorLog } from './supportinfo.js?v=315';
-import { loadMySeries, rememberedSeries } from './outloadseries.js?v=315';
-import { initTheme } from './theme.js?v=315';
+import { db } from './storage.js?v=316';
+import { supabase, ENV } from './supabase.js?v=316';
+import { installErrorLog } from './supportinfo.js?v=316';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=316';
+import { initTheme } from './theme.js?v=316';
 initTheme();
-import { renderPosition } from './views/position.js?v=315';
-import { renderProduction } from './views/production.js?v=315';
-import { renderReports } from './views/reports.js?v=315';
-import { renderSales } from './views/sales.js?v=315';
-import { renderMovements } from './views/movements.js?v=315';
-import { renderStorage } from './views/storage.js?v=315';
-import { renderSettings } from './views/settings.js?v=315';
-import { renderLogin } from './views/login.js?v=315';
-import { renderAccount } from './views/account.js?v=315';
-import { renderHelp } from './views/help.js?v=315';
+import { renderPosition } from './views/position.js?v=316';
+import { renderProduction } from './views/production.js?v=316';
+import { renderReports } from './views/reports.js?v=316';
+import { renderSales } from './views/sales.js?v=316';
+import { renderMovements } from './views/movements.js?v=316';
+import { renderStorage } from './views/storage.js?v=316';
+import { renderSettings } from './views/settings.js?v=316';
+import { renderLogin } from './views/login.js?v=316';
+import { renderAccount } from './views/account.js?v=316';
+import { renderHelp } from './views/help.js?v=316';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=315';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=315';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=315';
-import { esc } from './fmt.js?v=315';
-import { isSheetOpen, notify } from './ui.js?v=315';
-import { describeMerges } from './ticketmerge.js?v=315';
-import { watchLists } from './band.js?v=315';
-import { APP_VERSION } from './version.js?v=315';
-import { startUpdateCheck } from './updatecheck.js?v=315';
-import { installWatch, requestPersistence } from './pwa.js?v=315';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=315';
+} from './auth.js?v=316';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=316';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=316';
+import { esc } from './fmt.js?v=316';
+import { isSheetOpen, notify } from './ui.js?v=316';
+import { describeMerges } from './ticketmerge.js?v=316';
+import { watchLists } from './band.js?v=316';
+import { APP_VERSION } from './version.js?v=316';
+import { startUpdateCheck } from './updatecheck.js?v=316';
+import { emailFromTrialHash } from './trialtext.js?v=316';
+import { installWatch, requestPersistence } from './pwa.js?v=316';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=316';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -256,6 +257,19 @@ function clearInvite() {
 
 stashInviteFromHash();
 
+// A trial link opens the app on Create account with the invited email already filled in. Kept the same way as the invitation token, and
+// for the same reason: confirming the email can finish in another tab at the plain address. Forgotten once somebody is signed in.
+const TRIAL_EMAIL_KEY = 'grainflow.trialEmail';
+function stashTrialFromHash() {
+  const email = emailFromTrialHash(location.hash);
+  if (!email) return;
+  try { localStorage.setItem(TRIAL_EMAIL_KEY, email); } catch { /* private mode */ }
+  location.replace(`${location.pathname}${location.search}#/`);
+}
+const readTrialEmail = () => { try { return localStorage.getItem(TRIAL_EMAIL_KEY); } catch { return null; } };
+const clearTrialEmail = () => { try { localStorage.removeItem(TRIAL_EMAIL_KEY); } catch { /* nothing to do */ } };
+stashTrialFromHash();
+
 /**
  * The invitation was refused by the server, and the reason is worth showing.
  *
@@ -349,9 +363,10 @@ async function boot() {
     setChromeVisible(false);
     // The login screen says why they are looking at it. Arriving on an
     // invitation link and being shown a bare sign-in form reads as a dead link.
-    renderLogin(app, { onDone: boot, invited: !!pendingInvite });
+    renderLogin(app, { onDone: boot, invited: !!pendingInvite, trialEmail: readTrialEmail() });
     return;
   }
+  clearTrialEmail();
 
   let joined = null;
   if (pendingInvite) {
