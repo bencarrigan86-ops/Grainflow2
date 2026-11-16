@@ -18,25 +18,27 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=306';
+import { hydrate } from './hydrate.js?v=308';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=306';
-import { chooseBootState, resolveLegacy } from './boot.js?v=306';
-import { isLegacyDirty } from './dirty.js?v=306';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=306';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=306';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=306';
-import { settleLegs, dedupeLegs } from './legs.js?v=306';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=306';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=306';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=306';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=306';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=306';
-import { schedulePush, pushOnReconnect } from './sync.js?v=306';
-import { hasParts as hasAddressParts } from './address.js?v=306';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=306';
+} from './local.js?v=308';
+import { chooseBootState, resolveLegacy } from './boot.js?v=308';
+import { isLegacyDirty } from './dirty.js?v=308';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=308';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=308';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=308';
+import { settleLegs, dedupeLegs } from './legs.js?v=308';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=308';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=308';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=308';
+import { setCommodityOrder } from './commodityorder.js?v=308';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=308';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=308';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=308';
+import { schedulePush, pushOnReconnect } from './sync.js?v=308';
+import { hasParts as hasAddressParts } from './address.js?v=308';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=308';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -129,8 +131,11 @@ function deriveCounters(state) {
 // ---------------------------------------------------------------------------
 
 let data = defaultData();
+/** The farm's commodity order is read by the sorts in derived.js, so whenever the data is swapped or its details change it is handed over. */
+const shareOrder = () => setCommodityOrder(data.businessDetails?.commodityOrder);
 let farmId = null;
 let role = 'owner';
+let outloadSeries = null;   // this person's digit for outload numbers, as the server gave it (null until known)
 let ready = false;
 
 const listeners = new Set();
@@ -154,6 +159,8 @@ function markOil(rec) {
   if (rec.ffaPct !== null && rec.ffaPct !== undefined && rec.ffaPct !== '' && Number.isFinite(Number(rec.ffaPct))) rec.__hasFfa = true;
   // the same for a ticket's own number from the receiving site
   if (rec.externalTicketNo) rec.__hasExtTicket = true;
+  // and the number quoted at the site
+  if (rec.outloadNo) rec.__hasOutloadNo = true;
   // and the time of day it was loaded
   if (rec.loadTime) rec.__hasLoadTime = true;
   // and where it is going, typed on the load
@@ -339,6 +346,7 @@ export const db = {
 
     if (decision.use === 'server') {
       data = deriveCounters(serverState);
+      shareOrder();
       await saveState(data, farmId).catch((e) => console.error('Local save failed', e));
     } else if (decision.use === 'local') {
       // The local copy wins, but the server still owns row identity. A device
@@ -352,11 +360,13 @@ export const db = {
         console.info(`Adopted ${adopted} server row id(s) so this device's changes can be sent.`);
       }
       data = deriveCounters(localState);
+      shareOrder();
     } else {
       // Brand new farm: seed the default commodity list so Settings is not
       // an empty screen on day one.
       data = defaultData();
       data.businessDetails = { ...defaultBusinessDetails() };
+      shareOrder();
       // A new farm's starting records (its season, the default commodities)
       // exist only here until sent, and everything created later refers to them.
       touch('all');
@@ -477,6 +487,7 @@ export const db = {
       const next = deriveCounters(serverState);
       if (data.currentYear && next.years[data.currentYear]) next.currentYear = data.currentYear;
       data = next;
+      shareOrder();
       saveState(data, farmId).catch((e) => console.error('Local save failed', e));
       listeners.forEach((fn) => {
         try { fn(data); } catch (e) { console.error('A view failed to re-render after a refresh', e); }
@@ -1252,12 +1263,28 @@ export const db = {
     persist();
   },
 
+  // --- outload numbers: the number a truck quotes at a third-party site (see outloadno.js) ---
+  getOutloadSeries() { return outloadSeries; },
+  setOutloadSeries(n) { outloadSeries = Number(n) >= 1 && Number(n) <= 9 ? Number(n) : null; },
+  /**
+   * The next outload number for this person, in the season being worked in, worked out from every load the phone holds.
+   * Nothing is stored until the load is saved with it. Null when this person has no digit yet.
+   */
+  nextOutloadNo() {
+    const yy = seasonYY(data.currentYear, new Date().toISOString().slice(0, 10));
+    const all = Object.values(data.years || {}).flatMap((y) => y.movements || []);
+    return nextOutloadNo({ series: outloadSeries, yy, movements: all });
+  },
+
   // --- business details ---
   getBusinessDetails() { return data.businessDetails; },
   updateBusinessDetails(patch) {
     data.businessDetails = { ...data.businessDetails, ...patch };
     if (data.businessDetails.qaProgram || data.businessDetails.qaNumber) data.businessDetails.__hasQa = true;   // so clearing them reaches the server
     if (data.businessDetails.pic) data.businessDetails.__hasPic = true;
+    if (data.businessDetails.importFormats?.length) data.businessDetails.__hasImportFormats = true;   // so deleting the last one reaches the server
+    if (data.businessDetails.commodityOrder?.length) data.businessDetails.__hasCommodityOrder = true;   // so going back to automatic reaches the server
+    shareOrder();
     if (data.businessDetails.showAircair) data.businessDetails.__hasAircair = true;   // so switching it off again reaches the server
     if (hasAddressParts(data.businessDetails.addressParts)) data.businessDetails.__hasAddressParts = true;   // so clearing the parts reaches the server
     touch('business');
@@ -1295,6 +1322,7 @@ export const db = {
     const retired = reconcileImport(data, state, tombstone);
 
     data = deriveCounters(state);
+    shareOrder();
     touch('all');
     persist();
     return { remapped, filled, retired, stats: after.stats };
@@ -1303,6 +1331,7 @@ export const db = {
   resetAll() {
     if (role !== 'owner') return;             // wipes every season: the owner only, as the Settings button is
     data = defaultData();
+    shareOrder();
     touch('all');
     persist();
   },

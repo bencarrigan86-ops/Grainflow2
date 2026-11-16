@@ -60,9 +60,9 @@ check('the load sheet, the silo sheet and the silo layer rows all have an FFA bo
   assert.ok(m.includes("id: 'lq-ffa'") && m.includes("ffaPct: n('lq-ffa')") && m.includes("ffaPct: num('lq-ffa')"), 'load sheet');
   const s = read('docs/js/views/storage.js');
   assert.ok(s.includes("id: 'q-ffa'") && s.includes("ffaPct: n('q-ffa')"), 'silo sheet');
-  assert.ok(s.includes('class="lay-ffa"') && s.includes("ffaPct: val(row, '.lay-ffa')"), 'layer rows');
-  assert.ok(s.includes('class="lay-oil"') && s.includes("oilPct: val(row, '.lay-oil')"), 'oil on the layer rows');
-  assert.ok(s.includes('class="lay-ret"') && s.includes("retentionPct: val(row, '.lay-ret')"), 'retention on the layer rows');
+  assert.ok(s.includes("'lay-ffa', 'Free fatty acid %'") && s.includes("ffaPct: val(row, '.lay-ffa')"), 'layer rows');
+  assert.ok(s.includes("'lay-oil', 'Oil %'") && s.includes("oilPct: val(row, '.lay-oil')"), 'oil on the layer rows');
+  assert.ok(s.includes("'lay-ret', 'Retention %'") && s.includes("retentionPct: val(row, '.lay-ret')"), 'retention on the layer rows');
 });
 
 check('the column is in the paste-in file and a migration', () => {

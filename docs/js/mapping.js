@@ -27,9 +27,9 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=306';
-import { cleanOffFarm } from './offfarm.js?v=306';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=306';
+import { cleanGradeOptions } from './gradeprice.js?v=308';
+import { cleanOffFarm } from './offfarm.js?v=308';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=308';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -131,6 +131,7 @@ export function movementFromRow(m, legs = [], photo = null) {
     correctsId: m.corrects_id,
     ...(m.source_ref ? { sourceRef: m.source_ref } : {}),
     ...(m.external_ticket_no != null ? { externalTicketNo: m.external_ticket_no, __hasExtTicket: true } : {}),
+    ...(m.outload_no != null ? { outloadNo: m.outload_no, __hasOutloadNo: true } : {}),
     ...(m.load_time ? { loadTime: m.load_time, __hasLoadTime: true } : {}),
     ...(m.load_destination ? { destination: m.load_destination, __hasDestination: true } : {}),
     ...(m.order_id ? { orderId: m.order_id, __hasOrderId: true } : {}),
@@ -271,6 +272,11 @@ export function stateToRows(state, farmId) {
     ...((b.pic || b.__hasPic) ? { pic: orNull(b.pic) } : {}),
     // Whether Aircair's own form is offered on a spray request. Off unless switched on, so a farm that never has it needs no column.
     ...((b.showAircair || b.__hasAircair) ? { show_aircair: !!b.showAircair } : {}),
+    // The order the commodities are listed in on every screen: their names, in order. Optional in the same way: left out until
+    // a list has been set, kept once one has, so going back to the automatic order (an empty list) reaches the server.
+    // The farm's saved layouts for the files a receiving site sends back. Optional in the same way.
+    ...(((b.importFormats || []).length || b.__hasImportFormats) ? { import_formats: Array.isArray(b.importFormats) ? b.importFormats : [] } : {}),
+    ...(((b.commodityOrder || []).length || b.__hasCommodityOrder) ? { commodity_order: Array.isArray(b.commodityOrder) ? b.commodityOrder : [] } : {}),
     // The address in its parts (line 1, line 2, town, state, postcode), beside the joined line in `address`. Optional in the same way.
     ...(partsOut(b.addressParts, b.__hasAddressParts) ? { address_parts: partsOut(b.addressParts, b.__hasAddressParts).v } : {}),
   });
@@ -475,6 +481,8 @@ export function stateToRows(state, farmId) {
         commodity_id: orNull(m.commodityId),
         // The receiving site's own ticket number, for a load that goes to another site. Optional like the other later columns.
         ...((m.externalTicketNo || m.__hasExtTicket) ? { external_ticket_no: orNull(m.externalTicketNo) } : {}),
+        // The number quoted at a third-party site. Optional in the same way: sent once one has been given, kept after that.
+        ...((m.outloadNo || m.__hasOutloadNo) ? { outload_no: orNull(m.outloadNo) } : {}),
         // The time of day it was loaded, optional in the same way.
         ...((m.loadTime || m.__hasLoadTime) ? { load_time: orNull(m.loadTime) } : {}),
         // Where it is going, typed on the load; optional in the same way.
@@ -908,6 +916,8 @@ export function rowsToState(rows) {
       ...((farm.qa_program != null || farm.qa_number != null) ? { qaProgram: farm.qa_program ?? '', qaNumber: farm.qa_number ?? '', __hasQa: true } : {}),
       ...(farm.pic != null ? { pic: farm.pic, __hasPic: true } : {}),
       ...(farm.show_aircair != null ? { showAircair: !!farm.show_aircair, __hasAircair: true } : {}),
+      ...(Array.isArray(farm.import_formats) ? { importFormats: farm.import_formats, __hasImportFormats: true } : {}),
+      ...(Array.isArray(farm.commodity_order) ? { commodityOrder: farm.commodity_order.map(String), __hasCommodityOrder: true } : {}),
       ...(farm.address_parts != null ? { __hasAddressParts: true, ...(partsIn(farm.address_parts, farm.address) ? { addressParts: partsIn(farm.address_parts, farm.address) } : {}) } : {}),
     },
   };

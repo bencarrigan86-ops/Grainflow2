@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=306';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=306';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=306';
-import { isTransit } from '../transit.js?v=306';
-import { isOffFarm } from '../offfarm.js?v=306';
-import { paintOffFarmCard } from './offfarm.js?v=306';
-import { gradesFor, allGradeCodes } from '../grades.js?v=306';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=306';
-import { hasStorageQuality } from '../mapping.js?v=306';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=306';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=306';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=306';
-import { renderRelatedMovements } from './movements.js?v=306';
-import { openSiloSetupSheet } from './silosetup.js?v=306';
-import { commodityFills } from '../commodityfill.js?v=306';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=306';
+import { db } from '../storage.js?v=308';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=308';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=308';
+import { isTransit } from '../transit.js?v=308';
+import { isOffFarm } from '../offfarm.js?v=308';
+import { paintOffFarmCard } from './offfarm.js?v=308';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=308';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=308';
+import { hasStorageQuality } from '../mapping.js?v=308';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=308';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=308';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=308';
+import { renderRelatedMovements } from './movements.js?v=308';
+import { openSiloSetupSheet } from './silosetup.js?v=308';
+import { commodityFills } from '../commodityfill.js?v=308';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=308';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=306';
+} from '../silolayers.js?v=308';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -661,27 +661,48 @@ function noteLine(s) {
  * out — last in, first out. Needs the quality of each load to say anything
  * about quality; without it the prediction is a list of which loads come first.
  */
-/** One band of the samples editor: a stretch of the silo, by tonnes, with its grade and specs. */
-function bandRowHtml(r = {}) {
+/**
+ * One band of the samples editor: a sample of the silo, by tonnes, with its grade and specs. Every box carries its name above it,
+ * so a number that has been typed in still says what it is. The first line is the tonnes and the grade; then moisture and protein;
+ * then the other measurements, two to a line.
+ */
+/**
+ * The grade of a sample, or of one load in a silo, as a drop-down: the grades this silo can hold, "No grade", a grade already on the sample that is not on the
+ * list (so opening an old sample never loses it) and "Other" for a one-off, which reveals a box to type it in.
+ */
+function sampleGradeHtml(grades, value, { cls = 'lay-grade', aria = 'Grade of this sample', other = 'lay-grade-other' } = {}) {
+  const cur = String(value ?? '').trim();
+  const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+  const list = [...new Set(grades || [])];
+  const opts = [['', 'No grade'], ...list.map((g) => [g, g]), ...(cur && !list.some((g) => same(g, cur)) ? [[cur, `${cur} (not on the list)`]] : []), [OTHER_GRADE, 'Other…']];
+  return `<select class="${cls}" aria-label="${aria}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${same(v, cur) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
+      <input type="text" class="${other}" aria-label="Type the grade" placeholder="Type the grade" autocomplete="off" style="display:none;margin-top:4px" />`;
+}
+
+function bandRowHtml(r = {}, grades = []) {
   const v = (x) => (x === undefined || x === null ? '' : x);
+  const num = (cls, caption, aria, value, step = '0.1') => `<div class="lay-f"><span class="lay-cap">${caption}</span>
+      <input type="number" inputmode="decimal" step="${step}" class="${cls}" aria-label="${aria}" value="${v(value)}" /></div>`;
   return `<div class="lay-row" data-lay>
-    <input type="number" inputmode="decimal" step="0.1" class="lay-tons" placeholder="Tonnes" aria-label="Tonnes in this stretch" value="${v(r.tons)}" />
-    <input type="text" class="lay-grade" list="lay-grades" placeholder="Grade" aria-label="Grade of this stretch" value="${esc(r.grade ?? '')}" />
-    <input type="number" inputmode="decimal" step="0.1" class="lay-protein" placeholder="Prot %" aria-label="Protein" value="${v(r.proteinPct)}" />
+    <div class="lay-f"><span class="lay-cap">Tonnes</span>
+      <input type="number" inputmode="decimal" step="0.1" class="lay-tons" aria-label="Tonnes in this sample" value="${v(r.tons)}" /></div>
+    <div class="lay-f"><span class="lay-cap">Grade</span>
+      ${sampleGradeHtml(grades, r.grade)}</div>
     <span class="lay-btns">
-      <button type="button" class="lay-up" aria-label="Move this stretch up">&uarr;</button>
-      <button type="button" class="lay-down" aria-label="Move this stretch down">&darr;</button>
-      <button type="button" class="lay-del" aria-label="Remove this stretch">&times;</button>
+      <button type="button" class="lay-up" aria-label="Move this sample up">&uarr;</button>
+      <button type="button" class="lay-down" aria-label="Move this sample down">&darr;</button>
+      <button type="button" class="lay-del" aria-label="Remove this sample">&times;</button>
     </span>
     <span class="lay-tag meta"></span>
     <div class="lay-more">
-      <input type="number" inputmode="decimal" step="0.1" class="lay-moisture" placeholder="Moisture %" aria-label="Moisture" value="${v(r.moisturePct)}" />
-      <input type="number" inputmode="decimal" step="0.1" class="lay-screenings" placeholder="Screenings %" aria-label="Screenings" value="${v(r.screeningsPct)}" />
-      <input type="number" inputmode="decimal" step="0.1" class="lay-tw" placeholder="Test wt kg/hL" aria-label="Test weight" value="${v(r.testWeightKgHl)}" />
-      <input type="number" inputmode="decimal" step="1" class="lay-fn" placeholder="Falling no." aria-label="Falling number" value="${v(r.fallingNumber)}" />
-      <input type="number" inputmode="decimal" step="0.1" class="lay-oil" placeholder="Oil %" aria-label="Oil" value="${v(r.oilPct)}" />
-      <input type="number" inputmode="decimal" step="0.01" class="lay-ffa" placeholder="FFA %" aria-label="Free fatty acid" value="${v(r.ffaPct)}" />
-      <input type="number" inputmode="decimal" step="0.1" class="lay-ret" placeholder="Retention %" aria-label="Retention" value="${v(r.retentionPct)}" />
+      ${num('lay-moisture', 'Moisture %', 'Moisture', r.moisturePct)}
+      ${num('lay-protein', 'Protein %', 'Protein', r.proteinPct)}
+      ${num('lay-screenings', 'Screenings %', 'Screenings', r.screeningsPct)}
+      ${num('lay-tw', 'Test weight kg/hL', 'Test weight', r.testWeightKgHl)}
+      ${num('lay-fn', 'Falling number', 'Falling number', r.fallingNumber, '1')}
+      ${num('lay-oil', 'Oil %', 'Oil', r.oilPct)}
+      ${num('lay-ffa', 'Free fatty acid %', 'Free fatty acid', r.ffaPct, '0.01')}
+      ${num('lay-ret', 'Retention %', 'Retention', r.retentionPct)}
     </div>
   </div>`;
 }
@@ -723,14 +744,14 @@ function contentsFold(existing, grades, kind = existing?.kind) {
       <div class="subhead" style="margin-top:10px" id="lay-stack-head"></div>
       <div id="op-stack"></div>
       <div class="subhead">Grade and specs by tonnes <span class="meta">(from the ${isBunker ? 'back' : 'bottom'})</span></div>
-      <div class="field hint" style="margin-bottom:8px">Running samples? Say what each stretch of the silo is &mdash; the first 800 t is APH1 at 11.5% protein, the next
+      <div class="field hint" style="margin-bottom:8px">Sampled the silo? Say what each sample covers &mdash; the first 800 t is APH1 at 11.5% protein, the next
         600 t is AUH2 &mdash; whichever loads it came from. This replaces what the individual loads say for that grain. Grain that arrives after the date
-        below, or beyond the last stretch, keeps its own grade. Trucks take from the top, so lower stretches stay as they are.</div>
+        below, or beyond the last sample, keeps its own grade. Trucks take from the top, so lower samples stay as they are.</div>
       <div class="field" style="margin-bottom:8px"><label for="lay-asof">Sampled on</label>
         <input type="date" id="lay-asof" value="${esc(existing?.gradeBandsDate || todayLocal())}" /></div>
-      <div id="lay-rows">${rows.map(bandRowHtml).join('')}</div>
+      <div id="lay-rows">${rows.map((r) => bandRowHtml(r, grades)).join('')}</div>
       <datalist id="lay-grades">${grades.map((g) => `<option value="${esc(g)}"></option>`).join('')}</datalist>
-      <button type="button" class="btn secondary small" id="lay-add">+ Add the next stretch</button>
+      <button type="button" class="btn secondary small" id="lay-add">+ Add the next sample</button>
       <div class="field hint" id="lay-total"></div>
       <div class="subhead">Plan an outload</div>
       <div class="grid-2">
@@ -746,7 +767,7 @@ function readLayerRows(root) {
   const val = (row, sel) => row.querySelector(sel)?.value ?? '';
   return [...root.querySelectorAll('#lay-rows [data-lay]')].map((row) => ({
     tons: val(row, '.lay-tons'),
-    grade: val(row, '.lay-grade'),
+    grade: val(row, '.lay-grade') === OTHER_GRADE ? val(row, '.lay-grade-other').trim() : val(row, '.lay-grade'),
     proteinPct: val(row, '.lay-protein'),
     moisturePct: val(row, '.lay-moisture'),
     screeningsPct: val(row, '.lay-screenings'),
@@ -765,6 +786,8 @@ function buildContents(root, existing, kind = existing?.kind) {
   if (!stackEl) return;
   const resultEl = root.querySelector('#op-result');
   const rowsEl = root.querySelector('#lay-rows');
+  // the grades this silo can hold, as the list on the form has them (for the grade drop-downs)
+  const gradeList = () => [...root.querySelectorAll('#lay-grades option')].map((o) => o.value);
   let layers = [];
   let ungradedIds = [];
   let contents = 0;
@@ -786,7 +809,7 @@ function buildContents(root, existing, kind = existing?.kind) {
     const base = l.source === 'opening'
       ? 'Opening stock'
       : `Ticket #${l.ticketNo ?? '?'} · ${esc(shortDate(l.date) || 'no date')}${l.rego ? ` · ${esc(l.rego)}` : ''}`;
-    return l.banded ? `${base} <span class="meta">· stretch ${l.banded}</span>` : base;
+    return l.banded ? `${base} <span class="meta">· sample ${l.banded}</span>` : base;
   };
 
   const redraw = () => {
@@ -834,7 +857,7 @@ function buildContents(root, existing, kind = existing?.kind) {
          <button type="button" class="btn secondary small" id="lay-bulk-go" style="flex:none">Set all</button></div>`
       : '';
 
-    // each stretch labelled with where it sits in the silo, from the bottom
+    // each sample labelled with where it sits in the silo, from the bottom
     const rows = [...rowsEl.querySelectorAll('[data-lay]')];
     let from = 0;
     rows.forEach((row, i) => {
@@ -848,7 +871,7 @@ function buildContents(root, existing, kind = existing?.kind) {
     });
     const covered = cleanBands(readLayerRows(root)).reduce((a, b) => a + b.tons, 0);
     root.querySelector('#lay-total').textContent = covered > 0
-      ? `These stretches cover ${num(Math.min(covered, contents), 1)} t of the ${num(contents, 1)} t in the silo${contents - covered > 0.05 ? `; the top ${num(contents - covered, 1)} t keeps the grade of the loads it came from.` : '.'}`
+      ? `These samples cover ${num(Math.min(covered, contents), 1)} t of the ${num(contents, 1)} t in the silo${contents - covered > 0.05 ? `; the top ${num(contents - covered, 1)} t keeps the grade of the loads it came from.` : '.'}`
       : 'No samples described: each load and the opening stock keep their own grade.';
     drawPlan();
   };
@@ -863,7 +886,7 @@ function buildContents(root, existing, kind = existing?.kind) {
       return `<div class="row"><span class="label">${sp.label}</span><span class="value">${num(v.avg, sp.dp)} ${sp.unit}${range}${partial}</span></div>`;
     }).join('');
     const from = [...new Set(pl.segments.map((sg) => (sg.layer.source === 'opening' ? 'opening stock' : `#${sg.layer.ticketNo ?? '?'}`)
-      + (sg.layer.banded ? ` (stretch ${sg.layer.banded})` : '')))].join(', ');
+      + (sg.layer.banded ? ` (sample ${sg.layer.banded})` : '')))].join(', ');
     return `<div class="card${whole ? ' whole-outload' : ''}" style="margin:8px 0">
       <h2 style="margin-bottom:4px">${title}</h2>
       <div class="meta">${mix || 'No grade recorded'}</div>
@@ -887,6 +910,14 @@ function buildContents(root, existing, kind = existing?.kind) {
   };
 
   // Grade one load in place, from the silo, without going to the Movement tab.
+  // choosing "Other" for a load's grade reveals the box to type it in
+  stackEl.addEventListener('change', (e) => {
+    if (!e.target.matches('.le-grade')) return;
+    const other = e.target.closest('.le-edit')?.querySelector('.le-grade-other');
+    if (!other) return;
+    other.style.display = e.target.value === OTHER_GRADE ? 'block' : 'none';
+    if (e.target.value === OTHER_GRADE) other.focus();
+  });
   stackEl.addEventListener('click', (e) => {
     const open = e.target.closest('.le-open');
     const row = e.target.closest('.row');
@@ -896,12 +927,12 @@ function buildContents(root, existing, kind = existing?.kind) {
       const nv = (x) => (x === undefined || x === null ? '' : x);
       row.querySelector('.label .meta').outerHTML = `<div class="le-edit" data-load="${esc(m.id)}" style="margin-top:4px">
         <div class="le-grid">
-          <input type="text" class="le-grade" list="lay-grades" placeholder="Grade" value="${esc(m.grade ?? '')}" />
-          <input type="number" inputmode="decimal" step="0.1" class="le-protein" placeholder="Protein %" value="${nv(m.proteinPct)}" />
-          <input type="number" inputmode="decimal" step="0.1" class="le-moisture" placeholder="Moisture %" value="${nv(m.moisturePct)}" />
-          <input type="number" inputmode="decimal" step="0.1" class="le-screenings" placeholder="Screenings %" value="${nv(m.screeningsPct)}" />
-          <input type="number" inputmode="decimal" step="0.1" class="le-tw" placeholder="Test wt kg/hL" value="${nv(m.testWeightKgHl)}" />
-          <input type="number" inputmode="decimal" step="1" class="le-fn" placeholder="Falling no." value="${nv(m.fallingNumber)}" />
+          <div class="lay-f wide"><span class="lay-cap">Grade</span>${sampleGradeHtml(gradeList(), m.grade, { cls: 'le-grade', aria: 'Grade', other: 'le-grade-other' })}</div>
+          <div class="lay-f"><span class="lay-cap">Moisture %</span><input type="number" inputmode="decimal" step="0.1" class="le-moisture" aria-label="Moisture" value="${nv(m.moisturePct)}" /></div>
+          <div class="lay-f"><span class="lay-cap">Protein %</span><input type="number" inputmode="decimal" step="0.1" class="le-protein" aria-label="Protein" value="${nv(m.proteinPct)}" /></div>
+          <div class="lay-f"><span class="lay-cap">Screenings %</span><input type="number" inputmode="decimal" step="0.1" class="le-screenings" aria-label="Screenings" value="${nv(m.screeningsPct)}" /></div>
+          <div class="lay-f"><span class="lay-cap">Test weight kg/hL</span><input type="number" inputmode="decimal" step="0.1" class="le-tw" aria-label="Test weight" value="${nv(m.testWeightKgHl)}" /></div>
+          <div class="lay-f"><span class="lay-cap">Falling number</span><input type="number" inputmode="decimal" step="1" class="le-fn" aria-label="Falling number" value="${nv(m.fallingNumber)}" /></div>
         </div>
         <div style="display:flex;gap:6px;margin-top:6px">
           <button type="button" class="btn small le-save" style="flex:none;min-height:38px">Save</button>
@@ -917,7 +948,7 @@ function buildContents(root, existing, kind = existing?.kind) {
       const num = (sel) => { const v = edit.querySelector(sel).value; return v === '' ? null : Number(v); };
       db.upsertMovement({
         id: edit.dataset.load,
-        grade: edit.querySelector('.le-grade').value.trim(),
+        grade: edit.querySelector('.le-grade').value === OTHER_GRADE ? edit.querySelector('.le-grade-other').value.trim() : edit.querySelector('.le-grade').value,
         proteinPct: num('.le-protein'), moisturePct: num('.le-moisture'), screeningsPct: num('.le-screenings'),
         testWeightKgHl: num('.le-tw'), fallingNumber: num('.le-fn'),
       });
@@ -947,6 +978,14 @@ function buildContents(root, existing, kind = existing?.kind) {
     drawPlan();
   });
   rowsEl.addEventListener('input', redraw);
+  // choosing "Other" for a grade reveals the box to type it in
+  rowsEl.addEventListener('change', (e) => {
+    if (!e.target.matches('.lay-grade')) return;
+    const other = e.target.closest('[data-lay]')?.querySelector('.lay-grade-other');
+    if (!other) return;
+    other.style.display = e.target.value === OTHER_GRADE ? 'block' : 'none';
+    if (e.target.value === OTHER_GRADE) other.focus();
+  });
   rowsEl.addEventListener('click', (e) => {
     const row = e.target.closest('[data-lay]');
     if (!row) return;
@@ -956,11 +995,11 @@ function buildContents(root, existing, kind = existing?.kind) {
     else return;
     redraw();
   });
-  // The next stretch starts where the last ended; the tonnes left over are filled in to save typing.
+  // The next sample starts where the last ended; the tonnes left over are filled in to save typing.
   root.querySelector('#lay-add').addEventListener('click', () => {
     const covered = cleanBands(readLayerRows(root)).reduce((a, b) => a + b.tons, 0);
     const left = Math.max(0, Math.round((contents - covered) * 10) / 10);
-    rowsEl.insertAdjacentHTML('beforeend', bandRowHtml({ tons: left > 0 ? left : '' }));
+    rowsEl.insertAdjacentHTML('beforeend', bandRowHtml({ tons: left > 0 ? left : '' }, gradeList()));
     redraw();
     rowsEl.lastElementChild.querySelector('.lay-grade').focus();
   });
@@ -1064,7 +1103,7 @@ function wireMeasureSummary(root) {
 
 function openStorageSheet(existing) {
   const { commodities, movements, storages } = db.get();
-  // Suggestions for the grade of a stretch of grain in this silo: this commodity's grades if it has one, otherwise
+  // Suggestions for the grade of a sample of grain in this silo: this commodity's grades if it has one, otherwise
   // every commodity's, and any grade already used on another storage.
   const ownCommodity = commodities.find((c) => c.id === existing?.commodityId);
   const gradesInUse = [...new Set([

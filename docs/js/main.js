@@ -1,30 +1,31 @@
-import { db } from './storage.js?v=306';
-import { supabase, ENV } from './supabase.js?v=306';
-import { installErrorLog } from './supportinfo.js?v=306';
-import { initTheme } from './theme.js?v=306';
+import { db } from './storage.js?v=308';
+import { supabase, ENV } from './supabase.js?v=308';
+import { installErrorLog } from './supportinfo.js?v=308';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=308';
+import { initTheme } from './theme.js?v=308';
 initTheme();
-import { renderPosition } from './views/position.js?v=306';
-import { renderProduction } from './views/production.js?v=306';
-import { renderReports } from './views/reports.js?v=306';
-import { renderSales } from './views/sales.js?v=306';
-import { renderMovements } from './views/movements.js?v=306';
-import { renderStorage } from './views/storage.js?v=306';
-import { renderSettings } from './views/settings.js?v=306';
-import { renderLogin } from './views/login.js?v=306';
-import { renderAccount } from './views/account.js?v=306';
-import { renderHelp } from './views/help.js?v=306';
+import { renderPosition } from './views/position.js?v=308';
+import { renderProduction } from './views/production.js?v=308';
+import { renderReports } from './views/reports.js?v=308';
+import { renderSales } from './views/sales.js?v=308';
+import { renderMovements } from './views/movements.js?v=308';
+import { renderStorage } from './views/storage.js?v=308';
+import { renderSettings } from './views/settings.js?v=308';
+import { renderLogin } from './views/login.js?v=308';
+import { renderAccount } from './views/account.js?v=308';
+import { renderHelp } from './views/help.js?v=308';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=306';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=306';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=306';
-import { esc } from './fmt.js?v=306';
-import { isSheetOpen, notify } from './ui.js?v=306';
-import { describeMerges } from './ticketmerge.js?v=306';
-import { watchLists } from './band.js?v=306';
-import { APP_VERSION } from './version.js?v=306';
-import { installWatch, requestPersistence } from './pwa.js?v=306';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=306';
+} from './auth.js?v=308';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=308';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=308';
+import { esc } from './fmt.js?v=308';
+import { isSheetOpen, notify } from './ui.js?v=308';
+import { describeMerges } from './ticketmerge.js?v=308';
+import { watchLists } from './band.js?v=308';
+import { APP_VERSION } from './version.js?v=308';
+import { installWatch, requestPersistence } from './pwa.js?v=308';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=308';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -412,6 +413,10 @@ async function boot() {
   try {
     currentRole = membership.role;
     await db.init({ farmId: membership.farmId, role: membership.role });
+    // this person's digit for outload numbers: what the phone last knew at once, then the server's word when it can be asked
+    const myId = session?.user?.id;
+    db.setOutloadSeries(rememberedSeries(myId, membership.farmId));
+    loadMySeries(myId, membership.farmId).then((n) => db.setOutloadSeries(n)).catch(() => {});
     // Ask the phone to keep what is saved on it. Best effort, and quiet: the answer is shown on Account.
     requestPersistence().catch(() => {});
     if (currentRole === 'support') noteSupportOpen(membership.farmId);

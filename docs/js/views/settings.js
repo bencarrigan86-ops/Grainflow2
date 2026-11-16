@@ -1,39 +1,42 @@
-import { db } from '../storage.js?v=306';
-import { getTheme, setTheme } from '../theme.js?v=306';
-import { num, money, esc, todayLocal } from '../fmt.js?v=306';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=306';
-import { openLoadImportSheet } from './importloads.js?v=306';
-import { openPastSeasonsSheet } from './pastseasons.js?v=306';
-import { openPastSalesSheet } from './pastsales.js?v=306';
-import { openLineupSheet } from './lineup.js?v=306';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=306';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=306';
-import { openDangerSheet } from './dangerconfirm.js?v=306';
-import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=306';
-import { seasonContents, contentsText } from '../seasondelete.js?v=306';
-import { openDeletedSheet } from './deleted.js?v=306';
-import { APP_VERSION } from '../version.js?v=306';
-import { exportRowsAsCSV } from '../csv.js?v=306';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=306';
-import { endpointLabel } from './movements.js?v=306';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=306';
-import { layersForStorage } from '../outload.js?v=306';
-import { traceLoads, traceText } from '../trace.js?v=306';
-import { holdings, totalHeld } from '../offfarm.js?v=306';
-import { kindLabel, billTotal } from '../payables.js?v=306';
-import { orderState, STATE_LABEL } from '../orders.js?v=306';
-import { fieldHarvest } from '../harvest.js?v=306';
-import { openMySignatureSheet } from './signaturepad.js?v=306';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=306';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=306';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=306';
+import { db } from '../storage.js?v=308';
+import { getTheme, setTheme } from '../theme.js?v=308';
+import { num, money, esc, todayLocal } from '../fmt.js?v=308';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=308';
+import { openLoadImportSheet } from './importloads.js?v=308';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=308';
+import { openPastSeasonsSheet } from './pastseasons.js?v=308';
+import { openPastSalesSheet } from './pastsales.js?v=308';
+import { openLineupSheet } from './lineup.js?v=308';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=308';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=308';
+import { openDangerSheet } from './dangerconfirm.js?v=308';
+import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=308';
+import { seasonContents, contentsText } from '../seasondelete.js?v=308';
+import { openDeletedSheet } from './deleted.js?v=308';
+import { APP_VERSION } from '../version.js?v=308';
+import { exportRowsAsCSV } from '../csv.js?v=308';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=308';
+import { orderedNames, moveName } from '../commodityorder.js?v=308';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=308';
+import { endpointLabel } from './movements.js?v=308';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=308';
+import { layersForStorage } from '../outload.js?v=308';
+import { traceLoads, traceText } from '../trace.js?v=308';
+import { holdings, totalHeld } from '../offfarm.js?v=308';
+import { kindLabel, billTotal } from '../payables.js?v=308';
+import { orderState, STATE_LABEL } from '../orders.js?v=308';
+import { fieldHarvest } from '../harvest.js?v=308';
+import { openMySignatureSheet } from './signaturepad.js?v=308';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=308';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=308';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=308';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=306';
+} from '../invites.js?v=308';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=306';
+} from '../auth.js?v=308';
 
 let unsub = null;
 
@@ -41,6 +44,27 @@ export function renderSettings(root) {
   if (unsub) unsub();
   paint(root);
   unsub = db.subscribe(() => paint(root));
+}
+
+/** The farm's commodity names in the automatic order (the most tonnes first), the way the Position screen has them. */
+function commodityNamesInOrder({ commodities, fields, sales, movements }) {
+  try { return position(commodities, fields, sales, movements).map((r) => r.commodity.name); } catch (e) { return commodities.map((c) => c.name); }
+}
+
+/** Settings: the one list the commodities are put in on every screen. Automatic (biggest first) until it is moved by hand. */
+function commodityOrderCard(data, business) {
+  if ((data.commodities || []).length < 2) return '';
+  const custom = (business.commodityOrder || []).length > 0;
+  const list = orderedNames(business.commodityOrder, commodityNamesInOrder(data));
+  const row = (name, i) => `<div class="row" style="align-items:center"><span class="label">${esc(name)}</span><span class="value" style="display:flex;gap:6px">
+    <button type="button" class="btn secondary small" data-order-move="${i}" data-by="-1" aria-label="Move ${esc(name)} up" ${i === 0 ? 'disabled' : ''}>&uarr;</button>
+    <button type="button" class="btn secondary small" data-order-move="${i}" data-by="1" aria-label="Move ${esc(name)} down" ${i === list.length - 1 ? 'disabled' : ''}>&darr;</button></span></div>`;
+  return `<div class="card input" id="order-card">
+    <h2><span class="dot input"></span>Order of commodities</h2>
+    <div class="field hint" style="margin-bottom:6px">${custom ? 'In your order, on Position, Production, Storage, Sales and the reports. A new commodity goes after these.' : 'Automatic: the one with the most tonnes first. Move one to set your own order, used on every screen.'}</div>
+    ${list.map(row).join('')}
+    ${custom ? '<button type="button" class="btn secondary small" id="order-auto" style="margin-top:8px">Back to biggest first</button>' : ''}
+  </div>`;
 }
 
 function paint(root) {
@@ -86,6 +110,8 @@ function paint(root) {
         <h2><span class="dot input"></span>Commodities</h2>
         ${commodities.length === 0 ? `<div class="empty">Tap + to add a commodity.</div>` : commodities.map((c) => commodityRow(c)).join('')}
       </div>
+
+      ${db.getRole() === 'owner' ? commodityOrderCard(db.get(), business) : ''}
 
       <div class="card input">
         <h2><span class="dot input"></span>Grades</h2>
@@ -175,6 +201,7 @@ function paint(root) {
         </div>
         <button class="btn secondary small" id="export-csv" style="margin-top:8px">Export CSV (Excel)&hellip;</button>
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-loads" style="margin-top:8px">Import truck loads (CSV)&hellip;</button>` : ''}
+        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-deliveries" style="margin-top:8px">Import site deliveries (CSV)&hellip;</button>` : ''}
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-past" style="margin-top:8px">Import past seasons (CSV)&hellip;</button>` : ''}
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-past-sales" style="margin-top:8px">Import past sales (CSV)&hellip;</button>` : ''}
         ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="line-up" style="margin-top:8px">Line up paddock names (CSV)&hellip;</button>` : ''}
@@ -275,6 +302,12 @@ function paint(root) {
   if (!canEditBusiness) root.querySelectorAll('#business-card input, #business-card select, #bd-farm').forEach((el) => { el.disabled = true; });
 
   root.querySelector('#open-help')?.addEventListener('click', () => { location.hash = '#/help'; });
+  // the order the commodities are listed in: one step up or down, or back to biggest first
+  root.querySelectorAll('[data-order-move]').forEach((el) => el.addEventListener('click', () => {
+    const list = orderedNames(business.commodityOrder, commodityNamesInOrder(db.get()));
+    db.updateBusinessDetails({ commodityOrder: moveName(list, Number(el.dataset.orderMove), Number(el.dataset.by)) });
+  }));
+  root.querySelector('#order-auto')?.addEventListener('click', () => db.updateBusinessDetails({ commodityOrder: [] }));
   root.querySelector('#show-aircair')?.addEventListener('change', (e) => db.updateBusinessDetails({ showAircair: e.target.checked }));
 
   root.querySelector('#save-business')?.addEventListener('click', () => {
@@ -333,6 +366,7 @@ function paint(root) {
   });
   root.querySelector('#export-csv').addEventListener('click', () => openExportCsvSheet());
   root.querySelector('#import-loads')?.addEventListener('click', () => openLoadImportSheet());
+  root.querySelector('#import-deliveries')?.addEventListener('click', () => openDeliveryImportSheet());
   root.querySelector('#import-past')?.addEventListener('click', () => openPastSeasonsSheet());
   root.querySelector('#import-past-sales')?.addEventListener('click', () => openPastSalesSheet());
   root.querySelector('#line-up')?.addEventListener('click', () => openLineupSheet());
@@ -425,9 +459,11 @@ async function loadPeople() {
     // them. The session is in there because a farm can have several owners now,
     // so "the owner" is no longer a useful way to identify the person looking
     // at the screen — only their own user id is.
-    const [members, pending, session] = await Promise.all([
-      listMembers(farmId), listPendingInvitations(farmId), getSession(),
+    // the digit each person has for outload numbers comes separately, so the card still loads if it cannot be had
+    const [found, pending, session, digits] = await Promise.all([
+      listMembers(farmId), listPendingInvitations(farmId), getSession(), listSeries(farmId).catch(() => new Map()),
     ]);
+    const members = found.map((m) => ({ ...m, series: digits.get(m.userId) ?? null }));
     people = { members, pending, meId: session?.user?.id ?? null };
     peopleError = null;
   } catch (e) {
@@ -518,11 +554,12 @@ function memberRow(m, meId) {
   const editable = canEditMember(m, meId);
   const extra = m.canWriteProduction && (m.role === 'farm_worker' || m.role === 'driver')
     ? ' · can record production' : '';
+  const digit = m.series ? ` · outload digit ${m.series}` : '';
   return `
     <div class="list-item" ${editable ? `data-edit-member="${esc(m.userId)}"` : ''}>
       <div>
         <div class="main">${esc(m.email)}</div>
-        <div class="meta">${esc(roleLabel(m.role))}${extra}</div>
+        <div class="meta">${esc(roleLabel(m.role))}${extra}${digit}</div>
       </div>
       <div class="right">
         <div class="meta">${m.userId === meId ? 'You' : (editable ? 'Change&hellip;' : '')}</div>
@@ -551,6 +588,11 @@ function openMemberSheet(m) {
           options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }],
           hint: 'Lets them enter yields and fertiliser as well as their own loads.' })}
       </div>
+      <div id="mem-series-wrap">
+        ${field({ label: 'Outload digit', id: 'mem-series', type: 'select', value: m.series ? String(m.series) : '',
+          options: [{ value: '', label: 'None' }, ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => ({ value: String(d), label: String(d) }))],
+          hint: 'The digit in the middle of the outload numbers this person gives out (26 1 001). Nobody else on the farm can have the same one, so two phones without signal never give out the same number.' })}
+      </div>
       <div class="field hint">Takes effect the next time they open the app.</div>
       <div id="mem-problem"></div>
       <button class="btn" id="mem-save">Save changes</button>
@@ -566,6 +608,8 @@ function openMemberSheet(m) {
     const syncRole = () => {
       blurbEl.textContent = INVITABLE_ROLES.find((r) => r.value === roleEl.value)?.blurb ?? '';
       prodWrap.style.display = isField(roleEl.value) ? 'block' : 'none';
+      // only people who write loads give out numbers
+      root.querySelector('#mem-series-wrap').style.display = ['owner', 'manager', 'farm_worker', 'driver'].includes(roleEl.value) ? 'block' : 'none';
     };
     roleEl.addEventListener('change', syncRole);
     syncRole();
@@ -583,6 +627,8 @@ function openMemberSheet(m) {
       busy = true;
       saveBtn.textContent = 'Saving…';
       try {
+        const digit = getVal(root, 'mem-series') || '';
+        if (digit !== (m.series ? String(m.series) : '')) await setMemberSeries(db.getFarmId(), m.userId, digit ? Number(digit) : null);
         await changeMemberRole(db.getFarmId(), m.userId, role,
           isField(role) && getVal(root, 'mem-prod') === 'yes');
         refreshPeople();

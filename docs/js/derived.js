@@ -1,7 +1,8 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=306';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=306';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=308';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=308';
+import { commoditySort } from './commodityorder.js?v=308';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -362,10 +363,11 @@ function byName(a, b) {
 }
 
 /**
- * A sort for commodity lists: the most tonnes first, and the same tonnes in name order, so the order is the same every
- * time and does not depend on the order the commodities were saved in. `volume` and `name` say how to read a row.
+ * A sort for commodity lists: the farm's own order when it has set one (commodityorder.js), otherwise the most tonnes first,
+ * and the same tonnes in name order, so the order is the same every time and does not depend on the order the commodities
+ * were saved in. `volume` and `name` say how to read a row.
  */
-export const bigFirst = (volume, name = (r) => r.name) => (a, b) => (Number(volume(b)) || 0) - (Number(volume(a)) || 0) || String(name(a) || '').localeCompare(String(name(b) || ''));
+export const bigFirst = commoditySort;
 
 /** Fields grouped under each commodity (plus a trailing "No commodity" group), sorted by name. */
 export function groupFieldsByCommodity(commodities, fields, movements = []) {

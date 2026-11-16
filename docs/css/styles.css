@@ -947,7 +947,7 @@ i.sw { margin-right: 6px; vertical-align: -1px; }
 .gauge.layered.over { box-shadow: 0 0 0 1.5px var(--danger); }
 
 .lay-row { display: grid; grid-template-columns: 74px 1fr 68px auto; gap: 6px; align-items: center; margin-bottom: 4px; }
-.lay-row input, .lay-bulk input, .le-edit input {
+.lay-row input, .lay-row select, .lay-bulk input, .le-edit input, .le-edit select {
   width: 100%; min-width: 0; font-size: 16px; font-family: inherit; padding: 9px 8px;
   border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text);
 }
@@ -965,8 +965,11 @@ i.sw { margin-right: 6px; vertical-align: -1px; }
 /* Samples by tonnes: the other measurements sit under the grade, two to a line. */
 .lay-more { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 8px; }
 .le-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.le-grid .le-grade { grid-column: 1 / -1; }
-.lay-row { grid-template-columns: 74px 1fr 68px auto; }
+.le-grid .le-grade, .le-grid .lay-f.wide { grid-column: 1 / -1; }
+.lay-row { grid-template-columns: 84px 1fr auto; align-items: end; }
+/* a caption above each box, so a typed number still says what it is */
+.lay-f { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lay-cap { font-size: 11.5px; font-weight: 600; color: var(--text-dim); line-height: 1.2; }
 
 /* A summary table that has to fit a phone: tighter cell spacing. */
 .card.report .table-scroll table.tight th, .card.report .table-scroll table.tight td { padding-left: 4px; padding-right: 4px; }

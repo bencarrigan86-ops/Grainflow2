@@ -4,6 +4,7 @@
 // A silo is a stack of layers, each its own grade: the grain that was there, then
 // each load. Running samples say what a stretch of it is, by tonnes from the bottom.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   gradeMix, dominantGrade, hasGrades, mixText, gradeColor, cleanBands, layersTotal, siloSvg, bunkerSvg, storageSvg, NO_GRADE,
 } from '../docs/js/silolayers.js';
@@ -234,6 +235,36 @@ check('the storage picks its picture by kind', () => {
   assert.ok(storageSvg('bunker', layers, 200, { outloadEnd: 'first' }).includes('starts at the back'));
   assert.ok(!storageSvg('silo', layers, 200).includes('START'));
   assert.ok(!storageSvg(undefined, layers, 200).includes('START'));
+});
+
+check('a sample row names every box above it, and runs tonnes and grade, then moisture and protein, then the rest', () => {
+  const src = readFileSync(new URL('../docs/js/views/storage.js', import.meta.url), 'utf8');
+  const row = src.slice(src.indexOf('function bandRowHtml'), src.indexOf('function contentsFold'));
+  assert.ok(!/placeholder=/.test(row), 'a caption, not a placeholder that goes once something is typed');
+  const order = ['Tonnes</span>', 'Grade</span>', "'lay-moisture', 'Moisture %'", "'lay-protein', 'Protein %'", "'lay-screenings'", "'lay-tw'", "'lay-fn'", "'lay-oil'", "'lay-ffa'", "'lay-ret'"].map((w) => row.indexOf(w));
+  assert.ok(order.every((i) => i > 0), 'every box is there');
+  assert.deepEqual([...order].sort((a, b) => a - b), order, 'in that order');
+  assert.ok(readFileSync(new URL('../docs/css/styles.css', import.meta.url), 'utf8').includes('.lay-cap {'), 'the caption style exists');
+});
+
+check('the grade of a sample is a drop-down: the grades the silo can hold, No grade, one already on it, and Other to type a one-off', () => {
+  const src = readFileSync(new URL('../docs/js/views/storage.js', import.meta.url), 'utf8');
+  const fn = src.slice(src.indexOf('function sampleGradeHtml'), src.indexOf('function bandRowHtml'));
+  assert.ok(fn.includes('<select class="${cls}"') && fn.includes("cls = 'lay-grade'") && fn.includes("['', 'No grade']") && fn.includes('(not on the list)') && fn.includes("[OTHER_GRADE, 'Other…']"));
+  assert.ok(src.includes("grade: val(row, '.lay-grade') === OTHER_GRADE ? val(row, '.lay-grade-other').trim() : val(row, '.lay-grade')"), 'a typed one-off is what is saved');
+  assert.ok(src.includes('rows.map((r) => bandRowHtml(r, grades))') && src.includes("bandRowHtml({ tons: left > 0 ? left : '' }, gradeList())"), 'both places a row is drawn pass the grades');
+  assert.ok(src.includes("e.target.matches('.lay-grade')"), 'Other reveals the box');
+});
+
+check('the grade editor on a load names every box above it, moisture before protein', () => {
+  const src = readFileSync(new URL('../docs/js/views/storage.js', import.meta.url), 'utf8');
+  const at = src.indexOf('<div class="le-grid">');
+  const block = src.slice(at, src.indexOf('</div>', src.indexOf('le-fn', at)));
+  assert.ok(!/placeholder=/.test(block), 'captions, not placeholders');
+  assert.ok(block.includes("sampleGradeHtml(gradeList(), m.grade, { cls: 'le-grade'"), 'its grade is the same drop-down as a sample');
+  assert.ok(src.includes("edit.querySelector('.le-grade').value === OTHER_GRADE ? edit.querySelector('.le-grade-other').value.trim()"), 'a typed one-off is what is saved');
+  const order = ['>Grade<', '>Moisture %<', '>Protein %<', '>Screenings %<', '>Test weight kg/hL<', '>Falling number<'].map((w) => block.indexOf(w));
+  assert.ok(order.every((i) => i > 0) && [...order].sort((a, b) => a - b).join() === order.join());
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }

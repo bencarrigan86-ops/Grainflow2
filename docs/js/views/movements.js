@@ -1,19 +1,20 @@
-import { db } from '../storage.js?v=306';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=306';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=306';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=306';
-import { compressAndStampImage } from '../img.js?v=306';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=306';
-import { specText, extraSpecKey } from '../outload.js?v=306';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=306';
-import { pickableSilos } from '../silopick.js?v=306';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=306';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=306';
-import { activeSales } from '../paidsales.js?v=306';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=306';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=306';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=306';
-import { nowTime } from '../loadreport.js?v=306';
+import { db } from '../storage.js?v=308';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=308';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=308';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=308';
+import { compressAndStampImage } from '../img.js?v=308';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=308';
+import { specText, extraSpecKey } from '../outload.js?v=308';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=308';
+import { pickableSilos } from '../silopick.js?v=308';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=308';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=308';
+import { activeSales } from '../paidsales.js?v=308';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=308';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=308';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=308';
+import { nowTime } from '../loadreport.js?v=308';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=308';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -35,7 +36,7 @@ function ticketSearchText(m, ctx) {
   const fo = m.freightOrderId ? (ctx.freightOrders || []).find((f) => f.id === m.freightOrderId) : null;
   // a date is searchable as it is written on paperwork (05-11-2026) as well as stored (2026-11-05)
   const written = /^(\d{4})-(\d{2})-(\d{2})/.exec(m.date || '');
-  return [m.ticketNo, m.sourceRef, m.externalTicketNo, m.date, written ? `${written[3]}-${written[2]}-${written[1]} ${written[3]}/${written[2]}/${written[1]}` : '', m.truckRego, m.driver, m.notes, m.grade, m.tons, c?.name,
+  return [m.ticketNo, m.sourceRef, m.externalTicketNo, m.outloadNo, m.date, written ? `${written[3]}-${written[2]}-${written[1]} ${written[3]}/${written[2]}/${written[1]}` : '', m.truckRego, m.driver, m.notes, m.grade, m.tons, c?.name,
     ...linked.flatMap((s) => [s.buyer, s.contractNo, s.ourRef]), fo?.carrier, fo?.freightNo, ...ends].filter((x) => x !== undefined && x !== null && x !== '').join(' ').toLowerCase();
 }
 
@@ -67,6 +68,7 @@ function paint(root) {
 
       ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="log-ginning" style="margin-bottom:10px">+ Log ginning</button>` : ''}
       ${movements.length > 0 ? `<button class="btn secondary small" id="load-report" style="margin-bottom:10px">Send a load report</button>` : ''}
+      <button class="btn secondary small" id="get-outload" style="margin-bottom:10px">Outload number for a truck</button>
 
       ${movements.length > 0 ? `
       <div class="filterbar">
@@ -92,6 +94,8 @@ function paint(root) {
   root.querySelector('#add-movement').addEventListener('click', () => openMovementSheet(null));
   root.querySelector('#log-ginning')?.addEventListener('click', () => openGinningSheet());
   root.querySelector('#load-report')?.addEventListener('click', () => openLoadReportSheet());
+  // a number to quote at a third-party site: the load form opens with the number already in it
+  root.querySelector('#get-outload')?.addEventListener('click', () => openMovementSheet(null, { wantOutload: true }));
   // The most recent ticket by date — not the last one typed in, which is
   // whatever order an import or an edit happened to leave.
   root.querySelector('#repeat-movement')?.addEventListener('click', () => {
@@ -108,7 +112,7 @@ function paint(root) {
 /** The ticket list and its totals, repainted alone so the search box keeps focus. */
 function paintList(root) {
   const { fields, storages, sales, commodities, movements } = db.get();
-  const ctx = { fields, storages, sales, commodities, grouped: true, freightOrders: db.getFreightOrders() };
+  const ctx = { fields, storages, sales, commodities, grouped: true, freightOrders: db.getFreightOrders(), dupOutloads: duplicateOutloads(movements) };
   const q = listFilter.q.trim().toLowerCase();
   const shown = movements
     .filter((m) => !listFilter.commodityId || m.commodityId === listFilter.commodityId)
@@ -254,7 +258,7 @@ export function movementRow(m, ctx) {
     : null;
   // the order it was delivered against, if any
   const order = m.orderId ? (ctx.orders || db.getOrders()).find((o) => o.id === m.orderId) : null;
-  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', order ? (order.orderNo ? `grain order #${order.orderNo}` : 'against a grain order') : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date, { tight: true }) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
+  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', m.outloadNo ? `outload ${m.outloadNo}${ctx.dupOutloads?.has(normaliseOutloadNo(m.outloadNo)) ? ' (used on more than one load)' : ''}` : '', order ? (order.orderNo ? `grain order #${order.orderNo}` : 'against a grain order') : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date, { tight: true }) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
   return `
     <div class="list-item stack" data-edit-movement="${m.id}">
       <div class="li-top">
@@ -576,6 +580,14 @@ export function openMovementSheet(existing, template) {
         ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
       </div>
       ${field({ label: 'Their ticket no.', id: 'extTicket', value: existing?.externalTicketNo, placeholder: 'Their number for this load', hint: 'When the load goes to another site, the number on their ticket' })}
+      <div class="field">
+        <label for="outloadNo">Outload number</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="outloadNo" type="text" inputmode="numeric" autocomplete="off" style="flex:1" value="${esc(existing?.outloadNo || '')}" placeholder="The number quoted at the site" />
+          <button type="button" class="btn secondary small" id="ol-get">Get a number</button>
+        </div>
+        <div class="hint" id="ol-hint">The number the driver gives the site. It comes back on the site's delivery file, which is matched to this load by it. Save the load to keep it.</div>
+      </div>
       <hr class="sep" />
       <div class="field"><label>Weight</label></div>
       <div class="grid-2">
@@ -935,7 +947,29 @@ export function openMovementSheet(existing, template) {
     root.querySelector('#m-photo-take').addEventListener('click', () => root.querySelector('#m-photo-file').click());
     root.querySelector('#m-photo-pick').addEventListener('click', () => root.querySelector('#m-photo-lib').click());
 
+    // the outload number: this person's next one, worked out here, kept when the load is saved
+    const olInput = root.querySelector('#outloadNo');
+    const olHint = root.querySelector('#ol-hint');
+    root.querySelector('#ol-get').addEventListener('click', () => {
+      if (olInput.value.trim()) { toast('This load already has a number'); return; }
+      const n = db.nextOutloadNo();
+      if (!n) {
+        notify(db.getOutloadSeries()
+          ? 'There is no season to put on the number. Check the season in Settings.'
+          : 'You do not have an outload digit yet. It is given when you join the farm: try again with signal, or ask the owner to look in Settings > People.');
+        return;
+      }
+      olInput.value = n;
+      olHint.innerHTML = `Quote <strong>${esc(n)}</strong> at the site. Save the load to keep it.`;
+    });
+    if (template?.wantOutload && !existing) root.querySelector('#ol-get').click();
+
     root.querySelector('#save').addEventListener('click', () => {
+      const olNo = normaliseOutloadNo(getVal(root, 'outloadNo'));
+      if (olNo) {
+        const clash = movements.find((m) => m.id !== existing?.id && normaliseOutloadNo(m.outloadNo) === olNo);
+        if (clash) { notify(`Outload number ${olNo} is already on load #${clash.ticketNo ?? '?'}. Use a different number, or clear this one.`); return; }
+      }
       const froms = readFromRows(fromRowsEl).filter((f) => f.type && f.id);
       let tos;
       if (toKind === 'sale') {
@@ -965,6 +999,7 @@ export function openMovementSheet(existing, template) {
         loadTime: getVal(root, 'loadTime') || '',
         destination: getVal(root, 'destination')?.trim() || '',
         externalTicketNo: getVal(root, 'extTicket')?.trim() || '',
+        outloadNo: olNo,
         // the order it fills; only a load going to a contract can be against one
         orderId: toKind === 'sale' ? (getVal(root, 'to-order-select') || null) : null,
         // the freight order it is carted on; kept as it was when this person cannot see freight orders (no select)
