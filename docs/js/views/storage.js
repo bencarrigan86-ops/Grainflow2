@@ -1,22 +1,23 @@
-import { db } from '../storage.js?v=316';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=316';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=316';
-import { isTransit } from '../transit.js?v=316';
-import { isOffFarm } from '../offfarm.js?v=316';
-import { paintOffFarmCard } from './offfarm.js?v=316';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=316';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=316';
-import { hasStorageQuality } from '../mapping.js?v=316';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=316';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=316';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=316';
-import { renderRelatedMovements } from './movements.js?v=316';
-import { openSiloSetupSheet } from './silosetup.js?v=316';
-import { commodityFills } from '../commodityfill.js?v=316';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=316';
+import { db } from '../storage.js?v=317';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=317';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=317';
+import { isTransit } from '../transit.js?v=317';
+import { isOffFarm } from '../offfarm.js?v=317';
+import { paintOffFarmCard } from './offfarm.js?v=317';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=317';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=317';
+import { hasStorageQuality } from '../mapping.js?v=317';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=317';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=317';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=317';
+import { renderRelatedMovements } from './movements.js?v=317';
+import { openSiloSetupSheet } from './silosetup.js?v=317';
+import { commodityFills } from '../commodityfill.js?v=317';
+import { capacityInfo, capacityTons, capacityLine } from '../storagecapacity.js?v=317';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=317';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=316';
+} from '../silolayers.js?v=317';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -612,7 +613,9 @@ function storageRow(s, commodities, movements) {
   // the loads in and out — so entering an opening stock fills it. It used to
   // follow the measured estimate, which is zero until someone dips the silo.
   // Over capacity is shown as over, not clipped to a bar that looks merely full.
-  const capPct = s.capacityTons ? Math.max(0, (ledger / s.capacityTons) * 100) : null;
+  // the most it holds: its volume times the test weight of what is in it, or the tonnes typed on it
+  const capT = capacityTons(s, c);
+  const capPct = capT > 0 ? Math.max(0, (ledger / capT) * 100) : null;
   const mix = visibleMix(s.__mix);
   const layered = hasGrades(s.__layers || []);
   // The bar is the silo filled to what the books say, split by grade where grades are known:
@@ -634,7 +637,7 @@ function storageRow(s, commodities, movements) {
     <div class="list-item storage-row" data-edit-storage="${s.id}">
       <div>
         <div class="main">${esc(s.name)} <span class="badge muted">${kindLabel(looksLikeBunker(s) ? 'bunker' : s.kind)}</span></div>
-        <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(s.capacityTons, 0)} t` : ''}</div>
+        <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(capT, 0)} t` : ''}</div>
         ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
         ${noteLine(s) ? `<div class="meta" style="font-style:italic">${noteLine(s)}</div>` : ''}
         ${mixLine}
@@ -819,7 +822,7 @@ function buildContents(root, existing, kind = existing?.kind) {
     const result = layersForStorage(st, db.get().movements);
     layers = result.layers;
     const mix = gradeMix(layers);
-    const capacity = Number(root.querySelector('#s-capacity')?.value) || existing?.capacityTons || 0;
+    const capacity = formCapacity(root, existing).tons;
     const total = layers.reduce((a, l) => a + l.tons, 0);
 
     root.querySelector('#lay-picture').innerHTML = `
@@ -1007,6 +1010,8 @@ function buildContents(root, existing, kind = existing?.kind) {
   root.querySelector('#op-truck').addEventListener('input', drawPlan);
   root.querySelector('#lay-asof').addEventListener('change', redraw);
   root.querySelector('#s-capacity')?.addEventListener('input', redraw);
+  // the picture's fullness follows the volume, the test weight and what is in it
+  for (const id of ['#s-volume', '#s-tw', '#s-commodity']) root.querySelector(id)?.addEventListener('input', redraw);
   root.querySelector('#s-cone')?.addEventListener('input', redraw);          // a silo's picture follows its bottom
   root.querySelector('#s-opening')?.addEventListener('input', redraw);
   redraw();
@@ -1078,6 +1083,42 @@ function buildPredictor(root, existing) {
   root.querySelector('#op-truck').addEventListener('input', draw);
 }
 
+/**
+ * What the form says the storage holds when full: its volume times the test weight of the commodity picked (or the test weight typed
+ * on the storage), otherwise the tonnes typed. Falls back to the saved storage for anything the form does not show.
+ */
+function formCapacity(root, existing) {
+  const el = (id) => root.querySelector(id);
+  const commodityId = el('#s-commodity') ? el('#s-commodity').value : existing?.commodityId;
+  const commodity = db.get().commodities.find((c) => c.id === commodityId) || null;
+  const read = (id, fallback) => (el(id) ? Number(el(id).value) || 0 : Number(fallback) || 0);
+  const storage = { volumeM3: read('#s-volume', existing?.volumeM3), testWeight: read('#s-tw', existing?.testWeight), capacityTons: read('#s-capacity', existing?.capacityTons) };
+  return { ...capacityInfo(storage, commodity), storage, commodity };
+}
+
+/** The words under the volume field, and the test weight field showing what it will use unless a figure is typed. */
+function paintCapacityLine(root, existing) {
+  const line = root.querySelector('#s-cap-line');
+  if (!line) return;
+  const { storage, commodity } = formCapacity(root, existing);
+  const base = capacityLine(storage, commodity, num);
+  const ignored = storage.volumeM3 > 0 && storage.capacityTons > 0 && capacityInfo(storage, commodity).source === 'volume'
+    ? '. The tonnes typed beside it are not used while there is a volume.' : '';
+  line.textContent = base ? base + ignored : '';
+  line.hidden = !base;
+  // the test weight in use, drawn from the commodity unless one is typed for this storage
+  const tw = root.querySelector('#s-tw');
+  const twLine = root.querySelector('#s-tw-line');
+  if (tw) tw.placeholder = commodity?.testWeight > 0 ? String(commodity.testWeight) : '';
+  if (twLine) {
+    twLine.textContent = storage.testWeight > 0
+      ? `Using ${num(storage.testWeight, 3)} t/m³ set on this storage. Clear it to go back to ${commodity?.testWeight > 0 ? `${commodity.name}'s ${num(commodity.testWeight, 3)}` : 'the commodity\'s'}.`
+      : commodity?.testWeight > 0
+        ? `Using ${commodity.name}'s ${num(commodity.testWeight, 3)} t/m³ (from Commodities). Type a figure here to use a different one for this storage.`
+        : 'Pick the commodity in it and its test weight is used here. Or type one for this storage.';
+  }
+}
+
 /** The closed "Measure & dimensions" header: the measured total, the level and the capacity, kept current as they are typed. */
 function wireMeasureSummary(root) {
   const fold = root.querySelector('#measure-fold');
@@ -1085,7 +1126,7 @@ function wireMeasureSummary(root) {
   if (!fold || !sub) return;
   const update = () => {
     const total = root.querySelector('#s-total-preview')?.textContent.trim();
-    const cap = Number(root.querySelector('#s-capacity')?.value) || 0;
+    const cap = formCapacity(root).tons;
     const high = root.querySelector('#s-height');
     const level = Number((high || root.querySelector('#s-length'))?.value) || 0;
     const bits = [];
@@ -1154,20 +1195,27 @@ function openStorageSheet(existing) {
             ${field({ label: 'Radius (m)', id: 's-radius', type: 'number', step: '0.01', value: existing?.radius })}
             ${field({ label: 'Cone angle (°)', id: 's-cone', type: 'number', step: '1', value: existing?.coneAngle ?? 0, hint: '0 = flat bottom' })}
           </div>
-          ${field({ label: 'Capacity (t, optional)', id: 's-capacity', type: 'number', step: '1', value: existing?.capacityTons })}
+          <div class="grid-2">
+            ${field({ label: 'Volume (m³, optional)', id: 's-volume', type: 'number', step: '1', value: existing?.volumeM3 || '' })}
+            ${field({ label: 'Capacity (t, optional)', id: 's-capacity', type: 'number', step: '1', value: existing?.capacityTons })}
+          </div>
+          <div class="field hint" id="s-cap-line" hidden></div>
           <hr class="sep" />
           ${field({ label: 'Current grain height (m)', id: 's-height', type: 'number', step: '0.01', value: existing?.currentHeight })}
         ` : `
           <div class="grid-2">
             ${field({ label: 'Width (m)', id: 's-width', type: 'number', step: '0.01', value: existing?.width })}
-            ${field({ label: 'Capacity (t, optional)', id: 's-capacity', type: 'number', step: '1', value: existing?.capacityTons })}
+            ${field({ label: 'Volume (m³, optional)', id: 's-volume', type: 'number', step: '1', value: existing?.volumeM3 || '' })}
           </div>
+          ${field({ label: 'Capacity (t, optional)', id: 's-capacity', type: 'number', step: '1', value: existing?.capacityTons })}
+          <div class="field hint" id="s-cap-line" hidden></div>
           <hr class="sep" />
           ${field({ label: 'Current filled length (m)', id: 's-length', type: 'number', step: '0.01', value: existing?.length, hint: 'How much of the bunker currently has grain in it' })}
           ${field({ label: 'Wall height (m, optional)', id: 's-wall', type: 'number', step: '0.01', value: existing?.wallHeight || '', hint: 'Bunkers and sheds can have walls: the grain is held straight up to the top of them, with the peak on top. Leave blank if it has none' })}
         `}
         ${field({ label: 'Angle of repose override (°, optional)', id: 's-angle', type: 'number', step: '1', value: existing?.angleOfRepose, hint: 'Leave blank to use the commodity default' })}
-        ${field({ label: 'Test weight override (t/m³, optional)', id: 's-tw', type: 'number', step: '0.01', value: existing?.testWeight, hint: 'Leave blank to use the commodity default' })}
+        ${field({ label: 'Test weight (t/m³, optional)', id: 's-tw', type: 'number', step: '0.001', value: existing?.testWeight })}
+        <div class="field hint" id="s-tw-line"></div>
         ${kind === 'silo' ? `
         <div class="field">
           <label>Grain surface</label>
@@ -1237,6 +1285,7 @@ function openStorageSheet(existing) {
           ? bunkerResult({ width: getNum(root, 's-width'), length: getNum(root, 's-length'), angleDeg: angleOfRepose, testWeight, wallHeight: getNum(root, 's-wall') })
           : siloResult({ radius: getNum(root, 's-radius'), height: getNum(root, 's-height'), coneAngle: getNum(root, 's-cone'), angleOfRepose, testWeight, fillState });
         preview.textContent = `${num(r.tons, 1)} t`;
+        paintCapacityLine(root, existing);
         if (kind === 'bunker' && tarpWidthEl) {
           const t = bunkerTarpRequirement({
             width: getNum(root, 's-width'), length: getNum(root, 's-length'),
@@ -1261,6 +1310,7 @@ function openStorageSheet(existing) {
           commodityId: getVal(root, 's-commodity') || null,
           openingStock: getNum(root, 's-opening'),
           capacityTons: getNum(root, 's-capacity') || null,
+          volumeM3: getNum(root, 's-volume') || null,
           angleOfRepose: angleOverride ? parseFloat(angleOverride) : null,
           testWeight: twOverride ? parseFloat(twOverride) : null,
           gradeBands: cleanBands(readLayerRows(root)),

@@ -27,9 +27,9 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=316';
-import { cleanOffFarm } from './offfarm.js?v=316';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=316';
+import { cleanGradeOptions } from './gradeprice.js?v=317';
+import { cleanOffFarm } from './offfarm.js?v=317';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=317';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -368,6 +368,7 @@ export function stateToRows(state, farmId) {
         test_weight: orNull(st.testWeight),
         tarp_overhang_m: orNull(st.tarpOverhangM),
         ...((Number(st.wallHeight) > 0 || st.__hasWallHeight) ? { wall_height_m: Number(st.wallHeight) > 0 ? Number(st.wallHeight) : null } : {}),
+        ...((Number(st.volumeM3) > 0 || st.__hasVolume) ? { volume_m3: Number(st.volumeM3) > 0 ? Number(st.volumeM3) : null } : {}),
         current_height: n(st.currentHeight),
         fill_state: st.fillState || 'peak',
         opening_stock: n(st.openingStock),
@@ -751,6 +752,7 @@ export function rowsToState(rows) {
         angleOfRepose: st.angle_of_repose, testWeight: st.test_weight,
         tarpOverhangM: st.tarp_overhang_m,
         ...(st.wall_height_m != null ? { wallHeight: n(st.wall_height_m), __hasWallHeight: true } : {}),
+        ...(st.volume_m3 != null ? { volumeM3: n(st.volume_m3), __hasVolume: true } : {}),
         currentHeight: n(st.current_height),
         fillState: st.fill_state,
         openingStock: n(st.opening_stock),

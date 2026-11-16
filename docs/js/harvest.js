@@ -9,8 +9,9 @@
 //
 // Pure apart from the two sums it borrows from derived.js.
 
-import { estimateFieldTons, movementTonsFromField, storageLedgerStock, bigFirst } from './derived.js?v=316';
-import { isTransit } from './transit.js?v=316';
+import { estimateFieldTons, movementTonsFromField, storageLedgerStock, bigFirst } from './derived.js?v=317';
+import { isTransit } from './transit.js?v=317';
+import { capacityFor } from './storagecapacity.js?v=317';
 
 /**
  * One field.
@@ -87,7 +88,8 @@ const EMPTY_T = 0.05;
  * Room in a silo is its capacity less what is tracked in it now. A silo holding a commodity has room for that
  * commodity (and only that); an empty one, whatever it last held, has room for any grain, so it is counted once, on
  * its own, and not under each commodity. Third-party storage is not counted: its room is not the farm's to know.
- * A silo with no capacity set has no room worked out, and neither does one holding grain with no commodity set; both are
+ * Capacity is the silo's volume times the test weight of what is in it when it has a volume (see storagecapacity.js), otherwise the
+ * tonnes typed on it. A silo with no capacity set has no room worked out, and neither does one holding grain with no commodity set; both are
  * named so they can be fixed.
  *
  * @returns {{
@@ -99,11 +101,12 @@ const EMPTY_T = 0.05;
  *   notCounted: string[]                                       silos left out, and why, so they can be fixed
  * }}
  */
-export function siloSpace(storages, movements, { minRoom = 0 } = {}) {
+export function siloSpace(storages, movements, { minRoom = 0, commodities = [] } = {}) {
   const out = { byCommodity: new Map(), emptyRoom: 0, emptyCount: 0, totalRoom: 0, notCounted: [], silos: [], tooSmall: { count: 0, room: 0 } };
   for (const s of storages || []) {
     if (s.offFarm || isTransit(s) || s.kind === 'tally') continue;
-    const capacity = Number(s.capacityTons) || 0;
+    // from its volume and what is in it when it has a volume, otherwise the tonnes typed on it
+    const capacity = capacityFor(s, commodities);
     if (!(capacity > 0)) { out.notCounted.push(`${s.name} (no capacity set)`); continue; }
     const stock = Math.max(0, storageLedgerStock(s, movements));
     const room = Math.max(0, capacity - stock);

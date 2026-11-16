@@ -18,27 +18,27 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=316';
+import { hydrate } from './hydrate.js?v=317';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=316';
-import { chooseBootState, resolveLegacy } from './boot.js?v=316';
-import { isLegacyDirty } from './dirty.js?v=316';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=316';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=316';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=316';
-import { settleLegs, dedupeLegs } from './legs.js?v=316';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=316';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=316';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=316';
-import { setCommodityOrder } from './commodityorder.js?v=316';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=316';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=316';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=316';
-import { schedulePush, pushOnReconnect } from './sync.js?v=316';
-import { hasParts as hasAddressParts } from './address.js?v=316';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=316';
+} from './local.js?v=317';
+import { chooseBootState, resolveLegacy } from './boot.js?v=317';
+import { isLegacyDirty } from './dirty.js?v=317';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=317';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=317';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=317';
+import { settleLegs, dedupeLegs } from './legs.js?v=317';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=317';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=317';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=317';
+import { setCommodityOrder } from './commodityorder.js?v=317';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=317';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=317';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=317';
+import { schedulePush, pushOnReconnect } from './sync.js?v=317';
+import { hasParts as hasAddressParts } from './address.js?v=317';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=317';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -579,6 +579,7 @@ export const db = {
       id: uid(), kind: s.kind, name: s.name, commodityId: mapCommodity(s.commodityId),
       radius: s.radius, coneAngle: s.coneAngle, width: s.width,
       capacityTons: s.capacityTons, angleOfRepose: s.angleOfRepose,
+      ...(Number(s.volumeM3) > 0 ? { volumeM3: s.volumeM3, __hasVolume: true } : {}),
       testWeight: s.testWeight, tarpOverhangM: s.tarpOverhangM,
       ...(Number(s.wallHeight) > 0 ? { wallHeight: s.wallHeight, __hasWallHeight: true } : {}),
       currentHeight: 0, length: 0, fillState: 'peak', openingStock: 0,
@@ -956,6 +957,7 @@ export const db = {
         if (hasGradeBands(merged)) merged.__hasBands = true;
         if (merged.outloadEnd) merged.__hasOutloadEnd = true;
         if (Number(merged.wallHeight) > 0) merged.__hasWallHeight = true;     // so clearing it later reaches the server
+        if (Number(merged.volumeM3) > 0) merged.__hasVolume = true;           // likewise the volume
         if (merged.offFarm) merged.__hasOffFarm = true;
         c.storages[idx] = merged;
       }
@@ -969,6 +971,7 @@ export const db = {
       if (hasGradeBands(made)) made.__hasBands = true;
       if (made.outloadEnd) made.__hasOutloadEnd = true;
       if (Number(made.wallHeight) > 0) made.__hasWallHeight = true;
+      if (Number(made.volumeM3) > 0) made.__hasVolume = true;
       if (made.offFarm) made.__hasOffFarm = true;
       c.storages.push(made);
       touch('storage', id);

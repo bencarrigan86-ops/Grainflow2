@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=316';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=316';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=316';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=316';
-import { compressAndStampImage } from '../img.js?v=316';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=316';
-import { specText, extraSpecKey } from '../outload.js?v=316';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=316';
-import { pickableSilos } from '../silopick.js?v=316';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=316';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=316';
-import { activeSales } from '../paidsales.js?v=316';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=316';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=316';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=316';
-import { nowTime } from '../loadreport.js?v=316';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=316';
+import { db } from '../storage.js?v=317';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=317';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=317';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=317';
+import { compressAndStampImage } from '../img.js?v=317';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=317';
+import { specText, extraSpecKey } from '../outload.js?v=317';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=317';
+import { pickableSilos } from '../silopick.js?v=317';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=317';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=317';
+import { activeSales } from '../paidsales.js?v=317';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=317';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=317';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=317';
+import { nowTime } from '../loadreport.js?v=317';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=317';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -603,9 +603,9 @@ export function openMovementSheet(existing, template) {
         </div>
       </div>
       ${existing?.sourceRef ? `<div class="field hint" style="margin-bottom:8px">Movement number from the freight platform: <strong>${esc(existing.sourceRef)}</strong></div>` : ''}
-      <details class="fold" ${existing && (existing.grade || existing.proteinPct != null || existing.moisturePct != null || existing.oilPct != null || existing.ffaPct != null || existing.retentionPct != null) ? 'open' : ''}>
-        <summary><div><h2>Load quality</h2>
-          <div class="sub">Grade, moisture, protein, screenings, test weight, falling number, oil and FFA, or retention</div></div></summary>
+      <details class="fold feature" id="lq-fold" ${existing && (existing.grade || existing.proteinPct != null || existing.moisturePct != null || existing.oilPct != null || existing.ffaPct != null || existing.retentionPct != null) ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Load quality</h2>
+          <div class="sub" id="lq-sub">${esc(specText(existing) || 'Not recorded yet · tap to add grade, protein, moisture and more')}</div></div></summary>
         <div class="field hint" style="margin-bottom:8px">What was on this truck. It lets the storage it went into say what
           each load out of it will carry.</div>
         ${gradeFieldHtml({ id: 'lq-grade', commodity: commodities.find((c) => c.id === ctx.commodityId), value: existing?.grade })}
@@ -672,6 +672,18 @@ export function openMovementSheet(existing, template) {
       root.querySelector('#lq-ffa-wrap').hidden = !(key === 'oilPct' || getVal(root, 'lq-ffa'));
     };
     syncExtra();
+    // the closed header says what has been recorded, kept current as it is typed
+    const lqSub = root.querySelector('#lq-sub');
+    const paintLqSub = () => {
+      const v = (id) => getVal(root, id);
+      lqSub.textContent = specText({
+        grade: gradeCtl.read(), moisturePct: v('lq-moisture'), proteinPct: v('lq-protein'), screeningsPct: v('lq-screenings'),
+        testWeightKgHl: v('lq-tw'), fallingNumber: v('lq-fn'), oilPct: v('lq-oil'), ffaPct: v('lq-ffa'), retentionPct: v('lq-ret'),
+      }) || 'Not recorded yet · tap to add grade, protein, moisture and more';
+    };
+    const lqFold = root.querySelector('#lq-fold');
+    lqFold.addEventListener('input', () => setTimeout(paintLqSub, 0));
+    lqFold.addEventListener('change', () => setTimeout(paintLqSub, 0));
     // What an off-farm location holds of this commodity and grade, against what this load takes out of it, and
     // the grade a load going into one will be held under.
     const offFarmNoteEl = root.querySelector('#offfarm-note');

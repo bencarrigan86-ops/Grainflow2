@@ -118,5 +118,17 @@ check('the trial link opens sign-up with their email in it, and the email comes 
   assert.ok(tf.includes('Copy link only') && tf.includes('Nothing has been sent to them yet'), 'honest that the app does not send it');
 });
 
+check('the paste file can be run whole, again and again: a function whose shape changed is dropped before it is made', () => {
+  const sql = read('supabase/paste-into-sql-editor.sql');
+  for (const fn of ['trial_invites_list', 'support_farms']) {
+    const makes = [...sql.matchAll(new RegExp(`create (or replace )?function ${fn}\\(`, 'g'))];
+    assert.ok(makes.length >= 2, `${fn} is made more than once`);
+    for (const mk of makes) {
+      assert.ok(!mk[1], `${fn}: a plain create, never create or replace`);
+      assert.ok(new RegExp(`drop function if exists ${fn}\\(\\);\\s*$`).test(sql.slice(0, mk.index)), `${fn} is dropped just before it is made`);
+    }
+  }
+});
+
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
 console.log('\nall passed');
