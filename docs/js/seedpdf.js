@@ -2,7 +2,7 @@
 // buffer on top. Portrait A4 in the same style as the Position and Fert pages. The figures come from fertfigures.js
 // (seedFigures), the same ones the screen uses. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=301';
+import { Pdf, wrapText } from './pdf.js?v=302';
 
 const PAGE = { width: 595.28, height: 841.89 };
 const M = 36;
@@ -39,7 +39,7 @@ export function seedPdf(figures = [], { business = '', season = '', today = '', 
   let y = 0;
 
   const footer = () => {
-    pdf.text(M, PAGE.height - 24, `Made in Grainflow. Required is the rate over the area; the last column adds ${fixed(bufferPct, 0)}% for spillage and calibration.`, { size: 7.5, gray: GREY });
+    pdf.text(M, PAGE.height - 24, `Made in Commodity Mate. Required is the rate over the area; the last column adds ${fixed(bufferPct, 0)}% for spillage and calibration.`, { size: 7.5, gray: GREY });
     pdf.text(PAGE.width - M, PAGE.height - 24, `page ${page}`, { size: 7.5, gray: GREY, align: 'right' });
   };
   const header = () => {

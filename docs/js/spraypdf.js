@@ -6,11 +6,11 @@
 
 import {
   AIRCAIR_LAYOUT, CHECKLIST, aircairOps, standardOps, sprayMapPlan, mapPageText, sprayRows, sprayTotals, plain, fitText, A4,
-} from './spray.js?v=301';
-import { wrapText } from './pdf.js?v=301';
-import { ASPECT, strokesInBox } from './signature.js?v=301';
-import { NO_FARM, farmGroups } from './farmmap.js?v=301';
-import { dmy } from './fmt.js?v=301';
+} from './spray.js?v=302';
+import { wrapText } from './pdf.js?v=302';
+import { ASPECT, strokesInBox } from './signature.js?v=302';
+import { NO_FARM, farmGroups } from './farmmap.js?v=302';
+import { dmy } from './fmt.js?v=302';
 
 const PDF_LIB = 'https://esm.sh/pdf-lib@1.17.1';
 const AIRCAIR_URL = './forms/aircair-spray-request.pdf';
@@ -181,7 +181,7 @@ async function addMapPage(doc, lib, job, layout, text) {
     text(page, cx + colW - 16, cy, plain(p.areaHa, 1), { size: 8.5, align: 'right', color: black });
   });
   if (paddocks.length > perCol * 3) text(page, 40, ty + perCol * 12 + 2, `+ ${paddocks.length - perCol * 3} more (all are listed on the form)`, { size: 8, color: rgb(0.4, 0.4, 0.4) });
-  text(page, 40, 826, `Made in Grainflow ${dmy(job.today)}`, { size: 7.5, color: rgb(0.5, 0.5, 0.5) });
+  text(page, 40, 826, `Made in Commodity Mate ${dmy(job.today)}`, { size: 7.5, color: rgb(0.5, 0.5, 0.5) });
 }
 
 /**
@@ -288,6 +288,6 @@ export async function buildFarmMapPdf(layout, { title = 'Farm map', subtitle = '
     text(page, lx + 14, ly + 7, l.name, { size: 9 });
     lx += w + 8;
   }
-  text(page, 40, 826, `Made in Grainflow ${dmy(date)}`, { size: 7.5, color: rgb(0.5, 0.5, 0.5) });
+  text(page, 40, 826, `Made in Commodity Mate ${dmy(date)}`, { size: 7.5, color: rgb(0.5, 0.5, 0.5) });
   return doc.save();
 }

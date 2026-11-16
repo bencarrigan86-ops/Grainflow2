@@ -1,30 +1,30 @@
-import { db } from './storage.js?v=301';
-import { supabase, ENV } from './supabase.js?v=301';
-import { installErrorLog } from './supportinfo.js?v=301';
-import { initTheme } from './theme.js?v=301';
+import { db } from './storage.js?v=302';
+import { supabase, ENV } from './supabase.js?v=302';
+import { installErrorLog } from './supportinfo.js?v=302';
+import { initTheme } from './theme.js?v=302';
 initTheme();
-import { renderPosition } from './views/position.js?v=301';
-import { renderProduction } from './views/production.js?v=301';
-import { renderReports } from './views/reports.js?v=301';
-import { renderSales } from './views/sales.js?v=301';
-import { renderMovements } from './views/movements.js?v=301';
-import { renderStorage } from './views/storage.js?v=301';
-import { renderSettings } from './views/settings.js?v=301';
-import { renderLogin } from './views/login.js?v=301';
-import { renderAccount } from './views/account.js?v=301';
-import { renderHelp } from './views/help.js?v=301';
+import { renderPosition } from './views/position.js?v=302';
+import { renderProduction } from './views/production.js?v=302';
+import { renderReports } from './views/reports.js?v=302';
+import { renderSales } from './views/sales.js?v=302';
+import { renderMovements } from './views/movements.js?v=302';
+import { renderStorage } from './views/storage.js?v=302';
+import { renderSettings } from './views/settings.js?v=302';
+import { renderLogin } from './views/login.js?v=302';
+import { renderAccount } from './views/account.js?v=302';
+import { renderHelp } from './views/help.js?v=302';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=301';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=301';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=301';
-import { esc } from './fmt.js?v=301';
-import { isSheetOpen, notify } from './ui.js?v=301';
-import { describeMerges } from './ticketmerge.js?v=301';
-import { watchLists } from './band.js?v=301';
-import { APP_VERSION } from './version.js?v=301';
-import { installWatch, requestPersistence } from './pwa.js?v=301';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=301';
+} from './auth.js?v=302';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=302';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=302';
+import { esc } from './fmt.js?v=302';
+import { isSheetOpen, notify } from './ui.js?v=302';
+import { describeMerges } from './ticketmerge.js?v=302';
+import { watchLists } from './band.js?v=302';
+import { APP_VERSION } from './version.js?v=302';
+import { installWatch, requestPersistence } from './pwa.js?v=302';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=302';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -266,7 +266,7 @@ stashInviteFromHash();
 function renderInviteRefused(message) {
   setChromeVisible(false);
   app.innerHTML = `
-    <div class="topbar"><div><h1>Grainflow</h1><div class="sub">Invitation</div></div></div>
+    <div class="topbar"><div><h1>Commodity Mate</h1><div class="sub">Invitation</div></div></div>
     <div class="view">
       <div class="card">
         <h2>That invitation was not accepted</h2>
@@ -296,7 +296,7 @@ function renderInviteRefused(message) {
 function renderInvitationsWaiting(invitations) {
   setChromeVisible(false);
   app.innerHTML = `
-    <div class="topbar"><div><h1>Grainflow</h1><div class="sub">You have been invited</div></div></div>
+    <div class="topbar"><div><h1>Commodity Mate</h1><div class="sub">You have been invited</div></div></div>
     <div class="view">
       ${invitations.map((inv, i) => `
         <div class="card input">
@@ -391,13 +391,13 @@ async function boot() {
   if (joined && joined.farmId && joined.farmId !== membership.farmId) {
     setChromeVisible(false);
     app.innerHTML = `
-      <div class="topbar"><div><h1>Grainflow</h1><div class="sub">Invitation accepted</div></div></div>
+      <div class="topbar"><div><h1>Commodity Mate</h1><div class="sub">Invitation accepted</div></div></div>
       <div class="view"><div class="card">
         <h2>You have joined ${esc(joined.farmName || 'that farm')}</h2>
-        <div class="hint" style="margin-top:6px">Grainflow shows one farm at a time, and this
+        <div class="hint" style="margin-top:6px">Commodity Mate shows one farm at a time, and this
           account is already on ${esc(membership.farmName || 'another farm')} — which is the one
           that will open. Switching between farms is not built yet.</div>
-        <button class="btn" id="inv-ok" style="margin-top:14px">Open ${esc(membership.farmName || 'Grainflow')}</button>
+        <button class="btn" id="inv-ok" style="margin-top:14px">Open ${esc(membership.farmName || 'Commodity Mate')}</button>
       </div></div>`;
     await new Promise((resolve) => {
       app.querySelector('#inv-ok').addEventListener('click', resolve, { once: true });

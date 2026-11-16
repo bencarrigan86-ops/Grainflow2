@@ -114,7 +114,7 @@ check('it is a landscape A4 PDF with the title, the crops and the paddocks', () 
   const t = text(b);
   assert.ok(t.startsWith('%PDF'));
   assert.match(t, /\/MediaBox \[0 0 841\.89 595\.28\]/);
-  for (const w of ['ROTATION AND YIELD HISTORY', 'Carrigan Farms', 'NGR 12345', 'Made in Grainflow 16-11-2026 09:30', '2 paddocks, 3 seasons', 'East', 'Wheat', 'Canola', 'Area and yield by crop across the farm', 'All crops', '150 ha']) assert.ok(t.includes(w), w);
+  for (const w of ['ROTATION AND YIELD HISTORY', 'Carrigan Farms', 'NGR 12345', 'Made in Commodity Mate 16-11-2026 09:30', '2 paddocks, 3 seasons', 'East', 'Wheat', 'Canola', 'Area and yield by crop across the farm', 'All crops', '150 ha']) assert.ok(t.includes(w), w);
 });
 check('a role that does not see yields gets a PDF with no yields in it', () => {
   const t = text(rotationPdf(grid, { showYield: false }));
@@ -162,7 +162,7 @@ check('twenty seasons need more page sets in portrait than in landscape', () => 
 check('it is laid out like the load report: shaded header band, banded rows, title and foot', () => {
   const src = read('docs/js/rotationexport.js');
   const lr = read('docs/js/loadreport.js');
-  for (const piece of ['stroke: null, fill: 0.88', 'stroke: null, fill: 0.96', 'Made in Grainflow', 'size: 18, bold: true', 'size: 11, bold: true, align:']) {
+  for (const piece of ['stroke: null, fill: 0.88', 'stroke: null, fill: 0.96', 'Made in Commodity Mate', 'size: 18, bold: true', 'size: 11, bold: true, align:']) {
     assert.ok(src.includes(piece) && lr.includes(piece), piece);
   }
 });

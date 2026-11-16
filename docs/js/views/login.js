@@ -2,11 +2,11 @@
 // account with no farm yet — name the farm.
 //
 // Deliberately built from the app's existing .card / .field / .btn classes
-// rather than new styling, so it looks like the rest of Grainflow rather than
+// rather than new styling, so it looks like the rest of Commodity Mate rather than
 // a login page bolted onto the front of it.
 
-import { signIn, signUp, createFarm } from '../auth.js?v=301';
-import { wantSampleData } from '../demo.js?v=301';
+import { signIn, signUp, createFarm } from '../auth.js?v=302';
+import { wantSampleData } from '../demo.js?v=302';
 
 export function renderLogin(root, { mode = 'signin', onDone, invited = false } = {}) {
   let busy = false;
@@ -26,7 +26,7 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false } =
     root.innerHTML = `
       <div class="topbar">
         <div>
-          <h1>Grainflow</h1>
+          <h1>Commodity Mate</h1>
           <div class="sub">${
             isFarm ? 'One last thing' : isSignUp ? 'Create an account' : 'Sign in to your farm'
           }</div>
@@ -53,7 +53,7 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false } =
           </div>
           <!--
             On iOS a home-screen app has its own storage, sealed off from
-            Safari. Anyone who used Grainflow before accounts existed has a
+            Safari. Anyone who used Commodity Mate before accounts existed has a
             season in that container which the signed-out app cannot show them
             and which Safari cannot see at all.
 

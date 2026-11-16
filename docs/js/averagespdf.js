@@ -2,7 +2,7 @@
 // figures under it. Same numbers as the screen (seasonAverages() is passed in), laid out portrait, one block per crop in the
 // same green as the Position page. Pure: it builds bytes and touches nothing else.
 
-import { Pdf } from './pdf.js?v=301';
+import { Pdf } from './pdf.js?v=302';
 
 const PAGE = { width: 595.28, height: 841.89 };
 const M = 36;
@@ -45,7 +45,7 @@ export function averagesPdf(result = { labels: [], commodities: [] }, { business
 
   const span = labels.length ? `${labels[0]}${labels.length > 1 ? ` to ${labels[labels.length - 1]}` : ''}` : '';
   const footer = () => {
-    pdf.text(M, PAGE.height - 24, 'Made in Grainflow. Yield is total tonnes over total hectares; price is weighted by tonnes sold.', { size: 7.5, gray: GREY });
+    pdf.text(M, PAGE.height - 24, 'Made in Commodity Mate. Yield is total tonnes over total hectares; price is weighted by tonnes sold.', { size: 7.5, gray: GREY });
     pdf.text(PAGE.width - M, PAGE.height - 24, `page ${page}`, { size: 7.5, gray: GREY, align: 'right' });
   };
   const header = () => {

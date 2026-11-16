@@ -3,7 +3,7 @@
 // Pure: each function returns an <svg> string. The figures are illustrations of how a part of the app works, with made-up
 // numbers, not live data. The wording they carry is checked by tests/help.test.mjs along with the rest of the guide.
 
-import { TABS_BY_ROLE } from './nav.js?v=301';
+import { TABS_BY_ROLE } from './nav.js?v=302';
 
 const W = 340;
 const C = {
@@ -214,7 +214,7 @@ const FIGURES = {
   signing: () => flowSvg([['Draw it once', 'My signature'], ['Tick sign', 'on the document'], ['Print or send', 'signed']], { arrows: ['', ''], accent: C.green, label: 'Draw your signature once, tick sign on a document, print or send it' }),
   safety: () => flowSvg([['Export backup', 'a file'], ['Keep it', 'off the phone'], ['Import', 'if needed']], { arrows: ['', ''], accent: C.blue, label: 'Export a backup, keep it somewhere else, import it if needed' }),
   help: () => flowSvg([['Report', 'what went wrong'], ['Support', 'if you allow it'], ['Fixed', 'a new build']], { arrows: ['', ''], accent: C.amber, label: 'Report a problem; the owner can let support look, read only' }),
-  install: () => flowSvg([['Share or menu', 'in Safari or Chrome'], ['Add to Home Screen', 'tap Add'], ['Open the icon', 'full screen']], { arrows: ['', ''], accent: C.green, label: 'Open Grainflow in the browser, add it to the home screen, then open it from its icon' }),
+  install: () => flowSvg([['Share or menu', 'in Safari or Chrome'], ['Add to Home Screen', 'tap Add'], ['Open the icon', 'full screen']], { arrows: ['', ''], accent: C.green, label: 'Open Commodity Mate in the browser, add it to the home screen, then open it from its icon' }),
   season: seasonSvg,
   people: peopleSvg,
   offline: offlineSvg,

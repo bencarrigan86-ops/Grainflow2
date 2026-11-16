@@ -9,9 +9,9 @@
 //
 // Pure: it builds the declaration's data and its PDF; the screen and the sharing are elsewhere.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=301';
-import { dmy } from './fmt.js?v=301';
-import { hasSignature, strokesInBox } from './signature.js?v=301';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=302';
+import { dmy } from './fmt.js?v=302';
+import { hasSignature, strokesInBox } from './signature.js?v=302';
 
 export const MAX_VARIETIES = 4;
 
@@ -351,7 +351,7 @@ export function declarationPdf(d) {
   pdf.line(M + 380, by + 11, M + W - 8, by + 11);
   pdf.text(M + 384, by, d.signedDate ? dmy(d.signedDate) : '', { size: 9 });
   if (clean(d.signedBy)) pdf.text(M + 104, by + 15, d.signedBy, { size: 8, gray: 0.3 });
-  pdf.text(pdf.width / 2, pdf.height - 28, 'Prepared in Grainflow, in the layout of the Grain Trade Australia commodity vendor declaration.', { size: 7, align: 'center', gray: 0.5 });
+  pdf.text(pdf.width / 2, pdf.height - 28, 'Prepared in Commodity Mate, in the layout of the Grain Trade Australia commodity vendor declaration.', { size: 7, align: 'center', gray: 0.5 });
   return pdf.bytes();
 }
 
@@ -537,7 +537,7 @@ function cvdPdf(d) {
   pdf.line(M + 380, y + 11, M + W, y + 11);
   pdf.text(M + 384, y, d.signedDate ? dmy(d.signedDate) : '', { size: 9 });
   if (clean(d.signedBy)) pdf.text(M + 64, y + 15, d.signedBy, { size: 8, gray: 0.3 });
-  pdf.text(pdf.width / 2, pdf.height - 28, 'Prepared in Grainflow in the layout of the national Commodity Vendor Declaration (MLA / SAFEMEAT, May 2014). Read the explanatory notes on the official form before signing.', { size: 7, align: 'center', gray: 0.5 });
+  pdf.text(pdf.width / 2, pdf.height - 28, 'Prepared in Commodity Mate in the layout of the national Commodity Vendor Declaration (MLA / SAFEMEAT, May 2014). Read the explanatory notes on the official form before signing.', { size: 7, align: 'center', gray: 0.5 });
   return pdf.bytes();
 }
 

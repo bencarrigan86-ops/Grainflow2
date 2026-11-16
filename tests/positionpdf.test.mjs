@@ -199,7 +199,7 @@ check('the whole farm result and the overheads can each be left off, or both', (
   const neither = text(positionPdf(data, { show: { result: false, overheads: false } }));
   assert.ok(neither.startsWith('%PDF') && neither.includes('(Wheat)') && neither.includes('(Total)'), 'the table must stay');
   assert.deepEqual(headings(neither), []);
-  assert.ok(neither.includes('Made in Grainflow'), 'the footer must stay');
+  assert.ok(neither.includes('Made in Commodity Mate'), 'the footer must stay');
 });
 
 check('the Position screen asks what goes at the bottom, and remembers the answer', () => {

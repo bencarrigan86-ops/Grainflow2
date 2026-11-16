@@ -5,7 +5,7 @@
 // sold, the prices, the values and the gross margin. Under it the whole farm: gross margin, overheads, bills and the
 // profit or loss. Pure: it builds bytes and touches nothing else.
 
-import { Pdf } from './pdf.js?v=301';
+import { Pdf } from './pdf.js?v=302';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;
@@ -73,7 +73,7 @@ export function positionPdf({ rows = [], totals = {}, overheads = {}, pl = {}, c
   let y = 0;
 
   const footer = () => pdf.text(M, PAGE.height - 22,
-    'Made in Grainflow. Unsold grain is valued at the mark-to-market (MTM) price; sold grain at the contract prices.', { size: 7.5, gray: GREY });
+    'Made in Commodity Mate. Unsold grain is valued at the mark-to-market (MTM) price; sold grain at the contract prices.', { size: 7.5, gray: GREY });
   // the green band across the top of every page, as on the load ticket
   const header = () => {
     pdf.rect(0, 0, PAGE.width, 68, { stroke: null, fill: GREEN });

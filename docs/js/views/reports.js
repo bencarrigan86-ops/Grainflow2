@@ -1,14 +1,14 @@
-import { db } from '../storage.js?v=301';
-import { ureaFigures, starterFigures, seedFigures } from '../fertfigures.js?v=301';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=301';
-import { fertPdf } from '../fertpdf.js?v=301';
-import { seedPdf } from '../seedpdf.js?v=301';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=301';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=301';
-import { field, getVal, getNum } from '../ui.js?v=301';
-import { canSeeYield } from '../nav.js?v=301';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=301';
-import { harvestReport, siloSpace, pctText } from '../harvest.js?v=301';
+import { db } from '../storage.js?v=302';
+import { ureaFigures, starterFigures, seedFigures } from '../fertfigures.js?v=302';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=302';
+import { fertPdf } from '../fertpdf.js?v=302';
+import { seedPdf } from '../seedpdf.js?v=302';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=302';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=302';
+import { field, getVal, getNum } from '../ui.js?v=302';
+import { canSeeYield } from '../nav.js?v=302';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=302';
+import { harvestReport, siloSpace, pctText } from '../harvest.js?v=302';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below

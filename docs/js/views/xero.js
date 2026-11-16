@@ -2,11 +2,11 @@
 // (Business > Invoices > Import for sales invoices, Business > Bills to pay > Import for bills). The account codes
 // are the accountant's, so they are asked for here and remembered on this device. The files are made in xero.js.
 
-import { db } from '../storage.js?v=301';
-import { openSheet, field, getVal } from '../ui.js?v=301';
-import { esc, todayLocal } from '../fmt.js?v=301';
-import { downloadCSV } from '../csv.js?v=301';
-import { xeroInvoices, xeroBills, xeroCsv, DEFAULT_CODES, financialYearStart } from '../xero.js?v=301';
+import { db } from '../storage.js?v=302';
+import { openSheet, field, getVal } from '../ui.js?v=302';
+import { esc, todayLocal } from '../fmt.js?v=302';
+import { downloadCSV } from '../csv.js?v=302';
+import { xeroInvoices, xeroBills, xeroCsv, DEFAULT_CODES, financialYearStart } from '../xero.js?v=302';
 
 const CODES_KEY = 'grainflow.xero.codes';
 const loadCodes = () => { try { return { ...DEFAULT_CODES, ...JSON.parse(localStorage.getItem(CODES_KEY) || '{}') }; } catch { return { ...DEFAULT_CODES }; } };
@@ -52,7 +52,7 @@ export function openXeroSheet() {
         <button class="btn" id="xr-inv" ${inv.count ? '' : 'disabled'} style="margin-top:8px">Sales invoices (${inv.count})</button>
         <button class="btn" id="xr-bills" ${bills.count ? '' : 'disabled'} style="margin-top:8px">Bills (${bills.count})</button>
         ${warnings.length ? `<div class="hint" style="margin-top:10px;color:var(--danger)">Check before importing:<br>${warnings.slice(0, 8).map(esc).join('<br>')}${warnings.length > 8 ? `<br>and ${warnings.length - 8} more` : ''}</div>` : ''}
-        <div class="hint" style="margin-top:10px">Levies and freight the buyer takes off are lines of their own, without GST, so each invoice comes to what Grainflow says is payable. Amounts are before GST; Xero adds it.</div>`;
+        <div class="hint" style="margin-top:10px">Levies and freight the buyer takes off are lines of their own, without GST, so each invoice comes to what Commodity Mate says is payable. Amounts are before GST; Xero adds it.</div>`;
 
       root.querySelector('#xr-from').addEventListener('change', () => { from = getVal(root, 'xr-from') || from; readCodes(); paint(); });
       root.querySelector('#xr-to').addEventListener('change', () => { to = getVal(root, 'xr-to') || to; readCodes(); paint(); });

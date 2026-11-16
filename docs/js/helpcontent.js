@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=301';
+import { ROLES, canOpen } from './nav.js?v=302';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -348,11 +348,11 @@ export const GUIDES = [
     ],
   },
   {
-    id: 'install', title: 'Putting Grainflow on your phone', roles: ALL, open: 'account', openLabel: 'Open Account',
+    id: 'install', title: 'Putting Commodity Mate on your phone', roles: ALL, open: 'account', openLabel: 'Open Account',
     blurb: 'Add it to the home screen so it opens like any other app.',
     steps: [
-      'iPhone: open Grainflow in Safari, tap the Share button, then Add to Home Screen, then Add.',
-      'Android: open Grainflow in Chrome, tap the menu (three dots), then Install app or Add to Home screen.',
+      'iPhone: open Commodity Mate in Safari, tap the Share button, then Add to Home Screen, then Add.',
+      'Android: open Commodity Mate in Chrome, tap the menu (three dots), then Install app or Add to Home screen.',
       'Open it from the new icon. It fills the screen, opens faster and works the same with no signal.',
       'On Account, This device says whether it is installed and whether the phone has promised to keep what is saved on it. If it has not, tap Keep my saved data.',
     ],

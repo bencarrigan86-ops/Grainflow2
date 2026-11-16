@@ -2,7 +2,7 @@
 // style with the Position page. Nitrogen columns are amber and urea-equivalent columns green, as on the screen.
 // The figures come from fertfigures.js (ureaFigures, starterFigures), the same ones the screen uses. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=301';
+import { Pdf, wrapText } from './pdf.js?v=302';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;
@@ -66,7 +66,7 @@ export function fertPdf({ urea = [], starter = [] } = {}, { business = '', seaso
   let y = 0;
 
   const footer = () => pdf.text(M, PAGE.height - 22,
-    'Made in Grainflow. Urea figures are kg of urea; soil equiv is the soil nitrogen as urea. Left is required less applied.', { size: 7.5, gray: GREY });
+    'Made in Commodity Mate. Urea figures are kg of urea; soil equiv is the soil nitrogen as urea. Left is required less applied.', { size: 7.5, gray: GREY });
   const header = () => {
     pdf.rect(0, 0, PAGE.width, 68, { stroke: null, fill: GREEN });
     pdf.text(M, 16, 'FERTILISER', { size: 20, bold: true, gray: 1 });

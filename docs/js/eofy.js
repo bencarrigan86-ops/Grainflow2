@@ -9,10 +9,10 @@
 // after it counts as still owed. The result is plain data; eofyPdf() lays it out as the file to keep, which is the frozen
 // copy: the figures on screen move on as the books do, the file does not.
 
-import { Pdf } from './pdf.js?v=301';
-import { positionRows, saleEconomics } from './derived.js?v=301';
-import { uninvoiced, receivables } from './outstanding.js?v=301';
-import { dmy } from './fmt.js?v=301';
+import { Pdf } from './pdf.js?v=302';
+import { positionRows, saleEconomics } from './derived.js?v=302';
+import { uninvoiced, receivables } from './outstanding.js?v=302';
+import { dmy } from './fmt.js?v=302';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -172,6 +172,6 @@ export function eofyPdf(snap, { businessName = '', commodities = [] } = {}) {
   ], snap.unpaid.rows.map((r) => [r.sale ? contractText(r.sale, commodities) : 'Invoice', r.invoice.invoiceNo ? `#${r.invoice.invoiceNo}` : '', r.dueDate ? dmy(r.dueDate) : '', dollars(r.amount)]),
   ['Total', `${snap.unpaid.count}`, '', dollars(snap.unpaid.total)]);
 
-  pdf.text(pdf.width / 2, pdf.height - 28, `Snapshot as at ${dmy(snap.asAt)}, prepared in Grainflow. Contracts, loads and invoices dated after that day are left out.`, { size: 7.5, align: 'center', gray: GREY });
+  pdf.text(pdf.width / 2, pdf.height - 28, `Snapshot as at ${dmy(snap.asAt)}, prepared in Commodity Mate. Contracts, loads and invoices dated after that day are left out.`, { size: 7.5, align: 'center', gray: GREY });
   return pdf.bytes();
 }

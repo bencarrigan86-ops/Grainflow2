@@ -23,22 +23,22 @@ export function isStandalone(win = globalThis.window) {
   } catch { return false; }
 }
 
-/** The steps to add Grainflow to the home screen on this kind of phone. */
+/** The steps to add Commodity Mate to the home screen on this kind of phone. */
 export function installSteps(platform) {
   if (platform === 'ios') {
     return [
-      'Open Grainflow in Safari. (On an iPhone it is the one place the option is always there.)',
+      'Open Commodity Mate in Safari. (On an iPhone it is the one place the option is always there.)',
       'Tap the Share button, the square with an arrow, at the bottom of the screen.',
       'Scroll down and tap Add to Home Screen, then Add.',
-      'From now on, open Grainflow from its icon on the home screen.',
+      'From now on, open Commodity Mate from its icon on the home screen.',
     ];
   }
   if (platform === 'android') {
     return [
-      'Open Grainflow in Chrome.',
+      'Open Commodity Mate in Chrome.',
       'Tap the menu, the three dots at the top right.',
       'Tap Install app (or Add to Home screen), then Install.',
-      'From now on, open Grainflow from its icon on the home screen.',
+      'From now on, open Commodity Mate from its icon on the home screen.',
     ];
   }
   return [
@@ -92,7 +92,7 @@ export function storageText(st, standalone = false) {
   if (st.persisted) return 'Protected: this phone has promised to keep what is saved on it, even when it runs short of space.';
   return standalone
     ? 'Not protected yet. Tap the button to ask the phone to keep what is saved on it.'
-    : 'Not protected. The phone may clear what is saved here if it runs short of space. Adding Grainflow to the home screen helps.';
+    : 'Not protected. The phone may clear what is saved here if it runs short of space. Adding Commodity Mate to the home screen helps.';
 }
 
 // ---------------------------------------------------------------------------------------------------------------

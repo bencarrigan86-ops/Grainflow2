@@ -5,17 +5,17 @@
 // navigation per role, and that is when this gets a proper home in the
 // interface. Until then it is reachable at #/account.
 
-import { notify } from '../ui.js?v=301';
+import { notify } from '../ui.js?v=302';
 import {
   getSession, getMembership, signOut, listMyInvitations, acceptInvitation,
-} from '../auth.js?v=301';
-import { roleLabel, expiryText } from '../invites.js?v=301';
-import { esc } from '../fmt.js?v=301';
-import { openReportProblemSheet } from './support.js?v=301';
+} from '../auth.js?v=302';
+import { roleLabel, expiryText } from '../invites.js?v=302';
+import { esc } from '../fmt.js?v=302';
+import { openReportProblemSheet } from './support.js?v=302';
 import {
   platformOf, isStandalone, installSteps, installState, requestPersistence, storageStatus, storageText, canPromptInstall, promptInstall,
-} from '../pwa.js?v=301';
-import { toast } from '../ui.js?v=301';
+} from '../pwa.js?v=302';
+import { toast } from '../ui.js?v=302';
 
 const ROLE_LABELS = {
   owner: 'Owner',
@@ -59,7 +59,7 @@ export async function renderAccount(root) {
       </div>
     </div>
     <div class="view">
-      <button type="button" class="btn secondary" id="open-help" style="margin-bottom:12px">How to use Grainflow</button>
+      <button type="button" class="btn secondary" id="open-help" style="margin-bottom:12px">How to use Commodity Mate</button>
       <div class="card">
         <h2><span class="dot summary"></span>Signed in</h2>
         <div class="row"><span class="label">Email</span><span class="value">${user?.email ?? '—'}</span></div>
@@ -162,7 +162,7 @@ async function paintDeviceCard(root) {
   if (!body.isConnected) return;
   body.innerHTML = `
     <div class="row"><span class="label">${esc(inst.text)}</span></div>
-    ${inst.state === 'prompt' ? '<button type="button" class="btn secondary" id="dev-install">Install Grainflow</button>' : ''}
+    ${inst.state === 'prompt' ? '<button type="button" class="btn secondary" id="dev-install">Install Commodity Mate</button>' : ''}
     ${inst.state === 'steps' ? `<ol class="steps" style="margin:6px 0 10px 18px;padding:0">${installSteps(platform).map((t) => `<li>${esc(t)}</li>`).join('')}</ol>` : ''}
     <div class="row" style="margin-top:8px"><span class="label">${esc(storageText(st, standalone))}</span></div>
     ${st.persisted === false ? '<button type="button" class="btn secondary" id="dev-keep">Keep my saved data</button>' : ''}
@@ -174,7 +174,7 @@ async function paintDeviceCard(root) {
   });
   body.querySelector('#dev-keep')?.addEventListener('click', async () => {
     const r = await requestPersistence();
-    toast(r === 'kept' ? 'The phone will keep your saved data' : r === 'refused' ? 'The phone said no for now. Add Grainflow to the home screen and try again.' : 'This browser cannot do that');
+    toast(r === 'kept' ? 'The phone will keep your saved data' : r === 'refused' ? 'The phone said no for now. Add Commodity Mate to the home screen and try again.' : 'This browser cannot do that');
     paintDeviceCard(root);
   });
 }

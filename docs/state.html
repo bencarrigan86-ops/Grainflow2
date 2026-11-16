@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Grainflow — what is actually stored</title>
+<title>Commodity Mate — what is actually stored</title>
 <style>
   :root { color-scheme:light dark; --bg:#f2f3f5; --surface:#fff; --text:#14171a;
           --dim:#6b7280; --border:#e3e5e8; --ok:#2e7d32; --bad:#c0392b; --warn:#b26a00; }
@@ -41,7 +41,7 @@
   through the app. Nothing is changed, sent, or deleted — this only reads.</p>
   <div id="out"><div class="card"><div class="big">Reading&hellip;</div></div></div>
   <p style="margin-top:22px;font-size:13px">
-    <a href="./" style="color:var(--dim)">&larr; Back to Grainflow</a>
+    <a href="./" style="color:var(--dim)">&larr; Back to Commodity Mate</a>
   </p>
 </div>
 
@@ -101,13 +101,13 @@ function getAll(db, store) {
 
   // indexedDB.open() on a name that does not exist CREATES it, which would be a
   // rude side effect for a page that promises only to read — and worse, would
-  // turn "you have never used this browser for Grainflow" into "you have an
+  // turn "you have never used this browser for Commodity Mate" into "you have an
   // empty farm". Ask first where the browser allows it.
   if (indexedDB.databases) {
     try {
       const names = (await indexedDB.databases()).map((d) => d.name);
       if (!names.includes('grainflow')) {
-        return card(`<div class="big bad">Grainflow has never stored anything in this browser.</div>
+        return card(`<div class="big bad">Commodity Mate has never stored anything in this browser.</div>
           <div class="detail">No local database exists at this address. If you have
           been using the app somewhere else — a different browser, a different
           device, or the home-screen icon rather than the browser — open this page

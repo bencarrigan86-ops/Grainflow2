@@ -10,10 +10,10 @@
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { Pdf, wrapText } from './pdf.js?v=301';
-import { dmy } from './fmt.js?v=301';
-import { movementTonsToSale } from './derived.js?v=301';
-import { hasSignature, strokesInBox } from './signature.js?v=301';
+import { Pdf, wrapText } from './pdf.js?v=302';
+import { dmy } from './fmt.js?v=302';
+import { movementTonsToSale } from './derived.js?v=302';
+import { hasSignature, strokesInBox } from './signature.js?v=302';
 
 export const BASES = [
   { key: 'per_t', label: '$ per tonne' },
@@ -243,6 +243,6 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
   }
   const by = signed ? ny + 78 : ny + 36;
   if (clean(issuedBy)) pdf.text(M, by, `Issued by ${issuedBy}${signed && date ? `, ${dmy(date)}` : ''}`, { size: 9, bold: true });
-  pdf.text(pdf.width / 2, pdf.height - 28, 'Prepared in Grainflow.', { size: 7, align: 'center', gray: 0.5 });
+  pdf.text(pdf.width / 2, pdf.height - 28, 'Prepared in Commodity Mate.', { size: 7, align: 'center', gray: 0.5 });
   return pdf.bytes();
 }

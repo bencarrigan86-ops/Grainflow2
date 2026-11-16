@@ -4,14 +4,14 @@
 // whether it is on, turns it on for 7 days or off early, and shows the log of what happened. A report sends the build,
 // the role, the sync state and the last few errors, with a message; the words are in supportinfo.js.
 
-import { supabase } from '../supabase.js?v=301';
-import { db } from '../storage.js?v=301';
-import { APP_VERSION } from '../version.js?v=301';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=301';
-import { esc } from '../fmt.js?v=301';
-import { buildReport, reportText, recentErrors, supportStatusText, logLine } from '../supportinfo.js?v=301';
+import { supabase } from '../supabase.js?v=302';
+import { db } from '../storage.js?v=302';
+import { APP_VERSION } from '../version.js?v=302';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=302';
+import { esc } from '../fmt.js?v=302';
+import { buildReport, reportText, recentErrors, supportStatusText, logLine } from '../supportinfo.js?v=302';
 
-const UNAVAILABLE = 'Support access is not available yet. Ask whoever looks after Grainflow to finish setting it up.';
+const UNAVAILABLE = 'Support access is not available yet. Ask whoever looks after Commodity Mate to finish setting it up.';
 
 async function status(farmId) {
   const { data, error } = await supabase.rpc('support_access_until', { p_farm_id: farmId });
@@ -28,7 +28,7 @@ async function logRows(farmId) {
 export const supportCardHtml = () => `
   <div class="card" id="support-card">
     <h2>Support access</h2>
-    <div class="hint">If something is wrong and you want help, you can let the person who looks after Grainflow see your farm, read only, for 7 days. They cannot change anything and cannot see your bank details. It switches itself off, or you can take it away sooner.</div>
+    <div class="hint">If something is wrong and you want help, you can let the person who looks after Commodity Mate see your farm, read only, for 7 days. They cannot change anything and cannot see your bank details. It switches itself off, or you can take it away sooner.</div>
     <div id="support-body"><div class="meta">Checking…</div></div>
   </div>`;
 

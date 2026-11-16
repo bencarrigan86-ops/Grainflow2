@@ -4,10 +4,10 @@
 // each crop's yield by season), so what is exported is what is shown. A role that is not shown yields is not given them
 // here either: `showYield` false leaves out every tonnage and yield and the crop table. Pure: it builds text and bytes.
 
-import { toCSV } from './csv.js?v=301';
-import { Pdf, wrapText, textWidth } from './pdf.js?v=301';
-import { PALETTE } from './farmmap.js?v=301';
-import { cropYields } from './fieldhistory.js?v=301';
+import { toCSV } from './csv.js?v=302';
+import { Pdf, wrapText, textWidth } from './pdf.js?v=302';
+import { PALETTE } from './farmmap.js?v=302';
+import { cropYields } from './fieldhistory.js?v=302';
 
 const round = (n, dp = 2) => { const f = 10 ** dp; return Math.round((Number(n) || 0) * f) / f; };
 
@@ -60,7 +60,7 @@ export function rotationCsv(grid, { showYield = true } = {}) {
 
 // ---------------------------------------------------------------------------------------------------------------
 // PDF, laid out like the load report: an upper case title with a summary on the right, a grey line of who it is for,
-// a shaded header band, banded rows, and "Made in Grainflow" at the foot. Landscape or portrait A4.
+// a shaded header band, banded rows, and "Made in Commodity Mate" at the foot. Landscape or portrait A4.
 
 const SIZES = { landscape: { width: 841.89, height: 595.28 }, portrait: { width: 595.28, height: 841.89 } };
 const M = 36;
@@ -117,7 +117,7 @@ export function rotationPdf(grid, { orientation = 'landscape', showYield = true,
   const who = [business, ngr ? `NGR ${ngr}` : '', today ? `Printed ${today}` : ''].filter(Boolean).join('   ·   ');
 
   let page = 0;
-  const footer = () => pdf.text(M, PAGE.height - 22, `Made in Grainflow${madeAt ? ` ${madeAt}` : ''}`, { size: 7.5, gray: 0.5 });
+  const footer = () => pdf.text(M, PAGE.height - 22, `Made in Commodity Mate${madeAt ? ` ${madeAt}` : ''}`, { size: 7.5, gray: 0.5 });
   // a page's title block; returns the y the content starts at
   const header = (seasonsNote) => {
     page += 1;

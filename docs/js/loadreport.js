@@ -3,9 +3,9 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=301';
-import { dmy } from './fmt.js?v=301';
-import { SPECS, specOf } from './outload.js?v=301';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=302';
+import { dmy } from './fmt.js?v=302';
+import { SPECS, specOf } from './outload.js?v=302';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -186,7 +186,7 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
       if (wc && value) pdf.text(wc.x + wc.w - 4, y + 6, plain(value), { size: 9.5, bold: true, align: 'right' });
     }
   }
-  pdf.text(MARGIN, PAGE.height - 22, `Made in Grainflow${madeAt ? ` ${madeAt}` : ''}`, { size: 7.5, gray: 0.5 });
+  pdf.text(MARGIN, PAGE.height - 22, `Made in Commodity Mate${madeAt ? ` ${madeAt}` : ''}`, { size: 7.5, gray: 0.5 });
   return pdf.bytes();
 }
 
@@ -305,6 +305,6 @@ export function buildLoadTicketPdf(row, { business = '', ngr = '', showOrigin = 
 
   // foot
   pdf.line(L, 800, R, 800, { width: 0.5, gray: 0.8 });
-  pdf.text(L, 809, `Made in Grainflow${madeAt ? ` ${madeAt}` : ''}`, { size: 7.5, gray: 0.5 });
+  pdf.text(L, 809, `Made in Commodity Mate${madeAt ? ` ${madeAt}` : ''}`, { size: 7.5, gray: 0.5 });
   return pdf.bytes();
 }

@@ -1,6 +1,6 @@
 {
-  "name": "Grainflow",
-  "short_name": "Grainflow",
+  "name": "Commodity Mate",
+  "short_name": "Commodity Mate",
   "description": "Farm production, sales, position and silo/bunker calculator",
   "start_url": "./index.html",
   "scope": "./",

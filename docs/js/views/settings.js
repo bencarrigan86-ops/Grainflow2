@@ -1,38 +1,38 @@
-import { db } from '../storage.js?v=301';
-import { getTheme, setTheme } from '../theme.js?v=301';
-import { num, money, esc, todayLocal } from '../fmt.js?v=301';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=301';
-import { openLoadImportSheet } from './importloads.js?v=301';
-import { openPastSeasonsSheet } from './pastseasons.js?v=301';
-import { openPastSalesSheet } from './pastsales.js?v=301';
-import { openLineupSheet } from './lineup.js?v=301';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=301';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=301';
-import { openDangerSheet } from './dangerconfirm.js?v=301';
-import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=301';
-import { seasonContents, contentsText } from '../seasondelete.js?v=301';
-import { openDeletedSheet } from './deleted.js?v=301';
-import { APP_VERSION } from '../version.js?v=301';
-import { exportRowsAsCSV } from '../csv.js?v=301';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=301';
-import { endpointLabel } from './movements.js?v=301';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=301';
-import { layersForStorage } from '../outload.js?v=301';
-import { traceLoads, traceText } from '../trace.js?v=301';
-import { holdings, totalHeld } from '../offfarm.js?v=301';
-import { kindLabel, billTotal } from '../payables.js?v=301';
-import { orderState, STATE_LABEL } from '../orders.js?v=301';
-import { fieldHarvest } from '../harvest.js?v=301';
-import { openMySignatureSheet } from './signaturepad.js?v=301';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=301';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=301';
+import { db } from '../storage.js?v=302';
+import { getTheme, setTheme } from '../theme.js?v=302';
+import { num, money, esc, todayLocal } from '../fmt.js?v=302';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=302';
+import { openLoadImportSheet } from './importloads.js?v=302';
+import { openPastSeasonsSheet } from './pastseasons.js?v=302';
+import { openPastSalesSheet } from './pastsales.js?v=302';
+import { openLineupSheet } from './lineup.js?v=302';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=302';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=302';
+import { openDangerSheet } from './dangerconfirm.js?v=302';
+import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=302';
+import { seasonContents, contentsText } from '../seasondelete.js?v=302';
+import { openDeletedSheet } from './deleted.js?v=302';
+import { APP_VERSION } from '../version.js?v=302';
+import { exportRowsAsCSV } from '../csv.js?v=302';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=302';
+import { endpointLabel } from './movements.js?v=302';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=302';
+import { layersForStorage } from '../outload.js?v=302';
+import { traceLoads, traceText } from '../trace.js?v=302';
+import { holdings, totalHeld } from '../offfarm.js?v=302';
+import { kindLabel, billTotal } from '../payables.js?v=302';
+import { orderState, STATE_LABEL } from '../orders.js?v=302';
+import { fieldHarvest } from '../harvest.js?v=302';
+import { openMySignatureSheet } from './signaturepad.js?v=302';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=302';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=302';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=301';
+} from '../invites.js?v=302';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=301';
+} from '../auth.js?v=302';
 
 let unsub = null;
 
@@ -60,7 +60,7 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
-      <button type="button" class="btn secondary" id="open-help" style="margin-bottom:12px">How to use Grainflow, and who can do what</button>
+      <button type="button" class="btn secondary" id="open-help" style="margin-bottom:12px">How to use Commodity Mate, and who can do what</button>
       <div class="card">
         <h2>Appearance</h2>
         <div class="segmented" id="theme-seg">
@@ -638,7 +638,7 @@ async function sendInviteLink(token, btn) {
 
   try {
     if (navigator.share) {
-      await navigator.share({ title: 'Grainflow', text: 'Join my farm on Grainflow:', url: link });
+      await navigator.share({ title: 'Commodity Mate', text: 'Join my farm on Commodity Mate:', url: link });
       return;
     }
   } catch (e) {

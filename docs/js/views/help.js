@@ -1,13 +1,13 @@
-// How to use Grainflow: what the signed-in person can do, a short guide for each part of the app, and who can do what.
+// How to use Commodity Mate: what the signed-in person can do, a short guide for each part of the app, and who can do what.
 //
 // The words are in helpcontent.js, checked against nav.js and the database policies by tests/help.test.mjs. This only lays
 // them out, and offers each guide only to the roles that have it.
 
-import { db } from '../storage.js?v=301';
-import { esc } from '../fmt.js?v=301';
-import { canOpen } from '../nav.js?v=301';
-import { ROLE_INFO, ACCESS, LEVELS, guidesForRole } from '../helpcontent.js?v=301';
-import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=301';
+import { db } from '../storage.js?v=302';
+import { esc } from '../fmt.js?v=302';
+import { canOpen } from '../nav.js?v=302';
+import { ROLE_INFO, ACCESS, LEVELS, guidesForRole } from '../helpcontent.js?v=302';
+import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=302';
 
 // a coloured chip for what a role can do, so a table of ticks and blanks reads at a glance
 const TINT = { full: 'var(--accent-summary)', view: 'var(--accent-report)', own: 'var(--accent-input)', used: 'var(--accent-input)', none: 'var(--text-dim)' };
@@ -38,7 +38,7 @@ export function renderHelp(root) {
   root.innerHTML = `
     <div class="topbar">
       <div>
-        <h1>How to use Grainflow</h1>
+        <h1>How to use Commodity Mate</h1>
         <div class="sub">You are signed in as ${esc(me.label)}</div>
       </div>
     </div>
