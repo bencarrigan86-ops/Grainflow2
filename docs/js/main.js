@@ -1,32 +1,32 @@
-import { db } from './storage.js?v=313';
-import { supabase, ENV } from './supabase.js?v=313';
-import { installErrorLog } from './supportinfo.js?v=313';
-import { loadMySeries, rememberedSeries } from './outloadseries.js?v=313';
-import { initTheme } from './theme.js?v=313';
+import { db } from './storage.js?v=315';
+import { supabase, ENV } from './supabase.js?v=315';
+import { installErrorLog } from './supportinfo.js?v=315';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=315';
+import { initTheme } from './theme.js?v=315';
 initTheme();
-import { renderPosition } from './views/position.js?v=313';
-import { renderProduction } from './views/production.js?v=313';
-import { renderReports } from './views/reports.js?v=313';
-import { renderSales } from './views/sales.js?v=313';
-import { renderMovements } from './views/movements.js?v=313';
-import { renderStorage } from './views/storage.js?v=313';
-import { renderSettings } from './views/settings.js?v=313';
-import { renderLogin } from './views/login.js?v=313';
-import { renderAccount } from './views/account.js?v=313';
-import { renderHelp } from './views/help.js?v=313';
+import { renderPosition } from './views/position.js?v=315';
+import { renderProduction } from './views/production.js?v=315';
+import { renderReports } from './views/reports.js?v=315';
+import { renderSales } from './views/sales.js?v=315';
+import { renderMovements } from './views/movements.js?v=315';
+import { renderStorage } from './views/storage.js?v=315';
+import { renderSettings } from './views/settings.js?v=315';
+import { renderLogin } from './views/login.js?v=315';
+import { renderAccount } from './views/account.js?v=315';
+import { renderHelp } from './views/help.js?v=315';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=313';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=313';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=313';
-import { esc } from './fmt.js?v=313';
-import { isSheetOpen, notify } from './ui.js?v=313';
-import { describeMerges } from './ticketmerge.js?v=313';
-import { watchLists } from './band.js?v=313';
-import { APP_VERSION } from './version.js?v=313';
-import { startUpdateCheck } from './updatecheck.js?v=313';
-import { installWatch, requestPersistence } from './pwa.js?v=313';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=313';
+} from './auth.js?v=315';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=315';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=315';
+import { esc } from './fmt.js?v=315';
+import { isSheetOpen, notify } from './ui.js?v=315';
+import { describeMerges } from './ticketmerge.js?v=315';
+import { watchLists } from './band.js?v=315';
+import { APP_VERSION } from './version.js?v=315';
+import { startUpdateCheck } from './updatecheck.js?v=315';
+import { installWatch, requestPersistence } from './pwa.js?v=315';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=315';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -490,8 +490,19 @@ installWatch();
 
 // Signing in or out anywhere in the app re-runs the gate rather than trying to
 // patch the current screen into shape.
-onAuthChange((event) => {
-  if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') boot();
+// Everything the page holds in memory (the People list, who the support login is, the farm on screen) belongs to whoever was signed in.
+// A different person signing in on the same page would be shown the last person's lists, so that starts from a clean page. The same
+// person signing back in, or a token being renewed, does not.
+let signedInAs = null;
+onAuthChange((event, session) => {
+  if (event === 'SIGNED_IN') {
+    const id = session?.user?.id ?? null;
+    if (signedInAs && id && signedInAs !== id) { location.reload(); return; }
+    if (id) signedInAs = id;
+    boot();
+  } else if (event === 'SIGNED_OUT') {
+    boot();
+  }
 });
 
 window.addEventListener('hashchange', () => {

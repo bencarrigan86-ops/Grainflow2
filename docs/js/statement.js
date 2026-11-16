@@ -4,9 +4,9 @@
 // buyer gets their unpaid invoices with how overdue they are, the grain delivered but not yet on an invoice, and the
 // total of both. This is the page to send a buyer who says "what do I owe you?". Pure; the PDF is drawn by statementPdf.
 
-import { receivables, uninvoiced } from './outstanding.js?v=313';
-import { Pdf, wrapText } from './pdf.js?v=313';
-import { refLabel } from './adjustment.js?v=313';
+import { receivables, uninvoiced } from './outstanding.js?v=315';
+import { Pdf, wrapText } from './pdf.js?v=315';
+import { refLabel } from './adjustment.js?v=315';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const round3 = (n) => Math.round(n * 1000) / 1000;

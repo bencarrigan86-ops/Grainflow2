@@ -13,7 +13,7 @@ import assert from 'node:assert';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pickMembership, recallMembership } from '../docs/js/membership.js';
+import { pickMembership, recallMembership, farmChoices } from '../docs/js/membership.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -331,6 +331,36 @@ check('getMembership makes no auth call of its own', () => {
     .filter((l) => l.includes('supabase.auth'));
   assert.deepEqual(calls, [], `getMembership calls supabase.auth: ${calls.join(' | ')}`);
   assert.ok(/getMembership\(\s*userId\s*\)/.test(auth), 'getMembership no longer takes the id');
+});
+
+check('the farms a login can open: oldest first, the open one marked, an expired view left out, rows of other people ignored', () => {
+  const rows = [
+    { user_id: 'me', farm_id: 'b', role: 'owner', created_at: '2026-11-10', farms: { farm_name: 'Test Farm' } },
+    { user_id: 'me', farm_id: 'a', role: 'owner', created_at: '2026-01-02', farms: { farm_name: '', entity_name: 'Diddly Squat Farm' } },
+    { user_id: 'me', farm_id: 'c', role: 'support', created_at: '2026-11-12', expires_at: '2026-11-01T00:00:00Z', farms: { farm_name: 'Old view' } },
+    { user_id: 'me', farm_id: 'd', role: 'support', created_at: '2026-11-13', expires_at: null, farms: null },
+    { user_id: 'someone', farm_id: 'e', role: 'owner', created_at: '2026-01-01', farms: { farm_name: 'Not mine' } },
+  ];
+  const got = farmChoices(rows, 'me', 'b', Date.parse('2026-11-16'));
+  assert.deepEqual(got.map((f) => f.farmId), ['a', 'b', 'd']);
+  assert.deepEqual(got.map((f) => f.farmName), ['Diddly Squat Farm', 'Test Farm', 'Unnamed farm']);
+  assert.deepEqual(got.map((f) => f.current), [false, true, false]);
+  assert.deepEqual(farmChoices(null, 'me'), []);
+  assert.deepEqual(farmChoices(rows, null), []);
+});
+
+check('a different person signing in on the same page starts from a clean page', () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'docs/js');
+  const main = readFileSync(join(root, 'main.js'), 'utf8');
+  assert.ok(main.includes('signedInAs !== id') && main.includes('location.reload()'));
+  assert.ok(main.includes('onAuthChange((event, session) =>'));
+  assert.ok(readFileSync(join(root, 'auth.js'), 'utf8').includes('callback(event, session)'));
+});
+
+check('Account offers the choice only when there is one, and will not switch with changes unsent', () => {
+  const acc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs/js/views/account.js'), 'utf8');
+  assert.ok(acc.includes('farms.length < 2'));
+  assert.ok(acc.includes('setPreferredFarm(') && acc.includes('pending > 0') && acc.includes('location.reload()'));
 });
 
 console.log('');

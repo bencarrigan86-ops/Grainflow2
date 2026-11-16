@@ -5,17 +5,18 @@
 // navigation per role, and that is when this gets a proper home in the
 // interface. Until then it is reachable at #/account.
 
-import { notify } from '../ui.js?v=313';
+import { notify } from '../ui.js?v=315';
+import { db } from '../storage.js?v=315';
 import {
-  getSession, getMembership, signOut, listMyInvitations, acceptInvitation,
-} from '../auth.js?v=313';
-import { roleLabel, expiryText } from '../invites.js?v=313';
-import { esc } from '../fmt.js?v=313';
-import { openReportProblemSheet } from './support.js?v=313';
+  getSession, getMembership, signOut, listMyInvitations, acceptInvitation, listMyFarms, setPreferredFarm,
+} from '../auth.js?v=315';
+import { roleLabel, expiryText } from '../invites.js?v=315';
+import { esc } from '../fmt.js?v=315';
+import { openReportProblemSheet } from './support.js?v=315';
 import {
   platformOf, isStandalone, installSteps, installState, requestPersistence, storageStatus, storageText, canPromptInstall, promptInstall,
-} from '../pwa.js?v=313';
-import { toast } from '../ui.js?v=313';
+} from '../pwa.js?v=315';
+import { toast } from '../ui.js?v=315';
 
 const ROLE_LABELS = {
   owner: 'Owner',
@@ -81,6 +82,8 @@ export async function renderAccount(root) {
             owner needs to invite you, or you can create one.</div>
         </div>` : ''}
 
+      <div id="my-farms"></div>
+
       <div class="card" id="device-card"><h2>This device</h2><div id="device-body"><div class="meta">Checking…</div></div></div>
 
       <div id="pending-invites"></div>
@@ -91,6 +94,7 @@ export async function renderAccount(root) {
   `;
 
   showPendingInvitations(root, membership);
+  showMyFarms(root, user?.id, membership);
   paintDeviceCard(root);
 
   root.querySelector('#report-problem')?.addEventListener('click', () => openReportProblemSheet());
@@ -100,6 +104,31 @@ export async function renderAccount(root) {
     // The auth listener in main.js picks this up and re-renders to the login
     // screen — no manual navigation needed here.
   });
+}
+
+/**
+ * More than one farm on this login: say so, name each, and let this device choose which one it opens. Only shown when there is a choice.
+ * The choice is remembered on this device; the other devices keep their own.
+ */
+async function showMyFarms(root, userId, membership) {
+  const slot = root.querySelector('#my-farms');
+  if (!slot || !userId) return;
+  let farms = [];
+  try { farms = await listMyFarms(userId, membership?.farmId); } catch { return; }
+  if (farms.length < 2 || !slot.isConnected) return;
+  slot.innerHTML = `<div class="card input">
+    <h2><span class="dot input"></span>Your farms</h2>
+    <div class="hint" style="margin-bottom:8px">This login is on ${farms.length} farms. Each has its own people, records and invitations. This device opens the one marked open now; each of your devices remembers its own choice.</div>
+    ${farms.map((f, i) => `<div class="row" style="align-items:center"><span class="label">${esc(f.farmName)}<br><span class="meta">${esc(ROLE_LABELS[f.role] ?? f.role)}${f.current ? ' &middot; open now' : ''}</span></span><span class="value">${f.current ? '' : `<button type="button" class="btn secondary small" data-open-farm="${i}">Open</button>`}</span></div>`).join('')}
+  </div>`;
+  slot.querySelectorAll('[data-open-farm]').forEach((b) => b.addEventListener('click', async () => {
+    // the farm on this device is replaced by the one chosen, so anything not yet sent would be left behind: wait until it has gone
+    let pending = 0;
+    try { pending = (await db.getSyncStatus()).pending; } catch { /* treated as none */ }
+    if (pending > 0) { notify('Some changes on this device have not been sent yet. Wait until the dot beside the season is white, then try again.'); return; }
+    setPreferredFarm(farms[Number(b.dataset.openFarm)].farmId);
+    location.reload();
+  }));
 }
 
 /**

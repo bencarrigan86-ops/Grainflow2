@@ -9,9 +9,9 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase } from './supabase.js?v=313';
-import { pickMembership, recallMembership } from './membership.js?v=313';
-import { newToken, expiryFrom } from './invites.js?v=313';
+import { supabase } from './supabase.js?v=315';
+import { pickMembership, recallMembership, farmChoices } from './membership.js?v=315';
+import { newToken, expiryFrom } from './invites.js?v=315';
 
 /** The signed-in user, or null. */
 export async function getUser() {
@@ -116,6 +116,21 @@ function readPreferredFarm() {
 
 function writePreferredFarm(farmId) {
   try { localStorage.setItem(PREFERRED_FARM_KEY, farmId); } catch { /* private mode */ }
+}
+
+/**
+ * Every farm this person can open, for the Account screen. Asked of the server each time: a list that cannot be fetched is simply not
+ * shown, and the farm already open is never put at risk by it.
+ */
+export async function listMyFarms(userId, currentFarmId = null) {
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from('farm_users')
+    .select('user_id, farm_id, role, created_at, expires_at, farms ( farm_name, entity_name )')
+    .eq('user_id', userId)
+    .is('deleted_at', null);
+  if (error) throw new Error(error.message);
+  return farmChoices(data ?? [], userId, currentFarmId);
 }
 
 /** The support login picks which trial farm (or its own) to open; the app reloads onto it. */
@@ -350,7 +365,7 @@ function friendlyInvite(error) {
 }
 
 export function onAuthChange(callback) {
-  const { data } = supabase.auth.onAuthStateChange((event) => callback(event));
+  const { data } = supabase.auth.onAuthStateChange((event, session) => callback(event, session));
   return () => data?.subscription?.unsubscribe();
 }
 

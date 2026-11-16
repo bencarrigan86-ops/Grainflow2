@@ -84,3 +84,20 @@ export function pickMembership(rows, userId, preferredFarmId = null) {
     memberships: mine.length,
   };
 }
+
+/**
+ * The farms a person can open, for the "Your farms" card on Account: oldest first, the one open now marked, and any membership that has
+ * run out (a support view that expired) left out.
+ */
+export function farmChoices(rows, userId, currentFarmId = null, now = Date.now()) {
+  if (!Array.isArray(rows) || !userId) return [];
+  return rows
+    .filter((r) => r && r.user_id === userId && (!r.expires_at || new Date(r.expires_at).getTime() > now))
+    .sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')))
+    .map((r) => ({
+      farmId: r.farm_id,
+      role: r.role,
+      farmName: r.farms?.farm_name || r.farms?.entity_name || 'Unnamed farm',
+      current: r.farm_id === currentFarmId,
+    }));
+}
