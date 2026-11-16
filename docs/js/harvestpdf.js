@@ -3,7 +3,7 @@
 // room in the silos, as on the screen. The report's own figures (harvest.js) go in; nothing is worked out again here.
 // Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=317';
+import { createReport, fixed } from './reportpdf.js?v=318';
 
 const pct = (p) => `${Math.round((Number(p) || 0) * 100)}%`;
 const haPct = (done, area) => (area > 0 ? `${Math.round((done / area) * 100)}%` : '-');
@@ -28,12 +28,12 @@ export const HARVEST_COLUMNS_NO_YIELD = [
 ];
 
 /**
- * @param {{groups: object[], farm: object, space: object, minRoom?: number, nameOf: (id: string) => string, showYield?: boolean,
+ * @param {{groups: object[], farm: object, seasons?: object[], space: object, minRoom?: number, nameOf: (id: string) => string, showYield?: boolean,
  *          business?: string, season?: string, today?: string}} p
  *   groups and farm are from harvestReport(), space from siloSpace()
  * @returns {Uint8Array} the PDF
  */
-export function harvestPdf({ groups = [], farm = {}, space = {}, minRoom = 0, nameOf = () => '', showYield = true, business = '', season = '', today = '' } = {}) {
+export function harvestPdf({ groups = [], farm = {}, seasons = [], space = {}, minRoom = 0, nameOf = () => '', showYield = true, business = '', season = '', today = '' } = {}) {
   const report = createReport({
     title: 'Harvest', business, season, today,
     footerNote: showYield
@@ -55,6 +55,15 @@ export function harvestPdf({ groups = [], farm = {}, space = {}, minRoom = 0, na
     report.pair('Of the area done', haPct(farm.doneHa, farm.areaHa), { bold: true });
   }
   report.pair('Paddocks finished', `${farm.doneFields} of ${farm.fields}${showYield ? ` · ${t0(farm.doneHa)} of ${t0(farm.areaHa)} ha` : ''}`);
+  // by when the crops are cut, so a summer crop still standing does not hide how far through the winter crops are
+  if (seasons.length > 1) {
+    report.gap(4);
+    for (const s of seasons) {
+      const t = s.totals;
+      const done = showYield ? pct(t.pct) : haPct(t.doneHa, t.areaHa);
+      report.pair(`${s.label} (${s.names.join(', ')})`, `${done} ${showYield ? 'in' : 'cut'} · ${t0(t.doneHa)} of ${t0(t.areaHa)} ha`);
+    }
+  }
   report.gap(8);
 
   // ---- the room in the silos ----
@@ -71,7 +80,7 @@ export function harvestPdf({ groups = [], farm = {}, space = {}, minRoom = 0, na
   if ((space.silos || []).length) {
     report.table([
       { head: 'Silo', w: 0.3, left: true, cell: (s) => s.name },
-      { head: 'Holds', w: 0.26, left: true, cell: (s) => (s.empty ? 'Empty, any grain' : nameOf(s.commodityId)) },
+      { head: 'Holds', w: 0.26, left: true, cell: (s) => (s.empty ? (s.assumed ? `Empty, as ${space.assumeName}` : 'Empty, any grain') : nameOf(s.commodityId)) },
       { head: 'Stock t', w: 0.14, cell: (s) => t0(s.stock) },
       { head: 'Capacity t', w: 0.15, cell: (s) => t0(s.capacity) },
       { head: 'Room t', w: 0.15, cell: (s) => t0(s.room) },

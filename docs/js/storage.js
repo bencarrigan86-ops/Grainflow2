@@ -18,27 +18,27 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=317';
+import { hydrate } from './hydrate.js?v=318';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=317';
-import { chooseBootState, resolveLegacy } from './boot.js?v=317';
-import { isLegacyDirty } from './dirty.js?v=317';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=317';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=317';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=317';
-import { settleLegs, dedupeLegs } from './legs.js?v=317';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=317';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=317';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=317';
-import { setCommodityOrder } from './commodityorder.js?v=317';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=317';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=317';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=317';
-import { schedulePush, pushOnReconnect } from './sync.js?v=317';
-import { hasParts as hasAddressParts } from './address.js?v=317';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=317';
+} from './local.js?v=318';
+import { chooseBootState, resolveLegacy } from './boot.js?v=318';
+import { isLegacyDirty } from './dirty.js?v=318';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=318';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=318';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=318';
+import { settleLegs, dedupeLegs } from './legs.js?v=318';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=318';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=318';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=318';
+import { setCommodityOrder } from './commodityorder.js?v=318';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=318';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=318';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=318';
+import { schedulePush, pushOnReconnect } from './sync.js?v=318';
+import { hasParts as hasAddressParts } from './address.js?v=318';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=318';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -562,6 +562,7 @@ export const db = {
         grossMarginCost: 0,
         // the farm's own grades carry into the new season with the commodity
         ...(c.customGrades?.length ? { customGrades: [...c.customGrades], __hasCustomGrades: true } : {}),
+        ...(c.harvestSeason ? { harvestSeason: c.harvestSeason, __hasHarvestSeason: true } : {}),
       };
     });
     const mapCommodity = (oldId) => (oldId && idMap.has(oldId) ? idMap.get(oldId) : null);
@@ -747,6 +748,7 @@ export const db = {
         const merged = { ...c.commodities[idx], ...commodity };
         if (Number(merged.openingValue)) merged.__hasOpeningValue = true;
         if (merged.customGrades?.length) merged.__hasCustomGrades = true;
+        if (merged.harvestSeason) merged.__hasHarvestSeason = true;   // so going back to automatic still reaches the server
         c.commodities[idx] = merged;
       }
       touch('commodity', commodity.id);
@@ -754,6 +756,7 @@ export const db = {
       const id = uid();
       const made = { mtmPrice: 0, openingStock: 0, retainedSeed: 0, grossMarginCost: 0, ...commodity, id };
       if (Number(made.openingValue)) made.__hasOpeningValue = true;
+      if (made.harvestSeason) made.__hasHarvestSeason = true;
       c.commodities.push(made);
       touch('commodity', id);
       persist();

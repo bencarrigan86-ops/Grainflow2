@@ -308,6 +308,19 @@ check('a storage volume: not sent until set, sent when set, clearing it still re
   const read = rowsToState(rowsFor({ volumeM3: 300 })).years['2026'].storages.find((x) => x.name === 'Bunker A');
   assert.equal(read.volumeM3, 300);
 });
+check('a commodity\'s harvest season: not sent until chosen, sent when chosen, going back to automatic still reaches the server, and it reads back', () => {
+  const rowsFor = (patch) => {
+    const s = JSON.parse(JSON.stringify(state));
+    s.years['2026'].commodities = s.years['2026'].commodities.map((x) => (x.id === cWheat ? { ...x, ...patch } : x));
+    return stateToRows(s);
+  };
+  const wheat = (r) => r.commodities.find((x) => x.name === 'Wheat');
+  assert.ok(!('harvest_season' in wheat(rowsFor({}))), 'a database without the column is untouched until it is used');
+  assert.equal(wheat(rowsFor({ harvestSeason: 'summer' })).harvest_season, 'summer');
+  assert.equal(wheat(rowsFor({ harvestSeason: null, __hasHarvestSeason: true })).harvest_season, null);
+  const read = rowsToState(rowsFor({ harvestSeason: 'summer' })).years['2026'].commodities.find((x) => x.name === 'Wheat');
+  assert.equal(read.harvestSeason, 'summer');
+});
 check('which end of a bunker is emptied first: not sent until set, sent when set, switching back still reaches the server', () => {
   const rowsFor = (patch) => {
     const s = JSON.parse(JSON.stringify(state));

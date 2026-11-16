@@ -1,23 +1,24 @@
-import { db } from '../storage.js?v=317';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=317';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=317';
-import { isTransit } from '../transit.js?v=317';
-import { isOffFarm } from '../offfarm.js?v=317';
-import { paintOffFarmCard } from './offfarm.js?v=317';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=317';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=317';
-import { hasStorageQuality } from '../mapping.js?v=317';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=317';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=317';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=317';
-import { renderRelatedMovements } from './movements.js?v=317';
-import { openSiloSetupSheet } from './silosetup.js?v=317';
-import { commodityFills } from '../commodityfill.js?v=317';
-import { capacityInfo, capacityTons, capacityLine } from '../storagecapacity.js?v=317';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=317';
+import { db } from '../storage.js?v=318';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=318';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=318';
+import { isTransit } from '../transit.js?v=318';
+import { isOffFarm } from '../offfarm.js?v=318';
+import { paintOffFarmCard } from './offfarm.js?v=318';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=318';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=318';
+import { hasStorageQuality } from '../mapping.js?v=318';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=318';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=318';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=318';
+import { renderRelatedMovements } from './movements.js?v=318';
+import { openSiloSetupSheet } from './silosetup.js?v=318';
+import { commodityFills } from '../commodityfill.js?v=318';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=318';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=318';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=318';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=317';
+} from '../silolayers.js?v=318';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -114,6 +115,7 @@ function paint(root) {
         <select id="storage-sort">${SORTS.map((x) => `<option value="${x.id}" ${sortMode === x.id ? 'selected' : ''}>${x.label}</option>`).join('')}</select>
       </div>
       <div id="storage-chips" style="margin-top:10px"></div>
+      <div id="storage-assume"></div>
       <div id="storage-list" style="margin-top:10px"></div>
     </div>
     <div id="offfarm-card"></div>
@@ -224,6 +226,22 @@ function paintStorageParts(root) {
         </table>
       </div>
     </div>`;
+
+  // ---- the commodity to work empty silos out as: only when some silo has a volume and nothing set to go in it ----
+  const assumeEl = root.querySelector('#storage-assume');
+  const assumeFor = storages.filter((x) => x.kind !== 'tally' && wantsCommodity(x));
+  const assumeOptions = commodities.filter((x) => Number(x.testWeight) > 0);
+  if (assumeEl) {
+    if (assumeFor.length && assumeOptions.length) {
+      const now = assumedCommodity(commodities, loadSpaceAs());
+      assumeEl.innerHTML = `<div class="field" style="margin:10px 0 0"><label for="storage-assume-sel">Space in the ${assumeFor.length} storage${assumeFor.length === 1 ? '' : 's'} with no commodity is worked out as</label>
+        <select id="storage-assume-sel">${assumeOptions.map((x) => `<option value="${esc(x.name)}" ${now?.name === x.name ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+        <div class="hint">Their volume needs a test weight to become tonnes. This only changes what is shown here and on the harvest report; nothing is saved on the storage.</div></div>`;
+      assumeEl.querySelector('select').addEventListener('change', (e) => { saveSpaceAs(e.target.value); paintStorageParts(root); });
+    } else {
+      assumeEl.innerHTML = '';
+    }
+  }
 
   // ---- commodity tabs: only in the By commodity view ----
   const chipsEl = root.querySelector('#storage-chips');
@@ -614,7 +632,13 @@ function storageRow(s, commodities, movements) {
   // follow the measured estimate, which is zero until someone dips the silo.
   // Over capacity is shown as over, not clipped to a bar that looks merely full.
   // the most it holds: its volume times the test weight of what is in it, or the tonnes typed on it
-  const capT = capacityTons(s, c);
+  // A storage with no commodity set has no test weight to turn its volume into tonnes, so it is worked out as the commodity picked above
+  // the list (nothing is saved on the storage by that).
+  const assume = c ? null : assumedCommodity(commodities, loadSpaceAs());
+  const capInfo = capacityInfo(s, c || assume);
+  const capT = capInfo.tons;
+  const asNote = assume && capInfo.source === 'volume' && capInfo.testWeightSource === 'commodity' ? ` (as ${esc(assume.name)})` : '';
+  const spare = capT - ledger;
   const capPct = capT > 0 ? Math.max(0, (ledger / capT) * 100) : null;
   const mix = visibleMix(s.__mix);
   const layered = hasGrades(s.__layers || []);
@@ -637,7 +661,7 @@ function storageRow(s, commodities, movements) {
     <div class="list-item storage-row" data-edit-storage="${s.id}">
       <div>
         <div class="main">${esc(s.name)} <span class="badge muted">${kindLabel(looksLikeBunker(s) ? 'bunker' : s.kind)}</span></div>
-        <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(capT, 0)} t` : ''}</div>
+        <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(capT, 0)} t${asNote}${spare > 0.05 ? ` · ${num(spare, 0)} t spare` : ''}` : ''}</div>
         ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
         ${noteLine(s) ? `<div class="meta" style="font-style:italic">${noteLine(s)}</div>` : ''}
         ${mixLine}

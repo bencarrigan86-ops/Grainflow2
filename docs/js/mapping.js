@@ -27,9 +27,9 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=317';
-import { cleanOffFarm } from './offfarm.js?v=317';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=317';
+import { cleanGradeOptions } from './gradeprice.js?v=318';
+import { cleanOffFarm } from './offfarm.js?v=318';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=318';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -307,6 +307,8 @@ export function stateToRows(state, farmId) {
         ...((Number(c.openingValue) || c.__hasOpeningValue) ? { opening_stock_value: n(c.openingValue) } : {}),
         // The farm's own grades for this commodity. Optional in the same way: left out until there are some.
         ...((c.customGrades?.length || c.__hasCustomGrades) ? { custom_grades: c.customGrades || [] } : {}),
+        // When it is harvested, if chosen (winter or summer; blank is automatic from the name). Optional in the same way.
+        ...((c.harvestSeason || c.__hasHarvestSeason) ? { harvest_season: c.harvestSeason || null } : {}),
         gross_margin_cost: n(c.grossMarginCost),
         // Cotton is counted in bales, not tonnes; without unit and the ginning
         // ratio the whole lint/seed flow has nothing to work from.
@@ -710,6 +712,7 @@ export function rowsToState(rows) {
         openingStock: n(c.opening_stock), retainedSeed: n(c.retained_seed),
         ...(c.opening_stock_value != null ? { openingValue: n(c.opening_stock_value), __hasOpeningValue: true } : {}),
         ...(Array.isArray(c.custom_grades) ? { customGrades: c.custom_grades, __hasCustomGrades: true } : {}),
+        ...(c.harvest_season ? { harvestSeason: c.harvest_season, __hasHarvestSeason: true } : {}),
         grossMarginCost: n(c.gross_margin_cost),
         unit: c.unit ?? 't',
         balesPerRoundBale: n(c.bales_per_round_bale),

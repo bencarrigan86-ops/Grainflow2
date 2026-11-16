@@ -63,3 +63,17 @@ export function capacityLine(storage, commodity, fmt = (n, dp = 0) => n.toFixed(
   const what = tw.source === 'storage' ? 'this storage\'s test weight' : `${commodity.name}'s test weight`;
   return `${fmt(volume, 0)} m³ × ${fmt(tw.value, 3)} t/m³ (${what}) = ${fmt(volume * tw.value, 0)} t when full`;
 }
+
+/**
+ * The commodity an empty silo with no commodity is worked out as: the one picked (by name, so the pick holds from season to season) if
+ * it is still there and has a test weight, otherwise the first commodity that has one. Null when no commodity has a test weight.
+ */
+export function assumedCommodity(commodities, savedName = '') {
+  const usable = (commodities || []).filter((c) => num(c?.testWeight) > 0);
+  return usable.find((c) => c.name === savedName) || usable[0] || null;
+}
+
+/** Does this storage have a volume but nothing set to say which grain it will hold, and no test weight of its own? */
+export function wantsCommodity(storage) {
+  return !storage?.commodityId && num(storage?.volumeM3) > 0 && !(num(storage?.testWeight) > 0);
+}

@@ -1,44 +1,45 @@
-import { db } from '../storage.js?v=317';
-import { getTheme, setTheme } from '../theme.js?v=317';
-import { num, money, esc, todayLocal } from '../fmt.js?v=317';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=317';
-import { openLoadImportSheet } from './importloads.js?v=317';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=317';
-import { openPastSeasonsSheet } from './pastseasons.js?v=317';
-import { openPastSalesSheet } from './pastsales.js?v=317';
-import { openLineupSheet } from './lineup.js?v=317';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=317';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=317';
-import { openDangerSheet } from './dangerconfirm.js?v=317';
-import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=317';
-import { seasonContents, contentsText } from '../seasondelete.js?v=317';
-import { openDeletedSheet } from './deleted.js?v=317';
-import { APP_VERSION } from '../version.js?v=317';
-import { exportRowsAsCSV } from '../csv.js?v=317';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=317';
-import { orderedNames, moveName } from '../commodityorder.js?v=317';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=317';
-import { endpointLabel } from './movements.js?v=317';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=317';
-import { layersForStorage } from '../outload.js?v=317';
-import { traceLoads, traceText } from '../trace.js?v=317';
-import { holdings, totalHeld } from '../offfarm.js?v=317';
-import { kindLabel, billTotal } from '../payables.js?v=317';
-import { orderState, STATE_LABEL } from '../orders.js?v=317';
-import { fieldHarvest } from '../harvest.js?v=317';
-import { capacityFor } from '../storagecapacity.js?v=317';
-import { openMySignatureSheet } from './signaturepad.js?v=317';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=317';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=317';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=317';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=317';
+import { db } from '../storage.js?v=318';
+import { getTheme, setTheme } from '../theme.js?v=318';
+import { num, money, esc, todayLocal } from '../fmt.js?v=318';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=318';
+import { openLoadImportSheet } from './importloads.js?v=318';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=318';
+import { openPastSeasonsSheet } from './pastseasons.js?v=318';
+import { openPastSalesSheet } from './pastsales.js?v=318';
+import { openLineupSheet } from './lineup.js?v=318';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=318';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=318';
+import { openDangerSheet } from './dangerconfirm.js?v=318';
+import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=318';
+import { seasonContents, contentsText } from '../seasondelete.js?v=318';
+import { openDeletedSheet } from './deleted.js?v=318';
+import { APP_VERSION } from '../version.js?v=318';
+import { exportRowsAsCSV } from '../csv.js?v=318';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=318';
+import { orderedNames, moveName } from '../commodityorder.js?v=318';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=318';
+import { endpointLabel } from './movements.js?v=318';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=318';
+import { layersForStorage } from '../outload.js?v=318';
+import { traceLoads, traceText } from '../trace.js?v=318';
+import { holdings, totalHeld } from '../offfarm.js?v=318';
+import { kindLabel, billTotal } from '../payables.js?v=318';
+import { orderState, STATE_LABEL } from '../orders.js?v=318';
+import { fieldHarvest } from '../harvest.js?v=318';
+import { capacityFor } from '../storagecapacity.js?v=318';
+import { autoSeasonText } from '../harvestseason.js?v=318';
+import { openMySignatureSheet } from './signaturepad.js?v=318';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=318';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=318';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=318';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=318';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=317';
+} from '../invites.js?v=318';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=317';
+} from '../auth.js?v=318';
 
 let unsub = null;
 
@@ -1262,6 +1263,9 @@ function openCommoditySheet(existing) {
         ${field({ label: 'Angle of repose (°)', id: 'angle', type: 'number', step: '1', value: existing?.angleOfRepose, hint: 'For silo/bunker peak calc' })}
         ${field({ label: 'Test weight (t/m³)', id: 'tw', type: 'number', step: '0.01', value: existing?.testWeight })}
       </div>
+      ${field({ label: 'Harvested in', id: 'harvestSeason', type: 'select', value: existing?.harvestSeason ?? '',
+        options: [{ value: '', label: 'Automatic' }, { value: 'winter', label: 'Winter (wheat, barley, canola...)' }, { value: 'summer', label: 'Summer (sorghum, cotton, maize...)' }],
+        hint: 'Harvest progress is read for winter and summer crops separately as well as for the whole farm. Automatic goes by the name.' })}
       ${field({ label: 'MTM price ($/t)', id: 'mtm', type: 'number', step: '0.01', value: existing?.mtmPrice ?? 0, hint: 'Used to value unsold position' })}
       <div class="grid-2">
         ${field({ label: 'Opening stock (t)', id: 'opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0 })}
@@ -1286,6 +1290,11 @@ function openCommoditySheet(existing) {
       <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
     `;
     offerLastSeasonsClosing(root);
+    // the automatic choice says what it comes to for the name as typed
+    const autoOpt = root.querySelector('#harvestSeason option[value=""]');
+    const syncAuto = () => { if (autoOpt) autoOpt.textContent = `Automatic: ${autoSeasonText(getVal(root, 'name'))}`; };
+    root.querySelector('#name').addEventListener('input', syncAuto);
+    syncAuto();
     const balesWrap = root.querySelector('#bales-per-round-wrap');
     const syncUnitFields = () => { balesWrap.style.display = getVal(root, 'unit') === 'bale' ? 'block' : 'none'; };
     root.querySelector('#unit').addEventListener('change', syncUnitFields);
@@ -1300,6 +1309,7 @@ function openCommoditySheet(existing) {
         balesPerRoundBale: getNum(root, 'balesPerRound'),
         angleOfRepose: getNum(root, 'angle'),
         testWeight: getNum(root, 'tw'),
+        harvestSeason: getVal(root, 'harvestSeason') || null,
         mtmPrice: getNum(root, 'mtm'),
         openingStock: getNum(root, 'opening'),
         openingValue: getNum(root, 'openingValue'),
