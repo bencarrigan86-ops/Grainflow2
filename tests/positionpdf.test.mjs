@@ -74,6 +74,25 @@ check('every figure and heading fits its column, even on a farm forty times the 
   });
 });
 
+check('headings and figures are centred in their columns, the commodity name on the left', () => {
+  const s = text(positionPdf(build()));
+  const W = 841.89 - 72;
+  const edges = POSITION_COLUMNS.reduce((a, c) => { a.push(a[a.length - 1] + c.w * W); return a; }, [36]);
+  const items = [...s.matchAll(/\/F\d ([\d.]+) Tf ([\d.-]+) [\d.-]+ Td \((.*?)\) Tj/g)].map((m) => ({ size: +m[1], x: +m[2], t: m[3].replace(/\\/g, '') }));   // the file escapes ( and ) with a backslash
+  const widthOf = (t, size) => textWidth(t, size, true);
+  // the heading of every figure column: the middle of the text sits on the middle of the column
+  POSITION_COLUMNS.slice(1).forEach((c, k) => {
+    const i = k + 1;
+    const mid = (edges[i] + edges[i + 1]) / 2;
+    const it = items.find((q) => q.t === c.label && q.size === HEAD);
+    assert.ok(it, `no heading ${c.label}`);
+    const centre = it.x + widthOf(it.t, HEAD) / 2;
+    assert.ok(Math.abs(centre - mid) < 3, `${c.label} is ${Math.abs(centre - mid).toFixed(1)}pt off the middle of its column`);
+  });
+  const name = items.find((q) => q.t === 'Wheat');
+  assert.ok(Math.abs(name.x - (edges[0] + 4)) < 0.5, 'the commodity name should stay on the left');
+});
+
 check('cost and cost per hectare sit just before the gross margin', () => {
   const labels = POSITION_COLUMNS.map((c) => c.label);
   const at = labels.indexOf('Gross margin');
@@ -147,6 +166,19 @@ check('a loss is called a loss, in the minus', () => {
   assert.ok(data.pl.profitLoss < 0);
   const s = text(positionPdf(data));
   assert.ok(s.includes('(Loss)') && !s.includes('(Profit)'));
+});
+
+check('each result line is green or red by its own sign: a loss made good by opening stock is red, then green', () => {
+  const withOpening = [{ ...commodities[0], openingStock: 100, openingValue: 50000 }, commodities[1]];
+  const rows = positionRows(withOpening, fields, sales, []);
+  const totals = positionTotals(rows);
+  // overheads set to leave a loss of 10,000 before the opening stock's 50,000 is counted
+  const overheads2 = { finance: Math.round(totals.grossMargin) + 10000 };
+  const pl = farmProfitLoss(totals.grossMargin, overheads2, totals.openingValue, 0);
+  assert.ok(pl.profitLoss < 0 && pl.profitWithOpening > 0, `needs a loss that opening stock turns round: ${pl.profitLoss}, ${pl.profitWithOpening}`);
+  const s = text(positionPdf({ rows, totals, overheads: overheads2, pl, cost: {} }));
+  const red = [...s.matchAll(/0\.72 0\.18 0\.15 rg/g)].length;
+  assert.equal(red, 2, `${red} red texts: the Loss label and figure only`);
 });
 
 check('opening stock adds its two lines and renames the value', () => {

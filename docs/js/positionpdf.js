@@ -5,7 +5,7 @@
 // sold, the prices, the values and the gross margin. Under it the whole farm: gross margin, overheads, bills and the
 // profit or loss. Pure: it builds bytes and touches nothing else.
 
-import { Pdf } from './pdf.js?v=295';
+import { Pdf } from './pdf.js?v=296';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;
@@ -16,7 +16,7 @@ const BAND = [0.93, 0.96, 0.93];
 const TOTAL = [0.82, 0.9, 0.83];
 const LINE = [0.78, 0.86, 0.78];
 const LOSS = [0.72, 0.18, 0.15];
-/** The commodity table's type sizes, and the room a figure keeps clear of its column's right edge. */
+/** The commodity table's type sizes, and the room a figure keeps clear of its column's edges (it is centred, so half each side). */
 export const BODY = 8.5;
 export const HEAD = 7.5;
 export const PAD = 9;
@@ -117,7 +117,7 @@ export function positionPdf({ rows = [], totals = {}, overheads = {}, pl = {}, c
   const cell = (i, str, opts = {}) => {
     const left = M + edges[i];
     if (i === 0) pdf.text(left + 4, y, String(str).slice(0, Math.floor(widths[i] / 4.8)), { size: BODY, ...opts });
-    else pdf.text(left + widths[i] - 5, y, String(str), { size: BODY, align: 'right', ...opts });
+    else pdf.text(left + widths[i] / 2, y, String(str), { size: BODY, align: 'center', ...opts });   // figures and headings centred in their column
   };
   const headRow = () => {
     pdf.rect(M, y - 5, W, 19, { stroke: null, fill: GREEN });
@@ -144,10 +144,11 @@ export function positionPdf({ rows = [], totals = {}, overheads = {}, pl = {}, c
     ['Overheads', takeOff(pl.overheadsTotal)],
   ];
   if (num(pl.payablesTotal)) lines.push(['Bills (brokerage, freight, storage, other)', takeOff(pl.payablesTotal)]);
-  lines.push([num(pl.profitLoss) >= 0 ? 'Profit' : 'Loss', dollars(pl.profitLoss), true]);
+  // the result lines (bold) carry the figure they show, so each is green or red by its own sign, not by the other's
+  lines.push([num(pl.profitLoss) >= 0 ? 'Profit' : 'Loss', dollars(pl.profitLoss), true, num(pl.profitLoss)]);
   if (num(pl.openingValue)) {
     lines.push(['Plus opening stock value', `+${dollars(pl.openingValue)}`]);
-    lines.push(['Total including opening stock', dollars(pl.profitWithOpening), true]);
+    lines.push(['Total including opening stock', dollars(pl.profitWithOpening), true, num(pl.profitWithOpening)]);
   }
 
   const overheadLines = OVERHEADS.map(([key, label]) => [label, num(overheads[key])]).filter(([, v]) => v);
@@ -176,8 +177,7 @@ export function positionPdf({ rows = [], totals = {}, overheads = {}, pl = {}, c
   };
 
   heading(M, top, 'Whole farm');
-  const profitInk = num(pl.profitLoss) >= 0 ? GREEN : LOSS;
-  bandedLines(M, top + 28, lines.map(([label, value, strong]) => [label, value, strong, strong ? profitInk : 0]), { size: 10, step: 18 });
+  bandedLines(M, top + 28, lines.map(([label, value, strong, sign]) => [label, value, strong, strong ? (sign >= 0 ? GREEN : LOSS) : 0]), { size: 10, step: 18 });
 
   const rx = M + colW + 30;
   let ry = top;
