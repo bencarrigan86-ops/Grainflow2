@@ -1,31 +1,32 @@
-import { db } from './storage.js?v=309';
-import { supabase, ENV } from './supabase.js?v=309';
-import { installErrorLog } from './supportinfo.js?v=309';
-import { loadMySeries, rememberedSeries } from './outloadseries.js?v=309';
-import { initTheme } from './theme.js?v=309';
+import { db } from './storage.js?v=310';
+import { supabase, ENV } from './supabase.js?v=310';
+import { installErrorLog } from './supportinfo.js?v=310';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=310';
+import { initTheme } from './theme.js?v=310';
 initTheme();
-import { renderPosition } from './views/position.js?v=309';
-import { renderProduction } from './views/production.js?v=309';
-import { renderReports } from './views/reports.js?v=309';
-import { renderSales } from './views/sales.js?v=309';
-import { renderMovements } from './views/movements.js?v=309';
-import { renderStorage } from './views/storage.js?v=309';
-import { renderSettings } from './views/settings.js?v=309';
-import { renderLogin } from './views/login.js?v=309';
-import { renderAccount } from './views/account.js?v=309';
-import { renderHelp } from './views/help.js?v=309';
+import { renderPosition } from './views/position.js?v=310';
+import { renderProduction } from './views/production.js?v=310';
+import { renderReports } from './views/reports.js?v=310';
+import { renderSales } from './views/sales.js?v=310';
+import { renderMovements } from './views/movements.js?v=310';
+import { renderStorage } from './views/storage.js?v=310';
+import { renderSettings } from './views/settings.js?v=310';
+import { renderLogin } from './views/login.js?v=310';
+import { renderAccount } from './views/account.js?v=310';
+import { renderHelp } from './views/help.js?v=310';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=309';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=309';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=309';
-import { esc } from './fmt.js?v=309';
-import { isSheetOpen, notify } from './ui.js?v=309';
-import { describeMerges } from './ticketmerge.js?v=309';
-import { watchLists } from './band.js?v=309';
-import { APP_VERSION } from './version.js?v=309';
-import { installWatch, requestPersistence } from './pwa.js?v=309';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=309';
+} from './auth.js?v=310';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=310';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=310';
+import { esc } from './fmt.js?v=310';
+import { isSheetOpen, notify } from './ui.js?v=310';
+import { describeMerges } from './ticketmerge.js?v=310';
+import { watchLists } from './band.js?v=310';
+import { APP_VERSION } from './version.js?v=310';
+import { startUpdateCheck } from './updatecheck.js?v=310';
+import { installWatch, requestPersistence } from './pwa.js?v=310';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=310';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -522,4 +523,6 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register(`./sw.js?v=${APP_VERSION}`)
       .catch((e) => console.error('Service worker did not register', e));
   });
+  // A phone that is only put down and picked up never reloads: say when a newer build is out, and let the person choose when.
+  startUpdateCheck(APP_VERSION);
 }

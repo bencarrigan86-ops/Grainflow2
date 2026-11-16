@@ -1,8 +1,8 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=309';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=309';
-import { commoditySort } from './commodityorder.js?v=309';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=310';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=310';
+import { commoditySort } from './commodityorder.js?v=310';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;

@@ -18,27 +18,27 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=309';
+import { hydrate } from './hydrate.js?v=310';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=309';
-import { chooseBootState, resolveLegacy } from './boot.js?v=309';
-import { isLegacyDirty } from './dirty.js?v=309';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=309';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=309';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=309';
-import { settleLegs, dedupeLegs } from './legs.js?v=309';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=309';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=309';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=309';
-import { setCommodityOrder } from './commodityorder.js?v=309';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=309';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=309';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=309';
-import { schedulePush, pushOnReconnect } from './sync.js?v=309';
-import { hasParts as hasAddressParts } from './address.js?v=309';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=309';
+} from './local.js?v=310';
+import { chooseBootState, resolveLegacy } from './boot.js?v=310';
+import { isLegacyDirty } from './dirty.js?v=310';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=310';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=310';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=310';
+import { settleLegs, dedupeLegs } from './legs.js?v=310';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=310';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=310';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=310';
+import { setCommodityOrder } from './commodityorder.js?v=310';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=310';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=310';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=310';
+import { schedulePush, pushOnReconnect } from './sync.js?v=310';
+import { hasParts as hasAddressParts } from './address.js?v=310';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=310';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.

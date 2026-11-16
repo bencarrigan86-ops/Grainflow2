@@ -1,42 +1,42 @@
-import { db } from '../storage.js?v=309';
-import { getTheme, setTheme } from '../theme.js?v=309';
-import { num, money, esc, todayLocal } from '../fmt.js?v=309';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=309';
-import { openLoadImportSheet } from './importloads.js?v=309';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=309';
-import { openPastSeasonsSheet } from './pastseasons.js?v=309';
-import { openPastSalesSheet } from './pastsales.js?v=309';
-import { openLineupSheet } from './lineup.js?v=309';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=309';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=309';
-import { openDangerSheet } from './dangerconfirm.js?v=309';
-import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=309';
-import { seasonContents, contentsText } from '../seasondelete.js?v=309';
-import { openDeletedSheet } from './deleted.js?v=309';
-import { APP_VERSION } from '../version.js?v=309';
-import { exportRowsAsCSV } from '../csv.js?v=309';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=309';
-import { orderedNames, moveName } from '../commodityorder.js?v=309';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=309';
-import { endpointLabel } from './movements.js?v=309';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=309';
-import { layersForStorage } from '../outload.js?v=309';
-import { traceLoads, traceText } from '../trace.js?v=309';
-import { holdings, totalHeld } from '../offfarm.js?v=309';
-import { kindLabel, billTotal } from '../payables.js?v=309';
-import { orderState, STATE_LABEL } from '../orders.js?v=309';
-import { fieldHarvest } from '../harvest.js?v=309';
-import { openMySignatureSheet } from './signaturepad.js?v=309';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=309';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=309';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=309';
+import { db } from '../storage.js?v=310';
+import { getTheme, setTheme } from '../theme.js?v=310';
+import { num, money, esc, todayLocal } from '../fmt.js?v=310';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=310';
+import { openLoadImportSheet } from './importloads.js?v=310';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=310';
+import { openPastSeasonsSheet } from './pastseasons.js?v=310';
+import { openPastSalesSheet } from './pastsales.js?v=310';
+import { openLineupSheet } from './lineup.js?v=310';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=310';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=310';
+import { openDangerSheet } from './dangerconfirm.js?v=310';
+import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=310';
+import { seasonContents, contentsText } from '../seasondelete.js?v=310';
+import { openDeletedSheet } from './deleted.js?v=310';
+import { APP_VERSION } from '../version.js?v=310';
+import { exportRowsAsCSV } from '../csv.js?v=310';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=310';
+import { orderedNames, moveName } from '../commodityorder.js?v=310';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=310';
+import { endpointLabel } from './movements.js?v=310';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=310';
+import { layersForStorage } from '../outload.js?v=310';
+import { traceLoads, traceText } from '../trace.js?v=310';
+import { holdings, totalHeld } from '../offfarm.js?v=310';
+import { kindLabel, billTotal } from '../payables.js?v=310';
+import { orderState, STATE_LABEL } from '../orders.js?v=310';
+import { fieldHarvest } from '../harvest.js?v=310';
+import { openMySignatureSheet } from './signaturepad.js?v=310';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=310';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=310';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=310';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=309';
+} from '../invites.js?v=310';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=309';
+} from '../auth.js?v=310';
 
 let unsub = null;
 
