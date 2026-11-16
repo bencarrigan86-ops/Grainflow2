@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=300';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=300';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=300';
-import { isTransit } from '../transit.js?v=300';
-import { isOffFarm } from '../offfarm.js?v=300';
-import { paintOffFarmCard } from './offfarm.js?v=300';
-import { gradesFor, allGradeCodes } from '../grades.js?v=300';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=300';
-import { hasStorageQuality } from '../mapping.js?v=300';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=300';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=300';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=300';
-import { renderRelatedMovements } from './movements.js?v=300';
-import { openSiloSetupSheet } from './silosetup.js?v=300';
-import { commodityFills } from '../commodityfill.js?v=300';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=300';
+import { db } from '../storage.js?v=301';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=301';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint } from '../derived.js?v=301';
+import { isTransit } from '../transit.js?v=301';
+import { isOffFarm } from '../offfarm.js?v=301';
+import { paintOffFarmCard } from './offfarm.js?v=301';
+import { gradesFor, allGradeCodes } from '../grades.js?v=301';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=301';
+import { hasStorageQuality } from '../mapping.js?v=301';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=301';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=301';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=301';
+import { renderRelatedMovements } from './movements.js?v=301';
+import { openSiloSetupSheet } from './silosetup.js?v=301';
+import { commodityFills } from '../commodityfill.js?v=301';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=301';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=300';
+} from '../silolayers.js?v=301';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -530,6 +530,7 @@ function qualityFold(existing, commodity) {
       </div>
       ${field({ label: 'Falling number (seconds)', id: 'q-fn', type: 'number', step: '1', value: existing?.fallingNumber ?? '' })}
       <div id="q-oil-wrap" ${extraSpecKey(commodity?.name) === 'oilPct' || existing?.oilPct != null ? '' : 'hidden'}>${field({ label: 'Oil (%)', id: 'q-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '', hint: 'Canola' })}</div>
+      <div id="q-ffa-wrap" ${extraSpecKey(commodity?.name) === 'oilPct' || existing?.ffaPct != null ? '' : 'hidden'}>${field({ label: 'Free fatty acid (%)', id: 'q-ffa', type: 'number', step: '0.01', value: existing?.ffaPct ?? '', hint: 'Canola' })}</div>
       <div id="q-ret-wrap" ${extraSpecKey(commodity?.name) === 'retentionPct' || existing?.retentionPct != null ? '' : 'hidden'}>${field({ label: 'Retention (%)', id: 'q-ret', type: 'number', step: '0.1', value: existing?.retentionPct ?? '', hint: 'Barley: kept above 2.5 mm' })}</div>
     </details>`;
 }
@@ -546,6 +547,7 @@ function readQuality(root, gradeCtl) {
     testWeightKgHl: n('q-tw'),
     fallingNumber: n('q-fn'),
     oilPct: n('q-oil'),
+    ffaPct: n('q-ffa'),
     retentionPct: n('q-ret'),
   };
 }
@@ -558,7 +560,7 @@ function qualityLine(s) {
     pct(s.moisturePct, 'moisture'), pct(s.proteinPct, 'protein'), pct(s.screeningsPct, 'screenings'),
     s.testWeightKgHl != null && s.testWeightKgHl !== '' ? `${num(s.testWeightKgHl, 1)} kg/hL` : '',
     s.fallingNumber != null && s.fallingNumber !== '' ? `FN ${num(s.fallingNumber, 0)}` : '',
-    pct(s.oilPct, 'oil'), pct(s.retentionPct, 'retention'),
+    pct(s.oilPct, 'oil'), s.ffaPct != null && s.ffaPct !== '' ? `${num(s.ffaPct, 2)}% FFA` : '', pct(s.retentionPct, 'retention'),
   ].filter(Boolean).map(esc).join(' · ');
 }
 
@@ -666,6 +668,9 @@ function bandRowHtml(r = {}) {
       <input type="number" inputmode="decimal" step="0.1" class="lay-screenings" placeholder="Screenings %" aria-label="Screenings" value="${v(r.screeningsPct)}" />
       <input type="number" inputmode="decimal" step="0.1" class="lay-tw" placeholder="Test wt kg/hL" aria-label="Test weight" value="${v(r.testWeightKgHl)}" />
       <input type="number" inputmode="decimal" step="1" class="lay-fn" placeholder="Falling no." aria-label="Falling number" value="${v(r.fallingNumber)}" />
+      <input type="number" inputmode="decimal" step="0.1" class="lay-oil" placeholder="Oil %" aria-label="Oil" value="${v(r.oilPct)}" />
+      <input type="number" inputmode="decimal" step="0.01" class="lay-ffa" placeholder="FFA %" aria-label="Free fatty acid" value="${v(r.ffaPct)}" />
+      <input type="number" inputmode="decimal" step="0.1" class="lay-ret" placeholder="Retention %" aria-label="Retention" value="${v(r.retentionPct)}" />
     </div>
   </div>`;
 }
@@ -736,6 +741,9 @@ function readLayerRows(root) {
     screeningsPct: val(row, '.lay-screenings'),
     testWeightKgHl: val(row, '.lay-tw'),
     fallingNumber: val(row, '.lay-fn'),
+    oilPct: val(row, '.lay-oil'),
+    ffaPct: val(row, '.lay-ffa'),
+    retentionPct: val(row, '.lay-ret'),
   }));
 }
 
@@ -1060,8 +1068,9 @@ function openStorageSheet(existing) {
       gradeCtl.refresh();
       // barley takes retention where other grains have oil; a figure already typed stays visible
       const key = extraSpecKey(commodities.find((c) => c.id === getVal(root, 's-commodity'))?.name);
-      const oil = root.querySelector('#q-oil-wrap'); const ret = root.querySelector('#q-ret-wrap');
+      const oil = root.querySelector('#q-oil-wrap'); const ret = root.querySelector('#q-ret-wrap'); const ffa = root.querySelector('#q-ffa-wrap');
       if (oil) oil.hidden = !(key === 'oilPct' || getVal(root, 'q-oil'));
+      if (ffa) ffa.hidden = !(key === 'oilPct' || getVal(root, 'q-ffa'));
       if (ret) ret.hidden = !(key === 'retentionPct' || getVal(root, 'q-ret'));
     });
   };

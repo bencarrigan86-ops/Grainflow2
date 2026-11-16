@@ -1,14 +1,14 @@
-import { db } from '../storage.js?v=300';
-import { ureaFigures, starterFigures, seedFigures } from '../fertfigures.js?v=300';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=300';
-import { fertPdf } from '../fertpdf.js?v=300';
-import { seedPdf } from '../seedpdf.js?v=300';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=300';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=300';
-import { field, getVal, getNum } from '../ui.js?v=300';
-import { canSeeYield } from '../nav.js?v=300';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=300';
-import { harvestReport, siloSpace, pctText } from '../harvest.js?v=300';
+import { db } from '../storage.js?v=301';
+import { ureaFigures, starterFigures, seedFigures } from '../fertfigures.js?v=301';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=301';
+import { fertPdf } from '../fertpdf.js?v=301';
+import { seedPdf } from '../seedpdf.js?v=301';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=301';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=301';
+import { field, getVal, getNum } from '../ui.js?v=301';
+import { canSeeYield } from '../nav.js?v=301';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=301';
+import { harvestReport, siloSpace, pctText } from '../harvest.js?v=301';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -21,7 +21,7 @@ export function renderReports(root) {
 
 function paint(root) {
   const showYield = canSeeYield(db.getRole());
-  if ((view === 'yield' || view === 'harvest') && !showYield) view = 'fert';
+  if (view === 'yield' && !showYield) view = 'fert';   // harvest is for everyone, but shows no tonnes or yields to a role that is not shown them
   root.innerHTML = `
     <div class="topbar">
       <div>
@@ -32,7 +32,7 @@ function paint(root) {
     <div class="view">
       <div class="segmented" id="reports-view">
         ${showYield ? `<button data-view="yield" class="${view === 'yield' ? 'active' : ''}">Yield</button>` : ''}
-        ${showYield ? `<button data-view="harvest" class="${view === 'harvest' ? 'active' : ''}">Harvest</button>` : ''}
+        <button data-view="harvest" class="${view === 'harvest' ? 'active' : ''}">Harvest</button>
         <button data-view="fert" class="${view === 'fert' ? 'active' : ''}">Fert</button>
         <button data-view="seed" class="${view === 'seed' ? 'active' : ''}">Seed</button>
       </div>
@@ -52,7 +52,7 @@ function paint(root) {
   } else if (view === 'yield') {
     paintYield(root);
   } else if (view === 'harvest') {
-    paintHarvest(root);
+    paintHarvest(root, showYield);
   } else {
     paintFert(root);
   }
@@ -415,7 +415,7 @@ function saveMinRoom(n) { try { localStorage.setItem(MIN_ROOM_KEY, String(n)); }
  * to take it. "In" is the tonnes carted off the field; "to come" is its estimate less that, until the field is marked
  * finished (see harvest.js). The silos and each commodity's fields fold away.
  */
-function paintHarvest(root) {
+function paintHarvest(root, showYield = true) {
   const { commodities, fields, storages, movements } = db.get();
   const { groups, farm } = harvestReport(commodities, fields, movements);
   const minRoom = loadMinRoom();
@@ -429,11 +429,15 @@ function paintHarvest(root) {
     return;
   }
   const nameOf = (id) => commodities.find((c) => c.id === id)?.name || 'No commodity';
+  // what a role that is not shown yields sees: how much ground is cut and what is left, and the room in the silos. A tonne
+  // figure beside a hectare figure is a yield, and the estimate and what is still to come are built from yields.
+  const haPct = (done, area) => (area > 0 ? `${Math.round((done / area) * 100)}%` : '-');
   const fold = (key, summary, inner) => `
     <details class="fold" data-fold="${key}" style="border-top:none;margin-top:0" ${harvestOpen.get(key) !== false ? 'open' : ''}>
       <summary>${summary}</summary>
       ${inner}
     </details>`;
+  if (!showYield) { body.innerHTML = harvestNoYieldHtml({ groups, farm, space, minRoom, t1, haPct, fold, nameOf }); wireHarvest(root, body, showYield); return; }
   body.innerHTML = `
     <div class="card report">
       <h2><span class="dot report"></span>Whole farm</h2>
@@ -494,14 +498,73 @@ function paintHarvest(root) {
       </div>`;
     }).join('')}`;
 
+  wireHarvest(root, body, showYield);
+}
+
+/** The minimum-room box and the folds, for either version of the harvest report. */
+function wireHarvest(root, body, showYield) {
   body.querySelector('#min-room')?.addEventListener('change', (e) => {
     const n = Number(e.target.value);
     saveMinRoom(Number.isFinite(n) && n >= 0 ? n : DEFAULT_MIN_ROOM);
-    paintHarvest(root);
+    paintHarvest(root, showYield);
   });
 
   // remember which sections were opened or closed, so a repaint does not undo it
   body.querySelectorAll('details[data-fold]').forEach((d) => d.addEventListener('toggle', () => harvestOpen.set(d.dataset.fold, d.open)));
+}
+
+/** Harvest progress with no tonnes, estimates or yields: hectares cut and left, paddocks finished, and the room in the silos. */
+function harvestNoYieldHtml({ groups, farm, space, minRoom, t1, haPct, fold, nameOf }) {
+  return `
+    <div class="card report">
+      <h2><span class="dot report"></span>Whole farm</h2>
+      <div class="stat-grid">
+        <div class="stat"><div class="n">${t1(farm.doneHa)} ha</div><div class="l">Cut</div></div>
+        <div class="stat"><div class="n">${t1(farm.toGoHa)} ha</div><div class="l">Left to harvest</div></div>
+        <div class="stat"><div class="n">${haPct(farm.doneHa, farm.areaHa)}</div><div class="l">Of the area done</div></div>
+        <div class="stat"><div class="n">${farm.doneFields} of ${farm.fields}</div><div class="l">Paddocks finished</div></div>
+      </div>
+    </div>
+
+    <div class="card report">
+      ${fold('room', `<div><h2><span class="dot report"></span>Room in the silos</h2><div class="sub">${t1(space.totalRoom)} t room left${minRoom > 0 ? ` · silos under ${t1(minRoom)} t left out` : ''}</div></div>`, `
+      <div class="row"><span class="label">In silos already holding a commodity</span><span class="value">${t1(space.totalRoom - space.emptyRoom)} t</span></div>
+      <div class="row"><span class="label">In empty silos (${space.emptyCount}), for any grain</span><span class="value">${t1(space.emptyRoom)} t</span></div>
+      <div class="row"><span class="label"><strong>Room left</strong></span><span class="value"><strong>${t1(space.totalRoom)} t</strong></span></div>
+      ${space.silos.length ? fold('silos', `<div><h2>Each silo</h2><div class="sub">${space.silos.length} silo${space.silos.length === 1 ? '' : 's'}, most room first</div></div>`, space.silos.map((s) => `
+        <div class="list-item stack">
+          <div class="li-top"><div class="main">${esc(s.name)}</div><div class="main">${t1(s.room)} t room</div></div>
+          <div class="meta">${s.empty ? 'Empty, takes any grain' : esc(nameOf(s.commodityId))} · ${t1(s.stock)} of ${t1(s.capacity)} t</div>
+          <div class="gauge" role="img" aria-label="${Math.round(s.pct * 100)} percent full"><i style="width:${s.pct * 100}%"></i></div>
+        </div>`).join('')) : ''}
+      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Third-party storage is not counted. An empty silo can take any grain, so it is counted once, here, and not under each commodity.</div>`)}
+      <div class="row" style="margin-top:8px"><label class="label" for="min-room">Leave out silos with less room than (t)</label><span class="value"><input id="min-room" type="number" inputmode="decimal" min="0" step="1" value="${minRoom}" style="width:80px;text-align:right" /></span></div>
+    </div>
+
+    ${groups.map((g) => {
+      const summary = `<div><h2>${esc(g.name)} <span class="badge ${g.totals.doneHa >= g.totals.areaHa && g.totals.areaHa > 0 ? 'pos' : 'muted'}">${haPct(g.totals.doneHa, g.totals.areaHa)} cut</span></h2>
+        <div class="sub">${t1(g.totals.doneHa)} of ${t1(g.totals.areaHa)} ha finished</div></div>`;
+      return `
+      <div class="card report">
+        ${fold('c-' + (g.id || 'none'), summary, `
+        <div class="table-scroll tight-wrap">
+          <table class="tight wrap-first">
+            <thead><tr><th>Field</th><th>Area ha</th><th>To cut ha</th><th>Done</th></tr></thead>
+            <tbody>
+              ${g.rows.map((r) => `<tr>
+                <td>${r.done ? '&#10003;&nbsp;' : ''}${esc(r.field.name)}</td>
+                <td>${t1(r.areaHa)}</td>
+                <td>${r.done ? '0' : t1(r.haLeft !== null ? r.haLeft : r.areaHa)}</td>
+                <td>${r.done ? 'Done' : haPct(r.doneHa, r.areaHa)}</td>
+              </tr>`).join('')}
+            </tbody>
+            <tfoot><tr>
+              <td>Total</td><td>${t1(g.totals.areaHa)}</td><td>${t1(g.totals.toGoHa)}</td><td>${haPct(g.totals.doneHa, g.totals.areaHa)}</td>
+            </tr></tfoot>
+          </table>
+        </div>`)}
+      </div>`;
+    }).join('')}`;
 }
 
 function paintYield(root) {

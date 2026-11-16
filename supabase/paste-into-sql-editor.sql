@@ -1482,3 +1482,11 @@ revoke all on function soft_delete_row(text, uuid) from public;
 grant execute on function soft_delete_row(text, uuid) to authenticated;
 
 notify pgrst, 'reload schema';
+
+-- Build 301: canola free fatty acid (FFA) on loads and silos (optional column)
+alter table movements
+  add column if not exists ffa_pct numeric(6,2);
+alter table storages
+  add column if not exists ffa_pct numeric(6,2);
+
+notify pgrst, 'reload schema';

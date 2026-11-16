@@ -25,6 +25,7 @@ export const SPECS = [
   { key: 'testWeightKgHl', label: 'Test weight', unit: 'kg/hL', dp: 1 },
   { key: 'fallingNumber', label: 'Falling no.', unit: 's', dp: 0 },
   { key: 'oilPct', label: 'Oil', unit: '%', dp: 1 },
+  { key: 'ffaPct', label: 'FFA', unit: '%', dp: 2 },
   { key: 'retentionPct', label: 'Retention', unit: '%', dp: 1 },
 ];
 
@@ -303,6 +304,7 @@ export function specText(rec) {
     sp.testWeightKgHl !== null ? `${fmt(sp.testWeightKgHl, 1)} kg/hL` : '',
     sp.fallingNumber !== null ? `FN ${fmt(sp.fallingNumber, 0)}` : '',
     sp.oilPct !== null ? `${fmt(sp.oilPct, 1)}% oil` : '',
+    sp.ffaPct !== null ? `${fmt(sp.ffaPct, 2)}% FFA` : '',
     sp.retentionPct !== null ? `${fmt(sp.retentionPct, 1)}% retention` : '',
   ].filter(Boolean).join(' · ');
 }

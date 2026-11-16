@@ -241,10 +241,15 @@ console.log('\n=== wired in ===');
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
-check('Reports has a Harvest view, only for roles that can see yields', () => {
+check('Reports has a Harvest view for every role, and a role that is not shown yields gets hectares and silo room with no tonnes', () => {
   const src = read('docs/js/views/reports.js');
-  assert.match(src, /showYield \? `<button data-view="harvest"/);
-  assert.match(src, /paintHarvest\(root\)/);
+  assert.match(src, /<button data-view="harvest"/);
+  assert.doesNotMatch(src, /showYield \? `<button data-view="harvest"/);
+  assert.match(src, /paintHarvest\(root, showYield\)/);
+  const noYield = src.slice(src.indexOf('function harvestNoYieldHtml'), src.indexOf('function paintYield'));
+  assert.ok(noYield.length > 500, 'no version without yields');
+  for (const bad of ['estimateT', 'inT', 'toComeT', 'yieldSoFar', 'Est t', 'to come', 'Harvested']) assert.ok(!noYield.includes(bad), `the no-yield harvest report shows ${bad}`);
+  assert.ok(noYield.includes('doneHa') && noYield.includes('space.totalRoom'));
 });
 check('the paddock form has the finished box', () => {
   assert.match(read('docs/js/views/production.js'), /id: 'harvestDone'/);

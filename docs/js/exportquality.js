@@ -23,6 +23,7 @@ const HEADINGS = {
   testWeightKgHl: 'Test weight (kg/hL)',
   fallingNumber: 'Falling number (s)',
   oilPct: 'Oil (%)',
+  ffaPct: 'FFA (%)',
   retentionPct: 'Retention (%)',
 };
 

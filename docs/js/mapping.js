@@ -27,9 +27,9 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=300';
-import { cleanOffFarm } from './offfarm.js?v=300';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=300';
+import { cleanGradeOptions } from './gradeprice.js?v=301';
+import { cleanOffFarm } from './offfarm.js?v=301';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=301';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -83,6 +83,8 @@ const QUALITY_FIELDS = [
   // Barley retention, the same way and with a flag of its own: a farm that has the oil column but not this one
   // must still be able to save a load with an oil figure.
   ['retentionPct', 'retention_pct', 'num', 'optional', '__hasRetention'],
+  // Canola free fatty acid, with a flag of its own for the same reason.
+  ['ffaPct', 'ffa_pct', 'num', 'optional', '__hasFfa'],
 ];
 const LOAD_QUALITY_FIELDS = QUALITY_FIELDS.filter(([key]) => key !== 'cropYear');
 

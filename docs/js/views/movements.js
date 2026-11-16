@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=300';
-import { movementsForEndpoint } from '../derived.js?v=300';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=300';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=300';
-import { compressAndStampImage } from '../img.js?v=300';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=300';
-import { specText, extraSpecKey } from '../outload.js?v=300';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=300';
-import { pickableSilos } from '../silopick.js?v=300';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=300';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=300';
-import { activeSales } from '../paidsales.js?v=300';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=300';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=300';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=300';
-import { nowTime } from '../loadreport.js?v=300';
+import { db } from '../storage.js?v=301';
+import { movementsForEndpoint } from '../derived.js?v=301';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=301';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=301';
+import { compressAndStampImage } from '../img.js?v=301';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=301';
+import { specText, extraSpecKey } from '../outload.js?v=301';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=301';
+import { pickableSilos } from '../silopick.js?v=301';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=301';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=301';
+import { activeSales } from '../paidsales.js?v=301';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=301';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=301';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=301';
+import { nowTime } from '../loadreport.js?v=301';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -589,9 +589,9 @@ export function openMovementSheet(existing, template) {
         </div>
       </div>
       ${existing?.sourceRef ? `<div class="field hint" style="margin-bottom:8px">Movement number from the freight platform: <strong>${esc(existing.sourceRef)}</strong></div>` : ''}
-      <details class="fold" ${existing && (existing.grade || existing.proteinPct != null || existing.moisturePct != null || existing.oilPct != null || existing.retentionPct != null) ? 'open' : ''}>
+      <details class="fold" ${existing && (existing.grade || existing.proteinPct != null || existing.moisturePct != null || existing.oilPct != null || existing.ffaPct != null || existing.retentionPct != null) ? 'open' : ''}>
         <summary><div><h2>Load quality</h2>
-          <div class="sub">Grade, moisture, protein, screenings, test weight, falling number, oil or retention</div></div></summary>
+          <div class="sub">Grade, moisture, protein, screenings, test weight, falling number, oil and FFA, or retention</div></div></summary>
         <div class="field hint" style="margin-bottom:8px">What was on this truck. It lets the storage it went into say what
           each load out of it will carry.</div>
         ${gradeFieldHtml({ id: 'lq-grade', commodity: commodities.find((c) => c.id === ctx.commodityId), value: existing?.grade })}
@@ -610,6 +610,7 @@ export function openMovementSheet(existing, template) {
             <div id="lq-ret-wrap" hidden>${field({ label: 'Retention (%)', id: 'lq-ret', type: 'number', step: '0.1', value: existing?.retentionPct ?? '', hint: 'Barley: kept above 2.5 mm' })}</div>
           </div>
         </div>
+        <div id="lq-ffa-wrap" class="grid-2">${field({ label: 'Free fatty acid (%)', id: 'lq-ffa', type: 'number', step: '0.01', value: existing?.ffaPct ?? '', hint: 'Canola' })}</div>
       </details>
       ${field({ label: 'Notes', id: 'notes', value: src?.notes })}
       <div class="field">
@@ -654,6 +655,7 @@ export function openMovementSheet(existing, template) {
       const key = extraSpecKey(commodities.find((c) => c.id === ctx.commodityId)?.name);
       root.querySelector('#lq-oil-wrap').hidden = !(key === 'oilPct' || getVal(root, 'lq-oil'));
       root.querySelector('#lq-ret-wrap').hidden = !(key === 'retentionPct' || getVal(root, 'lq-ret'));
+      root.querySelector('#lq-ffa-wrap').hidden = !(key === 'oilPct' || getVal(root, 'lq-ffa'));
     };
     syncExtra();
     // What an off-farm location holds of this commodity and grade, against what this load takes out of it, and
@@ -977,7 +979,7 @@ export function openMovementSheet(existing, template) {
           return {
             grade: gradeCtl.read() || '',
             moisturePct: n('lq-moisture'), proteinPct: n('lq-protein'), screeningsPct: n('lq-screenings'),
-            testWeightKgHl: n('lq-tw'), fallingNumber: n('lq-fn'), oilPct: n('lq-oil'), retentionPct: n('lq-ret'),
+            testWeightKgHl: n('lq-tw'), fallingNumber: n('lq-fn'), oilPct: n('lq-oil'), ffaPct: n('lq-ffa'), retentionPct: n('lq-ret'),
           };
         })(),
         photoDataUrl,
@@ -999,7 +1001,7 @@ export function openMovementSheet(existing, template) {
         ...existing,
         grade: gradeCtl.read() || '',
         moisturePct: num('lq-moisture'), proteinPct: num('lq-protein'), screeningsPct: num('lq-screenings'),
-        testWeightKgHl: num('lq-tw'), fallingNumber: num('lq-fn'), oilPct: num('lq-oil'), retentionPct: num('lq-ret'),
+        testWeightKgHl: num('lq-tw'), fallingNumber: num('lq-fn'), oilPct: num('lq-oil'), ffaPct: num('lq-ffa'), retentionPct: num('lq-ret'),
         loadTime: getVal(root, 'loadTime') || '', destination: getVal(root, 'destination')?.trim() || '',
         truckRego: getVal(root, 'truckRego')?.trim(), driver: getVal(root, 'driver')?.trim(),
         grossWeight: num('gross'), tareWeight: num('tare'), tons: getNum(root, 'tons'), weightStatus,
