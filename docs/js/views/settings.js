@@ -1,42 +1,42 @@
-import { db } from '../storage.js?v=308';
-import { getTheme, setTheme } from '../theme.js?v=308';
-import { num, money, esc, todayLocal } from '../fmt.js?v=308';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=308';
-import { openLoadImportSheet } from './importloads.js?v=308';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=308';
-import { openPastSeasonsSheet } from './pastseasons.js?v=308';
-import { openPastSalesSheet } from './pastsales.js?v=308';
-import { openLineupSheet } from './lineup.js?v=308';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=308';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=308';
-import { openDangerSheet } from './dangerconfirm.js?v=308';
-import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=308';
-import { seasonContents, contentsText } from '../seasondelete.js?v=308';
-import { openDeletedSheet } from './deleted.js?v=308';
-import { APP_VERSION } from '../version.js?v=308';
-import { exportRowsAsCSV } from '../csv.js?v=308';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=308';
-import { orderedNames, moveName } from '../commodityorder.js?v=308';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=308';
-import { endpointLabel } from './movements.js?v=308';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=308';
-import { layersForStorage } from '../outload.js?v=308';
-import { traceLoads, traceText } from '../trace.js?v=308';
-import { holdings, totalHeld } from '../offfarm.js?v=308';
-import { kindLabel, billTotal } from '../payables.js?v=308';
-import { orderState, STATE_LABEL } from '../orders.js?v=308';
-import { fieldHarvest } from '../harvest.js?v=308';
-import { openMySignatureSheet } from './signaturepad.js?v=308';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=308';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=308';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=308';
+import { db } from '../storage.js?v=309';
+import { getTheme, setTheme } from '../theme.js?v=309';
+import { num, money, esc, todayLocal } from '../fmt.js?v=309';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=309';
+import { openLoadImportSheet } from './importloads.js?v=309';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=309';
+import { openPastSeasonsSheet } from './pastseasons.js?v=309';
+import { openPastSalesSheet } from './pastsales.js?v=309';
+import { openLineupSheet } from './lineup.js?v=309';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=309';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=309';
+import { openDangerSheet } from './dangerconfirm.js?v=309';
+import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=309';
+import { seasonContents, contentsText } from '../seasondelete.js?v=309';
+import { openDeletedSheet } from './deleted.js?v=309';
+import { APP_VERSION } from '../version.js?v=309';
+import { exportRowsAsCSV } from '../csv.js?v=309';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=309';
+import { orderedNames, moveName } from '../commodityorder.js?v=309';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=309';
+import { endpointLabel } from './movements.js?v=309';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=309';
+import { layersForStorage } from '../outload.js?v=309';
+import { traceLoads, traceText } from '../trace.js?v=309';
+import { holdings, totalHeld } from '../offfarm.js?v=309';
+import { kindLabel, billTotal } from '../payables.js?v=309';
+import { orderState, STATE_LABEL } from '../orders.js?v=309';
+import { fieldHarvest } from '../harvest.js?v=309';
+import { openMySignatureSheet } from './signaturepad.js?v=309';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=309';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=309';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=309';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=308';
+} from '../invites.js?v=309';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=308';
+} from '../auth.js?v=309';
 
 let unsub = null;
 
@@ -47,23 +47,43 @@ export function renderSettings(root) {
 }
 
 /** The farm's commodity names in the automatic order (the most tonnes first), the way the Position screen has them. */
-function commodityNamesInOrder({ commodities, fields, sales, movements }) {
+function commodityNamesAuto({ commodities, fields, sales, movements }) {
   try { return position(commodities, fields, sales, movements).map((r) => r.commodity.name); } catch (e) { return commodities.map((c) => c.name); }
 }
 
-/** Settings: the one list the commodities are put in on every screen. Automatic (biggest first) until it is moved by hand. */
-function commodityOrderCard(data, business) {
-  if ((data.commodities || []).length < 2) return '';
+/** Every commodity name in the order shown: the owner's list if there is one, else biggest first (any the position leaves out go last). */
+function namesInOrder(data, business) {
+  const auto = commodityNamesAuto(data);
+  const all = [...auto, ...data.commodities.map((c) => c.name).filter((n) => !auto.includes(n))];
+  return orderedNames(business.commodityOrder, all);
+}
+
+/**
+ * The Commodities card: each commodity in the one list every screen uses (the biggest first until the owner moves one). The owner gets
+ * up and down arrows on each row; everyone else just sees the order. A hint and "Back to biggest first" sit under the list.
+ */
+function commoditiesCard(data, business, canOrder) {
+  const { commodities } = data;
+  if (commodities.length === 0) return `<div class="card input"><h2><span class="dot input"></span>Commodities</h2><div class="empty">Tap + to add a commodity.</div></div>`;
   const custom = (business.commodityOrder || []).length > 0;
-  const list = orderedNames(business.commodityOrder, commodityNamesInOrder(data));
-  const row = (name, i) => `<div class="row" style="align-items:center"><span class="label">${esc(name)}</span><span class="value" style="display:flex;gap:6px">
-    <button type="button" class="btn secondary small" data-order-move="${i}" data-by="-1" aria-label="Move ${esc(name)} up" ${i === 0 ? 'disabled' : ''}>&uarr;</button>
-    <button type="button" class="btn secondary small" data-order-move="${i}" data-by="1" aria-label="Move ${esc(name)} down" ${i === list.length - 1 ? 'disabled' : ''}>&darr;</button></span></div>`;
+  const names = namesInOrder(data, business);
+  const rank = (c) => { const i = names.indexOf(c.name); return i < 0 ? names.length : i; };
+  const list = [...commodities].sort((x, y) => rank(x) - rank(y));
+  const showArrows = canOrder && list.length > 1;
+  const arrows = (c, i) => `<span style="display:flex;gap:4px;margin-left:6px">
+    <button type="button" class="btn secondary small" data-order-move="${i}" data-by="-1" aria-label="Move ${esc(c.name)} up" ${i === 0 ? 'disabled' : ''}>&uarr;</button>
+    <button type="button" class="btn secondary small" data-order-move="${i}" data-by="1" aria-label="Move ${esc(c.name)} down" ${i === list.length - 1 ? 'disabled' : ''}>&darr;</button></span>`;
+  const rows = list.map((c, i) => showArrows
+    ? `<div style="display:flex;align-items:center"><div style="flex:1;min-width:0">${commodityRow(c)}</div>${arrows(c, i)}</div>`
+    : commodityRow(c)).join('');
+  const hint = list.length < 2 ? '' : custom
+    ? 'In your order on Position, Production, Storage, Sales and the reports. A new commodity goes after these.'
+    : 'Biggest tonnes first on every screen.' + (showArrows ? ' Use the arrows to set your own order.' : '');
   return `<div class="card input" id="order-card">
-    <h2><span class="dot input"></span>Order of commodities</h2>
-    <div class="field hint" style="margin-bottom:6px">${custom ? 'In your order, on Position, Production, Storage, Sales and the reports. A new commodity goes after these.' : 'Automatic: the one with the most tonnes first. Move one to set your own order, used on every screen.'}</div>
-    ${list.map(row).join('')}
-    ${custom ? '<button type="button" class="btn secondary small" id="order-auto" style="margin-top:8px">Back to biggest first</button>' : ''}
+    <h2><span class="dot input"></span>Commodities</h2>
+    ${hint ? `<div class="field hint" style="margin-bottom:6px">${hint}</div>` : ''}
+    ${rows}
+    ${showArrows && custom ? '<button type="button" class="btn secondary small" id="order-auto" style="margin-top:8px">Back to biggest first</button>' : ''}
   </div>`;
 }
 
@@ -106,12 +126,7 @@ function paint(root) {
         ${years.length > 1 && db.getRole() === 'owner' ?`<button class="btn danger small" id="delete-year" style="margin-top:8px">Delete "${esc(currentYear)}" season&hellip;</button>` : ''}
       </div>
 
-      <div class="card input">
-        <h2><span class="dot input"></span>Commodities</h2>
-        ${commodities.length === 0 ? `<div class="empty">Tap + to add a commodity.</div>` : commodities.map((c) => commodityRow(c)).join('')}
-      </div>
-
-      ${db.getRole() === 'owner' ? commodityOrderCard(db.get(), business) : ''}
+      ${commoditiesCard(db.get(), business, db.getRole() === 'owner')}
 
       <div class="card input">
         <h2><span class="dot input"></span>Grades</h2>
@@ -304,7 +319,7 @@ function paint(root) {
   root.querySelector('#open-help')?.addEventListener('click', () => { location.hash = '#/help'; });
   // the order the commodities are listed in: one step up or down, or back to biggest first
   root.querySelectorAll('[data-order-move]').forEach((el) => el.addEventListener('click', () => {
-    const list = orderedNames(business.commodityOrder, commodityNamesInOrder(db.get()));
+    const list = namesInOrder(db.get(), business);
     db.updateBusinessDetails({ commodityOrder: moveName(list, Number(el.dataset.orderMove), Number(el.dataset.by)) });
   }));
   root.querySelector('#order-auto')?.addEventListener('click', () => db.updateBusinessDetails({ commodityOrder: [] }));

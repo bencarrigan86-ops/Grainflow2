@@ -123,7 +123,8 @@ check('it is wired: the data hands the list to the sorts, Settings has the card,
   assert.ok(st.includes('data.businessDetails.__hasCommodityOrder = true'));
   const se = read('docs/js/views/settings.js');
   assert.ok(se.includes('id="order-card"') && se.includes('data-order-move') && se.includes('id="order-auto"'));
-  assert.ok(se.includes("db.getRole() === 'owner' ? commodityOrderCard(db.get(), business)"), 'the owner sets it; the server only lets the owner change the farm');
+  assert.ok(!se.includes('Order of commodities'), 'the order lives in the Commodities card, not a second card of the same names');
+  assert.ok(se.includes("commoditiesCard(db.get(), business, db.getRole() === 'owner')"), 'the owner sets it; the server only lets the owner change the farm');
   assert.ok(read('docs/js/derived.js').includes('export const bigFirst = commoditySort;'));
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists commodity_order jsonb'));
   assert.ok(read('supabase/migrations/20261118500000_commodity_order.sql').includes('alter table farms'));
