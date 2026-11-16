@@ -9,7 +9,7 @@
 // The same plan gives the money: each tonne is paid the contract's payment terms after it is delivered. Everything here
 // is a forecast at the contract price plus GST, before freight, levies and grade adjustments. Pure.
 
-import { daysBetween } from './orders.js?v=291';
+import { daysBetween } from './orders.js?v=292';
 
 export const PATTERNS = [
   { value: '', label: 'Not set' },

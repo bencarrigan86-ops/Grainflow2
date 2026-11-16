@@ -2,10 +2,10 @@
 // and give them the farm map. Choose the file of old name / new name rows, see what each season would become, then apply.
 // A backup beforehand is the way back: this changes names in the past seasons.
 
-import { db } from '../storage.js?v=291';
-import { openSheet, closeSheet, toast } from '../ui.js?v=291';
-import { esc } from '../fmt.js?v=291';
-import { parseLineup, planLineup, copyOutlines } from '../lineup.js?v=291';
+import { db } from '../storage.js?v=292';
+import { openSheet, closeSheet, toast } from '../ui.js?v=292';
+import { esc } from '../fmt.js?v=292';
+import { parseLineup, planLineup, mapCopyReport } from '../lineup.js?v=292';
 
 export function openLineupSheet() {
   openSheet('Line up paddock names', (root) => {
@@ -13,9 +13,18 @@ export function openLineupSheet() {
     const seasons = labels.map((label) => ({ label, ...db.getYearData(label) }));
     const nowFields = db.get().fields;
 
-    // how many paddocks in the other seasons could take an outline from this season
-    const mapCount = seasons.filter((s) => s.label !== db.getCurrentYear())
-      .reduce((a, s) => a + copyOutlines(s.fields, nowFields).touched.length, 0);
+    // how many paddocks in the other seasons could take an outline from the season in view, and why not if none
+    const view = db.getCurrentYear();
+    const report = mapCopyReport(seasons, view, nowFields);
+    const mapCount = report.copyable;
+    const names = (list) => [...new Set(list.map((x) => x.name))].slice(0, 12).map(esc).join(', ');
+    const mapNote = mapCount
+      ? `<strong>${mapCount}</strong> paddock${mapCount === 1 ? '' : 's'} would get an outline now.`
+      : !report.withOutline
+        ? `The season you are viewing (<strong>${esc(view)}</strong>) has no paddock outlines, so there is nothing to copy from. Switch to the season that has the farm map (the season at the top of the screen), then open this again.`
+        : report.noMatch.length
+          ? `Nothing to copy from <strong>${esc(view)}</strong>. ${report.noMatch.length} paddock${report.noMatch.length === 1 ? '' : 's'} in other seasons have no outline and no paddock of the same name with one here: ${names(report.noMatch)}.`
+          : `Nothing to copy: every paddock in the other seasons already has an outline.${report.alreadyHave ? '' : ' (There are no other seasons.)'}`;
 
     root.innerHTML = `
       <div class="hint" style="margin-bottom:10px">Earlier seasons often name the same ground differently, so the rotation and yield history shows it as separate paddocks.
@@ -28,7 +37,7 @@ export function openLineupSheet() {
       <div class="card" style="margin-top:14px">
         <h2>Farm map for earlier seasons</h2>
         <div class="hint">Gives each paddock in the other seasons the outline of the paddock with the same name in this season, where it has none. Do this after the names line up.
-          ${mapCount ? `<strong>${mapCount}</strong> paddock${mapCount === 1 ? '' : 's'} would get an outline now.` : 'Nothing to copy at the moment.'}</div>
+          ${mapNote}</div>
         ${mapCount ? '<button type="button" class="btn secondary" id="lu-map">Copy the farm map to earlier seasons</button>' : ''}
       </div>`;
     const out = root.querySelector('#lu-out');

@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseLineup, lineupGroups, lineupSeason, planLineup, scopeLabels, copyOutlines, groupsForSeason } from '../docs/js/lineup.js';
+import { parseLineup, lineupGroups, lineupSeason, planLineup, scopeLabels, copyOutlines, groupsForSeason, mapCopyReport } from '../docs/js/lineup.js';
 import { rotationGrid } from '../docs/js/fieldhistory.js';
 
 let failures = 0;
@@ -140,6 +140,26 @@ check('a paddock takes the outline and farm of the same-named paddock now, only 
 });
 
 console.log('\n=== the screen ===');
+check('the map card says why there is nothing to copy', () => {
+  const ring = [[0, 0], [1, 0], [1, 1], [0, 0]];
+  const now = [fld('n1', 'North', 100, { boundary: ring }), fld('n2', 'South', 100, { boundary: ring })];
+  const seasons = [
+    { label: '2024', fields: [fld('a', 'North', 100), fld('b', 'Gone', 50), fld('c', 'South', 100, { boundary: ring })] },
+    { label: '2026', fields: now },
+  ];
+  const r = mapCopyReport(seasons, '2026', now);
+  assert.deepEqual([r.withOutline, r.copyable, r.alreadyHave], [2, 1, 1]);
+  assert.deepEqual(r.noMatch, [{ label: '2024', name: 'Gone' }]);
+  // viewing the old season: it is the one with the outlines missing, so nothing to copy from
+  const back = mapCopyReport(seasons, '2024', seasons[0].fields);
+  assert.equal(back.copyable, 0);
+  // the season in view has no outlines at all
+  const bare = mapCopyReport(seasons, '2026', [fld('x', 'North', 1)]);
+  assert.deepEqual([bare.withOutline, bare.copyable], [0, 0]);
+  const v = read('docs/js/views/lineup.js');
+  assert.ok(v.includes('mapCopyReport(') && v.includes('has no paddock outlines'));
+});
+
 check('Settings offers it, and the db sends what it changed', () => {
   const s = read('docs/js/views/settings.js');
   assert.ok(s.includes('id="line-up"') && s.includes('openLineupSheet()'));

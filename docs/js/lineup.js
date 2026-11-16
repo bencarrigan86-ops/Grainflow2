@@ -19,8 +19,8 @@
 //   Share (%)            optional: for a split, the part of the old paddock this new one takes
 //   Seasons              optional: "2020-2024" or "2020, 2022" (default: every season except the current one)
 
-import { parseCsv, detectDelimiter } from './loadimport.js?v=291';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=291';
+import { parseCsv, detectDelimiter } from './loadimport.js?v=292';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=292';
 
 const ALIASES = {
   from: ['old name', 'old', 'old paddock', 'from'],
@@ -238,6 +238,32 @@ export function copyOutlines(fields, nowFields) {
     return { ...f, boundary: n.boundary, __hasBoundary: true, ...(!f.property && n.property ? { property: n.property, __hasProperty: true } : {}) };
   });
   return { fields: out, touched };
+}
+
+/**
+ * Why the farm map can or cannot be copied to the other seasons, for the card that offers it.
+ * @param {{label: string, fields: object[]}[]} seasons
+ * @param {string} currentLabel   the season in view: the map is copied from it
+ * @param {object[]} nowFields    its paddocks
+ * @returns {{withOutline: number, copyable: number, alreadyHave: number, noMatch: {label: string, name: string}[]}}
+ *   copyable: paddocks that would get an outline now; alreadyHave: paddocks elsewhere that have one;
+ *   noMatch: paddocks elsewhere with none and no outlined paddock of that name in the season in view
+ */
+export function mapCopyReport(seasons, currentLabel, nowFields = []) {
+  const withOutline = nowFields.filter((f) => f.boundary).length;
+  let copyable = 0;
+  let alreadyHave = 0;
+  const noMatch = [];
+  const has = new Set(nowFields.filter((f) => f.boundary).map((f) => nameKey(f.name)));
+  for (const s of seasons) {
+    if (s.label === currentLabel) continue;
+    for (const f of s.fields || []) {
+      if (f.boundary) alreadyHave += 1;
+      else if (has.has(nameKey(f.name))) copyable += 1;
+      else noMatch.push({ label: s.label, name: f.name });
+    }
+  }
+  return { withOutline, copyable, alreadyHave, noMatch };
 }
 
 /**
