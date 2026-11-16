@@ -1,37 +1,38 @@
-import { db } from '../storage.js?v=294';
-import { getTheme, setTheme } from '../theme.js?v=294';
-import { num, money, esc, todayLocal } from '../fmt.js?v=294';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=294';
-import { openLoadImportSheet } from './importloads.js?v=294';
-import { openPastSeasonsSheet } from './pastseasons.js?v=294';
-import { openPastSalesSheet } from './pastsales.js?v=294';
-import { openLineupSheet } from './lineup.js?v=294';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=294';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=294';
-import { openDangerSheet } from './dangerconfirm.js?v=294';
-import { seasonContents, contentsText } from '../seasondelete.js?v=294';
-import { openDeletedSheet } from './deleted.js?v=294';
-import { APP_VERSION } from '../version.js?v=294';
-import { exportRowsAsCSV } from '../csv.js?v=294';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=294';
-import { endpointLabel } from './movements.js?v=294';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=294';
-import { layersForStorage } from '../outload.js?v=294';
-import { traceLoads, traceText } from '../trace.js?v=294';
-import { holdings, totalHeld } from '../offfarm.js?v=294';
-import { kindLabel, billTotal } from '../payables.js?v=294';
-import { orderState, STATE_LABEL } from '../orders.js?v=294';
-import { fieldHarvest } from '../harvest.js?v=294';
-import { openMySignatureSheet } from './signaturepad.js?v=294';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=294';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=294';
+import { db } from '../storage.js?v=295';
+import { getTheme, setTheme } from '../theme.js?v=295';
+import { num, money, esc, todayLocal } from '../fmt.js?v=295';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=295';
+import { openLoadImportSheet } from './importloads.js?v=295';
+import { openPastSeasonsSheet } from './pastseasons.js?v=295';
+import { openPastSalesSheet } from './pastsales.js?v=295';
+import { openLineupSheet } from './lineup.js?v=295';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=295';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=295';
+import { openDangerSheet } from './dangerconfirm.js?v=295';
+import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=295';
+import { seasonContents, contentsText } from '../seasondelete.js?v=295';
+import { openDeletedSheet } from './deleted.js?v=295';
+import { APP_VERSION } from '../version.js?v=295';
+import { exportRowsAsCSV } from '../csv.js?v=295';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock } from '../derived.js?v=295';
+import { endpointLabel } from './movements.js?v=295';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=295';
+import { layersForStorage } from '../outload.js?v=295';
+import { traceLoads, traceText } from '../trace.js?v=295';
+import { holdings, totalHeld } from '../offfarm.js?v=295';
+import { kindLabel, billTotal } from '../payables.js?v=295';
+import { orderState, STATE_LABEL } from '../orders.js?v=295';
+import { fieldHarvest } from '../harvest.js?v=295';
+import { openMySignatureSheet } from './signaturepad.js?v=295';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=295';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=295';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=294';
+} from '../invites.js?v=295';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=294';
+} from '../auth.js?v=295';
 
 let unsub = null;
 
@@ -75,7 +76,9 @@ function paint(root) {
           <button class="btn secondary small" id="rename-year">Rename "${esc(currentYear)}"&hellip;</button>
           <button class="btn secondary small" id="new-year">Start new year&hellip;</button>
         </div>
-        ${years.length > 1 && db.getRole() === 'owner' ? `<button class="btn danger small" id="delete-year" style="margin-top:8px">Delete "${esc(currentYear)}" season&hellip;</button>` : ''}
+        ${sampleHistoryOffered(years, currentYear, db.getRole()) ?`<div class="hint" style="margin-top:8px">This is the sample farm, set up before it had earlier seasons. Add two, with rotated crops and contracts, so the history screens have something to show. Nothing else changes.</div>
+        <button class="btn secondary small" id="add-sample-history" style="margin-top:6px">Add the sample history (2024 and 2025)</button>` : ''}
+        ${years.length > 1 && db.getRole() === 'owner' ?`<button class="btn danger small" id="delete-year" style="margin-top:8px">Delete "${esc(currentYear)}" season&hellip;</button>` : ''}
       </div>
 
       <div class="card input">
@@ -298,6 +301,15 @@ function paint(root) {
   }));
   root.querySelector('#rename-year').addEventListener('click', () => openRenameYearSheet(currentYear));
   root.querySelector('#new-year').addEventListener('click', () => openNewYearSheet(currentYear));
+  root.querySelector('#add-sample-history')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget; btn.disabled = true;
+    try {
+      const res = await fetch(`./demo/seed.json?v=${APP_VERSION}`, { cache: 'no-cache' });
+      if (!res.ok) throw new Error(`The sample history could not be fetched (${res.status}).`);
+      const added = db.addSampleSeasons(sampleHistoryFrom(await res.json(), db.getYears()));
+      toast(added ? `Added ${added} earlier season${added === 1 ? '' : 's'}` : 'Those seasons are already here');
+    } catch (err) { notify(err.message || 'The sample history could not be added.'); btn.disabled = false; }
+  });
   const deleteYearBtn = root.querySelector('#delete-year');
   if (deleteYearBtn) {
     deleteYearBtn.addEventListener('click', () => {

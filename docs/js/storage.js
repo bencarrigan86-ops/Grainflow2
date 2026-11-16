@@ -18,24 +18,24 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=294';
+import { hydrate } from './hydrate.js?v=295';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=294';
-import { chooseBootState, resolveLegacy } from './boot.js?v=294';
-import { isLegacyDirty } from './dirty.js?v=294';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=294';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=294';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=294';
-import { settleLegs, dedupeLegs } from './legs.js?v=294';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=294';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=294';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=294';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=294';
-import { schedulePush, pushOnReconnect } from './sync.js?v=294';
-import { hasParts as hasAddressParts } from './address.js?v=294';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=294';
+} from './local.js?v=295';
+import { chooseBootState, resolveLegacy } from './boot.js?v=295';
+import { isLegacyDirty } from './dirty.js?v=295';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=295';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=295';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=295';
+import { settleLegs, dedupeLegs } from './legs.js?v=295';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=295';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=295';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=295';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=295';
+import { schedulePush, pushOnReconnect } from './sync.js?v=295';
+import { hasParts as hasAddressParts } from './address.js?v=295';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=295';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -598,6 +598,22 @@ export const db = {
     touch('year', label);
     persist();
     return true;
+  },
+  /**
+   * Add the sample farm's earlier seasons to a sample farm made before it had any (see demo.js sampleHistoryFrom).
+   * A label the farm already has is left alone, and the season in use stays where it is.
+   * @returns {number} how many seasons were added
+   */
+  addSampleSeasons(years) {
+    let added = 0;
+    for (const [label, y] of Object.entries(years || {})) {
+      if (data.years[label]) continue;
+      data.years[label] = { ...y, __seasonId: uid() };   // see createYear: a season must keep one id between sends
+      touch('year', label);
+      added += 1;
+    }
+    if (added) persist();
+    return added;
   },
   /**
    * Add contracts to an earlier season (see pastsales.js), and any crops the season did not have. A season that is not

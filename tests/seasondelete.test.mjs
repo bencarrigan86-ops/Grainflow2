@@ -62,8 +62,8 @@ check('Settings opens the sheet for both, and no longer asks with one plain dial
 
 check('only the owner is offered either button', () => {
   const s = read('docs/js/views/settings.js');
-  assert.ok(/getRole\(\) === 'owner' \? `<button class="btn danger small" id="delete-year"/.test(s), 'season delete is offered to every role');
-  assert.ok(/getRole\(\) === 'owner' \? '<button class="btn danger small" id="reset"/.test(s), 'reset is offered to every role');
+  assert.ok(/getRole\(\) === 'owner' \? ?`<button class="btn danger small" id="delete-year"/.test(s), 'season delete is offered to every role');
+  assert.ok(/getRole\(\) === 'owner' \? ?'<button class="btn danger small" id="reset"/.test(s), 'reset is offered to every role');
 });
 
 check('only an owner can delete a season: the data layer, and the server, say so', () => {

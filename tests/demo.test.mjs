@@ -22,7 +22,7 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { prepareImport, isUuid, remapIds } from '../docs/js/import.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
-import { sampleStateFor } from '../docs/js/demo.js';
+import { sampleStateFor, sampleHistoryFrom, sampleHistoryOffered } from '../docs/js/demo.js';
 import { ringsAreaHa, matchBoundaries } from '../docs/js/farmmap.js';
 
 const raw = readFileSync(new URL('../docs/demo/seed.json', import.meta.url), 'utf8');
@@ -354,6 +354,47 @@ check('each earlier season sold what it grew, all delivered, with no loads to ba
     assert.ok(y.sales.every((s) => s.tonsDelivered === s.tons), `${label}: a contract is not fully delivered`);
     assert.ok(y.fields.every((f) => f.yieldMode === 'recorded' && f.boundary && f.property), `${label}: a paddock lacks a recorded yield or its outline`);
   }
+});
+
+console.log('\n=== adding the history to a sample farm made without it ===');
+
+check('it hands back the two earlier seasons and not the one in use', () => {
+  const h = sampleHistoryFrom(seed, [seed.currentYear]);
+  assert.deepEqual(Object.keys(h).sort(), ['Sample 2024', 'Sample 2025']);
+  assert.ok(!(seed.currentYear in h));
+});
+check('a season the farm already has is left out, and a complete farm gets nothing', () => {
+  assert.deepEqual(Object.keys(sampleHistoryFrom(seed, ['Sample 2026', 'Sample 2025'])), ['Sample 2024']);
+  assert.deepEqual(sampleHistoryFrom(seed, ['Sample 2024', 'Sample 2025', 'Sample 2026']), {});
+});
+check('every id is a UUID, and a second farm gets different ones', () => {
+  const idsOf = (h) => Object.values(h).flatMap((y) => [...y.commodities, ...y.fields, ...y.sales].map((r) => r.id));
+  const a = idsOf(sampleHistoryFrom(seed, []));
+  const b = idsOf(sampleHistoryFrom(seed, []));
+  assert.ok(a.length > 50 && a.every(isUuid), 'ids were not reissued');
+  assert.equal(new Set([...a, ...b]).size, a.length + b.length, 'two farms would share a primary key');
+});
+check('references survive, and the paddocks keep their outlines and farm', () => {
+  for (const y of Object.values(sampleHistoryFrom(seed, []))) {
+    const crops = new Set(y.commodities.map((c) => c.id));
+    assert.ok(y.fields.every((f) => crops.has(f.commodityId)), 'a paddock lost its crop');
+    assert.ok(y.sales.every((s) => crops.has(s.commodityId)), 'a contract lost its crop');
+    assert.ok(y.fields.every((f) => f.boundary && f.property && f.__hasBoundary && f.__hasProperty), 'an outline or farm was lost');
+    assert.ok(Array.isArray(y.payables) && Array.isArray(y.orders), 'the season was not given its empty sections');
+  }
+});
+check('it is offered only on a sample farm, to an owner or manager, while seasons are missing', () => {
+  assert.equal(sampleHistoryOffered(['Sample 2026'], 'Sample 2026', 'owner'), true);
+  assert.equal(sampleHistoryOffered(['Sample 2026'], 'Sample 2026', 'manager'), true);
+  assert.equal(sampleHistoryOffered(['Sample 2026'], 'Sample 2026', 'driver'), false);
+  assert.equal(sampleHistoryOffered(['2026'], '2026', 'owner'), false, 'a real farm must never be offered it');
+  assert.equal(sampleHistoryOffered(['Sample 2024', 'Sample 2025', 'Sample 2026'], 'Sample 2026', 'owner'), false);
+});
+check('Settings has the button, and the db keeps what it adds under a season id of its own', () => {
+  const s = readFileSync(new URL('../docs/js/views/settings.js', import.meta.url), 'utf8');
+  assert.ok(s.includes('id="add-sample-history"') && s.includes('db.addSampleSeasons(sampleHistoryFrom('), 'not wired');
+  const st = readFileSync(new URL('../docs/js/storage.js', import.meta.url), 'utf8');
+  assert.ok(/addSampleSeasons\(years\) \{[\s\S]*?if \(data\.years\[label\]\) continue;[\s\S]*?__seasonId: uid\(\)[\s\S]*?touch\('year', label\)/.test(st), 'not safe to run twice, or no season id');
 });
 
 console.log('');

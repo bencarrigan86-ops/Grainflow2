@@ -11,8 +11,8 @@
 // remapIds() reissues every one on import and two trial accounts never collide
 // on a primary key.
 
-import { DEFAULT_BUSINESS_DETAILS } from './import.js?v=294';
-import { APP_VERSION } from './version.js?v=294';
+import { DEFAULT_BUSINESS_DETAILS, prepareImport } from './import.js?v=295';
+import { APP_VERSION } from './version.js?v=295';
 
 const WANTED_KEY = 'grainflow.seedSample';
 
@@ -58,6 +58,50 @@ export function sampleStateFor(rawJson, farmName) {
     paymentTermsDays: 30,
   };
   return state;
+}
+
+/** The earlier seasons the sample farm carries. */
+export const SAMPLE_HISTORY = ['Sample 2024', 'Sample 2025'];
+
+/** Is this the sample farm, and still missing some of its earlier seasons? Offered to the owner and manager only. */
+export function sampleHistoryOffered(years = [], currentYear = '', role = 'owner') {
+  return /^sample/i.test(currentYear || '') && ['owner', 'manager'].includes(role)
+    && SAMPLE_HISTORY.some((l) => !years.includes(l));
+}
+
+/**
+ * The sample farm's earlier seasons, ready to add to a sample farm that was set up before it had any.
+ *
+ * Every id is reissued on the way through, as for a new trial, so two farms never share a primary key. Nothing of the
+ * sample's business details comes with them, and the season in use is not among them: only the earlier ones, and only
+ * those the farm does not already have.
+ * @param {object} seed   the parsed seed file
+ * @param {string[]} have the season labels the farm has now
+ * @returns {Record<string, object>} label -> season, in the shape db.addSampleSeasons() stores
+ */
+export function sampleHistoryFrom(seed, have = []) {
+  const wanted = SAMPLE_HISTORY.filter((l) => seed?.years?.[l] && !have.includes(l));
+  if (!wanted.length) return {};
+  const { state } = prepareImport({
+    version: seed.version ?? 2,
+    currentYear: wanted[0],
+    years: Object.fromEntries(wanted.map((l) => [l, seed.years[l]])),
+  });
+  const out = {};
+  for (const label of wanted) {
+    const y = state.years[label];
+    out[label] = {
+      // the sections a season carries that the seed leaves out, as addPastSeason gives a season of its own
+      payables: [], orders: [], freightOrders: [], inputStock: [], sprayJobs: [],
+      ...y,
+      fields: (y.fields || []).map((f) => ({
+        ...f,
+        ...(f.boundary ? { __hasBoundary: true } : {}),
+        ...(f.property ? { __hasProperty: true } : {}),
+      })),
+    };
+  }
+  return out;
 }
 
 /** Fetch the seed. Versioned so a device cannot be served last release's. */

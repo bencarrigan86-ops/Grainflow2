@@ -4,7 +4,7 @@
 // months, then "Later", and "No due date" for the ones nobody dated. A running balance carries down the list. Grain that
 // is delivered but not yet invoiced is not in it; it has no date to land on. Pure.
 
-import { receivables, payablesDue } from './outstanding.js?v=294';
+import { receivables, payablesDue } from './outstanding.js?v=295';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
