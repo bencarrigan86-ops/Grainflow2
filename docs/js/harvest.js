@@ -9,10 +9,10 @@
 //
 // Pure apart from the two sums it borrows from derived.js.
 
-import { estimateFieldTons, movementTonsFromField, storageLedgerStock, bigFirst } from './derived.js?v=318';
-import { isTransit } from './transit.js?v=318';
-import { capacityInfo, commodityOf } from './storagecapacity.js?v=318';
-import { harvestSeasonOf, HARVEST_SEASONS } from './harvestseason.js?v=318';
+import { estimateFieldTons, movementTonsFromField, storageLedgerStock, bigFirst } from './derived.js?v=319';
+import { isTransit } from './transit.js?v=319';
+import { capacityInfo, commodityOf } from './storagecapacity.js?v=319';
+import { harvestSeasonOf, HARVEST_SEASONS } from './harvestseason.js?v=319';
 
 /**
  * One field.
@@ -79,7 +79,7 @@ export function harvestReport(commodities, fields, movements) {
   const all = groups.flatMap((g) => g.rows);
   const seasons = HARVEST_SEASONS.map(({ key, label }) => {
     const of = groups.filter((g) => (g.id ? harvestSeasonOf((commodities || []).find((c) => c.id === g.id) || g.name) : 'other') === key);
-    return { key, label, names: of.map((g) => g.name), totals: totalsOf(of.flatMap((g) => g.rows)) };
+    return { key, label, names: of.map((g) => g.name), ids: of.map((g) => g.id), totals: totalsOf(of.flatMap((g) => g.rows)) };
   }).filter((s) => s.totals.fields > 0);
   return { groups, farm: totalsOf(all), seasons };
 }
@@ -100,6 +100,9 @@ const EMPTY_T = 0.05;
  * tonnes typed on it. A silo with no capacity set has no room worked out, and neither does one holding grain with no commodity set; both are
  * named so they can be fixed.
  *
+ * With `season` ('winter' or 'summer') only the room for that season's crops is counted: silos holding the other season's crop are left
+ * out, and empty silos count in full (so in both seasons' views, and once in the whole-farm one).
+ *
  * An empty silo with a volume but no commodity is worked out as the commodity given in `assume` (a commodity record, or null), and flagged
  * `assumed`; `needsCommodity` counts those silos so the report knows whether to offer the choice.
  *
@@ -112,12 +115,17 @@ const EMPTY_T = 0.05;
  *   notCounted: string[]                                       silos left out, and why, so they can be fixed
  * }}
  */
-export function siloSpace(storages, movements, { minRoom = 0, commodities = [], assume = null } = {}) {
+export function siloSpace(storages, movements, { minRoom = 0, commodities = [], assume = null, season = null } = {}) {
   const out = { byCommodity: new Map(), emptyRoom: 0, emptyCount: 0, totalRoom: 0, notCounted: [], silos: [], tooSmall: { count: 0, room: 0 }, needsCommodity: 0, assumeName: assume?.name || '' };
   for (const s of storages || []) {
     if (s.offFarm || isTransit(s) || s.kind === 'tally') continue;
     const stock = Math.max(0, storageLedgerStock(s, movements));
     const empty = stock <= EMPTY_T;
+    // Looking at one season: a silo holding a crop of the other season is not room for this one. An empty silo takes either.
+    if ((season === 'winter' || season === 'summer') && s.commodityId && !empty) {
+      const held = commodityOf(s, commodities);
+      if (held && harvestSeasonOf(held) !== season) continue;
+    }
     // An empty silo with nothing set to go in it has a volume but no test weight to turn it into tonnes. Rather than leave it out, it is
     // worked out as the commodity chosen in `assume` (the report lets the person pick), and counted as such.
     const open = !s.commodityId && empty;

@@ -138,6 +138,29 @@ export function selectDirtyRows(rows, state, dirty) {
   return out;
 }
 
+/**
+ * How the season rows of a push are matched to the server's.
+ *
+ * A season the app already knows the id of (its year carries __seasonId) is matched by that id, so renaming it changes the label of the
+ * row it already is. Matching it by label instead found no season of the new name, tried to add a second row with the same id, and the
+ * server refused it (seasons_pkey): every rename of a season stayed unsent, and held up everything behind it. A season with no id yet
+ * (the app mints a fresh one on each pass until the server's is adopted) is matched by farm and label, so it lands on the row that has
+ * that name.
+ *
+ * @param {object[]} rows   season rows as stateToRows makes them
+ * @param {object} state    the farm's state, for each year's __seasonId
+ * @returns {{rows: object[], onConflict: string}[]}
+ */
+export function seasonBatches(rows, state) {
+  const known = [];
+  const minted = [];
+  for (const r of rows || []) (state?.years?.[r.label]?.__seasonId === r.id ? known : minted).push(r);
+  return [
+    ...(known.length ? [{ rows: known, onConflict: 'id' }] : []),
+    ...(minted.length ? [{ rows: minted, onConflict: 'farm_id,label' }] : []),
+  ];
+}
+
 /** Anything queued: used to keep the queue from growing a line per keystroke. */
 export function touchKey(t) { return `${t.kind}:${t.id ?? ''}`; }
 

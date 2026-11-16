@@ -15,13 +15,13 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=318';
-import { stateToRows } from './mapping.js?v=318';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=318';
-import { selectDirtyRows, isLegacyDirty, pushRowsFor } from './dirty.js?v=318';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=318';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=318';
-import { readAllIn } from './pages.js?v=318';
+import { supabase } from './supabase.js?v=319';
+import { stateToRows } from './mapping.js?v=319';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=319';
+import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=319';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=319';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=319';
+import { readAllIn } from './pages.js?v=319';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -191,8 +191,9 @@ export async function push(state, farmId, role = 'owner') {
       if (!tables.includes(table)) { result.skippedTables.push(table); continue; }
       const list = pushRowsFor(table, role, rows[table] || []);
       if (list.length === 0) continue;
-      for (const part of chunk(list)) {
-        const onConflict = CONFLICT_KEY[table] || 'id';
+      // seasons are matched by their own id when the app has one, so a renamed season updates its row (see seasonBatches)
+      const batches = table === 'seasons' ? seasonBatches(list, state) : [{ rows: list, onConflict: CONFLICT_KEY[table] || 'id' }];
+      for (const { rows: batchRows, onConflict } of batches) for (const part of chunk(batchRows)) {
         const sending = supabase.from(table).upsert(part, { onConflict });
         // For tickets, ask for the server's new version back, to remember it.
         const { data: sent, error } = table === 'movements' ? await sending.select('id,updated_at') : await sending;

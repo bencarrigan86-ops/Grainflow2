@@ -9,11 +9,11 @@
 // after it counts as still owed. The result is plain data; eofyPdf() lays it out as the file to keep, which is the frozen
 // copy: the figures on screen move on as the books do, the file does not.
 
-import { Pdf } from './pdf.js?v=318';
-import { positionRows, saleEconomics } from './derived.js?v=318';
-import { uninvoiced, receivables } from './outstanding.js?v=318';
-import { dmy } from './fmt.js?v=318';
-import { refLabel } from './adjustment.js?v=318';
+import { Pdf } from './pdf.js?v=319';
+import { positionRows, saleEconomics } from './derived.js?v=319';
+import { uninvoiced, receivables } from './outstanding.js?v=319';
+import { dmy } from './fmt.js?v=319';
+import { refLabel } from './adjustment.js?v=319';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const round2 = (n) => Math.round(n * 100) / 100;

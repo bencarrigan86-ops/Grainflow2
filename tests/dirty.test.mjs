@@ -19,7 +19,7 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { remapIds } from '../docs/js/import.js';
 import { stateToRows } from '../docs/js/mapping.js';
-import { selectDirtyRows, isLegacyDirty, KINDS } from '../docs/js/dirty.js';
+import { selectDirtyRows, isLegacyDirty, KINDS, seasonBatches } from '../docs/js/dirty.js';
 import { resolveLegacy } from '../docs/js/boot.js';
 
 let failures = 0;
@@ -200,6 +200,21 @@ check('the push no longer builds the whole farm', () => {
   const sync = readFileSync(new URL('../docs/js/sync.js', import.meta.url), 'utf8');
   assert.ok(sync.includes('selectDirtyRows(stateToRows('), 'sync.js must select dirty rows');
   assert.ok(!/const rows = stateToRows\(state, farmId\);/.test(sync), 'a bare stateToRows push is the old bug');
+});
+
+check('a renamed season is matched by its own id, so the rename updates its row instead of being refused as a second one', () => {
+  // the season kept its id (a) and took a new label; the other has no id of its own yet, so its row is minted afresh
+  const state = { years: { '2026/27': { __seasonId: 'a' }, '2027': {} } };
+  const rows = [{ id: 'a', label: '2026/27' }, { id: 'fresh', label: '2027' }];
+  const batches = seasonBatches(rows, state);
+  assert.deepEqual(batches, [
+    { rows: [{ id: 'a', label: '2026/27' }], onConflict: 'id' },
+    { rows: [{ id: 'fresh', label: '2027' }], onConflict: 'farm_id,label' },
+  ]);
+  assert.deepEqual(seasonBatches([], state), []);
+  assert.deepEqual(seasonBatches([{ id: 'a', label: '2026/27' }], state), [{ rows: [{ id: 'a', label: '2026/27' }], onConflict: 'id' }]);
+  const sync = readFileSync(new URL('../docs/js/sync.js', import.meta.url), 'utf8');
+  assert.ok(sync.includes("table === 'seasons' ? seasonBatches(list, state)"), 'the push uses it for seasons');
 });
 
 console.log('');

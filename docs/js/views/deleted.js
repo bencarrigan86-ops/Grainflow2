@@ -5,11 +5,11 @@
 // contract, paddock or load brings back what was deleted along with it. Only owners and managers can open this, and
 // only owners see contracts, invoices and bills.
 
-import { db } from '../storage.js?v=318';
-import { supabase } from '../supabase.js?v=318';
-import { openSheet, toast, notify } from '../ui.js?v=318';
-import { esc } from '../fmt.js?v=318';
-import { typeLabel, TYPES, whenText, restoreMessage, visibleDeleted } from '../deleted.js?v=318';
+import { db } from '../storage.js?v=319';
+import { supabase } from '../supabase.js?v=319';
+import { openSheet, toast, notify } from '../ui.js?v=319';
+import { esc } from '../fmt.js?v=319';
+import { typeLabel, TYPES, whenText, restoreMessage, visibleDeleted } from '../deleted.js?v=319';
 
 const DAYS = 60;
 let filterKind = '';   // kept while the app is open

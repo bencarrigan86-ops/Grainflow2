@@ -8,18 +8,18 @@
 // The reading and the rules live in loadimport.js, where they are tested. This
 // file is the screen: it holds the person's choices and hands them over.
 
-import { db } from '../storage.js?v=318';
-import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=318';
-import { esc, num, shortDate } from '../fmt.js?v=318';
-import { commodityFills } from '../commodityfill.js?v=318';
-import { isTransit } from '../transit.js?v=318';
-import { reconcileLoads } from '../loadcheck.js?v=318';
+import { db } from '../storage.js?v=319';
+import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=319';
+import { esc, num, shortDate } from '../fmt.js?v=319';
+import { commodityFills } from '../commodityfill.js?v=319';
+import { isTransit } from '../transit.js?v=319';
+import { reconcileLoads } from '../loadcheck.js?v=319';
 import {
   FIELD_SPECS, REQUIRED_KEYS, chooseSetup, recallSetups, rememberSetup, setupProblems, peekFile, distinctOf, likelyFinished,
-} from '../loadmap.js?v=318';
+} from '../loadmap.js?v=319';
 import {
   readFreightExport, planNames, distinctNames, matchCommodity, matchSiloByNumber, suggestCutoff, buildMovements, COMPLETED,
-} from '../loadimport.js?v=318';
+} from '../loadimport.js?v=319';
 
 const MEMORY_KEY = 'grainflow.loadImportChoices';
 const NEW = '__new';

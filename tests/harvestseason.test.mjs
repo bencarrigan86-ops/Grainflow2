@@ -9,7 +9,7 @@ import { APP_VERSION } from '../docs/js/version.js';
 const stamp = APP_VERSION.split('.').pop();
 const { harvestSeasonOf, autoSeasonText } = await import(`../docs/js/harvestseason.js?v=${stamp}`);
 const { harvestReport, siloSpace } = await import(`../docs/js/harvest.js?v=${stamp}`);
-const { assumedCommodity, wantsCommodity } = await import(`../docs/js/storagecapacity.js?v=${stamp}`);
+const { assumedCommodity, assumableCommodities, wantsCommodity } = await import(`../docs/js/storagecapacity.js?v=${stamp}`);
 
 let failures = 0;
 const check = (name, fn) => {
@@ -133,15 +133,69 @@ check('a silo already holding grain is not worked out as a guess: it needs its c
 
 check('it is wired: the harvest report, its PDF, and the storage tab', () => {
   const rp = read('docs/js/views/reports.js');
-  assert.ok(rp.includes('siloSpace(storages, movements, { minRoom, commodities, assume })') && rp.includes('id="space-as"'));
-  assert.ok(rp.includes('saveSpaceAs(e.target.value)'), 'the pick is remembered');
-  assert.equal(rp.split('${seasonBlock(seasons').length - 1, 2, 'the season block is in both layouts');
-  assert.equal(rp.split('${spaceAsRow(space, commodities, assume)').length - 1, 2, 'so is the picker');
+  assert.ok(rp.includes('siloSpace(storages, movements, { minRoom, commodities, assume, season: scope ? pick : null })') && rp.includes('id="space-as"'));
+  assert.ok(rp.includes('saveSpaceAs(e.target.value, e.target.dataset.season)'), 'the pick is remembered');
+  assert.equal(rp.split('${seasonBlock(').length - 1, 2, 'the season block is in both layouts');
+  assert.equal(rp.split('${spaceAsRow(space, assumeOptions, assume, pick)').length - 1, 2, 'so is the picker');
   const pdf = read('docs/js/harvestpdf.js');
   assert.ok(pdf.includes('seasons.length > 1') && pdf.includes('space.assumeName'));
   const st = read('docs/js/views/storage.js');
   assert.ok(st.includes('id="storage-assume-sel"') && st.includes('assumedCommodity(commodities, loadSpaceAs())'));
   assert.ok(st.includes('t spare'), 'the row says how many tonnes are spare');
+});
+
+check('looking at one season: its own paddocks, and the room for its own crops (empty silos count in either)', () => {
+  const sorghum = { id: 's', name: 'Sorghum', testWeight: 0.77 };
+  const commodities = [wheat, canola, sorghum];
+  const fields = [
+    { id: 'f1', name: 'A', areaHa: 100, commodityId: 'w', yieldMode: 'estimate', yieldTHa: 4 },
+    { id: 'f2', name: 'B', areaHa: 100, commodityId: 's', yieldMode: 'estimate', yieldTHa: 6 },
+  ];
+  const r = harvestReport(commodities, fields, []);
+  assert.deepEqual(r.seasons.find((s) => s.key === 'winter').ids, ['w']);
+  assert.deepEqual(r.seasons.find((s) => s.key === 'summer').ids, ['s']);
+  const storages = [
+    { id: 'a', name: 'Wheat silo', kind: 'silo', capacityTons: 200, commodityId: 'w', openingStock: 150 },
+    { id: 'b', name: 'Sorghum silo', kind: 'silo', capacityTons: 300, commodityId: 's', openingStock: 100 },
+    { id: 'c', name: 'Empty silo', kind: 'silo', capacityTons: 120 },
+    { id: 'd', name: 'Emptied sorghum silo', kind: 'silo', capacityTons: 80, commodityId: 's', openingStock: 0 },
+  ];
+  const room = (season) => siloSpace(storages, [], { commodities, season });
+  const both = room(null);
+  const winter = room('winter');
+  const summer = room('summer');
+  near(both.totalRoom, 50 + 200 + 120 + 80);
+  near(winter.totalRoom, 50 + 120 + 80, 'the sorghum silo holding grain is not room for wheat');
+  near(summer.totalRoom, 200 + 120 + 80, 'the wheat silo holding grain is not room for sorghum');
+  assert.ok(!winter.silos.some((s) => s.id === 'b') && !summer.silos.some((s) => s.id === 'a'));
+  assert.ok(winter.silos.some((s) => s.id === 'c') && summer.silos.some((s) => s.id === 'c'), 'an empty silo is counted in each season\'s view');
+  assert.ok(winter.silos.some((s) => s.id === 'd'), 'a silo that held sorghum but is empty now takes wheat');
+  // the plan: what is left to come against the room for it
+  const w = r.seasons.find((s) => s.key === 'winter').totals;
+  near(w.toComeT, 400);
+  assert.equal(Math.round(winter.totalRoom - w.toComeT), 0 + (50 + 120 + 80) - 400);
+});
+
+check('the empty-silo commodity offered follows the season, and is remembered for each', () => {
+  const sorghum = { id: 's', name: 'Sorghum', testWeight: 0.77 };
+  const list = [wheat, canola, sorghum];
+  assert.deepEqual(assumableCommodities(list, 'winter').map((c) => c.name), ['Wheat', 'Canola']);
+  assert.deepEqual(assumableCommodities(list, 'summer').map((c) => c.name), ['Sorghum']);
+  assert.equal(assumableCommodities(list, null).length, 3);
+  assert.equal(assumedCommodity(list, '', 'summer').name, 'Sorghum', 'a summer view does not start on wheat');
+  assert.equal(assumedCommodity(list, 'Sorghum', 'winter').name, 'Wheat', 'a pick from the other season is not kept');
+  assert.deepEqual(assumableCommodities([wheat], 'summer').map((c) => c.name), ['Wheat'], 'with none of that season, all are offered rather than none');
+});
+
+check('it is wired: the selector, the figures it scopes, the PDF, and what is remembered', () => {
+  const rp = read('docs/js/views/reports.js');
+  assert.ok(rp.includes('data-hs="${o.key}"') && rp.includes('saveHarvestView(b.dataset.hs)'), 'a Winter / Summer / Both selector, remembered');
+  assert.ok(rp.includes('const farm = scope ? scope.totals : all.farm;') && rp.includes("season: scope ? pick : null"), 'the figures and the room follow it');
+  assert.equal(rp.split('${scopeNote}').length - 1, 2, 'both layouts say which silos are left out');
+  assert.ok(rp.includes('seasons: scope ? [] : seasons, scopeLabel: scope ? scope.label'), 'the PDF follows it too');
+  assert.ok(read('docs/js/harvestpdf.js').includes("report.heading(scopeLabel || 'Whole farm')"));
+  const sp = read('docs/js/spacefor.js');
+  assert.ok(sp.includes('grainflow.harvestView') && sp.includes('`${KEY}.${season}`'));
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

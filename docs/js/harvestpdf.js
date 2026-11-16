@@ -3,7 +3,7 @@
 // room in the silos, as on the screen. The report's own figures (harvest.js) go in; nothing is worked out again here.
 // Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=318';
+import { createReport, fixed } from './reportpdf.js?v=319';
 
 const pct = (p) => `${Math.round((Number(p) || 0) * 100)}%`;
 const haPct = (done, area) => (area > 0 ? `${Math.round((done / area) * 100)}%` : '-');
@@ -33,7 +33,7 @@ export const HARVEST_COLUMNS_NO_YIELD = [
  *   groups and farm are from harvestReport(), space from siloSpace()
  * @returns {Uint8Array} the PDF
  */
-export function harvestPdf({ groups = [], farm = {}, seasons = [], space = {}, minRoom = 0, nameOf = () => '', showYield = true, business = '', season = '', today = '' } = {}) {
+export function harvestPdf({ groups = [], farm = {}, seasons = [], scopeLabel = '', space = {}, minRoom = 0, nameOf = () => '', showYield = true, business = '', season = '', today = '' } = {}) {
   const report = createReport({
     title: 'Harvest', business, season, today,
     footerNote: showYield
@@ -43,7 +43,7 @@ export function harvestPdf({ groups = [], farm = {}, seasons = [], space = {}, m
   if (!groups.length) { report.message('Nothing to report yet: add a paddock in Production.'); return report.bytes(); }
 
   // ---- the whole farm ----
-  report.heading('Whole farm');
+  report.heading(scopeLabel || 'Whole farm');
   if (showYield) {
     report.pair('Harvested', `${t0(farm.inT)} t`);
     report.pair('Still to come', `${t0(farm.toComeT)} t`);

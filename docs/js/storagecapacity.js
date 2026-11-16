@@ -6,6 +6,8 @@
 //
 // A storage with no volume keeps the tonnes figure typed on it, as before. Nothing here touches the farm: it only reads.
 
+import { harvestSeasonOf } from './harvestseason.js?v=319';
+
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
 /**
@@ -68,9 +70,20 @@ export function capacityLine(storage, commodity, fmt = (n, dp = 0) => n.toFixed(
  * The commodity an empty silo with no commodity is worked out as: the one picked (by name, so the pick holds from season to season) if
  * it is still there and has a test weight, otherwise the first commodity that has one. Null when no commodity has a test weight.
  */
-export function assumedCommodity(commodities, savedName = '') {
-  const usable = (commodities || []).filter((c) => num(c?.testWeight) > 0);
+export function assumedCommodity(commodities, savedName = '', season = null) {
+  const usable = assumableCommodities(commodities, season);
   return usable.find((c) => c.name === savedName) || usable[0] || null;
+}
+
+/**
+ * The commodities with a test weight, which an empty silo can be worked out as. For a season (winter or summer) only that season's, so a
+ * winter view does not offer sorghum, unless the farm has none of that season's with a test weight, when all of them are offered.
+ */
+export function assumableCommodities(commodities, season = null) {
+  const usable = (commodities || []).filter((c) => num(c?.testWeight) > 0);
+  if (season !== 'winter' && season !== 'summer') return usable;
+  const ofSeason = usable.filter((c) => harvestSeasonOf(c) === season);
+  return ofSeason.length ? ofSeason : usable;
 }
 
 /** Does this storage have a volume but nothing set to say which grain it will hold, and no test weight of its own? */
