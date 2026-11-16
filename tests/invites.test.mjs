@@ -253,6 +253,19 @@ check('every role the database allows has a readable name', () => {
   }
 });
 
+console.log('\n=== withdrawing an invitation ===');
+
+check('goes through revoke_invitation, because a plain update is refused by the select policy', () => {
+  const auth = readFileSync(new URL('../docs/js/auth.js', import.meta.url), 'utf8');
+  const fn = auth.slice(auth.indexOf('export async function revokeInvitation'), auth.indexOf('export async function changeMemberRole'));
+  assert.ok(fn.includes("rpc('revoke_invitation'"), 'does not call the function');
+  assert.ok(!fn.includes(".update("), 'still tries a plain update, which the server refuses');
+  const sql = readFileSync(new URL('../supabase/migrations/20261118200000_revoke_invitation.sql', import.meta.url), 'utf8');
+  assert.ok(/security definer/.test(sql) && /app_role\(v_farm\) is distinct from 'owner'/.test(sql), 'not limited to the owner');
+  const paste = readFileSync(new URL('../supabase/paste-into-sql-editor.sql', import.meta.url), 'utf8');
+  assert.ok(paste.includes('function revoke_invitation('), 'not in the paste file');
+});
+
 console.log('');
 if (failures) { console.log(`${failures} FAILURES`); process.exit(1); }
 console.log('ALL PASS');

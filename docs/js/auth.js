@@ -9,9 +9,9 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase } from './supabase.js?v=292';
-import { pickMembership, recallMembership } from './membership.js?v=292';
-import { newToken, expiryFrom } from './invites.js?v=292';
+import { supabase } from './supabase.js?v=293';
+import { pickMembership, recallMembership } from './membership.js?v=293';
+import { newToken, expiryFrom } from './invites.js?v=293';
 
 /** The signed-in user, or null. */
 export async function getUser() {
@@ -247,12 +247,12 @@ export async function listPendingInvitations(farmId) {
  * Soft delete, matching every other table here: the row stays so the history
  * of who was asked and when survives, and accept_invitation() skips it because
  * it only looks at rows with deleted_at null.
+ *
+ * Through revoke_invitation(), not a plain update: Postgres checks the updated row against the select policy too, which
+ * hides rows with deleted_at set, so the update was refused for the owner as well.
  */
 export async function revokeInvitation(id) {
-  const { error } = await supabase
-    .from('invitations')
-    .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-    .eq('id', id);
+  const { error } = await supabase.rpc('revoke_invitation', { p_id: id });
   if (error) throw new Error(error.message);
 }
 
