@@ -3,9 +3,9 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=298';
-import { dmy } from './fmt.js?v=298';
-import { SPECS, specOf } from './outload.js?v=298';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=299';
+import { dmy } from './fmt.js?v=299';
+import { SPECS, specOf } from './outload.js?v=299';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 

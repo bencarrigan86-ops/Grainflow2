@@ -1,10 +1,13 @@
-import { db } from '../storage.js?v=298';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldStarter, soilNUreaEquivalent, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=298';
-import { num, tons, esc } from '../fmt.js?v=298';
-import { field, getVal, getNum } from '../ui.js?v=298';
-import { canSeeYield } from '../nav.js?v=298';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=298';
-import { harvestReport, siloSpace, pctText } from '../harvest.js?v=298';
+import { db } from '../storage.js?v=299';
+import { ureaFigures, starterFigures } from '../fertfigures.js?v=299';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldSeed, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=299';
+import { fertPdf } from '../fertpdf.js?v=299';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=299';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=299';
+import { field, getVal, getNum } from '../ui.js?v=299';
+import { canSeeYield } from '../nav.js?v=299';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=299';
+import { harvestReport, siloSpace, pctText } from '../harvest.js?v=299';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -61,6 +64,7 @@ function paintFert(root) {
 
   // The two tools sit at the top, as the Yield tab's sensitivity does, so they are not lost beneath the tables.
   body.innerHTML = `
+    ${groups.length === 0 ? '' : `<button type="button" class="btn secondary" id="fert-pdf" style="margin-bottom:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>`}
     <details class="fold feature" style="margin-top:0">
       <summary><div class="feature-head"><h2>Nitrogen calculator</h2><div class="sub">Urea needed to reach a target yield</div></div></summary>
       <div id="n-calc-form"></div>
@@ -86,7 +90,20 @@ function paintFert(root) {
     </div>
   `;
   buildNitrogenCalc(body, commodities);
+  body.querySelector('#fert-pdf')?.addEventListener('click', () => exportFertPdf(groups, commodities));
   if (groups.length > 0) buildFertSensitivity(body, groups.filter((g) => g.id), commodities, fields);
+}
+
+/** The Fert report as a PDF: the same figures as the tables, shared where the phone can share and downloaded elsewhere. */
+async function exportFertPdf(groups, commodities) {
+  const season = db.getCurrentYear();
+  const bytes = fertPdf(
+    { urea: groups.map((g) => ureaFigures(g, commodities.find((c) => c.id === g.id))), starter: groups.map((g) => starterFigures(g)) },
+    { business: db.getBusinessDetails().entityName || '', season, today: dmy(todayLocal()), ureaNPct: UREA_N_PCT },
+  );
+  const fileName = safeFileName(`Fertiliser ${season} ${dmy(todayLocal())}`);
+  if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
+  await sharePdf(bytes, fileName, { title: `Fertiliser ${season}` });
 }
 
 // What the panel was last set to, so it survives the page repainting when data changes.
@@ -240,38 +257,7 @@ function buildNitrogenCalc(root, commodities) {
 }
 
 function ureaTable(g, commodity) {
-  const rows = g.fields.map((f) => ({
-    f,
-    u: fieldUrea(f),
-    soilEquivKgHa: soilNUreaEquivalent(f.soilTestNKgHa),
-    target: fieldUreaForTarget(f, commodity),
-    // What the nitrogen actually on the paddock will carry, as against what
-    // the plan called for. The gap between Target t/ha and Max t/ha is the
-    // column worth reading in a dry year.
-    max: maxYieldFromUrea({
-      nPerTonne: commodity?.nPerTonne,
-      soilTestN: f.soilTestNKgHa,
-      ureaAppliedKgHa: ureaAppliedKgHaFor(f),
-    }),
-  }));
-  const totals = rows.reduce((acc, { f, u }) => ({
-    area: acc.area + (Number(f.areaHa) || 0),
-    reqT: acc.reqT + u.requiredTons,
-    appT: acc.appT + u.appliedTons,
-    leftT: acc.leftT + u.leftTons,
-  }), { area: 0, reqT: 0, appT: 0, leftT: 0 });
-  const reqKgHa = totals.area > 0 ? (totals.reqT * 1000) / totals.area : 0;
-  const appKgHa = totals.area > 0 ? (totals.appT * 1000) / totals.area : 0;
-  const leftKgHa = totals.area > 0 ? (totals.leftT * 1000) / totals.area : 0;
-  const avgSoilTestN = rows.length > 0 ? rows.reduce((s, { f }) => s + (Number(f.soilTestNKgHa) || 0), 0) / rows.length : 0;
-  const avgSoilEquiv = rows.length > 0 ? rows.reduce((s, { soilEquivKgHa }) => s + soilEquivKgHa, 0) / rows.length : 0;
-  const avgTargetYield = rows.length > 0 ? rows.reduce((s, { target }) => s + target.targetYieldTHa, 0) / rows.length : 0;
-  // Area-weighted, not a plain mean: a 320 ha paddock and a 12 ha corner do
-  // not carry the same weight in what the block as a whole can yield.
-  const totalNAvail = rows.reduce((s, { f, max }) => s + max.nAvailableKgHa * (Number(f.areaHa) || 0), 0);
-  const wtdNAvail = totals.area > 0 ? totalNAvail / totals.area : 0;
-  const totalMaxYield = rows.reduce((s, { f, max }) => s + max.maxYieldTHa * (Number(f.areaHa) || 0), 0);
-  const wtdMaxYield = totals.area > 0 ? totalMaxYield / totals.area : 0;
+  const { rows, total } = ureaFigures(g, commodity);
 
   return `
     <div class="group-label"><span>${esc(g.name)}</span></div>
@@ -279,40 +265,37 @@ function ureaTable(g, commodity) {
       <table class="fert">
         <thead><tr><th>Field</th><th>Area</th><th class="n">Soil N kg/ha</th><th class="u">Soil equiv kg/ha</th><th>Target t/ha</th><th class="u">Req kg/ha</th><th class="u">App kg/ha</th><th class="u">Left kg/ha</th><th class="u">Req t</th><th class="u">App t</th><th class="u">Left t</th><th class="n">N avail kg/ha</th><th>Max t/ha</th></tr></thead>
         <tbody>
-          ${rows.map(({ f, u, soilEquivKgHa, target, max }) => {
-            const leftKgHaField = f.areaHa > 0 ? (u.leftTons * 1000) / f.areaHa : 0;
-            return `
+          ${rows.map((r) => `
             <tr>
-              <td>${esc(f.name)}</td>
-              <td>${num(f.areaHa, 1)}</td>
-              <td class="n">${num(f.soilTestNKgHa || 0, 0)}</td>
-              <td class="u">${num(soilEquivKgHa, 0)}</td>
-              <td>${target.targetYieldTHa > 0 ? num(target.targetYieldTHa, 2) : '—'}</td>
-              <td class="u">${num(f.ureaRequiredKgHa || 0, 0)}</td>
-              <td class="u">${num(ureaAppliedKgHaFor(f), 0)}</td>
-              <td class="u">${num(leftKgHaField, 0)}</td>
-              <td class="u">${num(u.requiredTons, 2)}</td>
-              <td class="u">${num(u.appliedTons, 2)}</td>
-              <td class="u">${num(u.leftTons, 2)}</td>
-              <td class="n">${num(max.nAvailableKgHa, 0)}</td>
-              <td>${max.maxYieldTHa > 0 ? num(max.maxYieldTHa, 2) : '—'}</td>
-            </tr>`;
-          }).join('')}
+              <td>${esc(r.name)}</td>
+              <td>${num(r.area, 1)}</td>
+              <td class="n">${num(r.soilN, 0)}</td>
+              <td class="u">${num(r.soilEquiv, 0)}</td>
+              <td>${r.targetYield > 0 ? num(r.targetYield, 2) : '—'}</td>
+              <td class="u">${num(r.req, 0)}</td>
+              <td class="u">${num(r.app, 0)}</td>
+              <td class="u">${num(r.left, 0)}</td>
+              <td class="u">${num(r.reqT, 2)}</td>
+              <td class="u">${num(r.appT, 2)}</td>
+              <td class="u">${num(r.leftT, 2)}</td>
+              <td class="n">${num(r.nAvail, 0)}</td>
+              <td>${r.maxYield > 0 ? num(r.maxYield, 2) : '—'}</td>
+            </tr>`).join('')}
         </tbody>
         <tfoot><tr>
           <td>Total</td>
-          <td>${num(totals.area, 1)}</td>
-          <td class="n">${num(avgSoilTestN, 0)}</td>
-          <td class="u">${num(avgSoilEquiv, 0)}</td>
-          <td>${avgTargetYield > 0 ? num(avgTargetYield, 2) : '—'}</td>
-          <td class="u">${num(reqKgHa, 0)}</td>
-          <td class="u">${num(appKgHa, 0)}</td>
-          <td class="u">${num(leftKgHa, 0)}</td>
-          <td class="u">${num(totals.reqT, 2)}</td>
-          <td class="u">${num(totals.appT, 2)}</td>
-          <td class="u">${num(totals.leftT, 2)}</td>
-          <td class="n">${num(wtdNAvail, 0)}</td>
-          <td>${wtdMaxYield > 0 ? num(wtdMaxYield, 2) : '—'}</td>
+          <td>${num(total.area, 1)}</td>
+          <td class="n">${num(total.soilN, 0)}</td>
+          <td class="u">${num(total.soilEquiv, 0)}</td>
+          <td>${total.targetYield > 0 ? num(total.targetYield, 2) : '—'}</td>
+          <td class="u">${num(total.req, 0)}</td>
+          <td class="u">${num(total.app, 0)}</td>
+          <td class="u">${num(total.left, 0)}</td>
+          <td class="u">${num(total.reqT, 2)}</td>
+          <td class="u">${num(total.appT, 2)}</td>
+          <td class="u">${num(total.leftT, 2)}</td>
+          <td class="n">${num(total.nAvail, 0)}</td>
+          <td>${total.maxYield > 0 ? num(total.maxYield, 2) : '—'}</td>
         </tr></tfoot>
       </table>
     </div>
@@ -320,16 +303,7 @@ function ureaTable(g, commodity) {
 }
 
 function starterTable(g) {
-  const rows = g.fields.map((f) => ({ f, s: fieldStarter(f) }));
-  const totals = rows.reduce((acc, { f, s }) => ({
-    area: acc.area + (Number(f.areaHa) || 0),
-    reqT: acc.reqT + s.requiredTons,
-    appT: acc.appT + s.appliedTons,
-    leftT: acc.leftT + s.leftTons,
-  }), { area: 0, reqT: 0, appT: 0, leftT: 0 });
-  const reqKgHa = totals.area > 0 ? (totals.reqT * 1000) / totals.area : 0;
-  const appKgHa = totals.area > 0 ? (totals.appT * 1000) / totals.area : 0;
-  const leftKgHa = totals.area > 0 ? (totals.leftT * 1000) / totals.area : 0;
+  const { rows, total } = starterFigures(g);
 
   return `
     <div class="group-label"><span>${esc(g.name)}</span></div>
@@ -337,30 +311,27 @@ function starterTable(g) {
       <table>
         <thead><tr><th>Field</th><th>Area</th><th>Req kg/ha</th><th>App kg/ha</th><th>Left kg/ha</th><th>Req t</th><th>App t</th><th>Left t</th></tr></thead>
         <tbody>
-          ${rows.map(({ f, s }) => {
-            const leftKgHaField = f.areaHa > 0 ? (s.leftTons * 1000) / f.areaHa : 0;
-            return `
+          ${rows.map((r) => `
             <tr>
-              <td>${esc(f.name)}</td>
-              <td>${num(f.areaHa, 1)}</td>
-              <td>${num(f.starterRequiredKgHa || 0, 0)}</td>
-              <td>${num(f.starterAppliedKgHa || 0, 0)}</td>
-              <td>${num(leftKgHaField, 0)}</td>
-              <td>${num(s.requiredTons, 2)}</td>
-              <td>${num(s.appliedTons, 2)}</td>
-              <td>${num(s.leftTons, 2)}</td>
-            </tr>`;
-          }).join('')}
+              <td>${esc(r.name)}</td>
+              <td>${num(r.area, 1)}</td>
+              <td>${num(r.req, 0)}</td>
+              <td>${num(r.app, 0)}</td>
+              <td>${num(r.left, 0)}</td>
+              <td>${num(r.reqT, 2)}</td>
+              <td>${num(r.appT, 2)}</td>
+              <td>${num(r.leftT, 2)}</td>
+            </tr>`).join('')}
         </tbody>
         <tfoot><tr>
           <td>Total</td>
-          <td>${num(totals.area, 1)}</td>
-          <td>${num(reqKgHa, 0)}</td>
-          <td>${num(appKgHa, 0)}</td>
-          <td>${num(leftKgHa, 0)}</td>
-          <td>${num(totals.reqT, 2)}</td>
-          <td>${num(totals.appT, 2)}</td>
-          <td>${num(totals.leftT, 2)}</td>
+          <td>${num(total.area, 1)}</td>
+          <td>${num(total.req, 0)}</td>
+          <td>${num(total.app, 0)}</td>
+          <td>${num(total.left, 0)}</td>
+          <td>${num(total.reqT, 2)}</td>
+          <td>${num(total.appT, 2)}</td>
+          <td>${num(total.leftT, 2)}</td>
         </tr></tfoot>
       </table>
     </div>

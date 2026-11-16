@@ -1009,7 +1009,7 @@ details.fold.feature > *:last-child { margin-bottom: 14px; }
 .card.report table.wrap-first td:first-child { white-space: normal; max-width: 78px; }
 /* The urea table: headings wrap so the columns can be narrow, and nitrogen (amber) is told apart from urea equivalent (green). */
 .card.report .table-scroll table.fert { font-size: 13px; }
-.card.report .table-scroll table.fert thead th { font-size: 10.5px; white-space: normal; line-height: 1.2; vertical-align: bottom; padding: 8px 5px; letter-spacing: .02em; }
+.card.report .table-scroll table.fert thead th { background: #51606a; font-size: 10.5px; white-space: normal; line-height: 1.2; vertical-align: bottom; padding: 8px 5px; letter-spacing: .02em; }
 .card.report .table-scroll table.fert tbody td, .card.report .table-scroll table.fert tfoot td { padding-left: 5px; padding-right: 5px; }
 .card.report .table-scroll table.fert thead th.n { background: #a8590a; }
 .card.report .table-scroll table.fert thead th.u { background: #2e7d32; }

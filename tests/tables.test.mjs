@@ -154,9 +154,9 @@ check('nitrogen and urea equivalent columns are marked in the head, body and tot
   const headMarks = marks(head.slice(0, head.indexOf('</tr>')), 'th');
   // Field, Area, Soil N, Soil equiv, Target, Req, App, Left, Req t, App t, Left t, N avail, Max
   assert.equal(headMarks, '--nu-uuuuuun-',`head marks are ${headMarks}`);
-  const body = src.slice(src.indexOf('<td>${esc(f.name)}</td>\n              <td>${num(f.areaHa, 1)}</td>\n              <td class="n">'));
+  const body = src.slice(src.indexOf('<td>${esc(r.name)}</td>\n              <td>${num(r.area, 1)}</td>\n              <td class="n">'));
   assert.equal(marks(body.slice(0, body.indexOf('</tr>')), 'td'), headMarks, 'body marks differ from the head');
-  const foot = src.slice(src.indexOf('<td>Total</td>\n          <td>${num(totals.area, 1)}</td>\n          <td class="n">'));
+  const foot = src.slice(src.indexOf('<td>Total</td>\n          <td>${num(total.area, 1)}</td>\n          <td class="n">'));
   assert.equal(marks(foot.slice(0, foot.indexOf('</tr>')), 'td'), headMarks, 'totals marks differ from the head');
   assert.ok(src.includes('Urea equivalent (N'), 'no key saying which colour is which');
 });
