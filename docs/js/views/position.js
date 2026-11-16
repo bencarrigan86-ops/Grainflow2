@@ -1,15 +1,16 @@
-import { db } from '../storage.js?v=296';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=296';
-import { num, tons, money, pct, esc } from '../fmt.js?v=296';
-import { payablesCost } from '../payables.js?v=296';
-import { openEofySheet } from './eofy.js?v=296';
-import { startProgress } from '../helpcontent.js?v=296';
-import { attentionItems } from '../attention.js?v=296';
-import { lastBackup } from '../backup.js?v=296';
-import { todayLocal, dmy } from '../fmt.js?v=296';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=296';
-import { positionPdf } from '../positionpdf.js?v=296';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=296';
+import { db } from '../storage.js?v=297';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=297';
+import { num, tons, money, pct, esc } from '../fmt.js?v=297';
+import { payablesCost } from '../payables.js?v=297';
+import { openEofySheet } from './eofy.js?v=297';
+import { startProgress } from '../helpcontent.js?v=297';
+import { attentionItems } from '../attention.js?v=297';
+import { lastBackup } from '../backup.js?v=297';
+import { todayLocal, dmy } from '../fmt.js?v=297';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=297';
+import { openSheet, closeSheet } from '../ui.js?v=297';
+import { positionPdf } from '../positionpdf.js?v=297';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=297';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -106,7 +107,7 @@ function paint(root) {
     </div>
   `;
   root.querySelector('#open-eofy').addEventListener('click', openEofySheet);
-  root.querySelector('#position-pdf')?.addEventListener('click', () => exportPdf({ rows, totals, overheads, pl, cost }));
+  root.querySelector('#position-pdf')?.addEventListener('click', () => openPdfSheet({ rows, totals, overheads, pl, cost }));
   root.querySelectorAll('[data-start-go]').forEach((el) => el.addEventListener('click', () => { location.hash = `#/${el.dataset.startGo}`; }));
   root.querySelectorAll('[data-attn]').forEach((el) => el.addEventListener('click', () => {
     const go = el.dataset.attn;
@@ -119,10 +120,33 @@ function paint(root) {
 }
 
 /** The screen as a PDF, shared from the phone's share sheet or downloaded on a computer. */
-async function exportPdf(data) {
+const PDF_KEY = 'grainflow.positionpdf';
+const readShow = () => { try { return { result: true, overheads: true, ...JSON.parse(localStorage.getItem(PDF_KEY) || '{}') }; } catch { return { result: true, overheads: true }; } };
+const saveShow = (v) => { try { localStorage.setItem(PDF_KEY, JSON.stringify(v)); } catch { /* not remembered */ } };
+
+/** What goes at the bottom of the PDF: ticks, remembered on this device, then the file. The commodity table is always there. */
+function openPdfSheet(data) {
+  openSheet('Position PDF', (root) => {
+    const d = readShow();
+    const tick = (id, on, text) => `<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:0 0 12px"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} style="width:20px;height:20px;margin-top:1px;flex:none" /><span>${text}</span></label>`;
+    root.innerHTML = `
+      <div class="hint" style="margin-bottom:12px">The table of commodities is always on the page. Choose what goes under it.</div>
+      ${tick('pp-result', d.result, '<strong>Whole farm result</strong><span class="meta" style="display:block">Gross margin, overheads and the profit or loss</span>')}
+      ${tick('pp-over', d.overheads, '<strong>Overheads and bills</strong><span class="meta" style="display:block">Each overhead, and the bills taken off profit</span>')}
+      <button type="button" class="btn" id="pp-go" style="margin-top:6px">${canShareFiles() ? 'Share PDF' : 'Download PDF'}</button>`;
+    root.querySelector('#pp-go').addEventListener('click', () => {
+      const show = { result: root.querySelector('#pp-result').checked, overheads: root.querySelector('#pp-over').checked };
+      saveShow(show);
+      closeSheet();
+      exportPdf(data, show);
+    });
+  }, { askBeforeClose: false });
+}
+
+async function exportPdf(data, show = readShow()) {
   const business = db.getBusinessDetails().entityName || '';
   const season = db.getCurrentYear();
-  const bytes = positionPdf(data, { business, season, today: dmy(todayLocal()) });
+  const bytes = positionPdf(data, { business, season, today: dmy(todayLocal()), show });
   const fileName = safeFileName(`Position ${season} ${dmy(todayLocal())}`);
   if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
   await sharePdf(bytes, fileName, { title: `Position ${season}` });

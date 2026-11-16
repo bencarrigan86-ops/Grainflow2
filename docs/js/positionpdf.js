@@ -5,7 +5,7 @@
 // sold, the prices, the values and the gross margin. Under it the whole farm: gross margin, overheads, bills and the
 // profit or loss. Pure: it builds bytes and touches nothing else.
 
-import { Pdf } from './pdf.js?v=296';
+import { Pdf } from './pdf.js?v=297';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;
@@ -63,7 +63,9 @@ export const POSITION_COLUMNS = [
  * @param {{business?: string, season?: string, today?: string}} [opts]  today is written as it should read (dd/mm/yyyy)
  * @returns {Uint8Array} the PDF
  */
-export function positionPdf({ rows = [], totals = {}, overheads = {}, pl = {}, cost = {} } = {}, { business = '', season = '', today = '' } = {}) {
+export function positionPdf({ rows = [], totals = {}, overheads = {}, pl = {}, cost = {} } = {}, { business = '', season = '', today = '', show = {} } = {}) {
+  const showResult = show.result !== false;          // the whole-farm result: gross margin, overheads, profit or loss
+  const showOverheads = show.overheads !== false;    // the overheads list, and the bills taken off profit
   const pdf = new Pdf(PAGE);
   const W = PAGE.width - M * 2;
   const BOTTOM = PAGE.height - 40;
@@ -154,9 +156,11 @@ export function positionPdf({ rows = [], totals = {}, overheads = {}, pl = {}, c
   const overheadLines = OVERHEADS.map(([key, label]) => [label, num(overheads[key])]).filter(([, v]) => v);
   const billLines = [['Brokerage', cost.brokerage], ['Freight, above or below the contract estimate', cost.freight], ['Storage', cost.storage], ['Other', cost.other]]
     .map(([l, v]) => [l, num(v)]).filter(([, v]) => v);
+  if (!showResult && !showOverheads) { footer(); return pdf.bytes(); }       // only the table
+  // two columns side by side; one alone takes the left
   const colW = (W - 30) / 2;
-  const need = 28 + lines.length * 18 + 8;
-  ensure(Math.max(need, 28 + (Math.max(overheadLines.length, 1) + 1) * 15));
+  const need = showResult ? 28 + lines.length * 18 + 8 : 0;
+  ensure(Math.max(need, showOverheads ? 28 + (Math.max(overheadLines.length, 1) + 1) * 15 : 0));
 
   // left: the result; right: where the overheads and the bills went
   const top = y;
@@ -176,21 +180,25 @@ export function positionPdf({ rows = [], totals = {}, overheads = {}, pl = {}, c
     return at;
   };
 
-  heading(M, top, 'Whole farm');
-  bandedLines(M, top + 28, lines.map(([label, value, strong, sign]) => [label, value, strong, strong ? (sign >= 0 ? GREEN : LOSS) : 0]), { size: 10, step: 18 });
+  if (showResult) {
+    heading(M, top, 'Whole farm');
+    bandedLines(M, top + 28, lines.map(([label, value, strong, sign]) => [label, value, strong, strong ? (sign >= 0 ? GREEN : LOSS) : 0]), { size: 10, step: 18 });
+  }
 
-  const rx = M + colW + 30;
-  let ry = top;
-  heading(rx, ry, 'Overheads');
-  ry += 28;
-  if (!overheadLines.length) { pdf.text(rx + 5, ry, 'None entered', { size: 9, gray: GREY }); ry += 15; }
-  ry = bandedLines(rx, ry, [...overheadLines.map(([l, v]) => [l, dollars(v)]), ['Total overheads', dollars(pl.overheadsTotal), true]]);
-  ry += 12;
-  if (billLines.length) {
-    if (ry + 28 + billLines.length * 15 > BOTTOM) { footer(); pdf.addPage(); page += 1; ry = header(); }
-    heading(rx, ry, 'Bills taken off profit');
+  if (showOverheads) {
+    const rx = showResult ? M + colW + 30 : M;
+    let ry = top;
+    heading(rx, ry, 'Overheads');
     ry += 28;
-    bandedLines(rx, ry, billLines.map(([l, v]) => [l, dollars(v)]));
+    if (!overheadLines.length) { pdf.text(rx + 5, ry, 'None entered', { size: 9, gray: GREY }); ry += 15; }
+    ry = bandedLines(rx, ry, [...overheadLines.map(([l, v]) => [l, dollars(v)]), ['Total overheads', dollars(pl.overheadsTotal), true]]);
+    ry += 12;
+    if (billLines.length) {
+      if (ry + 28 + billLines.length * 15 > BOTTOM) { footer(); pdf.addPage(); page += 1; ry = header(); }
+      heading(rx, ry, 'Bills taken off profit');
+      ry += 28;
+      bandedLines(rx, ry, billLines.map(([l, v]) => [l, dollars(v)]));
+    }
   }
 
   footer();

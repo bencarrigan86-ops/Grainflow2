@@ -181,6 +181,34 @@ check('each result line is green or red by its own sign: a loss made good by ope
   assert.equal(red, 2, `${red} red texts: the Loss label and figure only`);
 });
 
+check('the whole farm result and the overheads can each be left off, or both', () => {
+  const data = build({ cost: { total: 6000, brokerage: 4000, freight: 2000, storage: 0, other: 0 } });
+  const headings = (s) => [...s.matchAll(/\/F2 12 Tf ([\d.-]+) [\d.-]+ Td \((.*?)\) Tj/g)].map((m) => ({ x: +m[1], t: m[2] })).filter((h) => h.t);   // the season in the title band is also 12pt
+  const all = headings(text(positionPdf(data)));
+  assert.deepEqual(all.map((h) => h.t), ['Whole farm', 'Overheads', 'Bills taken off profit']);
+
+  const noResult = text(positionPdf(data, { show: { result: false } }));
+  assert.deepEqual(headings(noResult).map((h) => h.t), ['Overheads', 'Bills taken off profit']);
+  assert.ok(!noResult.includes('(Loss)') && !noResult.includes('(Profit)') && noResult.includes('(Total overheads)'));
+  assert.ok(headings(noResult)[0].x < 40, 'on its own, the overheads should take the left of the page');
+
+  const noOver = text(positionPdf(data, { show: { overheads: false } }));
+  assert.deepEqual(headings(noOver).map((h) => h.t), ['Whole farm']);
+  assert.ok(!noOver.includes('Total overheads') && !noOver.includes('Bills taken off profit') && noOver.includes('(Profit)'));
+
+  const neither = text(positionPdf(data, { show: { result: false, overheads: false } }));
+  assert.ok(neither.startsWith('%PDF') && neither.includes('(Wheat)') && neither.includes('(Total)'), 'the table must stay');
+  assert.deepEqual(headings(neither), []);
+  assert.ok(neither.includes('Made in Grainflow'), 'the footer must stay');
+});
+
+check('the Position screen asks what goes at the bottom, and remembers the answer', () => {
+  const v = readFileSync(new URL('../docs/js/views/position.js', import.meta.url), 'utf8');
+  assert.ok(v.includes("tick('pp-result'") && v.includes("tick('pp-over'") && v.includes("'grainflow.positionpdf'"), 'no ticks, or not remembered');
+  assert.ok(/openPdfSheet\(\{ rows, totals, overheads, pl, cost \}\)/.test(v), 'the button does not open the sheet');
+  assert.ok(v.includes('exportPdf(data, show)') && v.includes('positionPdf(data, {'), 'the choice does not reach the file');
+});
+
 check('opening stock adds its two lines and renames the value', () => {
   const withOpening = [{ ...commodities[0], openingStock: 100, openingValue: 30000 }, commodities[1]];
   const rows = positionRows(withOpening, fields, sales, []);
