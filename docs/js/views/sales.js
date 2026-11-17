@@ -1,31 +1,31 @@
-import { db } from '../storage.js?v=348';
+import { db } from '../storage.js?v=349';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=348';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=348';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=348';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=348';
-import { PATTERNS } from '../deliveryplan.js?v=348';
-import { INVOICING } from '../invoicing.js?v=348';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=348';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=348';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=348';
-import { renderRelatedMovements } from './movements.js?v=348';
-import { openInvoiceListSheet } from './invoice.js?v=348';
-import { openContractDocSheet } from './contract.js?v=348';
-import { wireJumps } from '../jump.js?v=348';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=348';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=348';
-import { freightState } from '../freight.js?v=348';
-import { activeSales, paidSales } from '../paidsales.js?v=348';
-import { openVendorDecSheet } from './vendordec.js?v=348';
-import { summarise as summariseOrders } from '../orders.js?v=348';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=348';
-import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=348';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=348';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=348';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=348';
-import { standardFor } from '../grades.js?v=348';
+} from '../documents.js?v=349';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=349';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=349';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=349';
+import { PATTERNS } from '../deliveryplan.js?v=349';
+import { INVOICING } from '../invoicing.js?v=349';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=349';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=349';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=349';
+import { renderRelatedMovements } from './movements.js?v=349';
+import { openInvoiceListSheet } from './invoice.js?v=349';
+import { openContractDocSheet } from './contract.js?v=349';
+import { wireJumps } from '../jump.js?v=349';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=349';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=349';
+import { freightState } from '../freight.js?v=349';
+import { activeSales, paidSales } from '../paidsales.js?v=349';
+import { openVendorDecSheet } from './vendordec.js?v=349';
+import { summarise as summariseOrders } from '../orders.js?v=349';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=349';
+import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=349';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=349';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=349';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=349';
+import { standardFor } from '../grades.js?v=349';
 
 let unsub = null;
 

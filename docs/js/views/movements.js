@@ -1,21 +1,22 @@
-import { db } from '../storage.js?v=348';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=348';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=348';
-import { withholdingClash } from '../fumigation.js?v=348';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=348';
-import { compressAndStampImage } from '../img.js?v=348';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=348';
-import { specText, extraSpecKey } from '../outload.js?v=348';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=348';
-import { pickableSilos } from '../silopick.js?v=348';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=348';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=348';
-import { activeSales } from '../paidsales.js?v=348';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=348';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=348';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=348';
-import { nowTime } from '../loadreport.js?v=348';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=348';
+import { db } from '../storage.js?v=349';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=349';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=349';
+import { withholdingClash } from '../fumigation.js?v=349';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=349';
+import { compressAndStampImage } from '../img.js?v=349';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=349';
+import { specText, extraSpecKey } from '../outload.js?v=349';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=349';
+import { pickableSilos } from '../silopick.js?v=349';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=349';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=349';
+import { activeSales } from '../paidsales.js?v=349';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=349';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=349';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=349';
+import { nowTime } from '../loadreport.js?v=349';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=349';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=349';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -28,7 +29,7 @@ export function renderMovements(root) {
 
 // What the list is narrowed to. Kept across repaints so a ticket saved or a
 // sync arriving does not wipe the search someone is part-way through.
-let listFilter = { q: '', commodityId: '', toFinish: false };
+let listFilter = { q: '', commodityId: '', toFinish: false, limit: PAGE_SIZE };
 
 function ticketSearchText(m, ctx) {
   const ends = [...(m.froms || []).map((f) => endpointLabel(f.type, f.id, ctx)), ...(m.tos || []).map((t) => endpointLabel(t.type, t.id, ctx))];
@@ -105,11 +106,11 @@ function paint(root) {
     const latest = [...movements].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (Number(b.ticketNo) || 0) - (Number(a.ticketNo) || 0))[0];
     openMovementSheet(null, latest);
   });
-  root.querySelector('#mv-q')?.addEventListener('input', (e) => { listFilter.q = e.target.value; paintList(root); });
+  root.querySelector('#mv-q')?.addEventListener('input', (e) => { listFilter.q = e.target.value; listFilter.limit = PAGE_SIZE; paintList(root); });
   root.querySelectorAll('[data-chip]').forEach((el) => {
-    el.addEventListener('click', () => { listFilter.commodityId = el.dataset.chip; listFilter.toFinish = false; paint(root); });
+    el.addEventListener('click', () => { listFilter.commodityId = el.dataset.chip; listFilter.toFinish = false; listFilter.limit = PAGE_SIZE; paint(root); });
   });
-  root.querySelector('[data-finish]')?.addEventListener('click', () => { listFilter.toFinish = !listFilter.toFinish; if (listFilter.toFinish) listFilter.commodityId = ''; paint(root); });
+  root.querySelector('[data-finish]')?.addEventListener('click', () => { listFilter.toFinish = !listFilter.toFinish; if (listFilter.toFinish) listFilter.commodityId = ''; listFilter.limit = PAGE_SIZE; paint(root); });
 }
 
 /** The ticket list and its totals, repainted alone so the search box keeps focus. */
@@ -139,8 +140,10 @@ function paintList(root) {
     list.innerHTML = `<div class="empty">No tickets match${q ? ` &ldquo;${esc(listFilter.q.trim())}&rdquo;` : ''}.</div>`;
     return;
   }
+  // the latest loads first; the rest are one tap away, and a search looks through all of them
+  const page = pageOfRows(shown, listFilter.limit);
   let lastDate = null;
-  list.innerHTML = shown.map((m) => {
+  list.innerHTML = page.rows.map((m) => {
     let head = '';
     if ((m.date || '') !== lastDate) {
       lastDate = m.date || '';
@@ -149,7 +152,10 @@ function paintList(root) {
       head = `<div class="day-label"><span>${esc(dayHeading(m.date))}</span><span>${day.length} load${day.length === 1 ? '' : 's'} · ${num(dayTons, 1)} t</span></div>`;
     }
     return head + movementRow(m, ctx);
-  }).join('');
+  }).join('') + (page.hidden > 0
+    ? `<button type="button" class="btn secondary more-row" id="mv-more">Show ${Math.min(PAGE_SIZE, page.hidden)} more <span class="meta">· ${page.hidden} older ${page.hidden === 1 ? 'load' : 'loads'} not shown</span></button>`
+    : '');
+  list.querySelector('#mv-more')?.addEventListener('click', () => { listFilter.limit = page.rows.length + PAGE_SIZE; paintList(root); });
   list.querySelectorAll('[data-edit-movement]').forEach((el) => {
     el.addEventListener('click', () => openMovementSheet(movements.find((m) => m.id === el.dataset.editMovement)));
   });
