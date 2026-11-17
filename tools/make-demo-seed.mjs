@@ -414,12 +414,28 @@ const pastSeason = (h) => {
   return { commodities: pastCommodities, fields: pastFields, storages: [], sales: pastSales, movements: [], invoices: [], overheads };
 };
 
+// One grain order (the buyer's call on a contract) and the freight order that carts it, so Grain orders and Freight orders
+// have something in them. The freight order is numbered from its contract, as the app does.
+const orders = [
+  { id: 'order-1', saleId: 'sale-1', orderNo: 'B-1001', tons: 300, deliverFrom: '2026-11-20', deliverBy: '2026-12-05',
+    freightCompany: 'Ace Haulage', status: 'open', notes: 'Gate 3, 7am to 4pm. Call the receival site before loading.' },
+];
+const freightOrders = [
+  { id: 'freight-1', saleId: 'sale-1', orderId: 'order-1', freightNo: 'RGT-4471-01', carrier: 'Ace Haulage', carrierEmail: '',
+    tons: 300, rate: 21.5, rateBasis: 'per_t', flatRate: '', distanceKm: '',
+    pickup: 'Kurrajong Downs, 12 Back Rd, Newbridge NSW 2810',
+    pickupParts: { line1: '12 Back Rd', line2: 'Kurrajong Downs', town: 'Newbridge', state: 'NSW', postcode: '2810' },
+    deliverTo: 'Newbridge Receival Site, 1 Rail Rd, Newbridge NSW 2810',
+    deliverToParts: { line1: '1 Rail Rd', line2: 'Newbridge Receival Site', town: 'Newbridge', state: 'NSW', postcode: '2810' },
+    loadFrom: '2026-11-20', loadBy: '2026-12-05', status: 'open', notes: 'Gate 3, 7am to 4pm.' },
+];
+
 const state = {
   version: 2,
   currentYear: SEASON,
   years: {
     [SEASON]: {
-      commodities, fields, storages, sales, movements, invoices,
+      commodities, fields, storages, sales, movements, invoices, orders, freightOrders,
       overheads: {
         finance: 186000, equipmentRepayments: 214000, depreciation: 168000,
         wages: 152000, drawings: 120000, admin: 34000, energy: 46000,

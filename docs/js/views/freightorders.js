@@ -5,22 +5,22 @@
 // It goes to the carrier as a PDF (shared or emailed) and a copy is filed with the contract. Loads then name the
 // freight order they travel on, and the carrier's bill is recorded against it. The arithmetic is in freight.js.
 
-import { db } from '../storage.js?v=340';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=340';
-import { signerName } from '../signdoc.js?v=340';
-import { addressFields, readAddress, partsOf, joinAddress } from '../address.js?v=340';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=340';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=340';
-import { orderTitle } from '../orders.js?v=340';
-import { activeSales } from '../paidsales.js?v=340';
+import { db } from '../storage.js?v=341';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=341';
+import { signerName } from '../signdoc.js?v=341';
+import { addressFields, readAddress, partsOf, joinAddress } from '../address.js?v=341';
+import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=341';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=341';
+import { orderTitle } from '../orders.js?v=341';
+import { activeSales } from '../paidsales.js?v=341';
 import {
   BASES, STATE_LABEL, freightState, freightOwed, freightTitle, freightDefaults, freightProblems,
   perTonne, rateText, estimatedTotal, windowText, freightOrderPdf,
-} from '../freight.js?v=340';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=340';
-import { fileSentCopy } from '../sentcopy.js?v=340';
-import { movementRow, openMovementSheet } from './movements.js?v=340';
-import { openBillSheet, returnToAfterBill } from './payables.js?v=340';
+} from '../freight.js?v=341';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=341';
+import { fileSentCopy } from '../sentcopy.js?v=341';
+import { movementRow, openMovementSheet } from './movements.js?v=341';
+import { openBillSheet, returnToAfterBill } from './payables.js?v=341';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | closed | all
@@ -134,11 +134,11 @@ export function openFreightOrderSheet(existing, start = {}) {
         <datalist id="dl-carriers">${carriers.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
         ${field({ label: 'Contract', id: 'fo-sale', type: 'select', value: d.saleId,
           options: activeSales(sales, [d.saleId]).map((s) => ({ value: s.id, label: contractLabel(s, commodities) })) })}
-        <div class="row" style="margin:-4px 0 10px"><span class="label">Contract no.</span><span class="value">${esc([sale.contractNo, sale.ourRef].filter(Boolean).join(' / ') || 'none on this contract')}</span></div>
-        <div class="row" style="margin:-4px 0 10px"><span class="label">Buyer's order no.</span><span class="value">${esc(orders.find((o) => o.id === d.orderId)?.orderNo || 'none: pick the grain order below')}</span></div>
-        ${field({ label: 'Grain order (optional)', id: 'fo-order', type: 'select', value: d.orderId || '',
-          options: [{ value: '', label: 'Not for one grain order' }, ...saleOrders.map((o) => ({ value: o.id, label: [orderTitle(o), o.freightCompany].filter(Boolean).join(' · ') }))],
-          hint: 'Choosing one fills in its tonnes, window, carrier and where it is going.' })}
+        <div class="row" style="margin:-4px 0 10px"><span class="label">Contract no.</span><span class="value">${esc(sale.contractNo || 'none on this contract')}</span></div>
+        <div class="row" style="margin:-4px 0 10px"><span class="label">Buyer's order no.</span><span class="value">${esc(orders.find((o) => o.id === d.orderId)?.orderNo || 'N/A')}</span></div>
+        ${field({ label: 'Select grain order', id: 'fo-order', type: 'select', value: d.orderId || '',
+          options: [{ value: '', label: 'N/A' }, ...saleOrders.map((o) => ({ value: o.id, label: [orderTitle(o), o.freightCompany].filter(Boolean).join(' · ') }))],
+          hint: 'Choosing one fills in its tonnes, window, carrier and where it is going. N/A if there is no grain order.' })}
         ${existing ? '<div id="fo-progress" style="margin:0 0 12px"></div>' : ''}
         <div class="grid-2">
           ${field({ label: 'Freight order no.', id: 'fo-no', value: d.freightNo })}
@@ -159,13 +159,13 @@ export function openFreightOrderSheet(existing, start = {}) {
         <div class="row"><span class="label">Works out at</span><span class="value" id="fo-calc">-</span></div>
 
         <div class="subhead">The job</div>
-        <div class="subhead">Deliver from</div>
-        ${addressFields('fo-pick', partsOf(d.pickup, d.pickupParts), { label: 'Deliver from' })}
+        <div class="subhead">Pick up from</div>
+        ${addressFields('fo-pick', partsOf(d.pickup, d.pickupParts), { label: 'Pick up from' })}
         <div class="subhead">Deliver to</div>
         ${addressFields('fo-drop', partsOf(d.deliverTo, d.deliverToParts), { label: 'Deliver to' })}
         <div class="grid-2">
-          ${field({ label: 'Load from', id: 'fo-from', type: 'date', value: d.loadFrom })}
-          ${field({ label: 'Load by', id: 'fo-by', type: 'date', value: d.loadBy })}
+          ${field({ label: 'Deliver from (date)', id: 'fo-from', type: 'date', value: d.loadFrom })}
+          ${field({ label: 'Deliver to (date)', id: 'fo-by', type: 'date', value: d.loadBy })}
         </div>
         ${field({ label: 'Instructions', id: 'fo-notes', type: 'textarea', value: d.notes, hint: 'Booking, truck type, gate hours, who to call. Goes on the carrier\'s copy.' })}
         ${existing ? `
@@ -291,7 +291,7 @@ export function openFreightOrderSheet(existing, start = {}) {
       const box = root.querySelector('#fo-problems');
       if (!d.saleId) { box.textContent = 'Choose the contract.'; return null; }
       if (strict && !(Number(d.tons) > 0)) { root.querySelector('#fo-tons').focus(); box.textContent = 'Enter the tonnes to cart.'; return null; }
-      if (d.loadFrom && d.loadBy && d.loadBy < d.loadFrom) { box.textContent = 'Load by is before load from.'; return null; }
+      if (d.loadFrom && d.loadBy && d.loadBy < d.loadFrom) { box.textContent = 'Deliver to date is before deliver from date.'; return null; }
       box.textContent = '';
       savedId = db.upsertFreightOrder({ ...d, id: savedId || undefined, status: d.status || 'open' }) || savedId;
       d.id = savedId;

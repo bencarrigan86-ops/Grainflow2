@@ -10,11 +10,11 @@
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { Pdf, wrapText } from './pdf.js?v=340';
-import { drawBrandLogo } from './brand.js?v=340';
-import { dmy } from './fmt.js?v=340';
-import { movementTonsToSale } from './derived.js?v=340';
-import { hasSignature, strokesInBox } from './signature.js?v=340';
+import { Pdf, wrapText } from './pdf.js?v=341';
+import { drawBrandLogo } from './brand.js?v=341';
+import { dmy } from './fmt.js?v=341';
+import { movementTonsToSale } from './derived.js?v=341';
+import { hasSignature, strokesInBox } from './signature.js?v=341';
 
 export const BASES = [
   { key: 'per_t', label: '$ per tonne' },
@@ -158,7 +158,7 @@ export function freightProblems(fo) {
   if (!(num(fo?.tons) > 0)) out.push('The tonnes');
   if (fo?.rateBasis === 'flat_tkm' ? !(num(fo?.flatRate) > 0 || num(fo?.rate) > 0) : !(num(fo?.rate) > 0)) out.push('The rate');
   if ((fo?.rateBasis === 'per_tkm' || fo?.rateBasis === 'flat_tkm') && !(num(fo?.distanceKm) > 0)) out.push('The distance in km');
-  if (fo?.loadFrom && fo?.loadBy && fo.loadBy < fo.loadFrom) out.push('Load by is before load from');
+  if (fo?.loadFrom && fo?.loadBy && fo.loadBy < fo.loadFrom) out.push('Deliver to date is before deliver from date');
   return out;
 }
 
@@ -176,7 +176,8 @@ export function windowText(fo) {
 
 const M = 40;
 const LINE = 0.15;
-const SHADE = 0.93;
+const GREEN = [0.18, 0.49, 0.196];    // the same green as the other documents
+const SHADE = [0.93, 0.96, 0.93];
 
 function labelled(pdf, x, y, labelW, valueW, label, value, lines = 1) {
   pdf.text(x, y + 1, label, { size: 8, bold: true });
@@ -188,7 +189,7 @@ function labelled(pdf, x, y, labelW, valueW, label, value, lines = 1) {
 
 function box(pdf, x, y, w, h, title) {
   pdf.rect(x, y, w, h, { stroke: LINE, lineWidth: 1 });
-  pdf.text(x + 8, y + 7, title, { size: 8.5, bold: true });
+  pdf.text(x + 8, y + 7, title, { size: 8.5, bold: true, gray: GREEN });
 }
 
 /**
@@ -199,10 +200,11 @@ function box(pdf, x, y, w, h, title) {
 export function freightOrderPdf({ fo, sale, order = null, commodityName = '', business = {}, issuedBy = '', date, signature = null }) {
   const pdf = new Pdf();
   const W = pdf.width - M * 2;
-  pdf.text(M, 30, 'FREIGHT ORDER', { size: 18, bold: true });
-  const rx = drawBrandLogo(pdf, { right: M + W, top: 10, maxW: 100, maxH: 40 });   // the farm's logo, if it has one
-  pdf.text(rx, 30, `No. ${clean(fo.freightNo) || '-'}`, { size: 12, bold: true, align: 'right' });
-  pdf.text(rx, 48, `Issued ${date ? dmy(date) : ''}`, { size: 9, align: 'right', gray: 0.3 });
+  pdf.rect(0, 0, pdf.width, 66, { stroke: null, fill: GREEN });
+  pdf.text(M, 14, 'FREIGHT ORDER', { size: 20, bold: true, gray: 1 });
+  const rx = drawBrandLogo(pdf, { right: M + W, top: 10, maxW: 100, maxH: 40, tile: true });   // the farm's logo, if it has one
+  pdf.text(rx, 14, `No. ${clean(fo.freightNo) || '-'}`, { size: 13, bold: true, align: 'right', gray: 1 });
+  pdf.text(rx, 38, `Issued ${date ? dmy(date) : ''}`, { size: 9.5, align: 'right', gray: 0.92 });
 
   // who it is from and to
   const top = 74;
@@ -226,22 +228,22 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
 
   // the job
   const jy = top + 124;
-  box(pdf, M, jy, W, 212, 'THE JOB');
+  box(pdf, M, jy, W, 196, 'THE JOB');
   let y = jy + 24;
   const half = (W - 24) / 2;
   y = labelled(pdf, M + 8, y, 60, W - 76, 'Commodity:', [commodityName, sale?.grade ? `(${sale.grade})` : ''].filter(Boolean).join(' '));
-  y = labelled(pdf, M + 8, y, 60, W - 76, 'Contract no:', [sale?.contractNo, sale?.ourRef].filter(Boolean).join(' / '));
+  y = labelled(pdf, M + 8, y, 60, W - 76, 'Contract no:', sale?.contractNo);
   y = labelled(pdf, M + 8, y, 60, W - 76, "Buyer's order:", order?.orderNo ? `${order.orderNo}` : '');
   labelled(pdf, M + 8, y, 60, half - 52, 'Tonnes:', num(fo.tons) ? `${num(fo.tons)} t` : '');
-  y = labelled(pdf, M + 20 + half, y, 56, half - 52 + 12, 'Load window:', windowText(fo));
-  y = labelled(pdf, M + 8, y, 60, W - 76, 'Deliver from:', fo.pickup, 2);
+  y = labelled(pdf, M + 20 + half, y, 56, half - 60, 'Dates:', windowText(fo));
+  y = labelled(pdf, M + 8, y, 60, W - 76, 'Pick up from:', fo.pickup, 2);
   y = labelled(pdf, M + 8, y, 60, W - 76, 'Deliver to:', fo.deliverTo, 2);
   y = labelled(pdf, M + 8, y, 60, W - 76, 'Receiver:', [sale?.buyer, sale?.buyerContact].filter(Boolean).join(' - '), 2);
 
   // the rate
-  const ry = jy + 224;
+  const ry = jy + 208;
   box(pdf, M, ry, W, 62, 'RATE');
-  pdf.text(M + 8, ry + 24, rateText(fo), { size: 11, bold: true });
+  pdf.text(M + 8, ry + 24, rateText(fo), { size: 11, bold: true, gray: GREEN });
   const est = estimatedTotal(fo);
   pdf.text(M + 8, ry + 42, est > 0 ? `About ${money(est, 0)} for ${num(fo.tons)} t, paid on the tonnes actually delivered, per the receival ticket. Rates ex GST.` : 'Paid on the tonnes actually delivered, per the receival ticket. Rates ex GST.', { size: 8.5, gray: 0.25 });
 

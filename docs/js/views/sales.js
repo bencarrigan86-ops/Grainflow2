@@ -1,30 +1,31 @@
-import { db } from '../storage.js?v=340';
+import { db } from '../storage.js?v=341';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=340';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=340';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=340';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=340';
-import { PATTERNS } from '../deliveryplan.js?v=340';
-import { INVOICING } from '../invoicing.js?v=340';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=340';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=340';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=340';
-import { renderRelatedMovements } from './movements.js?v=340';
-import { openInvoiceListSheet } from './invoice.js?v=340';
-import { openContractDocSheet } from './contract.js?v=340';
-import { wireJumps } from '../jump.js?v=340';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=340';
-import { renderContractFreight } from './freightorders.js?v=340';
-import { activeSales, paidSales } from '../paidsales.js?v=340';
-import { openVendorDecSheet } from './vendordec.js?v=340';
-import { summarise as summariseOrders } from '../orders.js?v=340';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=340';
-import { deliveries, moneyPosition } from '../outstanding.js?v=340';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=340';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=340';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=340';
-import { standardFor } from '../grades.js?v=340';
+} from '../documents.js?v=341';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=341';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=341';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=341';
+import { PATTERNS } from '../deliveryplan.js?v=341';
+import { INVOICING } from '../invoicing.js?v=341';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=341';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=341';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=341';
+import { renderRelatedMovements } from './movements.js?v=341';
+import { openInvoiceListSheet } from './invoice.js?v=341';
+import { openContractDocSheet } from './contract.js?v=341';
+import { wireJumps } from '../jump.js?v=341';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=341';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=341';
+import { freightState } from '../freight.js?v=341';
+import { activeSales, paidSales } from '../paidsales.js?v=341';
+import { openVendorDecSheet } from './vendordec.js?v=341';
+import { summarise as summariseOrders } from '../orders.js?v=341';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=341';
+import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=341';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=341';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=341';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=341';
+import { standardFor } from '../grades.js?v=341';
 
 let unsub = null;
 
@@ -45,6 +46,11 @@ function paint(root) {
   // grain still to deliver, and money in and out, for the buttons under it
   const deliverySum = deliveries(sales, movements, db.getOrders(), todayLocal());
   const moneySum = moneyPosition(db.get().invoices, sales, db.getPayables(), todayLocal());
+  // grain delivered that is not on an invoice yet, for the Acc Rec / Pay button
+  const notInvoiced = uninvoiced(sales, movements, db.get().invoices, todayLocal()).total.value;
+  // freight orders still to cart, for the Freight orders button
+  const freightOpen = db.getFreightOrders().map((f) => freightState(f, movements)).filter((st) => st.active);
+  const freightLeft = freightOpen.reduce((a, st) => a + st.left, 0);
   const salesTotals = rollup.reduce((acc, r) => ({
     tons: acc.tons + r.tons,
     tonsDue: acc.tonsDue + Math.max(0, r.tonsDue),
@@ -72,9 +78,9 @@ function paint(root) {
     <div class="view">
       ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div class="tile-grid">
         <button type="button" class="btn secondary tool-tile" id="open-orders"><b>Grain orders</b><span>${ordersSum.open.count ? `${num(ordersSum.open.left, 0)} t to deliver${ordersSum.overdue.count ? ` (${ordersSum.overdue.count} overdue)` : ordersSum.soon.count ? ` (${ordersSum.soon.count} due soon)` : ''}` : 'none open'}</span></button>
+        <button type="button" class="btn secondary tool-tile" id="open-freight"><b>Freight orders</b><span>${freightOpen.length ? `${freightOpen.length} open · ${num(freightLeft, 0)} t to cart` : 'none open'}</span></button>
         <button type="button" class="btn secondary tool-tile" id="open-deliveries"><b>Delivery timeline</b><span>${deliverySum.total.count ? `${num(deliverySum.total.due, 0)} t${deliverySum.ended.count ? ` (${deliverySum.ended.count} past end)` : deliverySum.soon.count ? ` (${deliverySum.soon.count} ending soon)` : ''}` : 'nothing due'}</span></button>
-        <button type="button" class="btn secondary tool-tile" id="open-money"><b>Receivables</b><span>${moneySum.owedToYou.outstanding.count ? `${money(moneySum.owedToYou.outstanding.total, 0)} owed to you${moneySum.owedToYou.overdue.count ? ' (overdue)' : ''}` : 'nothing owed'}</span></button>
-        <button type="button" class="btn secondary tool-tile" id="open-payables"><b>Payables</b><span>${moneySum.youOwe.outstanding.count ? `${money(moneySum.youOwe.outstanding.total, 0)} you owe${moneySum.youOwe.overdue.count ? ' (overdue)' : ''}` : 'nothing owing'}</span></button>
+        <button type="button" class="btn secondary tool-tile" id="open-money"><b>Acc Rec / Pay</b><span>${moneySum.owedToYou.outstanding.count || moneySum.youOwe.outstanding.count ? `In ${money(moneySum.owedToYou.outstanding.total, 0)} · Out ${money(moneySum.youOwe.outstanding.total, 0)}${moneySum.owedToYou.overdue.count || moneySum.youOwe.overdue.count ? ' (overdue)' : ''}` : 'nothing owed or owing'}</span>${notInvoiced > 0 ? `<span>Not invoiced ${money(notInvoiced, 0)}</span>` : ''}</button>
       </div>` : ''}
       ${rollup.length === 0 ? '' : `
       <div class="card report">
@@ -126,7 +132,7 @@ function paint(root) {
   root.querySelector('#open-orders')?.addEventListener('click', () => openOrdersSheet());
   root.querySelector('#open-deliveries')?.addEventListener('click', () => openDeliveriesSheet());
   root.querySelector('#open-money')?.addEventListener('click', () => openMoneySheet('in'));
-  root.querySelector('#open-payables')?.addEventListener('click', () => openMoneySheet('out'));
+  root.querySelector('#open-freight')?.addEventListener('click', () => openFreightOrdersSheet());
   root.querySelector('#empty-add')?.addEventListener('click', () => openSaleSheet(null));
   root.querySelector('#open-paid')?.addEventListener('click', () => openPaidSheet());
   root.querySelector('#carry-contracts')?.addEventListener('click', () => openCarrySheet(prevLabel));

@@ -329,8 +329,9 @@ check('Sales has buttons for both reports, for the roles that may see them', () 
   assert.match(src, /class="btn secondary tool-tile" id="open-money"/);
   assert.match(src, /openDeliveriesSheet\(\)/);
   assert.match(src, /openMoneySheet\('in'\)/);
-  assert.match(src, /id="open-payables"/);
-  assert.match(src, /openMoneySheet\('out'\)/);
+  assert.match(src, /id="open-freight"/);
+  assert.ok(!src.includes('id="open-payables"'), 'receivables and payables are one tile');
+  assert.match(src, /openFreightOrdersSheet\(\)/);
 });
 check('an invoice worked out again gets its dates back if it had lost them', () => {
   assert.match(read('docs/js/views/invoice.js'), /existingInvoice\.issueDate \? \{\} : \{ issueDate: today \}/);

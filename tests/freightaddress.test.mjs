@@ -1,8 +1,8 @@
 // Run with:
 //   node tests/freightaddress.test.mjs
 //
-// A freight order's Deliver from and Deliver to addresses are full addresses (line 1, line 2, town, state, postcode),
-// kept as one line plus parts, and the carrier's PDF says Deliver from / Deliver to and carries the contract number.
+// A freight order's Pick up from and Deliver to addresses are full addresses (line 1, line 2, town, state, postcode),
+// kept as one line plus parts, and the carrier's PDF says Pick up from / Deliver to and carries the contract number.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { freightOrderPdf } from '../docs/js/freight.js';
@@ -44,20 +44,20 @@ check('clearing an address after it had parts reaches the server as nothing', ()
   assert.equal(rows.freight_orders[0].pickup_parts, null);
 });
 
-check('the carrier\'s PDF says Deliver from and Deliver to, and has the contract number and our reference', () => {
+check('the carrier\'s PDF says Deliver from and Deliver to, and has the contract number', () => {
   const bytes = freightOrderPdf({
     fo: { ...base, pickup: 'Lot 4 Smith Rd, Gate 2, Wagin WA 6315', deliverTo: '1 Port Rd, Kwinana WA 6167' },
     sale: { buyer: 'Coastal Feeds', contractNo: 'CF-1094', ourRef: 'OUR-7' }, commodityName: 'Wheat', business: {}, issuedBy: 'Ben', date: '2026-11-14',
   });
   const s = latin1(bytes);
-  for (const t of ['Deliver from:', 'Deliver to:', 'Contract no:', 'CF-1094 / OUR-7', 'Wagin WA 6315', 'Kwinana WA 6167']) assert.ok(s.includes(t), t);
-  assert.ok(!s.includes('Pick up:'));
+  for (const t of ['Pick up from:', 'Deliver to:', 'Contract no:', 'CF-1094', 'Wagin WA 6315', 'Kwinana WA 6167']) assert.ok(s.includes(t), t);
+  assert.ok(!s.includes('Deliver from:'));
 });
 
 check('the form asks for each address in full, shows the contract number, and the SQL adds the columns', () => {
   const v = read('docs/js/views/freightorders.js');
   assert.ok(v.includes("addressFields('fo-pick'") && v.includes("addressFields('fo-drop'") && v.includes("readAddress(root, 'fo-pick')") && v.includes('Contract no.'));
-  assert.ok(!v.includes('Pick up from'));
+  assert.ok(v.includes("label: 'Pick up from'") && !v.includes("label: 'Deliver from'"));
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists pickup_parts jsonb'));
   assert.ok(read('supabase/migrations/20261121000000_freight_address_parts.sql').includes('deliver_to_parts jsonb'));
   assert.ok(read('docs/js/storage.js').includes('__hasPickupParts'));

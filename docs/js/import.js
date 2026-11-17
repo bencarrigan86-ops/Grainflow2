@@ -50,6 +50,8 @@ export function remapIds(input) {
     for (const s of year.sales || []) s.id = idFor(s.id);
     for (const m of year.movements || []) m.id = idFor(m.id);
     for (const i of year.invoices || []) i.id = idFor(i.id);
+    for (const o of year.orders || []) o.id = idFor(o.id);
+    for (const f of year.freightOrders || []) f.id = idFor(f.id);
   }
 
   // Second pass for references, so every target already has its new id.
@@ -66,6 +68,8 @@ export function remapIds(input) {
     }
 
     for (const i of year.invoices || []) i.saleId = idFor(i.saleId);
+    for (const o of year.orders || []) o.saleId = idFor(o.saleId);
+    for (const f of year.freightOrders || []) { f.saleId = idFor(f.saleId); f.orderId = idFor(f.orderId); }
   }
 
   return { state, map };
