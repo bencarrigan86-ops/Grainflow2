@@ -27,9 +27,9 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=337';
-import { cleanOffFarm } from './offfarm.js?v=337';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=337';
+import { cleanGradeOptions } from './gradeprice.js?v=338';
+import { cleanOffFarm } from './offfarm.js?v=338';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=338';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -427,6 +427,8 @@ export function stateToRows(state, farmId) {
         ...((sale.paid || sale.__hasPaid) ? { is_paid: !!sale.paid } : {}),
         // How the contract is delivered: 'call' (the buyer orders it) or 'even' (spread over the window). Optional like the other later columns.
         ...((sale.deliveryPattern || sale.__hasDeliveryPattern) ? { delivery_pattern: ['even', 'call', 'sellers'].includes(sale.deliveryPattern) ? sale.deliveryPattern : null } : {}),
+        // Who invoices: 'seller' (the farm) or 'rcti' (the buyer, by a recipient created tax invoice). Optional like the other later columns.
+        ...((sale.invoicing || sale.__hasInvoicing) ? { invoicing: ['seller', 'rcti'].includes(sale.invoicing) ? sale.invoicing : null } : {}),
       });
       out.sale_terms.push({
         id: sale.__termsId || uid(), farm_id: farmId, sale_id: sale.id,
@@ -813,6 +815,7 @@ export function rowsToState(rows) {
           ...(sale.our_ref != null ? { ourRef: sale.our_ref, __hasOurRef: true } : {}),
           ...(sale.is_paid != null ? { paid: !!sale.is_paid, __hasPaid: true } : {}),
           ...(sale.delivery_pattern != null ? { deliveryPattern: sale.delivery_pattern, __hasDeliveryPattern: true } : {}),
+          ...(sale.invoicing != null ? { invoicing: sale.invoicing, __hasInvoicing: true } : {}),
           broker: t.broker ?? '',
           brokerRef: t.broker_ref ?? '',
           brokeragePaidBy: t.brokerage_paid_by ?? '',

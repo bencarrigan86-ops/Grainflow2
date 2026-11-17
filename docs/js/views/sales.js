@@ -1,29 +1,30 @@
-import { db } from '../storage.js?v=337';
+import { db } from '../storage.js?v=338';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=337';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=337';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=337';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=337';
-import { PATTERNS } from '../deliveryplan.js?v=337';
-import { splitContact, joinContact } from '../buyercontact.js?v=337';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=337';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=337';
-import { renderRelatedMovements } from './movements.js?v=337';
-import { openInvoiceListSheet } from './invoice.js?v=337';
-import { openContractDocSheet } from './contract.js?v=337';
-import { wireJumps } from '../jump.js?v=337';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=337';
-import { renderContractFreight } from './freightorders.js?v=337';
-import { activeSales, paidSales } from '../paidsales.js?v=337';
-import { openVendorDecSheet } from './vendordec.js?v=337';
-import { summarise as summariseOrders } from '../orders.js?v=337';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=337';
-import { deliveries, moneyPosition } from '../outstanding.js?v=337';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=337';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=337';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=337';
-import { standardFor } from '../grades.js?v=337';
+} from '../documents.js?v=338';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=338';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=338';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=338';
+import { PATTERNS } from '../deliveryplan.js?v=338';
+import { INVOICING } from '../invoicing.js?v=338';
+import { splitContact, joinContact } from '../buyercontact.js?v=338';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=338';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=338';
+import { renderRelatedMovements } from './movements.js?v=338';
+import { openInvoiceListSheet } from './invoice.js?v=338';
+import { openContractDocSheet } from './contract.js?v=338';
+import { wireJumps } from '../jump.js?v=338';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=338';
+import { renderContractFreight } from './freightorders.js?v=338';
+import { activeSales, paidSales } from '../paidsales.js?v=338';
+import { openVendorDecSheet } from './vendordec.js?v=338';
+import { summarise as summariseOrders } from '../orders.js?v=338';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=338';
+import { deliveries, moneyPosition } from '../outstanding.js?v=338';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=338';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=338';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=338';
+import { standardFor } from '../grades.js?v=338';
 
 let unsub = null;
 
@@ -351,19 +352,20 @@ function openSaleSheet(existing) {
   const locationList = distinct('location');
   // Folds start closed on a new contract and open on an edit that has something in them.
   const contact = splitContact(existing?.buyerContact);
-  const openTerms = !!existing && ['cropYear', 'contractType', 'pricingPoint', 'deliveryTerms', 'buyerContact', 'tradeRules'].some((k) => existing[k]);
+  const openTerms = !!existing && ['cropYear', 'contractType', 'pricingPoint', 'deliveryTerms', 'tradeRules'].some((k) => existing[k]);
   const openAdjust = !!existing && (!!existing.premiumDiscount || !!existing.ginning || Math.abs((existing.leviesPct ?? 0) * 100 - 1.02) > 1e-6);
   const openGrades = !!existing?.gradeOptions?.length;
   // The oil section is for canola; it shows for any contract that already prices oil, whatever it is called.
   const openOil = oilPricingOn(existing);
   const isCanola = (c) => standardFor(c?.name)?.key === 'canola';
   const showOil = openOil || isCanola(commodities.find((c) => c.id === (existing?.commodityId ?? commodities[0]?.id)));
-  const openDelivered = !!existing && (!!existing.tonsDelivered || !!existing.buyerAbn || !!existing.buyerAddress);
+  const openBuyer = !!existing && (!!existing.buyerContact || !!existing.buyerAbn || !!existing.buyerAddress);
   // Comments. The old Broker note box is gone (Broker and Broker reference cover it), so a contract that has one
   // keeps it: it is brought into the comments, and cleared from its own field when the contract is saved.
   const commentsText = [existing?.notes, existing?.brokerNote ? `Broker note: ${existing.brokerNote}` : ''].filter(Boolean).join('\n');
   const openAdvanced = !!existing && (!!existing.carryRate || !!existing.carryFrom
     || (existing.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS) !== DEFAULT_TOLERANCE_CAP_TONS);
+  const openOther = openAdvanced || (!!existing && !!existing.tonsDelivered);
 
   openSheet(existing ? 'Edit sale' : 'Add sale', (root) => {
     root.innerHTML = `
@@ -373,45 +375,68 @@ function openSaleSheet(existing) {
       <datalist id="dl-brokers">${brokerList.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
       <datalist id="dl-locations">${locationList.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
 
+      <section class="form-section">
       <div class="subhead">Deal</div>
-      <div class="grid-2">
+      ${field({ label: 'Buyer', id: 'buyer', value: existing?.buyer, placeholder: 'e.g. CBH, Cargill', list: 'dl-buyers' })}
+      <div class="copy-last" id="copy-last"></div>
+      <details class="fold" id="buyer-fold" ${openBuyer ? 'open' : ''}>
+        <summary><div><h2>Buyer details</h2>
+          <div class="sub">Contact, number, email, ABN and address</div></div></summary>
+        ${field({ label: 'Buyer contact / trader', id: 'contactName', value: contact.name, placeholder: 'Name: who to ring about a load' })}
+        <div class="grid-2">
+          ${field({ label: 'Contact number', id: 'contactPhone', type: 'tel', value: contact.phone, placeholder: 'e.g. 0400 123 456' })}
+          ${field({ label: 'Contact email', id: 'contactEmail', type: 'email', value: contact.email, placeholder: 'name@buyer.com.au' })}
+        </div>
+        ${field({ label: 'Buyer ABN (optional)', id: 'buyerAbn', value: existing?.buyerAbn, hint: 'For invoices' })}
+        ${addressFields('buyerAddr', partsOf(existing?.buyerAddress, existing?.buyerAddressParts), { label: 'Buyer address', optional: true })}
+      </details>
+      <div class="grid-2" style="margin-top:12px">
         ${field({ label: 'Date', id: 'date', type: 'date', value: existing?.date ?? todayLocal() })}
         ${field({ label: "Buyer's contract no.", id: 'contractNo', value: existing?.contractNo })}
       </div>
-      ${field({ label: 'Our contract no.', id: 'ourRef', value: existing?.ourRef, hint: 'Your own number for this contract, if you keep one. It goes on the vendor declaration.' })}
-      ${existing ? `<label class="list-item" style="cursor:pointer;margin-bottom:12px"><div style="display:flex;align-items:center;gap:10px">
-        <input type="checkbox" id="paid" ${existing.paid ? 'checked' : ''} style="width:18px;height:18px" />
-        <div><div class="main">Paid, and finished with</div><div class="meta">Moves it off the main list and the pick lists. It stays under Paid contracts.</div></div></div></label>` : ''}
-      ${field({ label: 'Buyer', id: 'buyer', value: existing?.buyer, placeholder: 'e.g. CBH, Cargill', list: 'dl-buyers' })}
-      <div class="copy-last" id="copy-last"></div>
+      ${field({ label: 'Our contract no.', id: 'ourRef', value: existing?.ourRef, placeholder: 'Optional. Goes on the vendor declaration' })}
+      </section>
 
+      <section class="form-section alt">
       <div class="subhead">Quantity &amp; price</div>
       <div class="grid-2">
         ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
         ${gradeFieldHtml({ id: 'grade', commodity: commodities.find((c) => c.id === (existing?.commodityId ?? commodities[0]?.id)), value: existing?.grade })}
       </div>
-      ${field({ label: 'Tons', id: 'tons', type: 'number', step: '0.01', value: existing?.tons })}
+      <div class="grid-2">
+        ${field({ label: 'Tons', id: 'tons', type: 'number', step: '0.01', value: existing?.tons })}
+        ${field({ label: 'Price ($/t)', id: 'price', type: 'number', step: '0.01', value: existing?.price })}
+      </div>
       <div class="grid-2">
         ${field({ label: 'Tolerance (%)', id: 'tolPct', type: 'number', step: '0.1', value: existing?.tolerancePct ?? DEFAULT_TOLERANCE_PCT })}
         <div class="field"><label>Tolerance range</label><div class="readout" id="tol-preview">—</div></div>
       </div>
-      ${field({ label: 'Price ($/t)', id: 'price', type: 'number', step: '0.01', value: existing?.price })}
       <div class="row"><span class="label">Contract value</span><span class="value" id="value-preview">—</span></div>
+      </section>
 
+      <section class="form-section">
       <div class="subhead">Delivery</div>
       ${field({ label: 'Location', id: 'location', value: existing?.location, placeholder: 'Delivery site', list: 'dl-locations' })}
       <div class="grid-2">
         ${field({ label: 'Delivery start', id: 'deliveryStart', type: 'date', value: existing?.deliveryStart })}
         ${field({ label: 'Delivery finish', id: 'deliveryEnd', type: 'date', value: existing?.deliveryEnd })}
       </div>
-      ${field({ label: 'How it is delivered', id: 'deliveryPattern', type: 'select', value: existing?.deliveryPattern ?? '', options: PATTERNS, hint: 'Spread evenly shows tonnes a week or a month on Deliveries to go and in the cash flow. If the buyer calls it, the grain orders give the dates.' })}
-      ${field({ label: 'Weights to govern', id: 'weightsToGovern', type: 'select', value: existing?.weightsToGovern ?? '', options: [
+      ${field({ label: 'How it is delivered', id: 'deliveryPattern', type: 'select', value: existing?.deliveryPattern ?? '', options: PATTERNS, hint: 'An even spread shows tonnes a week or a month on Deliveries to go and in the cash flow. If the buyer calls it, the grain orders give the dates.' })}
+      ${field({ label: 'Weights and quality to govern', id: 'weightsToGovern', type: 'select', value: existing?.weightsToGovern ?? '', options: [
         { value: '', label: '—' },
         { value: 'destination', label: 'Destination' },
         { value: 'origin', label: 'Origin' },
-      ], hint: 'Whose weighbridge settles it' })}
+      ], hint: 'Whose weighbridge and quality test settles it' })}
+      ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
+      ${field({ label: 'Freight is paid by', id: 'freightPaidBy', type: 'select', value: existing?.freightPaidBy === 'buyer' ? 'buyer' : 'we', options: [
+        { value: 'we', label: 'We pay the carrier (a bill in Payables)' },
+        { value: 'buyer', label: 'Buyer deducts it from the invoice' },
+      ], hint: 'Decides whether freight is taken off the grain invoice.' })}
+      </section>
 
-      <div class="subhead">Payment, broker &amp; freight</div>
+      <section class="form-section alt">
+      <div class="subhead">Payment &amp; broker</div>
+      ${field({ label: 'Contract invoicing', id: 'invoicing', type: 'select', value: existing?.invoicing ?? '', options: INVOICING, hint: 'Who raises the invoice: we do, or the buyer sends a recipient created tax invoice (RCTI). Printed on the confirmation.' })}
       <div class="grid-2">
         ${field({ label: 'Payment terms (days)', id: 'paymentTermsDays', type: 'number', step: '1', value: existing?.paymentTermsDays ?? '' })}
         ${field({ label: 'Counted from', id: 'paymentTermsBasis', type: 'select', value: existing?.paymentTermsBasis ?? '', options: [
@@ -434,16 +459,12 @@ function openSaleSheet(existing) {
         ] })}
         ${field({ label: 'Brokerage ($/t)', id: 'brokerageRate', type: 'number', step: '0.01', value: existing?.brokerageRate || '', placeholder: '0', hint: 'On tonnes delivered. Bills go in Payables.' })}
       </div>
-      ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
-      ${field({ label: 'Freight is paid by', id: 'freightPaidBy', type: 'select', value: existing?.freightPaidBy === 'buyer' ? 'buyer' : 'we', options: [
-        { value: 'we', label: 'We pay the carrier (a bill in Payables)' },
-        { value: 'buyer', label: 'Buyer deducts it from the invoice' },
-      ], hint: 'Decides whether freight is taken off the grain invoice.' })}
       ${field({ label: 'Comments', id: 'notes', type: 'textarea', rows: 2, value: commentsText, placeholder: 'Anything worth knowing about this contract' })}
+      </section>
 
       <details class="fold" ${openTerms ? 'open' : ''}>
         <summary><div><h2>Contract terms</h2>
-          <div class="sub">Crop year, type, pricing point, delivery terms, contact, trade rules</div></div></summary>
+          <div class="sub">Crop year, type, pricing point, delivery terms, trade rules</div></div></summary>
         <div class="field hint" style="margin-bottom:10px">What the buyer's contract confirmation
           says. Fill in what you have — anything left blank is simply not shown.</div>
         <div class="grid-2">
@@ -451,12 +472,7 @@ function openSaleSheet(existing) {
           ${field({ label: 'Contract type', id: 'contractType', value: existing?.contractType, placeholder: 'e.g. Ex Farm' })}
         </div>
         ${field({ label: 'Pricing point', id: 'pricingPoint', value: existing?.pricingPoint, placeholder: 'e.g. Goondiwindi - 45km S/W', hint: 'Where the price is struck' })}
-        ${field({ label: 'Delivery terms', id: 'deliveryTerms', value: existing?.deliveryTerms, placeholder: "e.g. Buyer's call, 5 business days notice" })}
-        ${field({ label: 'Buyer contact / trader', id: 'contactName', value: contact.name, placeholder: 'Name: who to ring about a load' })}
-        <div class="grid-2">
-          ${field({ label: 'Contact number', id: 'contactPhone', type: 'tel', value: contact.phone, placeholder: 'e.g. 0400 123 456' })}
-          ${field({ label: 'Contact email', id: 'contactEmail', type: 'email', value: contact.email, placeholder: 'name@buyer.com.au' })}
-        </div>
+        ${field({ label: 'Delivery terms', id: 'deliveryTerms', value: existing?.deliveryTerms, placeholder: 'e.g. 5 business days notice' })}
         ${field({ label: 'Trade rules', id: 'tradeRules', value: existing?.tradeRules, placeholder: 'e.g. GTA contract 3' })}
       </details>
 
@@ -501,18 +517,11 @@ function openSaleSheet(existing) {
         <div id="oil-summary" style="margin-top:10px"></div>
       </details>
 
-      <details class="fold" ${openDelivered ? 'open' : ''}>
-        <summary><div><h2>Delivered &amp; other</h2>
-          <div class="sub">Tons delivered, buyer ABN and address</div></div></summary>
+      <details class="fold" ${openOther ? 'open' : ''}>
+        <summary><div><h2>Other</h2>
+          <div class="sub">Tons delivered by hand, tolerance cap, carry</div></div></summary>
         ${field({ label: 'Tons delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a Movement' })}
         ${movementDelivered > 0 ? `<div class="row"><span class="label">+ Delivered via movements</span><span class="value" id="movement-delivered-value">${num(movementDelivered, 1)} t</span></div>` : ''}
-        ${field({ label: 'Buyer ABN (optional)', id: 'buyerAbn', value: existing?.buyerAbn, hint: 'For invoices' })}
-        ${addressFields('buyerAddr', partsOf(existing?.buyerAddress, existing?.buyerAddressParts), { label: 'Buyer address', optional: true })}
-      </details>
-
-      <details class="fold" ${openAdvanced ? 'open' : ''}>
-        <summary><div><h2>Advanced</h2>
-          <div class="sub">Tolerance cap, carry</div></div></summary>
         ${field({ label: 'Tolerance cap (t)', id: 'tolCap', type: 'number', step: '0.1', value: existing?.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS, hint: 'The lesser of the % and this cap applies' })}
         <div class="grid-2">
           ${field({ label: 'Carry ($/t/month)', id: 'carryRate', type: 'number', step: '0.01', value: existing?.carryRate ?? 0, hint: 'Paid to leave grain on farm' })}
@@ -534,6 +543,9 @@ function openSaleSheet(existing) {
         <div class="field hint" style="margin-top:14px">Save the sale first, then you can
           attach the buyer's contract and the broker's note to it.</div>
       `}
+      ${existing ? `<label class="list-item" style="cursor:pointer;margin:14px 0 4px"><div style="display:flex;align-items:center;gap:10px">
+        <input type="checkbox" id="paid" ${existing.paid ? 'checked' : ''} style="width:18px;height:18px" />
+        <div><div class="main">Paid, and finished with</div><div class="meta">Moves it off the main list and the pick lists. It stays under Paid contracts.</div></div></div></label>` : ''}
       ${existing ? `<div id="contract-orders" style="margin:12px 0"></div>` : ''}
       ${existing && ['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div id="contract-freight" style="margin:12px 0"></div>` : ''}
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
@@ -872,6 +884,7 @@ function openSaleSheet(existing) {
         deliveryStart: getVal(root, 'deliveryStart'),
         deliveryEnd: getVal(root, 'deliveryEnd'),
         deliveryPattern: getVal(root, 'deliveryPattern') || '',
+        invoicing: getVal(root, 'invoicing') || '',
         tons: getNum(root, 'tons'),
         tonsDelivered: getNum(root, 'tonsDelivered'),
         price: getNum(root, 'price'),

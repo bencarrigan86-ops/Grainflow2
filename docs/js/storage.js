@@ -18,28 +18,28 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=337';
-import { setBrandLogo } from './brand.js?v=337';
+import { hydrate } from './hydrate.js?v=338';
+import { setBrandLogo } from './brand.js?v=338';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=337';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=337';
-import { isLegacyDirty } from './dirty.js?v=337';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=337';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=337';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=337';
-import { settleLegs, dedupeLegs } from './legs.js?v=337';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=337';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=337';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=337';
-import { setCommodityOrder } from './commodityorder.js?v=337';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=337';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=337';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=337';
-import { schedulePush, pushOnReconnect } from './sync.js?v=337';
-import { hasParts as hasAddressParts } from './address.js?v=337';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=337';
+} from './local.js?v=338';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=338';
+import { isLegacyDirty } from './dirty.js?v=338';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=338';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=338';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=338';
+import { settleLegs, dedupeLegs } from './legs.js?v=338';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=338';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=338';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=338';
+import { setCommodityOrder } from './commodityorder.js?v=338';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=338';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=338';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=338';
+import { schedulePush, pushOnReconnect } from './sync.js?v=338';
+import { hasParts as hasAddressParts } from './address.js?v=338';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=338';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -881,13 +881,14 @@ export const db = {
         if (merged.ourRef) merged.__hasOurRef = true;   // so clearing it reaches the server
         if (merged.paid) merged.__hasPaid = true;       // and so does marking it unpaid again
         if (merged.deliveryPattern) merged.__hasDeliveryPattern = true;   // and clearing how it is delivered
+        if (merged.invoicing) merged.__hasInvoicing = true;               // and clearing who invoices
         if (hasAddressParts(merged.buyerAddressParts)) merged.__hasBuyerAddressParts = true;   // and clearing the buyer's address parts
         c.sales[idx] = merged;
       }
       touch('sale', sale.id);
     } else {
       const id = uid();
-      c.sales.push({ ...sale, id, ...(Number(sale.brokerageRate) ? { __hasBrokerageRate: true } : {}), ...(sale.freightPaidBy === 'buyer' ? { __hasFreightPaidBy: true } : {}), ...(sale.ourRef ? { __hasOurRef: true } : {}), ...(sale.paid ? { __hasPaid: true } : {}), ...(sale.deliveryPattern ? { __hasDeliveryPattern: true } : {}), ...(hasAddressParts(sale.buyerAddressParts) ? { __hasBuyerAddressParts: true } : {}) });
+      c.sales.push({ ...sale, id, ...(Number(sale.brokerageRate) ? { __hasBrokerageRate: true } : {}), ...(sale.freightPaidBy === 'buyer' ? { __hasFreightPaidBy: true } : {}), ...(sale.ourRef ? { __hasOurRef: true } : {}), ...(sale.paid ? { __hasPaid: true } : {}), ...(sale.deliveryPattern ? { __hasDeliveryPattern: true } : {}), ...(sale.invoicing ? { __hasInvoicing: true } : {}), ...(hasAddressParts(sale.buyerAddressParts) ? { __hasBuyerAddressParts: true } : {}) });
       touch('sale', id);
     }
     persist();

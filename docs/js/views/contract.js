@@ -18,15 +18,16 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=337';
-import { openSheet } from '../ui.js?v=337';
-import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=337';
-import { addressLinesOf } from '../address.js?v=337';
-import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=337';
-import { PATTERN_ON_CONTRACT } from '../deliveryplan.js?v=337';
-import { contactLines } from '../buyercontact.js?v=337';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=337';
-import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=337';
+import { db } from '../storage.js?v=338';
+import { openSheet } from '../ui.js?v=338';
+import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=338';
+import { addressLinesOf } from '../address.js?v=338';
+import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=338';
+import { PATTERN_ON_CONTRACT } from '../deliveryplan.js?v=338';
+import { INVOICING_ON_CONTRACT } from '../invoicing.js?v=338';
+import { contactLines } from '../buyercontact.js?v=338';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=338';
+import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=338';
 
 const DASH = '—';
 
@@ -150,8 +151,9 @@ export function contractDocHTML(sale, business, commodity, signed = null, { show
         ${term('Location', sale.location)}
         ${term('Delivery period', deliveryPeriodText(sale))}
         ${term('Delivery option', PATTERN_ON_CONTRACT[sale.deliveryPattern])}
+        ${term('Invoicing', INVOICING_ON_CONTRACT[sale.invoicing])}
         ${term('Delivery terms', sale.deliveryTerms)}
-        ${term('Weights to govern', sale.weightsToGovern
+        ${term('Weights and quality to govern', sale.weightsToGovern
           ? sale.weightsToGovern.charAt(0).toUpperCase() + sale.weightsToGovern.slice(1) : '')}
         ${term('Payment terms', paymentText(sale))}
         ${term('Carry', carryText(sale))}

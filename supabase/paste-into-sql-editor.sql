@@ -1934,3 +1934,9 @@ alter table farms
   add column if not exists logo_off boolean;
 
 notify pgrst, 'reload schema';
+
+-- Who invoices on a contract: 'seller' (the farm invoices the buyer) or 'rcti' (the buyer issues a recipient created tax invoice) (optional)
+alter table sales
+  add column if not exists invoicing text;
+
+notify pgrst, 'reload schema';

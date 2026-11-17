@@ -1132,3 +1132,29 @@ tr.sum-head td { font-weight: 800; background: var(--surface-2); }
 .invoice-doc.branded .invoice-block h3 { color: #2e7d32; }
 .invoice-doc.branded .invoice-totals .row:nth-child(even) { background: #f4f8f4; }
 .invoice-doc.branded .invoice-totals .row { padding-left: 6px; padding-right: 6px; }
+
+/* The sale form in blocks: each section its own panel, in the same two colours as the lists, so where one ends and
+   the next begins is plain; the boxes inside go white so they stand out from the panel. */
+.form-section {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  padding: 4px 12px 2px;
+  margin-top: 12px;
+}
+.form-section.alt {
+  background: color-mix(in srgb, var(--accent-summary) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent-summary) 28%, var(--border));
+}
+.form-section > .subhead {
+  margin: 8px 0 10px;
+  font-size: 12.5px;
+  color: var(--text);
+}
+.form-section .field input:not([type="checkbox"]):not([type="radio"]),
+.form-section .field select,
+.form-section .field textarea,
+details.fold-band .field input:not([type="checkbox"]):not([type="radio"]),
+details.fold-band .field select,
+details.fold-band .field textarea { background: var(--surface); }
+.form-section .readout { background: var(--surface); border-style: solid; }
