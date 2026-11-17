@@ -1,24 +1,24 @@
-import { db } from '../storage.js?v=322';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=322';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=322';
-import { isTransit } from '../transit.js?v=322';
-import { isOffFarm } from '../offfarm.js?v=322';
-import { paintOffFarmCard } from './offfarm.js?v=322';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=322';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=322';
-import { hasStorageQuality } from '../mapping.js?v=322';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=322';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=322';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=322';
-import { renderRelatedMovements } from './movements.js?v=322';
-import { openSiloSetupSheet } from './silosetup.js?v=322';
-import { commodityFills } from '../commodityfill.js?v=322';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=322';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=322';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=322';
+import { db } from '../storage.js?v=324';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=324';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=324';
+import { isTransit } from '../transit.js?v=324';
+import { isOffFarm } from '../offfarm.js?v=324';
+import { paintOffFarmCard } from './offfarm.js?v=324';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=324';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=324';
+import { hasStorageQuality } from '../mapping.js?v=324';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=324';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=324';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=324';
+import { renderRelatedMovements } from './movements.js?v=324';
+import { openSiloSetupSheet } from './silosetup.js?v=324';
+import { commodityFills } from '../commodityfill.js?v=324';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=324';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=324';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=324';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=322';
+} from '../silolayers.js?v=324';
 
 let unsub = null;
 let listMode = 'commodity';
@@ -28,6 +28,8 @@ let quickKind = 'silo';
 // arriving does not clear what you were looking for.
 let searchText = '';
 let commodityTab = '';
+// Season set-up and fill-in sit behind a Tools button: they are used a few times a season, so they shouldn't push the list down.
+let toolsOpen = false;
 // How the list is ordered, remembered on the device like the measured switch.
 const SORT_KEY = 'grainflow.storageSort';
 let sortMode = (() => { try { const v = localStorage.getItem(SORT_KEY); return SORTS.some((x) => x.id === v) ? v : 'volume'; } catch { return 'volume'; } })();
@@ -93,26 +95,32 @@ function paint(root) {
     return;
   }
 
+  const canSetUp = ['owner', 'manager'].includes(db.getRole());
   body.innerHTML = `
     <div id="storage-summary"></div>
     <div class="card">
       <h2>Saved silos &amp; bunkers</h2>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="silo-setup">Season set-up&hellip;</button>` : ''}
-        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="fill-commodity">Fill in commodities from loads</button>` : ''}
+      <div class="storage-tools-bar">
         <button type="button" class="chip ${showMeasured ? 'active' : ''}" id="toggle-measured" aria-pressed="${showMeasured}">Measured: ${showMeasured ? 'shown' : 'hidden'}</button>
+        ${canSetUp ? `<button type="button" class="chip" id="toggle-tools" aria-expanded="${toolsOpen}">Tools ${toolsOpen ? '&#9652;' : '&#9662;'}</button>` : ''}
       </div>
+      ${canSetUp && toolsOpen ? `<div class="storage-tools">
+        <button class="btn secondary small" id="silo-setup">Season set-up&hellip;</button>
+        <button class="btn secondary small" id="fill-commodity">Fill in commodities from loads</button>
+      </div>` : ''}
       <div class="segmented" id="list-mode">
         <button data-mode="commodity" class="${listMode === 'commodity' ? 'active' : ''}">By commodity</button>
         <button data-mode="chronological" class="${listMode === 'chronological' ? 'active' : ''}">Chronological</button>
       </div>
-      <div class="field" style="margin:10px 0 0">
-        <label for="storage-search">Search</label>
-        <input type="search" id="storage-search" placeholder="A number, name, grade or commodity" value="${esc(searchText)}" />
-      </div>
-      <div class="field" style="margin:10px 0 0">
-        <label for="storage-sort">Sort by</label>
-        <select id="storage-sort">${SORTS.map((x) => `<option value="${x.id}" ${sortMode === x.id ? 'selected' : ''}>${x.label}</option>`).join('')}</select>
+      <div class="storage-find">
+        <div class="field">
+          <label for="storage-search">Search</label>
+          <input type="search" id="storage-search" placeholder="Number, name, grade&hellip;" value="${esc(searchText)}" />
+        </div>
+        <div class="field">
+          <label for="storage-sort">Sort by</label>
+          <select id="storage-sort">${SORTS.map((x) => `<option value="${x.id}" ${sortMode === x.id ? 'selected' : ''}>${x.label}</option>`).join('')}</select>
+        </div>
       </div>
       <div id="storage-chips" style="margin-top:10px"></div>
       <div id="storage-assume"></div>
@@ -173,6 +181,7 @@ function paint(root) {
     toast(`${fills.length} silo${fills.length === 1 ? '' : 's'} updated`);
     paint(root);
   });
+  root.querySelector('#toggle-tools')?.addEventListener('click', () => { toolsOpen = !toolsOpen; paint(root); });
   root.querySelector('#toggle-measured')?.addEventListener('click', () => { setShowMeasured(!showMeasured); paint(root); });
 }
 
@@ -255,12 +264,38 @@ function paintStorageParts(root) {
       ${tabs.map((t) => `<button type="button" class="chip ${commodityTab === t.id ? 'active' : ''}" data-tab="${esc(t.id)}" role="tab">${esc(t.name)} ${t.count}</button>`).join('')}
     </div>`;
     shown = filterByTab(found, commodities, commodityTab);
+    // With one commodity (or "No commodity") picked, a total for its silos: held, room when full, and what is spare.
+    if (commodityTab) chipsEl.innerHTML += tabTotalLine(shown, commodities, movements, tabs.find((t) => t.id === commodityTab)?.name || '');
   } else chipsEl.innerHTML = '';
 
   // ---- the list ----
   root.querySelector('#storage-list').innerHTML = transitCards(transits, commodities, movements) + (shown.length
     ? renderStorageList(shown, commodities, movements)
     : `<div class="empty">No silos match &ldquo;${esc(searchText.trim())}&rdquo;.</div>`);
+}
+
+/**
+ * The total for the silos on one commodity tab: how many, what they hold by the books, what they hold when full and what is spare.
+ * Silos with no commodity are worked out as the commodity picked above the list, the same as each row, so the total agrees with the rows.
+ * A tally storage counts in its own unit, not tonnes, so it is left out of the tonnes.
+ */
+function tabTotalLine(silos, commodities, movements, name) {
+  const assume = assumedCommodity(commodities, loadSpaceAs());
+  let held = 0; let room = 0; let counted = 0; let unknown = 0;
+  for (const s of silos) {
+    if (s.kind === 'tally' && (s.unitLabel || 't') !== 't') continue;
+    counted += 1;
+    held += storageLedgerStock(s, movements);
+    const c = commodities.find((x) => x.id === s.commodityId);
+    const cap = capacityInfo(s, c || assume).tons;
+    if (cap > 0) room += cap; else unknown += 1;
+  }
+  if (!counted) return '';
+  const spare = room - held;
+  const asNote = !silos.some((s) => commodities.some((x) => x.id === s.commodityId)) && assume ? ` as ${esc(assume.name)}` : '';
+  return `<div class="tab-total"><strong>${esc(name)} total</strong> · ${counted} silo${counted === 1 ? '' : 's'}
+    <div class="tab-total-fig"><span><b>${num(held, 1)} t</b> held</span><span><b>${num(room, 0)} t</b> room when full${asNote}</span>${room > 0 ? `<span><b>${num(spare, 0)} t</b> spare</span>` : ''}</div>
+    ${unknown ? `<div class="meta">${unknown} silo${unknown === 1 ? ' has' : 's have'} no volume or tonnes set, so no room is counted for ${unknown === 1 ? 'it' : 'them'}.</div>` : ''}</div>`;
 }
 
 /**

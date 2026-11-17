@@ -9,6 +9,7 @@
 // number — typing 13 must not also show 113, 130 or silo 43.
 
 import assert from 'node:assert';
+import fs from 'node:fs';
 import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../docs/js/storagefilter.js';
 
 let failures = 0;
@@ -182,6 +183,13 @@ check('the heading a silo sits under, for the sorts that have headings', () => {
 });
 check('a sort the screen offers is one the sorter knows', () => {
   for (const s of SORTS) assert.equal(sortStorages(GRADED, s.id).length, GRADED.length, s.id);
+});
+
+check('a commodity tab (and No commodity) shows a total: held, room when full and spare, as the rows work them out', () => {
+  const src = fs.readFileSync(new URL('../docs/js/views/storage.js', import.meta.url), 'utf8');
+  assert.ok(src.includes('function tabTotalLine('), 'the total is built in one place');
+  assert.ok(src.includes('if (commodityTab) chipsEl.innerHTML += tabTotalLine('), 'only when a tab is picked');
+  assert.ok(src.includes('capacityInfo(s, c || assume).tons'), 'a silo with no commodity is worked out as the commodity picked, like its row');
 });
 
 console.log('');

@@ -1,12 +1,12 @@
-import { db } from '../storage.js?v=322';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=322';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=322';
-import { addressLinesOf } from '../address.js?v=322';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=322';
-import { signToggleHtml, wireSignToggle } from './signtoggle.js?v=322';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=322';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=322';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=322';
+import { db } from '../storage.js?v=324';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=324';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=324';
+import { addressLinesOf } from '../address.js?v=324';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=324';
+import { signToggleHtml, wireSignToggle } from './signtoggle.js?v=324';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=324';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=324';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=324';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
