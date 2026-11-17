@@ -1188,3 +1188,21 @@ details.inner-fold > :not(summary) { margin-left: 14px; margin-right: 14px; }
 details.inner-fold > :last-child { margin-bottom: 14px; }
 details.inner-fold > summary + * { margin-top: 12px; }
 details.inner-fold .hint, details.inner-fold .field.hint { font-size: 11.5px; color: var(--text-dim); }
+/* Outload optimiser result cards */
+.opt-card { margin: 10px 0; }
+.opt-table { width: 100%; font-size: 12.5px; border-collapse: collapse; margin-top: 6px; }
+.opt-table th { text-align: left; font-weight: 600; color: var(--text-dim); padding: 4px 6px 4px 0; }
+.opt-table td { padding: 5px 6px 5px 0; border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+/* Sampled sections: each section a different tint down the list, so one is easy to tell from the next. The order
+   follows the rows themselves, so adding, removing and moving a section keeps the bands right. */
+#lay-rows .lay-row {
+  --band: #2f7fc1;
+  padding: 8px 8px 6px 10px; margin-bottom: 8px; border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--band) 35%, var(--border));
+  border-left: 5px solid var(--band);
+  background: color-mix(in srgb, var(--band) 11%, var(--surface));
+}
+#lay-rows .lay-row:nth-child(4n+2) { --band: #c98a12; }
+#lay-rows .lay-row:nth-child(4n+3) { --band: #8a4fb8; }
+#lay-rows .lay-row:nth-child(4n+4) { --band: #c0483c; }
+#lay-rows .lay-row input, #lay-rows .lay-row select { background: var(--surface); }
