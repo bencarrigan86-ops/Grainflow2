@@ -82,7 +82,10 @@ check('when the lint buyer pays the gin, the ginning and levies come off the con
   const base = saleEconomics(sale, []).totalValue;
   const e = saleEconomics(sale, [move(gin, 'sale')]);
   assert.equal(e.ginDeduction, 27340.40);
-  assert.equal(Math.round((base - e.totalValue) * 100) / 100, 27340.40, 'and the contract is worth that much less');
+  assert.equal(e.totalValue, base, 'the contract value is not changed by the gin: it is a deduction from the payment, not the price');
+  assert.equal(e.priceExFarm, saleEconomics(sale, []).priceExFarm, 'nor is the price');
+  assert.equal(Math.round((base - e.netPayment) * 100) / 100, 27340.40, 'but the payment is that much less');
+  assert.equal(saleEconomics(sale, []).netPayment, base, 'with no gin deduction the payment is the value');
   assert.equal(cleanGin({}).paidBy, 'us', 'a run saved before this existed is ours to pay');
 });
 

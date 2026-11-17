@@ -1,10 +1,10 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=361';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=361';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=361';
-import { ginDeduction } from './ginning.js?v=361';
-import { commoditySort } from './commodityorder.js?v=361';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=362';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=362';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=362';
+import { ginDeduction } from './ginning.js?v=362';
+import { commoditySort } from './commodityorder.js?v=362';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -89,9 +89,12 @@ export function saleEconomics(sale, movements = []) {
   const oil = oilAdjustment(sale, movements);
   // and a load can carry deductions of its own for faults the contract does not price
   const deductions = deductionAdjustment(sale, movements);
-  // and for cotton, the gin charges the buyer of the lint pays and takes off the lint payment
+  // and for cotton, the gin charges the buyer of the lint pays and takes off the lint payment. That is a deduction from
+  // the payment at the foot of the invoice, not part of the price: the contract's value stays what the lint is worth,
+  // and `netPayment` is what the buyer actually pays after the gin comes off.
   const gin = ginDeduction(sale, movements);
-  const totalValue = tons * priceExFarm - ginning + grades.total + oil.total + deductions.total - gin.total;
+  const totalValue = tons * priceExFarm - ginning + grades.total + oil.total + deductions.total;
+  const netPayment = totalValue - gin.total;
   const tonsDue = tons - tonsDelivered;
 
   const { toleranceTons, minTons, maxTons } = contractTolerance(tons, sale.tolerancePct, sale.toleranceCapTons);
@@ -101,7 +104,7 @@ export function saleEconomics(sale, movements = []) {
   const tonsRemainingMax = Math.max(0, maxTons - tonsDelivered);
 
   return {
-    netOfFreight, levies, priceExFarm, ginning, totalValue, tonsDue,
+    netOfFreight, levies, priceExFarm, ginning, totalValue, netPayment, tonsDue,
     gradeAdjustment: grades.total, gradeLines: grades.lines, gradeOtherTons: grades.otherTons,
     oilAdjustment: oil.total, oilSummary: oil, deductionAdjustment: deductions.total, deductionLoads: deductions.loads, ginDeduction: gin.total, ginRuns: gin.runs,
     manualDelivered, movementDelivered, tonsDelivered,
