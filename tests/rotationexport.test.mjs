@@ -171,8 +171,8 @@ console.log('\n=== the screen ===');
 check('the sheet has both buttons, a portrait or landscape choice, and the roles without yields are given none', () => {
   const v = read('docs/js/views/rotation.js');
   assert.ok(v.includes('id="rot-pdf"') && v.includes('id="rot-csv"'));
-  assert.ok(v.includes('id="rot-orient"') && v.includes('rememberOrientation(orientation)'));
-  assert.ok(v.includes('rotationCsv(grid, { showYield })') && v.includes('orientation, showYield'));
+  assert.ok(v.includes("openSheet('PDF layout'") && v.includes('data-orient=') && v.includes('rememberOrientation(orientation)') && !v.includes('id="rot-orient"'), 'the layout is asked for after PDF is pressed, not on the report');
+  assert.ok(v.includes('rotationCsv(grid, { showYield })') && v.includes('orientation, showYield: pdfYield'));
   assert.ok(v.includes('sharePdf(') && v.includes('downloadCSV('));
 });
 

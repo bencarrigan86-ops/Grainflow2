@@ -4,18 +4,19 @@
 // spray marked. What is on the form and where is decided in spray.js; the PDF is drawn in spraypdf.js. The job is saved
 // as it is filled in, so a request can be started in the paddock and finished at the desk.
 
-import { db } from '../storage.js?v=332';
-import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=332';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=332';
-import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=332';
+import { db } from '../storage.js?v=337';
+import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=337';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=337';
+import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=337';
 import {
   FORMS, RATE_UNITS, MAX_CHEMICALS, CHECKLIST, sprayDefaults, sprayProblems, sprayTotals, sprayTitle, usedChemicals, plain,
-} from '../spray.js?v=332';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=332';
-import { loadMySignature } from '../mysignature.js?v=332';
-import { signatureSvg } from './signaturepad.js?v=332';
-import { openMapSheet } from './farmmap.js?v=332';
-import { buildSprayPdf } from '../spraypdf.js?v=332';
+} from '../spray.js?v=337';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=337';
+import { loadMySignature } from '../mysignature.js?v=337';
+import { signerNamesFor } from './signtoggle.js?v=337';
+import { signatureSvg } from './signaturepad.js?v=337';
+import { openMapSheet } from './farmmap.js?v=337';
+import { buildSprayPdf } from '../spraypdf.js?v=337';
 
 export const canSpray = (role) => ['owner', 'manager'].includes(role);
 
@@ -69,6 +70,7 @@ export async function openSprayFormSheet(existing, start = {}) {
   const jobs = db.getSprayJobs();
   let mySig = null;
   try { mySig = await loadMySignature(); } catch { mySig = null; }
+  const signerNames = await signerNamesFor(business);   // who it can be signed by: this person, the people the business lists
 
   // the last request to anyone seeds the contractor and who supplies the chemical
   const lastJob = jobs.filter((j) => j.id !== existing?.id).sort((a, b) => String(b.jobNo).localeCompare(String(a.jobNo)))[0] || null;
@@ -77,6 +79,7 @@ export async function openSprayFormSheet(existing, start = {}) {
   if (start.draft) d = start.draft;
   else if (existing) d = JSON.parse(JSON.stringify(existing));
   else d = sprayDefaults({ business, paddocks: padOf(start.ids || []), today: todayLocal(), jobs, previous: lastJob });
+  if (!existing && !start.draft && mySig?.name) d.signedBy = mySig.name;   // a new request is signed in the signed-in person's own name
   // a new request does not start on Aircair's form, because the last one was, on a farm that has switched it off
   if (!existing && d.form === 'aircair' && !business.showAircair) d.form = 'standard';
   if (!d.chemicals?.length) d.chemicals = [{ name: '', rate: '', unit: 'L' }];
@@ -182,7 +185,8 @@ export async function openSprayFormSheet(existing, start = {}) {
               ${field({ label: i === 0 ? 'Phone' : '&nbsp;', id: `sp-n${i}-phone`, value: d.neighbours?.[i]?.phone })}
               <label style="display:flex;align-items:center;gap:6px;padding-bottom:18px"><input type="checkbox" id="sp-n${i}-done" ${d.neighbours?.[i]?.contacted === 'yes' ? 'checked' : ''} style="width:18px;height:18px" /> Told</label>
             </div>`).join('')}
-          ${field({ label: 'Signed by (printed)', id: 'sp-signed', value: d.signedBy })}
+          ${field({ label: 'Signed by (printed)', id: 'sp-signed', value: d.signedBy, list: 'dl-signers', hint: signerNames.length > 1 ? 'Pick another name from the list, or type one.' : '' })}
+          <datalist id="dl-signers">${signerNames.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>
           ${d.form === 'aircair' ? (mySig ? `
             <label class="row" style="cursor:pointer;margin-top:4px"><span class="label"><input type="checkbox" id="sp-usesig" ${d.useSignature ? 'checked' : ''} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />Sign with my saved signature</span><span class="value"></span></label>
             <div style="margin:8px 0">${signatureSvg(mySig.strokes, 180)}</div>` : '<div class="hint">Save a signature under your profile to sign the form here. Until then, print and sign it.</div>') : ''}

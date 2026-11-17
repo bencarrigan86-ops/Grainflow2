@@ -1,16 +1,16 @@
 // Rotation and yield history: every paddock against every season, with the crop and its yield in each cell, and the
 // farm's yield for each crop by season underneath. Built from the seasons the farm already holds; nothing is entered here.
 
-import { db } from '../storage.js?v=332';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=332';
-import { openSheet, toast } from '../ui.js?v=332';
-import { canSeeYield } from '../nav.js?v=332';
-import { PALETTE } from '../farmmap.js?v=332';
-import { rotationGrid, rotationFarms, withoutFarms, withoutSeasons } from '../fieldhistory.js?v=332';
-import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=332';
-import { nowTime } from '../loadreport.js?v=332';
-import { downloadCSV } from '../csv.js?v=332';
-import { sharePdf, safeFileName } from '../sharefile.js?v=332';
+import { db } from '../storage.js?v=337';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=337';
+import { openSheet, toast } from '../ui.js?v=337';
+import { canSeeYield } from '../nav.js?v=337';
+import { PALETTE } from '../farmmap.js?v=337';
+import { rotationGrid, rotationFarms, withoutFarms, withoutSeasons } from '../fieldhistory.js?v=337';
+import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=337';
+import { nowTime } from '../loadreport.js?v=337';
+import { downloadCSV } from '../csv.js?v=337';
+import { sharePdf, safeFileName } from '../sharefile.js?v=337';
 
 const ORIENT_KEY = 'grainflow.rotation.orientation';
 const lastOrientation = () => { try { return orientationOf(localStorage.getItem(ORIENT_KEY)); } catch { return 'landscape'; } };
@@ -110,15 +110,9 @@ export function openRotationSheet() {
         <div style="display:flex;gap:8px;margin:8px 0"><button type="button" class="btn secondary" id="rot-all">Select all</button><button type="button" class="btn secondary" id="rot-none">Clear all</button></div>
         ${farms.map(farmRow).join('')}</details></div>` : ''}
       <div id="rot-body"></div>
-      <div class="subhead" style="margin-top:14px">Save or send</div>
+      ${canYield ? `<div class="subhead" style="margin-top:14px">Options</div>` : ''}
       ${canYield ? `<label class="row" style="cursor:pointer;margin-bottom:6px"><span class="label"><input type="checkbox" id="rot-yield" ${showYield ? 'checked' : ''} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />Include yields</span><span class="value">on screen, PDF and Excel</span></label>` : ''}
-      <div class="segmented" id="rot-orient" style="margin-bottom:8px">
-        ${ORIENTATIONS.map((x) => `<button data-orient="${x.value}" class="${x.value === orientation ? 'active' : ''}">${x.label}</button>`).join('')}
-      </div>
-      <div class="grid-2">
-        <button type="button" class="btn secondary" id="rot-pdf">PDF to print or send</button>
-        <button type="button" class="btn secondary" id="rot-csv">Excel (CSV)</button>
-      </div>`;
+      <div class="save-bar"><button type="button" class="btn secondary" id="rot-csv" style="flex:1;padding-left:12px;padding-right:12px">Excel (CSV)</button><button type="button" class="btn" id="rot-pdf" style="flex:1;padding-left:12px;padding-right:12px">PDF to print or send</button></div>`;
     paintBody();
     root.querySelector('#rot-farms')?.addEventListener('toggle', (e) => saveOpen(e.currentTarget.open));
     root.querySelector('#rot-seasons')?.addEventListener('toggle', (e) => saveSeasonsOpen(e.currentTarget.open));
@@ -145,26 +139,33 @@ export function openRotationSheet() {
     root.querySelector('#rot-yield')?.addEventListener('change', (e) => { showYield = e.currentTarget.checked; rememberYield(showYield); paintBody(); });
     const stamp = todayLocal();
     const business = db.getBusinessDetails();
-    root.querySelector('#rot-orient').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-orient]');
-      if (!b) return;
-      orientation = orientationOf(b.dataset.orient);
-      rememberOrientation(orientation);
-      root.querySelectorAll('#rot-orient button').forEach((x) => x.classList.toggle('active', x === b));
-    });
     const nothingOn = () => { if (grid.seasons.length && grid.rows.length) return false; toast('Switch on a season and a farm first.'); return true; };
     root.querySelector('#rot-csv').addEventListener('click', () => {
       if (nothingOn()) return;
       downloadCSV(safeFileName(`grainflow-rotation-${stamp}`, 'csv'), rotationCsv(grid, { showYield }));
       toast('Downloaded. It opens in Excel.');
     });
-    root.querySelector('#rot-pdf').addEventListener('click', async () => {
+    // the PDF asks how it should print on the next page, so the report itself is not crowded with it
+    root.querySelector('#rot-pdf').addEventListener('click', () => {
       if (nothingOn()) return;
-      const bytes = rotationPdf(grid, {
-        orientation, showYield, business: business.entityName || business.farmName || '', ngr: business.ngr || '',
-        today: dmy(stamp), madeAt: `${dmy(stamp)} ${nowTime()}`,
+      const pdfGrid = grid;
+      const pdfYield = showYield;
+      openSheet('PDF layout', (pick) => {
+        pick.innerHTML = `
+          <div class="hint" style="margin-bottom:10px">How should it print? Landscape fits more seasons across a page; portrait suits a narrow sheet. The one you used last is filled in.</div>
+          <div class="grid-2">${ORIENTATIONS.map((x) => `<button type="button" class="btn ${x.value === orientation ? '' : 'secondary'}" data-orient="${x.value}">${x.label}</button>`).join('')}</div>
+          <button type="button" class="btn ghost" id="rot-back" style="margin-top:10px">Back to the report</button>`;
+        pick.querySelectorAll('[data-orient]').forEach((btn) => btn.addEventListener('click', async () => {
+          orientation = orientationOf(btn.dataset.orient);
+          rememberOrientation(orientation);
+          const bytes = rotationPdf(pdfGrid, {
+            orientation, showYield: pdfYield, business: business.entityName || business.farmName || '', ngr: business.ngr || '',
+            today: dmy(stamp), madeAt: `${dmy(stamp)} ${nowTime()}`,
+          });
+          await sharePdf(bytes, `Rotation and yield history ${stamp}`, { title: 'Rotation and yield history', text: `Rotation and yield history, ${business.farmName || business.entityName || ''}`.trim() });
+        }));
+        pick.querySelector('#rot-back').addEventListener('click', () => openRotationSheet());
       });
-      await sharePdf(bytes, `Rotation and yield history ${stamp}`, { title: 'Rotation and yield history', text: `Rotation and yield history, ${business.farmName || business.entityName || ''}`.trim() });
     });
   });
 }

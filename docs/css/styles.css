@@ -634,9 +634,16 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
 .invoice-doc .invoice-bank { margin-top: 14px; font-size: 12px; color: #444; }
 
 @media print {
+  /* Only the document prints, once. The app underneath is taken out (hidden is not enough: it still takes up room, and the
+     document sits in a fixed overlay, which a printer repeats on every page the app's height runs to). */
+  html, body { height: auto !important; overflow: visible !important; background: #fff !important; }
+  body > *:not(.sheet-backdrop) { display: none !important; }
+  .sheet-backdrop { position: static !important; display: block !important; background: none !important; }
+  .sheet { max-height: none !important; overflow: visible !important; padding: 0 !important; background: #fff !important; border-radius: 0 !important; }
   body * { visibility: hidden; }
   .invoice-doc, .invoice-doc * { visibility: visible; }
   .invoice-doc { position: absolute; top: 0; left: 0; width: 100%; margin: 0; border-radius: 0; border: none; }
+  .invoice-doc, .invoice-doc * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .tabbar, .year-pill, .settings-btn, .fab, #print-invoice, .doc-actions, .sheet-header, .sheet-handle { display: none !important; }
 }
 
@@ -1114,3 +1121,14 @@ tr.sum-head td { font-weight: 800; background: var(--surface-2); }
 .card.report .table-scroll table td.sum-sub, .card.report .table-scroll table.tight td.sum-sub { padding-left: 20px; font-weight: 500; }
 .mtm.pos { color: var(--accent-summary); font-weight: 800; }
 .mtm.neg { color: var(--danger); font-weight: 800; }
+
+/* The confirmation of sale: the same green band as the app's other documents, with the farm's logo at the right of it. */
+.invoice-doc.branded { overflow: hidden; }
+.invoice-doc .doc-band { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: #2e7d32; color: #fff; margin: -16px -16px 14px; padding: 14px 16px; }
+.invoice-doc .doc-band .title { text-align: left; margin: 0 0 6px; color: #fff; }
+.invoice-doc .doc-band .invoice-meta { color: rgba(255,255,255,.92); margin: 0; justify-content: flex-start; gap: 2px 14px; }
+.invoice-doc .doc-band-logo { flex: none; background: #fff; border-radius: 6px; padding: 5px 8px; }
+.invoice-doc .doc-band-logo img { display: block; max-width: 120px; max-height: 52px; }
+.invoice-doc.branded .invoice-block h3 { color: #2e7d32; }
+.invoice-doc.branded .invoice-totals .row:nth-child(even) { background: #f4f8f4; }
+.invoice-doc.branded .invoice-totals .row { padding-left: 6px; padding-right: 6px; }

@@ -3,9 +3,10 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=332';
-import { dmy } from './fmt.js?v=332';
-import { SPECS, specOf } from './outload.js?v=332';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=337';
+import { drawBrandLogo } from './brand.js?v=337';
+import { dmy } from './fmt.js?v=337';
+import { SPECS, specOf } from './outload.js?v=337';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -153,7 +154,8 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
 
   const header = (page) => {
     pdf.text(MARGIN, 30, title.toUpperCase(), { size: 18, bold: true });
-    pdf.text(PAGE.width - MARGIN, 36, `${totals.loads} load${totals.loads === 1 ? '' : 's'}, ${plain(totals.tons)} t`, { size: 11, bold: true, align: 'right' });
+    const rx = drawBrandLogo(pdf, { right: PAGE.width - MARGIN, top: 10, maxW: 100, maxH: 40 });   // the farm's logo, if it has one
+    pdf.text(rx, 36, `${totals.loads} load${totals.loads === 1 ? '' : 's'}, ${plain(totals.tons)} t`, { size: 11, bold: true, align: 'right' });
     pdf.text(MARGIN, 56, [business, ngr ? `NGR ${ngr}` : '', rangeText(from, to)].filter(Boolean).join('   ·   '), { size: 9.5, gray: 0.2 });
     let y = 80;
     pdf.rect(MARGIN, y, PAGE.width - 2 * MARGIN, 18, { stroke: null, fill: 0.88 });
@@ -203,13 +205,14 @@ export function buildLoadTicketPdf(row, { business = '', ngr = '', showOrigin = 
 
   // heading band
   pdf.rect(0, 0, W, 96, { stroke: null, fill: GREEN });
+  const rx = drawBrandLogo(pdf, { right: R, top: 14, maxW: 80, maxH: 64, tile: true });   // the farm's logo, if it has one
   pdf.text(L, 30, 'LOAD TICKET', { size: 22, bold: true, gray: WHITE });
   // the trading name and the grower's NGR
-  if (business) pdf.text(L, 58, clipText(business, CW * 0.6, 12, true), { size: 12, bold: true, gray: 0.95 });
+  if (business) pdf.text(L, 58, clipText(business, Math.min(CW * 0.6, rx - L - 120), 12, true), { size: 12, bold: true, gray: 0.95 });
   if (ngr) pdf.text(L, 75, `NGR ${ngr}`, { size: 9.5, gray: 0.85 });
   if (row.ticketNo !== '') {
-    pdf.text(R, 24, 'TICKET', { size: 8, bold: true, gray: 0.85, align: 'right' });
-    pdf.text(R, 36, `#${row.ticketNo}`, { size: 28, bold: true, gray: WHITE, align: 'right' });
+    pdf.text(rx, 24, 'TICKET', { size: 8, bold: true, gray: 0.85, align: 'right' });
+    pdf.text(rx, 36, `#${row.ticketNo}`, { size: 28, bold: true, gray: WHITE, align: 'right' });
   }
 
   // a labelled card: the label small and grey, the value large

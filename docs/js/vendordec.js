@@ -9,9 +9,10 @@
 //
 // Pure: it builds the declaration's data and its PDF; the screen and the sharing are elsewhere.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=332';
-import { dmy } from './fmt.js?v=332';
-import { hasSignature, strokesInBox } from './signature.js?v=332';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=337';
+import { drawBrandLogo } from './brand.js?v=337';
+import { dmy } from './fmt.js?v=337';
+import { hasSignature, strokesInBox } from './signature.js?v=337';
 
 export const MAX_VARIETIES = 4;
 
@@ -102,7 +103,7 @@ export function buildDeclaration({ sale, order = null, business = {}, commodityN
     saleId: sale?.id || '',
     orderId: order?.id || '',
     buyer: {
-      name: buyerContact.replace(emailIn(buyerContact), '').replace(phoneIn(buyerContact), '').trim(),
+      name: buyerContact.replace(emailIn(buyerContact), '').replace(phoneIn(buyerContact), '').replace(/\s*[,;|/]\s*/g, ' ').replace(/\s+/g, ' ').trim(),
       company: clean(sale?.buyer),
       address: clean(sale?.buyerAddress),
       town: '',
@@ -217,6 +218,7 @@ export function declarationPdf(d) {
   const pdf = new Pdf();
   const W = pdf.width - M * 2;
   pdf.text(pdf.width / 2, 34, 'GRAIN COMMODITY VENDOR DECLARATION', { size: 16, bold: true, align: 'center' });
+  drawBrandLogo(pdf, { right: M + W, top: 12, maxW: 80, maxH: 40 });   // the farm's logo, if it has one
 
   // document id
   pdf.rect(M + W - 230, 62, 230, 18, { stroke: null, fill: SHADE });
@@ -364,7 +366,8 @@ function cvdPdf(d) {
   const W = pdf.width - M * 2;
   const LIMIT = pdf.height - 48;
   const cvd = d.cvd || {};
-  let y = 28;
+  const logoSpace = drawBrandLogo(pdf, { right: M + W, top: 10, maxW: 80, maxH: 28 }) !== M + W;   // the farm's logo, if it has one
+  let y = logoSpace ? 46 : 28;
   const ensure = (h) => { if (y + h > LIMIT) { pdf.addPage(); y = M; } };
   const heading = (title) => {
     ensure(40);

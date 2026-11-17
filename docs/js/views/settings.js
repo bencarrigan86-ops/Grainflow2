@@ -1,46 +1,47 @@
-import { db } from '../storage.js?v=332';
-import { getTheme, setTheme } from '../theme.js?v=332';
-import { num, money, esc, todayLocal } from '../fmt.js?v=332';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=332';
-import { openLoadImportSheet } from './importloads.js?v=332';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=332';
-import { openPastSeasonsSheet } from './pastseasons.js?v=332';
-import { openPastSalesSheet } from './pastsales.js?v=332';
-import { openLineupSheet } from './lineup.js?v=332';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=332';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=332';
-import { openDangerSheet } from './dangerconfirm.js?v=332';
-import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=332';
-import { seasonContents, contentsText } from '../seasondelete.js?v=332';
-import { openDeletedSheet } from './deleted.js?v=332';
-import { APP_VERSION } from '../version.js?v=332';
-import { exportRowsAsCSV } from '../csv.js?v=332';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=332';
-import { orderedNames, moveName } from '../commodityorder.js?v=332';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=332';
-import { endpointLabel } from './movements.js?v=332';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=332';
-import { layersForStorage } from '../outload.js?v=332';
-import { traceLoads, traceText } from '../trace.js?v=332';
-import { holdings, totalHeld } from '../offfarm.js?v=332';
-import { kindLabel, billTotal } from '../payables.js?v=332';
-import { orderState, STATE_LABEL } from '../orders.js?v=332';
-import { fieldHarvest } from '../harvest.js?v=332';
-import { capacityFor } from '../storagecapacity.js?v=332';
-import { autoSeasonText } from '../harvestseason.js?v=332';
-import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=332';
-import { openMySignatureSheet } from './signaturepad.js?v=332';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=332';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=332';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=332';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=332';
+import { db } from '../storage.js?v=337';
+import { getTheme, setTheme } from '../theme.js?v=337';
+import { num, money, esc, todayLocal } from '../fmt.js?v=337';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=337';
+import { openLoadImportSheet } from './importloads.js?v=337';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=337';
+import { openPastSeasonsSheet } from './pastseasons.js?v=337';
+import { openPastSalesSheet } from './pastsales.js?v=337';
+import { openLineupSheet } from './lineup.js?v=337';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=337';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=337';
+import { openDangerSheet } from './dangerconfirm.js?v=337';
+import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=337';
+import { seasonContents, contentsText } from '../seasondelete.js?v=337';
+import { openDeletedSheet } from './deleted.js?v=337';
+import { APP_VERSION } from '../version.js?v=337';
+import { logoFromFile } from '../logo.js?v=337';
+import { exportRowsAsCSV } from '../csv.js?v=337';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=337';
+import { orderedNames, moveName } from '../commodityorder.js?v=337';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=337';
+import { endpointLabel } from './movements.js?v=337';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=337';
+import { layersForStorage } from '../outload.js?v=337';
+import { traceLoads, traceText } from '../trace.js?v=337';
+import { holdings, totalHeld } from '../offfarm.js?v=337';
+import { kindLabel, billTotal } from '../payables.js?v=337';
+import { orderState, STATE_LABEL } from '../orders.js?v=337';
+import { fieldHarvest } from '../harvest.js?v=337';
+import { capacityFor } from '../storagecapacity.js?v=337';
+import { autoSeasonText } from '../harvestseason.js?v=337';
+import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=337';
+import { openMySignatureSheet } from './signaturepad.js?v=337';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=337';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=337';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=337';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=337';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=332';
+} from '../invites.js?v=337';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=332';
+} from '../auth.js?v=337';
 
 let unsub = null;
 
@@ -184,12 +185,23 @@ function paint(root) {
           bank account. Used as the "Seller" on invoices you generate in Sales — not as the
           name of the farm, which is set above.</div>
         ${field({ label: 'Entity / business name', id: 'bd-entity', value: business.entityName, placeholder: 'e.g. Carrigan Agricultural Co Pty Ltd' })}
+        <div class="field">
+          <label>Company logo</label>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div id="bd-logo-box" style="min-width:96px;min-height:48px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--border);border-radius:8px;padding:4px">${business.logo ? `<img src="${esc(business.logo)}" alt="Your logo" style="max-width:150px;max-height:64px;display:block" />` : '<span class="meta" style="color:#777">No logo yet</span>'}</div>
+            ${canEditBusiness ? `<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn secondary small" id="bd-logo-pick">${business.logo ? 'Change logo' : 'Add a logo'}</button>${business.logo ? '<button type="button" class="btn secondary small" id="bd-logo-remove">Remove</button>' : ''}</div>` : ''}
+          </div>
+          ${business.logo && canEditBusiness ? `<label class="row" style="cursor:pointer;margin:8px 0 0"><span class="label"><input type="checkbox" id="bd-logo-on" ${business.logoOff ? '' : 'checked'} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />Print the logo</span><span class="value">on PDFs and the confirmation</span></label>` : ''}
+          <input type="file" id="bd-logo-file" accept="image/*" hidden />
+          <div class="hint">Printed in the header of your PDFs and on the confirmation of sale. A PNG or JPG; it is shrunk to fit.</div>
+        </div>
         <div class="grid-2">
           ${field({ label: 'ABN', id: 'bd-abn', value: business.abn })}
           ${field({ label: 'NGR', id: 'bd-ngr', value: business.ngr })}
         </div>
         ${field({ label: 'PIC (property identification code)', id: 'bd-pic', value: business.pic, hint: 'Named on the national vendor declaration.' })}
         ${field({ label: 'Contact name', id: 'bd-contact', value: business.contactName })}
+        ${field({ label: 'People who sign for the business', id: 'bd-signers', type: 'textarea', rows: 3, value: business.signers, placeholder: 'One name to a line', hint: 'Offered as the printed name under a signature on confirmations, invoices and freight orders. The person signed in is always first.' })}
         <div class="grid-2">
           ${field({ label: 'Phone', id: 'bd-phone', type: 'tel', value: business.phone })}
           ${field({ label: 'Email', id: 'bd-email', type: 'email', value: business.email })}
@@ -355,6 +367,23 @@ function paint(root) {
   root.querySelector('#order-auto')?.addEventListener('click', () => db.updateBusinessDetails({ commodityOrder: [] }));
   root.querySelector('#show-aircair')?.addEventListener('change', (e) => db.updateBusinessDetails({ showAircair: e.target.checked }));
 
+  // the logo is saved as soon as it is chosen, like the other switches on this screen
+  root.querySelector('#bd-logo-pick')?.addEventListener('click', () => root.querySelector('#bd-logo-file').click());
+  root.querySelector('#bd-logo-file')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      db.updateBusinessDetails({ logo: await logoFromFile(file), logoOff: false });
+      toast('Logo saved. It is on your PDFs from now on.');
+    } catch (err) { notify(err?.message || 'That picture could not be used.'); }
+  });
+  root.querySelector('#bd-logo-on')?.addEventListener('change', (e) => { db.updateBusinessDetails({ logoOff: !e.target.checked }); toast(e.target.checked ? 'The logo is on your documents.' : 'The logo is off your documents.'); });
+  root.querySelector('#bd-logo-remove')?.addEventListener('click', () => {
+    db.updateBusinessDetails({ logo: '' });
+    toast('Logo removed.');
+  });
+
   root.querySelector('#save-business')?.addEventListener('click', () => {
     const addr = readAddress(root, 'bd-addr');
     db.updateBusinessDetails({
@@ -363,6 +392,7 @@ function paint(root) {
       ngr: getVal(root, 'bd-ngr')?.trim(),
       pic: getVal(root, 'bd-pic')?.trim(),
       contactName: getVal(root, 'bd-contact')?.trim(),
+      signers: getVal(root, 'bd-signers')?.trim(),
       phone: getVal(root, 'bd-phone')?.trim(),
       email: getVal(root, 'bd-email')?.trim(),
       address: joinAddress(addr),   // the one line the documents print; the parts ride beside it

@@ -2,7 +2,8 @@
 // figures under it. Same numbers as the screen (seasonAverages() is passed in), laid out portrait, one block per crop in the
 // same green as the Position page. Pure: it builds bytes and touches nothing else.
 
-import { Pdf } from './pdf.js?v=332';
+import { Pdf } from './pdf.js?v=337';
+import { drawBrandLogo } from './brand.js?v=337';
 
 const PAGE = { width: 595.28, height: 841.89 };
 const M = 36;
@@ -50,8 +51,9 @@ export function averagesPdf(result = { labels: [], commodities: [] }, { business
   };
   const header = () => {
     pdf.rect(0, 0, PAGE.width, 68, { stroke: null, fill: GREEN });
+    const rx = drawBrandLogo(pdf, { right: PAGE.width - M, top: 11, tile: true });   // the farm's logo, if it has one
     pdf.text(M, 16, 'AVERAGES', { size: 20, bold: true, gray: 1 });
-    pdf.text(PAGE.width - M, 20, span, { size: 12, bold: true, align: 'right', gray: 1 });
+    pdf.text(rx, 20, span, { size: 12, bold: true, align: 'right', gray: 1 });
     const who = [business, today ? `Printed ${today}` : ''].filter(Boolean).join('   ·   ');
     if (who) pdf.text(M, 44, who, { size: 9.5, gray: 0.92 });
     pdf.text(M, 76, 'By commodity', { size: 8, gray: GREY });

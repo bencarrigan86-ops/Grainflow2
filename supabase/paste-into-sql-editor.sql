@@ -48,7 +48,7 @@ alter table farms
 alter table sale_terms
   add column if not exists buyer_address_parts jsonb;
 
--- How a contract is delivered: 'call' (the buyer orders it) or 'even' (spread evenly over the window) (optional; stored only once it has been set)
+-- How a contract is delivered: 'call' (the buyer orders it), 'sellers' (the seller chooses when) or 'even' (spread evenly over the window) (optional; stored only once it has been set)
 alter table sales
   add column if not exists delivery_pattern text;
 
@@ -1329,7 +1329,6 @@ create policy problem_reports_insert on problem_reports for insert
 
 grant insert on problem_reports to authenticated;
 
-notify pgrst, 'reload schema';
 
 -- ---------------------------------------------------------------------------
 -- ONE LAST STEP, done once by whoever runs the app's support. It is not part of this file because it names a
@@ -1919,5 +1918,19 @@ notify pgrst, 'reload schema';
 -- yield estimate. Blank means the paddock's estimate.
 alter table fields
   add column if not exists harvest_left_yield numeric;
+
+notify pgrst, 'reload schema';
+
+-- The farm's logo: a small JPEG kept as text, printed in the header of the PDFs (optional; stored only once a logo has been added)
+alter table farms
+  add column if not exists logo text;
+
+-- The people who sign for the business: their names, one to a line, offered as the printed name on documents (optional)
+alter table farms
+  add column if not exists signers text;
+
+-- Whether the logo is switched off (it is printed whenever there is one, unless this is true) (optional)
+alter table farms
+  add column if not exists logo_off boolean;
 
 notify pgrst, 'reload schema';

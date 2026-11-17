@@ -4,18 +4,24 @@
 // start of the window, if that is later) to the end of the window, so it can be shown as tonnes a week or a month. "Buyer
 // calls it" means it moves when the buyer orders it: the open grain orders are the schedule, by the date each is due, and
 // whatever is not yet ordered has no date. A contract with no pattern set is treated as a buyer-calls one, which is the
-// cautious reading: nothing is dated that nobody dated.
+// cautious reading: nothing is dated that nobody dated. "Seller's option" (the farm decides when it goes) is read the same
+// way: it is dated by the grain orders, and whatever is not ordered has no date.
 //
 // The same plan gives the money: each tonne is paid the contract's payment terms after it is delivered. Everything here
 // is a forecast at the contract price plus GST, before freight, levies and grade adjustments. Pure.
 
-import { daysBetween } from './orders.js?v=332';
+import { daysBetween } from './orders.js?v=337';
 
 export const PATTERNS = [
   { value: '', label: 'Not set' },
-  { value: 'call', label: 'Buyer calls it (loads ordered as needed)' },
-  { value: 'even', label: 'Spread evenly over the window' },
+  { value: 'call', label: "Buyer's call (loads ordered as needed)" },
+  { value: 'sellers', label: "Seller's option (you choose when it goes)" },
+  { value: 'even', label: 'Even spread over the delivery period' },
 ];
+/** The delivery option as a contract confirmation words it: the contract's choice, without the note in brackets. */
+export const PATTERN_ON_CONTRACT = Object.fromEntries(PATTERNS.filter((p) => p.value).map((p) => [p.value, p.label.replace(/\s*\(.*\)\s*$/, '')]));
+/** The pattern values the farm's records keep. */
+export const PATTERN_VALUES = PATTERNS.map((p) => p.value).filter(Boolean);
 export const patternLabel = (v) => PATTERNS.find((p) => p.value === (v || ''))?.label || 'Not set';
 
 export const GST_RATE = 0.1;

@@ -11,7 +11,7 @@ const { groupFieldsByCommodity } = await import(`../docs/js/derived.js?v=${stamp
 const { fertPdf } = await import(`../docs/js/fertpdf.js?v=${stamp}`);
 const { seedPdf } = await import(`../docs/js/seedpdf.js?v=${stamp}`);
 const { buyerExposure, dueByWeek } = await import(`../docs/js/exposure.js?v=${stamp}`);
-const { exposurePdf, mtmText, mtmColour, EXPOSURE_COLUMNS, exposureContractLine } = await import(`../docs/js/exposurepdf.js?v=${stamp}`);
+const { exposurePdf, mtmText, mtmColour, EXPOSURE_COLUMNS } = await import(`../docs/js/exposurepdf.js?v=${stamp}`);
 
 let failures = 0;
 const check = (name, fn) => {
@@ -176,7 +176,12 @@ check('each buyer lists its open contracts, and the PDF puts each one on its own
   const lines = ex.buyers.reduce((n, b) => n + b.list.length, 0);
   assert.ok(lines >= 3);
   assert.ok(text(exposurePdf(ex)).split('/Contents').length > 1);
-  assert.ok(exposureContractLine({ commodity: 'Wheat', grade: 'APW', contractNo: '12' }) === 'Wheat APW #12');
+  const lineOf = (c) => EXPOSURE_COLUMNS.map((col) => col.line(c));
+  const one = { contractNo: 'C12', commodity: 'Wheat', grade: 'APW', price: 379, mtm: 360, delivered: 120, tons: 80, value: 30320, gap: 1520 };
+  assert.deepEqual(lineOf(one).slice(0, 8), ['#C12', 'Wheat APW', '$379', '$360', '120', '80', '$30,320', '$1,520'], 'a contract is one line: number, commodity, price, MTM, delivered, outstanding');
+  assert.equal(EXPOSURE_COLUMNS[7].line({ ...one, mtm: 0, gap: null }), 'no MTM');
+  assert.ok(ex.buyers.every((b) => b.list.every((c) => typeof c.delivered === 'number' && 'contractNo' in c)), 'every contract line carries its delivered tonnes and its number');
+  assert.equal(Math.round(ex.buyers.reduce((s, b) => s + b.deliveredTons, 0) * 1000), Math.round(ex.total.deliveredTons * 1000));
 });
 check('a buyer whose commodity has no MTM price says so in the MTM column, and an empty list still makes a file', () => {
   assert.ok(text(exposurePdf(ex)).includes('no MTM'));

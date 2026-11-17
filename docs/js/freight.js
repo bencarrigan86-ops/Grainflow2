@@ -10,10 +10,11 @@
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { Pdf, wrapText } from './pdf.js?v=332';
-import { dmy } from './fmt.js?v=332';
-import { movementTonsToSale } from './derived.js?v=332';
-import { hasSignature, strokesInBox } from './signature.js?v=332';
+import { Pdf, wrapText } from './pdf.js?v=337';
+import { drawBrandLogo } from './brand.js?v=337';
+import { dmy } from './fmt.js?v=337';
+import { movementTonsToSale } from './derived.js?v=337';
+import { hasSignature, strokesInBox } from './signature.js?v=337';
 
 export const BASES = [
   { key: 'per_t', label: '$ per tonne' },
@@ -182,8 +183,9 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
   const pdf = new Pdf();
   const W = pdf.width - M * 2;
   pdf.text(M, 30, 'FREIGHT ORDER', { size: 18, bold: true });
-  pdf.text(M + W, 30, `No. ${clean(fo.freightNo) || '-'}`, { size: 12, bold: true, align: 'right' });
-  pdf.text(M + W, 48, `Issued ${date ? dmy(date) : ''}`, { size: 9, align: 'right', gray: 0.3 });
+  const rx = drawBrandLogo(pdf, { right: M + W, top: 10, maxW: 100, maxH: 40 });   // the farm's logo, if it has one
+  pdf.text(rx, 30, `No. ${clean(fo.freightNo) || '-'}`, { size: 12, bold: true, align: 'right' });
+  pdf.text(rx, 48, `Issued ${date ? dmy(date) : ''}`, { size: 9, align: 'right', gray: 0.3 });
 
   // who it is from and to
   const top = 74;

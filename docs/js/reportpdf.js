@@ -3,7 +3,8 @@
 // total row, a footer with the page number). The reports say what goes on it; this does the laying out, and runs a long
 // table on to the next page with its heading and table head repeated. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=332';
+import { Pdf, wrapText } from './pdf.js?v=337';
+import { drawBrandLogo } from './brand.js?v=337';
 
 const PAGE = { width: 595.28, height: 841.89 };
 const M = 36;
@@ -33,8 +34,9 @@ export function createReport({ title, business = '', season = '', today = '', fo
   };
   const header = () => {
     pdf.rect(0, 0, PAGE.width, 68, { stroke: null, fill: GREEN });
+    const rx = drawBrandLogo(pdf, { right: PAGE.width - M, top: 11, tile: true });   // the farm's logo, if it has one
     pdf.text(M, 16, title.toUpperCase(), { size: 20, bold: true, gray: 1 });
-    if (season) pdf.text(PAGE.width - M, 20, season, { size: 12, bold: true, align: 'right', gray: 1 });
+    if (season) pdf.text(rx, 20, season, { size: 12, bold: true, align: 'right', gray: 1 });
     const who = [business, today ? `Printed ${today}` : ''].filter(Boolean).join('   ·   ');
     if (who) pdf.text(M, 44, who, { size: 9.5, gray: 0.92 });
     return 90;

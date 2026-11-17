@@ -5,7 +5,8 @@
 // sold, the prices, the values and the gross margin. Under it the whole farm: gross margin, overheads, bills and the
 // profit or loss. Pure: it builds bytes and touches nothing else.
 
-import { Pdf } from './pdf.js?v=332';
+import { Pdf } from './pdf.js?v=337';
+import { drawBrandLogo } from './brand.js?v=337';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;
@@ -77,11 +78,12 @@ export function positionPdf({ rows = [], totals = {}, overheads = {}, pl = {}, c
   // the green band across the top of every page, as on the load ticket
   const header = () => {
     pdf.rect(0, 0, PAGE.width, 68, { stroke: null, fill: GREEN });
+    const rx = drawBrandLogo(pdf, { right: PAGE.width - M, top: 11, tile: true });   // the farm's logo, if it has one
     pdf.text(M, 16, 'POSITION', { size: 20, bold: true, gray: 1 });
-    pdf.text(PAGE.width - M, 20, season, { size: 12, bold: true, align: 'right', gray: 1 });
+    pdf.text(rx, 20, season, { size: 12, bold: true, align: 'right', gray: 1 });
     const who = [business, today ? `Printed ${today}` : ''].filter(Boolean).join('   ·   ');
     if (who) pdf.text(M, 44, who, { size: 9.5, gray: 0.92 });
-    if (page > 1) pdf.text(PAGE.width - M, 46, `page ${page}`, { size: 8, gray: 0.85, align: 'right' });
+    if (page > 1) pdf.text(rx, 46, `page ${page}`, { size: 8, gray: 0.85, align: 'right' });
     return 88;
   };
   const ensure = (h) => {

@@ -4,23 +4,23 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=332';
-import { openSheet } from '../ui.js?v=332';
-import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=332';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=332';
-import { windowText } from '../orders.js?v=332';
-import { openOrderSheet } from './orders.js?v=332';
-import { openInvoiceListSheet } from './invoice.js?v=332';
-import { renderPayables, returnToAfterBill } from './payables.js?v=332';
-import { openXeroSheet } from './xero.js?v=332';
-import { cashflow } from '../cashflow.js?v=332';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=332';
-import { buyerStatements, statementPdf } from '../statement.js?v=332';
-import { buyerExposure } from '../exposure.js?v=332';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=332';
-import { exposurePdf } from '../exposurepdf.js?v=332';
-import { emailIn } from '../vendordec.js?v=332';
-import { invoiceLabel } from '../adjustment.js?v=332';
+import { db } from '../storage.js?v=337';
+import { openSheet } from '../ui.js?v=337';
+import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=337';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=337';
+import { windowText } from '../orders.js?v=337';
+import { openOrderSheet } from './orders.js?v=337';
+import { openInvoiceListSheet } from './invoice.js?v=337';
+import { renderPayables, returnToAfterBill } from './payables.js?v=337';
+import { openXeroSheet } from './xero.js?v=337';
+import { cashflow } from '../cashflow.js?v=337';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=337';
+import { buyerStatements, statementPdf } from '../statement.js?v=337';
+import { buyerExposure } from '../exposure.js?v=337';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=337';
+import { exposurePdf } from '../exposurepdf.js?v=337';
+import { emailIn } from '../vendordec.js?v=337';
+import { invoiceLabel } from '../adjustment.js?v=337';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -131,18 +131,18 @@ export function openMoneySheet(side = null) {
       const side = moneySide === 'out' ? pos.youOwe : pos.owedToYou;
 
       root.innerHTML = `
-        <div class="stat-grid">
-          <div class="stat"><div class="n">${money(pos.owedToYou.outstanding.total, 0)}</div><div class="l">Owed to you (${pos.owedToYou.outstanding.count})</div></div>
-          <div class="stat"><div class="n">${money(pos.youOwe.outstanding.total, 0)}</div><div class="l">You owe (${pos.youOwe.outstanding.count})</div></div>
-        </div>
-        <div class="row" style="margin-top:8px"><span class="label"><strong>Net, once both are settled</strong></span><span class="value"><span class="badge ${pos.net >= 0 ? 'pos' : 'neg'}">${money(pos.net, 0)}</span></span></div>
-        <div class="row"><span class="label">Overdue to you / overdue by you</span><span class="value"><span ${pos.owedToYou.overdue.count ? 'style="color:var(--danger)"' : ''}>${money(pos.owedToYou.overdue.total, 0)}</span> / <span ${pos.youOwe.overdue.count ? 'style="color:var(--danger)"' : ''}>${money(pos.youOwe.overdue.total, 0)}</span></span></div>
-        <div class="segmented" id="money-side" style="margin:12px 0 10px">
+        <div class="segmented" id="money-side" style="margin:0 0 12px">
           <button data-side="in" class="${moneySide === 'in' ? 'active' : ''}">Receivables</button>
           <button data-side="out" class="${moneySide === 'out' ? 'active' : ''}">Payables</button>
           <button data-side="month" class="${moneySide === 'month' ? 'active' : ''}">By month</button>
           <button data-side="buyer" class="${moneySide === 'buyer' ? 'active' : ''}">MTM</button>
         </div>
+        <div class="stat-grid">
+          <div class="stat"><div class="n">${money(pos.owedToYou.outstanding.total, 0)}</div><div class="l">Owed to you (${pos.owedToYou.outstanding.count})</div></div>
+          <div class="stat"><div class="n">${money(pos.youOwe.outstanding.total, 0)}</div><div class="l">You owe (${pos.youOwe.outstanding.count})</div></div>
+        </div>
+        <div class="row" style="margin-top:8px"><span class="label"><strong>Net, once both are settled</strong></span><span class="value"><span class="badge ${pos.net >= 0 ? 'pos' : 'neg'}">${money(pos.net, 0)}</span></span></div>
+        <div class="row" style="margin-bottom:10px"><span class="label">Overdue to you / overdue by you</span><span class="value"><span ${pos.owedToYou.overdue.count ? 'style="color:var(--danger)"' : ''}>${money(pos.owedToYou.overdue.total, 0)}</span> / <span ${pos.youOwe.overdue.count ? 'style="color:var(--danger)"' : ''}>${money(pos.youOwe.overdue.total, 0)}</span></span></div>
         ${moneySide === 'month' ? cashflowHtml(cashflow(invoices, sales, db.getPayables(), today, 6, expectedReceipts(deliveries(sales, movements, db.getOrders(), today).rows, unb.rows, today))) : moneySide === 'buyer' ? buyersHtml(buyerExposure(invoices, sales, movements, commodities, today), commodities) : moneySide === 'out' ? '<div id="money-bills"></div>' : `
         <div class="subhead">Delivered, not yet invoiced</div>
         ${unb.rows.length === 0 ? '<div class="empty" style="padding:6px 0">Every delivery is on an invoice.</div>' : `

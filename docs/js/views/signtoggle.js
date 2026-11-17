@@ -4,10 +4,11 @@
 // saved yet it says so and opens the pad, then the person ticks it again. The signature is theirs alone (see
 // mysignature.js), so a document is only ever signed by the person looking at it.
 
-import { loadMySignature } from '../mysignature.js?v=332';
-import { notify } from '../ui.js?v=332';
-import { canSign } from '../signdoc.js?v=332';
-import { openMySignatureSheet } from './signaturepad.js?v=332';
+import { loadMySignature, mySignatureOnDevice } from '../mysignature.js?v=337';
+import { notify } from '../ui.js?v=337';
+import { canSign, signerChoices } from '../signdoc.js?v=337';
+import { esc } from '../fmt.js?v=337';
+import { openMySignatureSheet } from './signaturepad.js?v=337';
 
 export function signToggleHtml(id = 'sign-doc', label = 'Sign this document with my signature', checked = false) {
   return `<label class="row" style="gap:10px;align-items:center;cursor:pointer;margin:6px 0">
@@ -35,4 +36,43 @@ export function wireSignToggle(root, id, onChange) {
     }
     onChange(sig);
   });
+}
+
+// --- the printed name under a signature -------------------------------------------------------------------------------------
+// Every signed document shows who signed it in print. By default that is the signed-in person: the name saved with their signature.
+// Where the business has listed other people who sign (Settings, Business details), or has a contact name, they are in a dropdown
+// too, so a document can be signed for someone else. The last one chosen is remembered on this device.
+
+const LAST_KEY = 'grainflow.signer.last';
+const readLast = () => { try { return localStorage.getItem(LAST_KEY) || ''; } catch { return ''; } };
+const saveLast = (name) => { try { localStorage.setItem(LAST_KEY, name); } catch { /* not remembered */ } };
+
+/** The names a document can be signed in: this person's own first, then the business's. Resolves to [] when there are none. */
+export async function signerNamesFor(business = {}) {
+  let mine = '';
+  try { mine = (await mySignatureOnDevice())?.name || (await loadMySignature())?.name || ''; } catch { mine = ''; }
+  return signerChoices({ mine, signers: business?.signers, contactName: business?.contactName });
+}
+
+/** The dropdown, empty and hidden until wireSignerPick() fills it (it is left out when there is no name to offer). */
+export function signerPickHtml(id = 'signer-pick') {
+  return `<div class="field" id="${id}-wrap" hidden style="margin:6px 0"><label for="${id}">Printed name</label><select id="${id}"></select></div>`;
+}
+
+/**
+ * Fills the dropdown and calls onChange(name) when the person picks another. Returns { name() } for the document to read.
+ * @param {HTMLElement} root
+ */
+export async function wireSignerPick(root, id, business, onChange = () => {}) {
+  const sel = root.querySelector(`#${id}`);
+  const names = await signerNamesFor(business);
+  if (!sel || !names.length) return { name: () => '' };
+  const last = readLast();
+  sel.innerHTML = names.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  // the signed-in person is first, so they are the default; a name picked before on this device wins only where it is still on the list
+  sel.value = names.includes(last) ? last : names[0];
+  root.querySelector(`#${id}-wrap`).hidden = false;
+  sel.addEventListener('change', () => { saveLast(sel.value); onChange(sel.value); });
+  onChange(sel.value);
+  return { name: () => sel.value };
 }

@@ -4,9 +4,10 @@
 // buyer gets their unpaid invoices with how overdue they are, the grain delivered but not yet on an invoice, and the
 // total of both. This is the page to send a buyer who says "what do I owe you?". Pure; the PDF is drawn by statementPdf.
 
-import { receivables, uninvoiced } from './outstanding.js?v=332';
-import { Pdf, wrapText } from './pdf.js?v=332';
-import { refLabel } from './adjustment.js?v=332';
+import { receivables, uninvoiced } from './outstanding.js?v=337';
+import { Pdf, wrapText } from './pdf.js?v=337';
+import { drawBrandLogo } from './brand.js?v=337';
+import { refLabel } from './adjustment.js?v=337';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const round3 = (n) => Math.round(n * 1000) / 1000;
@@ -53,8 +54,9 @@ export function statementPdf(st, { businessName = '', abn = '', today, contractN
   const L = 40; const R = 555;
   let y = 48;
   pdf.rect(0, 0, 595, 70, { fill: GREEN, stroke: null });
+  const rx = drawBrandLogo(pdf, { right: R, top: 11, tile: true });   // the farm's logo, if it has one
   pdf.text(L, 24, 'STATEMENT', { size: 18, bold: true, gray: 1 });
-  pdf.text(R, 28, dmy(today), { size: 10, align: 'right', gray: 1 });
+  pdf.text(rx, 28, dmy(today), { size: 10, align: 'right', gray: 1 });
   y = 92;
   pdf.text(L, y, st.buyer, { size: 13, bold: true });
   y += 16;

@@ -1,12 +1,12 @@
-import { db } from '../storage.js?v=332';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=332';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=332';
-import { addressLinesOf } from '../address.js?v=332';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=332';
-import { signToggleHtml, wireSignToggle } from './signtoggle.js?v=332';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=332';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=332';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=332';
+import { db } from '../storage.js?v=337';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=337';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=337';
+import { addressLinesOf } from '../address.js?v=337';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=337';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=337';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=337';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=337';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=337';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -341,7 +341,7 @@ function invoiceDocHTML(sale, invoice, business, commodity, signed = null) {
         <strong>Payment details</strong><br/>
         ${business.bankName ? `${esc(business.bankName)} &middot; ` : ''}${business.accountName ? `${esc(business.accountName)} &middot; ` : ''}${business.bsb ? `BSB ${esc(business.bsb)} &middot; ` : ''}${business.accountNumber ? `Acc ${esc(business.accountNumber)}` : ''}
       </div>` : ''}
-      ${signed && canSign(signed.sig) ? `<div class="invoice-bank">${signedBlockHTML(signed.sig, { date: signed.date })}</div>` : ''}
+      ${signed && canSign(signed.sig) ? `<div class="invoice-bank">${signedBlockHTML({ ...signed.sig, name: String(signed.name || signed.sig.name || business.contactName || '').trim() }, { date: signed.date })}</div>` : ''}
     </div>
   `;
 }
@@ -361,7 +361,7 @@ function openInvoiceDocSheet(sale, invoice) {
         <button class="btn secondary" id="edit-invoice">Edit</button>
       </div>
       ${db.getRole() === 'manager' && !(business.bankName || business.accountNumber) ? '<div class="hint doc-actions" style="margin:6px 0">The payment details are kept from managers, so they are not on this copy. The owner or bookkeeper prints the invoice with them.</div>' : ''}
-      <div class="doc-actions">${signToggleHtml('sign-doc', 'Sign this invoice with my signature')}</div>
+      <div class="doc-actions">${signToggleHtml('sign-doc', 'Sign this invoice with my signature')}${signerPickHtml('signer-pick')}</div>
       <div id="doc-holder">${invoiceDocHTML(sale, invoice, business, commodity)}</div>
       <div class="card input" style="margin-top:14px" id="rcti-card">
         <h2><span class="dot input"></span>Buyer's RCTI</h2>
@@ -420,9 +420,13 @@ function openInvoiceDocSheet(sale, invoice) {
       });
     };
     wireAdjustmentsCard();
-    wireSignToggle(root, 'sign-doc', (sig) => {
-      root.querySelector('#doc-holder').innerHTML = invoiceDocHTML(sale, invoice, business, commodity, sig ? { sig, date: dmy(todayLocal()) } : null);
-    });
+    let signedWith = null;
+    let printedName = '';
+    const paintDoc = () => {
+      root.querySelector('#doc-holder').innerHTML = invoiceDocHTML(sale, invoice, business, commodity, signedWith ? { sig: signedWith, date: dmy(todayLocal()), name: printedName } : null);
+    };
+    wireSignToggle(root, 'sign-doc', (sig) => { signedWith = sig; paintDoc(); });
+    wireSignerPick(root, 'signer-pick', business, (name) => { printedName = name; paintDoc(); });
     root.querySelector('#print-invoice').addEventListener('click', () => window.print());
     root.querySelector('#delete-invoice').addEventListener('click', () => {
       confirmDelete(`Delete invoice #${invoice.invoiceNo}? This cannot be undone.`, () => {

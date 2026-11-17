@@ -12,9 +12,9 @@
 // cannot be compared, so its tonnes are counted in "still to go" but left out of the gap, and the count of such contracts is kept.
 // Pure.
 
-import { buyerStatements } from './statement.js?v=332';
-import { deliveries } from './outstanding.js?v=332';
-import { saleEconomics } from './derived.js?v=332';
+import { buyerStatements } from './statement.js?v=337';
+import { deliveries } from './outstanding.js?v=337';
+import { saleEconomics } from './derived.js?v=337';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const round3 = (n) => Math.round(n * 1000) / 1000;
@@ -36,7 +36,7 @@ export function buyerExposure(invoices, sales, movements, commodities, today) {
     const key = keyOf(name);
     if (!by.has(key)) {
       by.set(key, { buyer: String(name || '').trim() || 'No buyer name', key, owing: 0, unpaidTotal: 0, overdueTotal: 0, unpaidCount: 0,
-        notInvoicedValue: 0, notInvoicedTons: 0, dueTons: 0, dueValue: 0, contracts: 0, mtmGap: 0, noMtm: 0, share: 0, list: [] });
+        notInvoicedValue: 0, notInvoicedTons: 0, dueTons: 0, deliveredTons: 0, dueValue: 0, contracts: 0, mtmGap: 0, noMtm: 0, share: 0, list: [] });
     }
     return by.get(key);
   };
@@ -60,17 +60,18 @@ export function buyerExposure(invoices, sales, movements, commodities, today) {
     // one line for each contract: what it is, what is left on it, and where it sits against MTM
     b.list.push({
       id: r.sale.id, commodity: commodity?.name || '', grade: String(r.sale.grade || '').trim(), contractNo: String(r.sale.contractNo || '').trim(),
-      price: round2(price), mtm: mtm > 0 ? mtm : 0, tons: r.due, value: round2(r.due * price),
+      price: round2(price), mtm: mtm > 0 ? mtm : 0, tons: r.due, delivered: r.delivered, value: round2(r.due * price),
       gap: mtm > 0 ? round2((price - mtm) * r.due) : null, end: r.end || '',
     });
     b.contracts += 1;
     b.dueTons += r.due;
+    b.deliveredTons += r.delivered;
     b.dueValue += r.due * price;
     if (mtm > 0) b.mtmGap += (price - mtm) * r.due; else b.noMtm += 1;
   }
 
   const buyers = [...by.values()].map((b) => ({
-    ...b, dueTons: round3(b.dueTons), dueValue: round2(b.dueValue), mtmGap: round2(b.mtmGap),
+    ...b, dueTons: round3(b.dueTons), deliveredTons: round3(b.deliveredTons), dueValue: round2(b.dueValue), mtmGap: round2(b.mtmGap),
   }));
   const owingAll = buyers.reduce((s, b) => s + b.owing, 0);
   for (const b of buyers) b.share = owingAll > 0 ? b.owing / owingAll : 0;
@@ -83,7 +84,7 @@ export function buyerExposure(invoices, sales, movements, commodities, today) {
     total: {
       owing: round2(owingAll), overdueTotal: round2(sum('overdueTotal')), unpaidTotal: round2(sum('unpaidTotal')),
       notInvoicedValue: round2(sum('notInvoicedValue')), notInvoicedTons: round3(sum('notInvoicedTons')),
-      dueTons: round3(sum('dueTons')), dueValue: round2(sum('dueValue')),
+      dueTons: round3(sum('dueTons')), deliveredTons: round3(sum('deliveredTons')), dueValue: round2(sum('dueValue')),
       mtmGap: round2(sum('mtmGap')), noMtm: sum('noMtm'), buyers: buyers.length,
     },
   };

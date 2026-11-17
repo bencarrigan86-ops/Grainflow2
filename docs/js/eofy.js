@@ -9,11 +9,12 @@
 // after it counts as still owed. The result is plain data; eofyPdf() lays it out as the file to keep, which is the frozen
 // copy: the figures on screen move on as the books do, the file does not.
 
-import { Pdf } from './pdf.js?v=332';
-import { positionRows, saleEconomics } from './derived.js?v=332';
-import { uninvoiced, receivables } from './outstanding.js?v=332';
-import { dmy } from './fmt.js?v=332';
-import { refLabel } from './adjustment.js?v=332';
+import { Pdf } from './pdf.js?v=337';
+import { drawBrandLogo } from './brand.js?v=337';
+import { positionRows, saleEconomics } from './derived.js?v=337';
+import { uninvoiced, receivables } from './outstanding.js?v=337';
+import { dmy } from './fmt.js?v=337';
+import { refLabel } from './adjustment.js?v=337';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -111,7 +112,8 @@ export function eofyPdf(snap, { businessName = '', commodities = [] } = {}) {
   const ensure = (h) => { if (y + h > LIMIT) { pdf.addPage(); y = M; } };
 
   pdf.text(M, y, 'End of year snapshot', { size: 18, bold: true });
-  pdf.text(M + W, y + 4, `As at ${dmy(snap.asAt)}`, { size: 11, bold: true, align: 'right' });
+  const rx = drawBrandLogo(pdf, { right: M + W, top: 14, maxW: 100, maxH: 40 });   // the farm's logo, if it has one
+  pdf.text(rx, y + 4, `As at ${dmy(snap.asAt)}`, { size: 11, bold: true, align: 'right' });
   y += 26;
   if (businessName) { pdf.text(M, y, businessName, { size: 10, gray: GREY }); y += 16; }
   y += 6;

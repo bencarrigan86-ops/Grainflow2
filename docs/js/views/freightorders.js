@@ -5,21 +5,21 @@
 // It goes to the carrier as a PDF (shared or emailed) and a copy is filed with the contract. Loads then name the
 // freight order they travel on, and the carrier's bill is recorded against it. The arithmetic is in freight.js.
 
-import { db } from '../storage.js?v=332';
-import { signToggleHtml, wireSignToggle } from './signtoggle.js?v=332';
-import { signerName } from '../signdoc.js?v=332';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=332';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=332';
-import { orderTitle } from '../orders.js?v=332';
-import { activeSales } from '../paidsales.js?v=332';
+import { db } from '../storage.js?v=337';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=337';
+import { signerName } from '../signdoc.js?v=337';
+import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=337';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=337';
+import { orderTitle } from '../orders.js?v=337';
+import { activeSales } from '../paidsales.js?v=337';
 import {
   BASES, STATE_LABEL, freightState, freightOwed, freightTitle, freightDefaults, freightProblems,
   perTonne, rateText, estimatedTotal, windowText, freightOrderPdf,
-} from '../freight.js?v=332';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=332';
-import { fileSentCopy } from '../sentcopy.js?v=332';
-import { movementRow, openMovementSheet } from './movements.js?v=332';
-import { openBillSheet, returnToAfterBill } from './payables.js?v=332';
+} from '../freight.js?v=337';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=337';
+import { fileSentCopy } from '../sentcopy.js?v=337';
+import { movementRow, openMovementSheet } from './movements.js?v=337';
+import { openBillSheet, returnToAfterBill } from './payables.js?v=337';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | closed | all
@@ -174,6 +174,7 @@ export function openFreightOrderSheet(existing, start = {}) {
         <div id="fo-loads" class="card" style="margin:12px 0"></div>` : ''}
 
         ${signToggleHtml('fo-sign', 'Sign it with my signature', !!mySig)}
+        ${signerPickHtml('fo-signer')}
         <div id="fo-problems" class="hint" style="color:var(--danger);margin:8px 0"></div>
         <button class="btn" id="fo-send">${canShareFiles() ? 'Save and send to carrier' : 'Save, download and email'}</button>
         <button class="btn secondary" id="fo-download" style="margin-top:8px">Save and download PDF</button>
@@ -264,6 +265,7 @@ export function openFreightOrderSheet(existing, start = {}) {
       });
       root.querySelector('#fo-save').addEventListener('click', () => { if (persist(true)) { toast('Saved'); openFreightOrdersSheet(); } });
       wireSignToggle(root, 'fo-sign', (sig) => { mySig = sig; });
+      wireSignerPick(root, 'fo-signer', db.getBusinessDetails(), (name) => { printedName = name; });
       root.querySelector('#fo-send').addEventListener('click', () => send(true));
       root.querySelector('#fo-download').addEventListener('click', () => send(false));
       root.querySelector('#fo-bill')?.addEventListener('click', () => recordBill());
@@ -273,6 +275,7 @@ export function openFreightOrderSheet(existing, start = {}) {
     };
 
     // saves what is on the screen; returns the id, or null when it cannot be saved yet
+    let printedName = '';   // the name picked to print as who issued it
     let mySig = null;   // the signed-in person's saved signature, once they tick "sign it"
     let savedId = existing?.id || null;
     function persist(strict) {
@@ -297,7 +300,7 @@ export function openFreightOrderSheet(existing, start = {}) {
       const order = orders.find((o) => o.id === d.orderId) || null;
       const business = db.getBusinessDetails();
       const bytes = freightOrderPdf({
-        fo: d, sale, order, business, date: todayLocal(), issuedBy: signerName(mySig, business), signature: mySig,
+        fo: d, sale, order, business, date: todayLocal(), issuedBy: printedName || signerName(mySig, business), signature: mySig,
         commodityName: commodities.find((c) => c.id === sale?.commodityId)?.name || '',
       });
       const fileName = safeFileName(`Freight order ${d.freightNo || ''} ${dmy(todayLocal())}`);

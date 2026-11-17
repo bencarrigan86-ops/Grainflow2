@@ -84,6 +84,7 @@ export class Pdf {
     this.width = width;
     this.height = height;
     this.pages = [];
+    this.images = [];
     this.addPage();
   }
 
@@ -142,6 +143,18 @@ export class Pdf {
     return this;
   }
 
+  /**
+   * A JPEG (from jpegInfo()) with its top left at (x, y), drawn w by h points. The file's own bytes go into the PDF as they are
+   * (the reader decodes them), so a logo costs its size and nothing more.
+   */
+  image(img, x, y, w, h) {
+    if (!img || !img.data) return this;
+    let i = this.images.indexOf(img);
+    if (i < 0) { this.images.push(img); i = this.images.length - 1; }
+    this.ops.push(`q ${f2(w)} 0 0 ${f2(h)} ${f2(x)} ${f2(this.height - y - h)} cm /Im${i} Do Q`);
+    return this;
+  }
+
   /** A tick box, crossed when checked. */
   checkbox(x, y, size = 9, checked = false) {
     this.rect(x, y, size, size, { lineWidth: 0.8 });
@@ -161,11 +174,14 @@ export class Pdf {
     add('');                                                                   // 2: pages, filled in below
     add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');       // 3
     add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');  // 4
+    // pictures: each is one object (its bytes are the JPEG itself, kept as characters 0-255 like the rest of the file)
+    const imageIds = this.images.map((img) => add(`<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height} /ColorSpace /${img.comps === 1 ? 'DeviceGray' : img.comps === 4 ? 'DeviceCMYK' : 'DeviceRGB'} /BitsPerComponent 8 /Filter /DCTDecode /Length ${img.data.length} >>\nstream\n${img.data}\nendstream`));
+    const xobjects = imageIds.length ? ` /XObject << ${imageIds.map((id, i) => `/Im${i} ${id} 0 R`).join(' ')} >>` : '';
     const kids = [];
     for (const ops of this.pages) {
       const content = ops.join('\n');
       const contentId = add(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
-      const pageId = add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${f2(this.width)} ${f2(this.height)}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentId} 0 R >>`);
+      const pageId = add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${f2(this.width)} ${f2(this.height)}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${xobjects} >> /Contents ${contentId} 0 R >>`);
       kids.push(`${pageId} 0 R`);
     }
     objects[1] = `<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${kids.length} >>`;

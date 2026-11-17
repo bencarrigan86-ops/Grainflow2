@@ -18,27 +18,28 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=332';
+import { hydrate } from './hydrate.js?v=337';
+import { setBrandLogo } from './brand.js?v=337';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=332';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=332';
-import { isLegacyDirty } from './dirty.js?v=332';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=332';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=332';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=332';
-import { settleLegs, dedupeLegs } from './legs.js?v=332';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=332';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=332';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=332';
-import { setCommodityOrder } from './commodityorder.js?v=332';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=332';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=332';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=332';
-import { schedulePush, pushOnReconnect } from './sync.js?v=332';
-import { hasParts as hasAddressParts } from './address.js?v=332';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=332';
+} from './local.js?v=337';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=337';
+import { isLegacyDirty } from './dirty.js?v=337';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=337';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=337';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=337';
+import { settleLegs, dedupeLegs } from './legs.js?v=337';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=337';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=337';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=337';
+import { setCommodityOrder } from './commodityorder.js?v=337';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=337';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=337';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=337';
+import { schedulePush, pushOnReconnect } from './sync.js?v=337';
+import { hasParts as hasAddressParts } from './address.js?v=337';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=337';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -1310,11 +1311,15 @@ export const db = {
   },
 
   // --- business details ---
-  getBusinessDetails() { return data.businessDetails; },
+  // every PDF reads the details just before it is made, so this is where the farm's logo is handed to the PDF writer
+  getBusinessDetails() { setBrandLogo(data.businessDetails?.logoOff ? '' : data.businessDetails?.logo); return data.businessDetails; },
   updateBusinessDetails(patch) {
     data.businessDetails = { ...data.businessDetails, ...patch };
     if (data.businessDetails.qaProgram || data.businessDetails.qaNumber) data.businessDetails.__hasQa = true;   // so clearing them reaches the server
     if (data.businessDetails.pic) data.businessDetails.__hasPic = true;
+    if (data.businessDetails.logoOff) data.businessDetails.__hasLogoOff = true;   // so turning it back on reaches the server
+    if (data.businessDetails.logo) data.businessDetails.__hasLogo = true;   // so taking it off again reaches the server
+    if (data.businessDetails.signers) data.businessDetails.__hasSigners = true;   // so clearing the list reaches the server
     if (data.businessDetails.importFormats?.length) data.businessDetails.__hasImportFormats = true;   // so deleting the last one reaches the server
     if (data.businessDetails.commodityOrder?.length) data.businessDetails.__hasCommodityOrder = true;   // so going back to automatic reaches the server
     shareOrder();

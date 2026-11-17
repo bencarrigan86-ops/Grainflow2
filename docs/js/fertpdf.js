@@ -2,8 +2,9 @@
 // style with the Position page. Nitrogen columns are amber and urea-equivalent columns green, as on the screen.
 // The figures come from fertfigures.js (ureaFigures, starterFigures), the same ones the screen uses. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=332';
-import { ureaSummary, starterSummary } from './fertfigures.js?v=332';
+import { Pdf, wrapText } from './pdf.js?v=337';
+import { drawBrandLogo } from './brand.js?v=337';
+import { ureaSummary, starterSummary } from './fertfigures.js?v=337';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;
@@ -70,11 +71,12 @@ export function fertPdf({ urea = [], starter = [], summary = false } = {}, { bus
     'Made in Commodity Mate. Urea figures are kg of urea; soil equiv is the soil nitrogen as urea. Left is required less applied.', { size: 7.5, gray: GREY });
   const header = () => {
     pdf.rect(0, 0, PAGE.width, 68, { stroke: null, fill: GREEN });
+    const rx = drawBrandLogo(pdf, { right: PAGE.width - M, top: 11, tile: true });   // the farm's logo, if it has one
     pdf.text(M, 16, 'FERTILISER', { size: 20, bold: true, gray: 1 });
-    if (season) pdf.text(PAGE.width - M, 20, season, { size: 12, bold: true, align: 'right', gray: 1 });
+    if (season) pdf.text(rx, 20, season, { size: 12, bold: true, align: 'right', gray: 1 });
     const who = [business, today ? `Printed ${today}` : ''].filter(Boolean).join('   ·   ');
     if (who) pdf.text(M, 44, who, { size: 9.5, gray: 0.92 });
-    if (page > 1) pdf.text(PAGE.width - M, 46, `page ${page}`, { size: 8, gray: 0.85, align: 'right' });
+    if (page > 1) pdf.text(rx, 46, `page ${page}`, { size: 8, gray: 0.85, align: 'right' });
     return 88;
   };
   const newPage = () => { footer(); pdf.addPage(); page += 1; y = header(); };

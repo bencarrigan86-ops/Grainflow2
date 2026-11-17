@@ -2,8 +2,9 @@
 // buffer on top. Portrait A4 in the same style as the Position and Fert pages. The figures come from fertfigures.js
 // (seedFigures), the same ones the screen uses. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=332';
-import { seedSummary } from './fertfigures.js?v=332';
+import { Pdf, wrapText } from './pdf.js?v=337';
+import { drawBrandLogo } from './brand.js?v=337';
+import { seedSummary } from './fertfigures.js?v=337';
 
 const PAGE = { width: 595.28, height: 841.89 };
 const M = 36;
@@ -45,8 +46,9 @@ export function seedPdf(figures = [], { business = '', season = '', today = '', 
   };
   const header = () => {
     pdf.rect(0, 0, PAGE.width, 68, { stroke: null, fill: GREEN });
+    const rx = drawBrandLogo(pdf, { right: PAGE.width - M, top: 11, tile: true });   // the farm's logo, if it has one
     pdf.text(M, 16, 'SEED', { size: 20, bold: true, gray: 1 });
-    if (season) pdf.text(PAGE.width - M, 20, season, { size: 12, bold: true, align: 'right', gray: 1 });
+    if (season) pdf.text(rx, 20, season, { size: 12, bold: true, align: 'right', gray: 1 });
     const who = [business, today ? `Printed ${today}` : ''].filter(Boolean).join('   ·   ');
     if (who) pdf.text(M, 44, who, { size: 9.5, gray: 0.92 });
     return 90;

@@ -27,9 +27,9 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=332';
-import { cleanOffFarm } from './offfarm.js?v=332';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=332';
+import { cleanGradeOptions } from './gradeprice.js?v=337';
+import { cleanOffFarm } from './offfarm.js?v=337';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=337';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -270,6 +270,12 @@ export function stateToRows(state, farmId) {
     ...((b.qaProgram || b.qaNumber || b.__hasQa) ? { qa_program: orNull(b.qaProgram), qa_number: orNull(b.qaNumber) } : {}),
     // The property identification code (PIC), the same way.
     ...((b.pic || b.__hasPic) ? { pic: orNull(b.pic) } : {}),
+    // The farm's logo (a small JPEG as text), the same way: sent once there is one, kept after that so removing it reaches the server.
+    ...((b.logo || b.__hasLogo) ? { logo: orNull(b.logo) } : {}),
+    // Whether the logo is switched off (it is on whenever there is one). Sent once it has been switched off, kept so switching it back on reaches the server.
+    ...((b.logoOff || b.__hasLogoOff) ? { logo_off: !!b.logoOff } : {}),
+    // The people who sign for the business (names, one to a line), offered as the printed name on documents. The same way.
+    ...((b.signers || b.__hasSigners) ? { signers: orNull(b.signers) } : {}),
     // Whether Aircair's own form is offered on a spray request. Off unless switched on, so a farm that never has it needs no column.
     ...((b.showAircair || b.__hasAircair) ? { show_aircair: !!b.showAircair } : {}),
     // The order the commodities are listed in on every screen: their names, in order. Optional in the same way: left out until
@@ -420,7 +426,7 @@ export function stateToRows(state, farmId) {
         // Marked paid and finished with. Sent once it has been marked, and kept after that so un-marking reaches the server.
         ...((sale.paid || sale.__hasPaid) ? { is_paid: !!sale.paid } : {}),
         // How the contract is delivered: 'call' (the buyer orders it) or 'even' (spread over the window). Optional like the other later columns.
-        ...((sale.deliveryPattern || sale.__hasDeliveryPattern) ? { delivery_pattern: sale.deliveryPattern === 'even' || sale.deliveryPattern === 'call' ? sale.deliveryPattern : null } : {}),
+        ...((sale.deliveryPattern || sale.__hasDeliveryPattern) ? { delivery_pattern: ['even', 'call', 'sellers'].includes(sale.deliveryPattern) ? sale.deliveryPattern : null } : {}),
       });
       out.sale_terms.push({
         id: sale.__termsId || uid(), farm_id: farmId, sale_id: sale.id,
@@ -923,6 +929,9 @@ export function rowsToState(rows) {
       bsb: bank.bsb ?? '', accountNumber: bank.account_number ?? '',
       ...((farm.qa_program != null || farm.qa_number != null) ? { qaProgram: farm.qa_program ?? '', qaNumber: farm.qa_number ?? '', __hasQa: true } : {}),
       ...(farm.pic != null ? { pic: farm.pic, __hasPic: true } : {}),
+      ...(farm.logo != null ? { logo: farm.logo, __hasLogo: true } : {}),
+      ...(farm.logo_off != null ? { logoOff: !!farm.logo_off, __hasLogoOff: true } : {}),
+      ...(farm.signers != null ? { signers: farm.signers, __hasSigners: true } : {}),
       ...(farm.show_aircair != null ? { showAircair: !!farm.show_aircair, __hasAircair: true } : {}),
       ...(Array.isArray(farm.import_formats) ? { importFormats: farm.import_formats, __hasImportFormats: true } : {}),
       ...(Array.isArray(farm.commodity_order) ? { commodityOrder: farm.commodity_order.map(String), __hasCommodityOrder: true } : {}),

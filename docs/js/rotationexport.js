@@ -4,10 +4,11 @@
 // each crop's yield by season), so what is exported is what is shown. A role that is not shown yields is not given them
 // here either: `showYield` false leaves out every tonnage and yield and the crop table. Pure: it builds text and bytes.
 
-import { toCSV } from './csv.js?v=332';
-import { Pdf, wrapText, textWidth } from './pdf.js?v=332';
-import { PALETTE } from './farmmap.js?v=332';
-import { cropYields } from './fieldhistory.js?v=332';
+import { toCSV } from './csv.js?v=337';
+import { Pdf, wrapText, textWidth } from './pdf.js?v=337';
+import { drawBrandLogo } from './brand.js?v=337';
+import { PALETTE } from './farmmap.js?v=337';
+import { cropYields } from './fieldhistory.js?v=337';
 
 const round = (n, dp = 2) => { const f = 10 ** dp; return Math.round((Number(n) || 0) * f) / f; };
 
@@ -122,7 +123,8 @@ export function rotationPdf(grid, { orientation = 'landscape', showYield = true,
   const header = (seasonsNote) => {
     page += 1;
     pdf.text(M, 30, 'ROTATION AND YIELD HISTORY', { size: 18, bold: true });
-    pdf.text(PAGE.width - M, 36, summary, { size: 11, bold: true, align: 'right' });
+    const rx = drawBrandLogo(pdf, { right: PAGE.width - M, top: 10, maxW: 100, maxH: 40 });   // the farm's logo, if it has one
+    pdf.text(rx, 36, summary, { size: 11, bold: true, align: 'right' });
     if (who) pdf.text(M, 56, who, { size: 9.5, gray: 0.2 });
     if (page > 1 || seasonsNote) pdf.text(PAGE.width - M, 56, [seasonsNote, page > 1 ? `page ${page}` : ''].filter(Boolean).join('   '), { size: 8, gray: 0.4, align: 'right' });
     return 74;

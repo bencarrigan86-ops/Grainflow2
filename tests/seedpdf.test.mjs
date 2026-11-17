@@ -126,7 +126,7 @@ check('the sheet lists the seasons, remembers the choice, and will not export wi
   const v = read('docs/js/views/rotation.js');
   assert.ok(v.includes('class="rot-season"') && v.includes("'grainflow.rotation.hiddenSeasons'"));
   assert.ok(v.includes('withoutSeasons(withoutFarms(fullGrid, hidden), hiddenSeasons)'), 'the farms and seasons are not both applied');
-  assert.ok(/if \(nothingOn\(\)\) return;[\s\S]*?downloadCSV\(/.test(v) && /rot-pdf'\)\.addEventListener\('click', async \(\) => \{\s*if \(nothingOn\(\)\) return;/.test(v), 'an empty export is allowed');
+  assert.ok(/if \(nothingOn\(\)\) return;[\s\S]*?downloadCSV\(/.test(v) && /rot-pdf'\)\.addEventListener\('click', \(\) => \{\s*if \(nothingOn\(\)\) return;/.test(v), 'an empty export is allowed');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

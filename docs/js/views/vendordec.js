@@ -5,18 +5,19 @@
 // assurance program is remembered with the business details so it is typed once. The form itself is in
 // vendordec.js; getting the PDF out is in sharefile.js.
 
-import { db } from '../storage.js?v=332';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=332';
-import { todayLocal, tightDate, dmy } from '../fmt.js?v=332';
-import { loadMySignature } from '../mysignature.js?v=332';
-import { fileSentCopy } from '../sentcopy.js?v=332';
-import { mountSignaturePad, signatureSvg } from './signaturepad.js?v=332';
-import { orderTitle, windowText } from '../orders.js?v=332';
-import { activeSales } from '../paidsales.js?v=332';
+import { db } from '../storage.js?v=337';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=337';
+import { todayLocal, tightDate, dmy, esc } from '../fmt.js?v=337';
+import { loadMySignature } from '../mysignature.js?v=337';
+import { signerNamesFor } from './signtoggle.js?v=337';
+import { fileSentCopy } from '../sentcopy.js?v=337';
+import { mountSignaturePad, signatureSvg } from './signaturepad.js?v=337';
+import { orderTitle, windowText } from '../orders.js?v=337';
+import { activeSales } from '../paidsales.js?v=337';
 import {
   buildDeclaration, declarationPdf, declarationProblems, GMO_OPTIONS, MAX_VARIETIES, LAYOUTS, CVD_SOURCES, CVD_GMO_OPTIONS, CVD_BYPRODUCT,
-} from '../vendordec.js?v=332';
-import { sharePdf, downloadFile, safeFileName, mailtoLink, canShareFiles } from '../sharefile.js?v=332';
+} from '../vendordec.js?v=337';
+import { sharePdf, downloadFile, safeFileName, mailtoLink, canShareFiles } from '../sharefile.js?v=337';
 
 const LAYOUT_KEY = 'grainflow.vendordec.layout';
 const lastLayout = () => { try { return localStorage.getItem(LAYOUT_KEY) === 'cvd' ? 'cvd' : 'gta'; } catch { return 'gta'; } };
@@ -40,6 +41,7 @@ export async function openVendorDecSheet(start = {}) {
   // the signed-in person's own saved signature, if they have one (it is theirs, not the farm's)
   let mySig = null;
   try { mySig = await loadMySignature(); } catch { mySig = null; }
+  const signerNames = await signerNamesFor(db.getBusinessDetails());   // who it can be signed by: this person, the people the business lists
 
   const startOrder = start.orderId ? orders.find((o) => o.id === start.orderId) : null;
   const startSale = sales.find((s) => s.id === (start.saleId || startOrder?.saleId)) || sales[0];
@@ -191,7 +193,8 @@ export async function openVendorDecSheet(start = {}) {
         <div class="hint" style="margin-bottom:6px">You have not saved a signature yet. Draw it once and it signs your documents from then on. It is only yours.</div>
         <div id="vd-sigpad"></div>`}
         <div class="grid-2">
-          ${field({ label: 'Signed by', id: 'vd-by', value: d.signedBy })}
+          ${field({ label: 'Signed by', id: 'vd-by', value: d.signedBy, list: 'dl-signers', hint: signerNames.length > 1 ? 'Pick another name from the list, or type one.' : '' })}
+          <datalist id="dl-signers">${signerNames.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>
           ${field({ label: 'Date', id: 'vd-date', type: 'date', value: d.signedDate })}
         </div>
         ${field({ label: 'Document ID', id: 'vd-id', value: d.documentId })}

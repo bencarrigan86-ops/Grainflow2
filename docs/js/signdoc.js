@@ -4,7 +4,7 @@
 // sale, the invoice) draw it as an inline picture; the freight order is a PDF and draws it as lines (see freight.js).
 // This holds the parts that do not need a screen: the picture, the signed block, and what to print under it. Pure.
 
-import { cleanStrokes, hasSignature, strokesToSvgPath, ASPECT } from './signature.js?v=332';
+import { cleanStrokes, hasSignature, strokesToSvgPath, ASPECT } from './signature.js?v=337';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -34,3 +34,22 @@ export const canSign = (sig) => !!sig && hasSignature(sig.strokes);
 
 /** The name to print under a signature: the one saved with it, else the business contact, else nothing. */
 export const signerName = (sig, business = {}) => String(sig?.name || business?.contactName || '').trim();
+
+/** The names typed in "who signs for the business" (one to a line, or separated by commas) as a list, each once. */
+export function parseSigners(text) {
+  const seen = new Set();
+  return String(text || '').split(/[\n,;]+/).map((s) => s.trim()).filter((s) => {
+    const k = s.toLowerCase();
+    if (!s || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+/**
+ * The names a document can be signed in, each once: the signed-in person's own (the name saved with their signature) first, then the
+ * ones the business lists as people who sign, then the business contact.
+ */
+export function signerChoices({ mine = '', signers = '', contactName = '' } = {}) {
+  return parseSigners([mine, ...parseSigners(signers), contactName].join('\n'));
+}

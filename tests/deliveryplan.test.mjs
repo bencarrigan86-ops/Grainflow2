@@ -162,7 +162,7 @@ console.log('\n=== on the screens ===');
 check('the contract form asks how it is delivered, and saves the answer', () => {
   const s = read('docs/js/views/sales.js');
   assert.ok(s.includes("id: 'deliveryPattern'") && s.includes("deliveryPattern: getVal(root, 'deliveryPattern') || ''") && s.includes('options: PATTERNS'));
-  assert.deepEqual(PATTERNS.map((p) => p.value), ['', 'call', 'even']);
+  assert.deepEqual(PATTERNS.map((p) => p.value), ['', 'call', 'sellers', 'even']);
 });
 check('Delivery timeline has the weekly and monthly schedule, and Receivables & payables feeds the forecast to the cash flow', () => {
   const o = read('docs/js/views/outstanding.js');
