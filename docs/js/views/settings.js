@@ -1,45 +1,45 @@
-import { db } from '../storage.js?v=321';
-import { getTheme, setTheme } from '../theme.js?v=321';
-import { num, money, esc, todayLocal } from '../fmt.js?v=321';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=321';
-import { openLoadImportSheet } from './importloads.js?v=321';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=321';
-import { openPastSeasonsSheet } from './pastseasons.js?v=321';
-import { openPastSalesSheet } from './pastsales.js?v=321';
-import { openLineupSheet } from './lineup.js?v=321';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=321';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=321';
-import { openDangerSheet } from './dangerconfirm.js?v=321';
-import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=321';
-import { seasonContents, contentsText } from '../seasondelete.js?v=321';
-import { openDeletedSheet } from './deleted.js?v=321';
-import { APP_VERSION } from '../version.js?v=321';
-import { exportRowsAsCSV } from '../csv.js?v=321';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=321';
-import { orderedNames, moveName } from '../commodityorder.js?v=321';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=321';
-import { endpointLabel } from './movements.js?v=321';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=321';
-import { layersForStorage } from '../outload.js?v=321';
-import { traceLoads, traceText } from '../trace.js?v=321';
-import { holdings, totalHeld } from '../offfarm.js?v=321';
-import { kindLabel, billTotal } from '../payables.js?v=321';
-import { orderState, STATE_LABEL } from '../orders.js?v=321';
-import { fieldHarvest } from '../harvest.js?v=321';
-import { capacityFor } from '../storagecapacity.js?v=321';
-import { autoSeasonText } from '../harvestseason.js?v=321';
-import { openMySignatureSheet } from './signaturepad.js?v=321';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=321';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=321';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=321';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=321';
+import { db } from '../storage.js?v=322';
+import { getTheme, setTheme } from '../theme.js?v=322';
+import { num, money, esc, todayLocal } from '../fmt.js?v=322';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=322';
+import { openLoadImportSheet } from './importloads.js?v=322';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=322';
+import { openPastSeasonsSheet } from './pastseasons.js?v=322';
+import { openPastSalesSheet } from './pastsales.js?v=322';
+import { openLineupSheet } from './lineup.js?v=322';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=322';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=322';
+import { openDangerSheet } from './dangerconfirm.js?v=322';
+import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=322';
+import { seasonContents, contentsText } from '../seasondelete.js?v=322';
+import { openDeletedSheet } from './deleted.js?v=322';
+import { APP_VERSION } from '../version.js?v=322';
+import { exportRowsAsCSV } from '../csv.js?v=322';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=322';
+import { orderedNames, moveName } from '../commodityorder.js?v=322';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=322';
+import { endpointLabel } from './movements.js?v=322';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=322';
+import { layersForStorage } from '../outload.js?v=322';
+import { traceLoads, traceText } from '../trace.js?v=322';
+import { holdings, totalHeld } from '../offfarm.js?v=322';
+import { kindLabel, billTotal } from '../payables.js?v=322';
+import { orderState, STATE_LABEL } from '../orders.js?v=322';
+import { fieldHarvest } from '../harvest.js?v=322';
+import { capacityFor } from '../storagecapacity.js?v=322';
+import { autoSeasonText } from '../harvestseason.js?v=322';
+import { openMySignatureSheet } from './signaturepad.js?v=322';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=322';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=322';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=322';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=322';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=321';
+} from '../invites.js?v=322';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=321';
+} from '../auth.js?v=322';
 
 let unsub = null;
 
@@ -991,7 +991,7 @@ function exportFieldsCSV(year, stamp) {
     { label: 'Seed rate (kg/ha)', get: (f) => f.seedRateKgHa ?? '' },
     { label: 'Seed required (t)', get: (f) => num(fieldSeed(f).requiredTons, 2) },
     { label: 'Harvested so far (t)', get: (f) => num(fieldHarvest(f, movements).inT, 2) },
-    { label: 'Still to come (t)', get: (f) => num(fieldHarvest(f, movements).toComeT, 2) },
+    { label: 'Still to harvest (t)', get: (f) => num(fieldHarvest(f, movements).toComeT, 2) },
     { label: 'Harvest finished', get: (f) => (f.harvestDone ? 'Yes' : 'No') },
     { label: 'Hectares still to harvest', get: (f) => (f.harvestHaLeft != null && !f.harvestDone ? num(f.harvestHaLeft, 2) : '') },
     { label: 'Yield for hectares left (t/ha)', get: (f) => (f.harvestHaLeft != null && !f.harvestDone && f.harvestLeftYield != null ? num(f.harvestLeftYield, 2) : '') },

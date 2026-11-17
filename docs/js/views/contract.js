@@ -18,13 +18,13 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=321';
-import { openSheet } from '../ui.js?v=321';
-import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=321';
-import { addressLinesOf } from '../address.js?v=321';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=321';
-import { signToggleHtml, wireSignToggle } from './signtoggle.js?v=321';
-import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=321';
+import { db } from '../storage.js?v=322';
+import { openSheet } from '../ui.js?v=322';
+import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=322';
+import { addressLinesOf } from '../address.js?v=322';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=322';
+import { signToggleHtml, wireSignToggle } from './signtoggle.js?v=322';
+import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=322';
 
 const DASH = '—';
 

@@ -86,7 +86,7 @@ check('the harvest report lists the commodity with the most tonnes first', () =>
 check('the harvest PDF with yields: whole farm, the room in the silos, each commodity with estimate, in and to come', () => {
   const s = hbuild(true);
   assert.ok(s.includes('/MediaBox [0 0 595.28 841.89]'));
-  for (const w of ['(HARVEST)', '(Whole farm)', '(Harvested)', '(Still to come)', '(Room in the silos)', '(Room left)', '(Silo 1)', '(Silo 2)', '(Wheat)', '(North)', '(Est t)', '(To come t)', '(In t)', '(Hectares finished)']) {
+  for (const w of ['(HARVEST)', '(Whole farm)', '(Harvested)', '(Still to harvest)', '(Room in the silos)', '(Room left)', '(Silo 1)', '(Silo 2)', '(Wheat)', '(North)', '(Est t)', '(To come t)', '(In t)', '(Hectares finished)']) {
     assert.ok(s.includes(w) || s.includes(w.replace(')', '').replace('(', '')), `missing ${w}`);
   }
   assert.ok(s.includes('(Done)'), 'a finished paddock says Done');
@@ -95,7 +95,7 @@ check('the harvest PDF with yields: whole farm, the room in the silos, each comm
 check('the harvest PDF for a role with no yields has no tonnes, estimates or to-come figures', () => {
   const s = hbuild(false);
   for (const w of ['(Cut)', '(Left to harvest)', '(Of the area done)', '(Room in the silos)', '(Area ha)', '(To cut ha)']) assert.ok(s.includes(w), `missing ${w}`);
-  for (const w of ['(Harvested)', '(Still to come)', '(Est t)', '(In t)', '(To come t)', 'Room to spare', 'Short of room']) assert.ok(!s.includes(w), `${w} must not be there`);
+  for (const w of ['(Harvested)', '(Still to harvest)', '(Est t)', '(In t)', '(To come t)', 'Room to spare', 'Short of room']) assert.ok(!s.includes(w), `${w} must not be there`);
   // the estimate for the paddocks is 800 + 300 + 100 + 30 t; none of it may appear
   for (const w of ['(800)', '(1,100)', '(1,230)']) assert.ok(!s.includes(w), `${w} is a tonnage`);
 });

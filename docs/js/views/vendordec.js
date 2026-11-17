@@ -5,18 +5,18 @@
 // assurance program is remembered with the business details so it is typed once. The form itself is in
 // vendordec.js; getting the PDF out is in sharefile.js.
 
-import { db } from '../storage.js?v=321';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=321';
-import { todayLocal, tightDate, dmy } from '../fmt.js?v=321';
-import { loadMySignature } from '../mysignature.js?v=321';
-import { fileSentCopy } from '../sentcopy.js?v=321';
-import { mountSignaturePad, signatureSvg } from './signaturepad.js?v=321';
-import { orderTitle, windowText } from '../orders.js?v=321';
-import { activeSales } from '../paidsales.js?v=321';
+import { db } from '../storage.js?v=322';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=322';
+import { todayLocal, tightDate, dmy } from '../fmt.js?v=322';
+import { loadMySignature } from '../mysignature.js?v=322';
+import { fileSentCopy } from '../sentcopy.js?v=322';
+import { mountSignaturePad, signatureSvg } from './signaturepad.js?v=322';
+import { orderTitle, windowText } from '../orders.js?v=322';
+import { activeSales } from '../paidsales.js?v=322';
 import {
   buildDeclaration, declarationPdf, declarationProblems, GMO_OPTIONS, MAX_VARIETIES, LAYOUTS, CVD_SOURCES, CVD_GMO_OPTIONS, CVD_BYPRODUCT,
-} from '../vendordec.js?v=321';
-import { sharePdf, downloadFile, safeFileName, mailtoLink, canShareFiles } from '../sharefile.js?v=321';
+} from '../vendordec.js?v=322';
+import { sharePdf, downloadFile, safeFileName, mailtoLink, canShareFiles } from '../sharefile.js?v=322';
 
 const LAYOUT_KEY = 'grainflow.vendordec.layout';
 const lastLayout = () => { try { return localStorage.getItem(LAYOUT_KEY) === 'cvd' ? 'cvd' : 'gta'; } catch { return 'gta'; } };

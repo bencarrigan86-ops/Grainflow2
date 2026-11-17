@@ -309,7 +309,7 @@ check('the screen groups the silos under a heading for each crop, with the leave
   const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../docs/js/views/reports.js'), 'utf8');
   assert.equal(src.split('${roomBySilo(split, space, {').length - 1, 2, 'both versions of the report');
   assert.equal(src.split('${minRoomRow(minRoom)}').length - 1, 2);
-  assert.ok(src.indexOf('${minRoomRow(minRoom)}') < src.indexOf("fold('room'"), 'the box is above the room section');
+  assert.ok(src.indexOf('${minRoomRow(minRoom)}') > src.indexOf("fold('room'"), 'the box is the first thing inside the room section, so folding it away takes it too');
   assert.ok(!src.includes('Each silo'), 'no flat list of silos any more');
   assert.equal(src.split('${spaceAsRow(space, assumeOptions, assume, pick)}').length - 1, 2, 'the empty-silo commodity choice is up with the empty silos total in both versions');
 });
@@ -371,6 +371,13 @@ check('each crop heading carries its space: room less what is still to come, neg
   assert.equal(by.Barley.space, 100, 'nothing to come: all of its room is space (and flagged as not needed on screen)');
   const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../docs/js/views/reports.js'), 'utf8');
   assert.ok(src.includes('Space ${signedT(c.space, t1)}') && src.includes('Room ${t1(c.room)} t − to come ${t1(c.toComeT)} t'));
+});
+
+check('the room in the silos starts folded away, every other section starts open, and a choice made is kept', () => {
+  const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../docs/js/views/reports.js'), 'utf8');
+  assert.ok(src.includes("const CLOSED_AT_START = new Set(['room']);"));
+  assert.ok(src.includes('harvestOpen.has(key) ? harvestOpen.get(key) !== false : !CLOSED_AT_START.has(key)'), 'a choice made on screen wins over the start state');
+  assert.ok(src.includes("${foldIsOpen(key) ? 'open' : ''}"));
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }

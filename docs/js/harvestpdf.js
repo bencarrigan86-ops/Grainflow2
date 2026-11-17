@@ -3,7 +3,7 @@
 // room in the silos, as on the screen. The report's own figures (harvest.js) go in; nothing is worked out again here.
 // Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=321';
+import { createReport, fixed } from './reportpdf.js?v=322';
 
 const pct = (p) => `${Math.round((Number(p) || 0) * 100)}%`;
 const haPct = (done, area) => (area > 0 ? `${Math.round((done / area) * 100)}%` : '-');
@@ -46,7 +46,7 @@ export function harvestPdf({ groups = [], farm = {}, seasons = [], scopeLabel = 
   report.heading(scopeLabel || 'Whole farm');
   if (showYield) {
     report.pair('Harvested', `${t0(farm.inT)} t`);
-    report.pair('Still to come', `${t0(farm.toComeT)} t`);
+    report.pair('Still to harvest', `${t0(farm.toComeT)} t`);
     report.pair('Done', pct(farm.pct), { bold: true });
     report.pair('Left to harvest', `${t0(farm.toGoHa)} ha`);
   } else {
@@ -84,8 +84,8 @@ export function harvestPdf({ groups = [], farm = {}, seasons = [], scopeLabel = 
   report.pair(`In empty silos (${space.emptyCount || 0}), for any grain`, `${t0(space.emptyRoom)} t`);
   report.pair('Room left', `${t0(space.totalRoom)} t`, { bold: true });
   if (showYield) {
-    if (split && split.unusable > 0.5) report.pair('Less silos with more room than that crop has to come', `${t0(split.unusable)} t`);
-    report.pair('Still to come', `${t0(farm.toComeT)} t`);
+    if (split && split.unusable > 0.5) { report.pair('Less surplus room in silos over remaining commodity', `${t0(split.unusable)} t`); }
+    report.pair('Still to harvest', `${t0(farm.toComeT)} t`);
     report.pair(margin >= 0 ? 'Room to spare' : 'Short of room by', `${t0(Math.abs(margin))} t`, { bold: true });
   }
   if ((space.silos || []).length) {

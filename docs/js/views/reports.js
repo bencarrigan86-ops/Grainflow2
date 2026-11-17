@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=321';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures } from '../fertfigures.js?v=321';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=321';
-import { fertPdf } from '../fertpdf.js?v=321';
-import { seedPdf } from '../seedpdf.js?v=321';
-import { yieldPdf } from '../yieldpdf.js?v=321';
-import { harvestPdf } from '../harvestpdf.js?v=321';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=321';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=321';
-import { field, getVal, getNum } from '../ui.js?v=321';
-import { canSeeYield } from '../nav.js?v=321';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=321';
-import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=321';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=321';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=321';
+import { db } from '../storage.js?v=322';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures } from '../fertfigures.js?v=322';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=322';
+import { fertPdf } from '../fertpdf.js?v=322';
+import { seedPdf } from '../seedpdf.js?v=322';
+import { yieldPdf } from '../yieldpdf.js?v=322';
+import { harvestPdf } from '../harvestpdf.js?v=322';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=322';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=322';
+import { field, getVal, getNum } from '../ui.js?v=322';
+import { canSeeYield } from '../nav.js?v=322';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=322';
+import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=322';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=322';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=322';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -401,6 +401,9 @@ function seedTable(g) {
 
 // Which folding sections of the harvest report are open, kept while the app is open. Open until closed.
 const harvestOpen = new Map();
+// Sections that start folded away until opened: the room in the silos. Everything else starts open. A choice made on the screen is kept.
+const CLOSED_AT_START = new Set(['room']);
+const foldIsOpen = (key) => (harvestOpen.has(key) ? harvestOpen.get(key) !== false : !CLOSED_AT_START.has(key));
 
 // Silos with less room than this are left out of the harvest report: not worth sending a load to. Kept on this device.
 const MIN_ROOM_KEY = 'grainflow.harvest.minRoom';
@@ -454,7 +457,7 @@ function paintHarvest(root, showYield = true) {
   // figure beside a hectare figure is a yield, and the estimate and what is still to come are built from yields.
   const haPct = (done, area) => (area > 0 ? `${Math.round((done / area) * 100)}%` : '-');
   const fold = (key, summary, inner) => `
-    <details class="fold" data-fold="${key}" style="border-top:none;margin-top:0" ${harvestOpen.get(key) !== false ? 'open' : ''}>
+    <details class="fold" data-fold="${key}" style="border-top:none;margin-top:0" ${foldIsOpen(key) ? 'open' : ''}>
       <summary>${summary}</summary>
       ${inner}
     </details>`;
@@ -465,7 +468,7 @@ function paintHarvest(root, showYield = true) {
       <h2><span class="dot report"></span>${esc(title)}</h2>
       <div class="stat-grid">
         <div class="stat"><div class="n">${t1(farm.inT)} t</div><div class="l">Harvested</div></div>
-        <div class="stat"><div class="n">${t1(farm.toComeT)} t</div><div class="l">Still to come</div></div>
+        <div class="stat"><div class="n">${t1(farm.toComeT)} t</div><div class="l">Still to harvest</div></div>
         <div class="stat"><div class="n">${pctText(farm.pct)}</div><div class="l">Done</div></div>
         <div class="stat"><div class="n">${t1(farm.toGoHa)} ha</div><div class="l">Left to harvest</div></div>
       </div>
@@ -474,14 +477,14 @@ function paintHarvest(root, showYield = true) {
     </div>
 
     <div class="card report">
+      ${fold('room', `<div><h2><span class="dot report"></span>Room in the silos</h2><div class="sub">${margin >= 0 ? `${t1(margin)} t spare after harvest` : `short ${t1(-margin)} t after harvest`} · ${t1(space.totalRoom)} t room (${t1(space.emptyRoom)} t empty)${minRoom > 0 ? ` · silos under ${t1(minRoom)} t left out` : ''}</div></div>`, `
       ${minRoomRow(minRoom)}
-      ${fold('room', `<div><h2><span class="dot report"></span>Room in the silos</h2><div class="sub">${t1(space.totalRoom)} t room left · ${margin >= 0 ? `${t1(margin)} t to spare` : `short by ${t1(-margin)} t`}${minRoom > 0 ? ` · silos under ${t1(minRoom)} t left out` : ''}</div></div>`, `
       <div class="row"><span class="label">In silos already holding a commodity</span><span class="value">${t1(space.totalRoom - space.emptyRoom)} t</span></div>
       <div class="row"><span class="label">In empty silos (${space.emptyCount}), for any grain</span><span class="value">${t1(space.emptyRoom)} t</span></div>
       ${spaceAsRow(space, assumeOptions, assume, pick)}
       <div class="row"><span class="label"><strong>Room left</strong></span><span class="value"><strong>${t1(space.totalRoom)} t</strong></span></div>
-      ${split.unusable > 0.5 ? `<div class="row"><span class="label">Less silos with more room than that crop has to come</span><span class="value">${t1(split.unusable)} t</span></div>` : ''}
-      <div class="row"><span class="label">Still to come</span><span class="value">${t1(farm.toComeT)} t</span></div>
+      ${split.unusable > 0.5 ? `<div class="row"><span class="label">Less surplus room in silos over remaining commodity</span><span class="value">${t1(split.unusable)} t</span></div>` : ''}
+      <div class="row"><span class="label">Still to harvest</span><span class="value">${t1(farm.toComeT)} t</span></div>
       <div class="row"><span class="label"><strong>${margin >= 0 ? 'Room to spare' : 'Short of room by'}</strong></span><span class="value"><span class="badge ${margin >= 0 ? 'pos' : 'neg'}">${t1(Math.abs(margin))} t</span></span></div>
       ${roomBySilo(split, space, { t1, showYield: true })}
       ${space.notCounted.length ? `<div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Not counted: ${space.notCounted.map(esc).join('; ')}. Set the capacity or commodity on the Storage tab to include them.</div>` : ''}
@@ -493,7 +496,7 @@ function paintHarvest(root, showYield = true) {
       const own = g.id ? space.byCommodity.get(g.id) : null;
       const tc = harvestTotals(g, t1);
       const summary = `<div><h2>${esc(g.name)} <span class="badge ${g.totals.pct >= 1 ? 'pos' : 'muted'}">${pctText(g.totals.pct)} in</span></h2>
-        <div class="sub">${t1(g.totals.toComeT)} t still to come · ${t1(g.totals.doneHa)} of ${t1(g.totals.areaHa)} ha finished</div></div>`;
+        <div class="sub">${t1(g.totals.toComeT)} t still to harvest · ${t1(g.totals.doneHa)} of ${t1(g.totals.areaHa)} ha finished</div></div>`;
       return `
       <div class="card report">
         ${fold('c-' + (g.id || 'none'), summary, `
@@ -644,7 +647,7 @@ function roomBySilo(split, space, { t1, showYield }) {
   if (!split.rows.length && !split.empty.length) return '';
   const head = (title, right, meta) => `<div class="crop-head"><div class="crop-top"><span class="crop-name">${title}</span>${right}</div>${meta ? `<div class="crop-sub">${meta}</div>` : ''}</div>`;
   const crops = split.rows.map((c) => {
-    const left = c.finished ? 'all cut' : (showYield && c.nothingToCome ? 'all in' : (showYield ? `${t1(c.toComeT)} t still to come` : `${t1(c.toGoHa)} ha to cut`));
+    const left = c.finished ? 'all cut' : (showYield && c.nothingToCome ? 'all in' : (showYield ? `${t1(c.toComeT)} t still to harvest` : `${t1(c.toGoHa)} ha to cut`));
     let badge = '';
     if (showYield && c.short > 0.5) badge = `<span class="badge neg">short ${t1(c.short)} t</span>`;
     else if (c.room > 0.5 && (showYield ? c.nothingToCome : c.finished)) badge = '<span class="badge muted">room not needed</span>';
@@ -715,8 +718,8 @@ function harvestNoYieldHtml({ groups, farm, seasons, space, minRoom, t1, haPct, 
     </div>
 
     <div class="card report">
+      ${fold('room', `<div><h2><span class="dot report"></span>Room in the silos</h2><div class="sub">${t1(space.totalRoom)} t room (${t1(space.emptyRoom)} t empty)${minRoom > 0 ? ` · silos under ${t1(minRoom)} t left out` : ''}</div></div>`, `
       ${minRoomRow(minRoom)}
-      ${fold('room', `<div><h2><span class="dot report"></span>Room in the silos</h2><div class="sub">${t1(space.totalRoom)} t room left${minRoom > 0 ? ` · silos under ${t1(minRoom)} t left out` : ''}</div></div>`, `
       <div class="row"><span class="label">In silos already holding a commodity</span><span class="value">${t1(space.totalRoom - space.emptyRoom)} t</span></div>
       <div class="row"><span class="label">In empty silos (${space.emptyCount}), for any grain</span><span class="value">${t1(space.emptyRoom)} t</span></div>
       ${spaceAsRow(space, assumeOptions, assume, pick)}
