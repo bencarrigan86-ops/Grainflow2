@@ -1,9 +1,10 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=359';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=359';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=359';
-import { commoditySort } from './commodityorder.js?v=359';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=360';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=360';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=360';
+import { ginDeduction } from './ginning.js?v=360';
+import { commoditySort } from './commodityorder.js?v=360';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -88,7 +89,9 @@ export function saleEconomics(sale, movements = []) {
   const oil = oilAdjustment(sale, movements);
   // and a load can carry deductions of its own for faults the contract does not price
   const deductions = deductionAdjustment(sale, movements);
-  const totalValue = tons * priceExFarm - ginning + grades.total + oil.total + deductions.total;
+  // and for cotton, the gin charges the buyer of the lint pays and takes off the lint payment
+  const gin = ginDeduction(sale, movements);
+  const totalValue = tons * priceExFarm - ginning + grades.total + oil.total + deductions.total - gin.total;
   const tonsDue = tons - tonsDelivered;
 
   const { toleranceTons, minTons, maxTons } = contractTolerance(tons, sale.tolerancePct, sale.toleranceCapTons);
@@ -100,7 +103,7 @@ export function saleEconomics(sale, movements = []) {
   return {
     netOfFreight, levies, priceExFarm, ginning, totalValue, tonsDue,
     gradeAdjustment: grades.total, gradeLines: grades.lines, gradeOtherTons: grades.otherTons,
-    oilAdjustment: oil.total, oilSummary: oil, deductionAdjustment: deductions.total, deductionLoads: deductions.loads,
+    oilAdjustment: oil.total, oilSummary: oil, deductionAdjustment: deductions.total, deductionLoads: deductions.loads, ginDeduction: gin.total, ginRuns: gin.runs,
     manualDelivered, movementDelivered, tonsDelivered,
     toleranceTons, minTons, maxTons, isFull, isOverDelivered, tonsToFill, tonsRemainingMax,
   };

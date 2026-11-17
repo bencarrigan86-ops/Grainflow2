@@ -18,29 +18,30 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=359';
-import { setBrandLogo } from './brand.js?v=359';
+import { hydrate } from './hydrate.js?v=360';
+import { setBrandLogo } from './brand.js?v=360';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=359';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=359';
-import { isLegacyDirty } from './dirty.js?v=359';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=359';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=359';
-import { hasDeductions } from './deductions.js?v=359';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=359';
-import { settleLegs, dedupeLegs } from './legs.js?v=359';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=359';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=359';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=359';
-import { setCommodityOrder } from './commodityorder.js?v=359';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=359';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=359';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=359';
-import { schedulePush, pushOnReconnect } from './sync.js?v=359';
-import { hasParts as hasAddressParts } from './address.js?v=359';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=359';
+} from './local.js?v=360';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=360';
+import { isLegacyDirty } from './dirty.js?v=360';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=360';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=360';
+import { hasDeductions } from './deductions.js?v=360';
+import { hasGin } from './ginning.js?v=360';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=360';
+import { settleLegs, dedupeLegs } from './legs.js?v=360';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=360';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=360';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=360';
+import { setCommodityOrder } from './commodityorder.js?v=360';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=360';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=360';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=360';
+import { schedulePush, pushOnReconnect } from './sync.js?v=360';
+import { hasParts as hasAddressParts } from './address.js?v=360';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=360';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -169,6 +170,8 @@ function markOil(rec) {
   if (rec.manualDocketNo) rec.__hasManualDocket = true;
   // and any deductions taken off its price
   if (hasDeductions(rec)) rec.__hasDeductions = true;
+  // and a cotton ginning run
+  if (hasGin(rec)) rec.__hasGin = true;
   // and the time of day it was loaded
   if (rec.loadTime) rec.__hasLoadTime = true;
   // and where it is going, typed on the load

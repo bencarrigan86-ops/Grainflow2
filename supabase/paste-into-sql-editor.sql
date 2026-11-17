@@ -1980,3 +1980,8 @@ notify pgrst, 'reload schema';
 alter table movements add column if not exists deductions jsonb;
 
 notify pgrst, 'reload schema';
+
+-- A cotton ginning run on a movement
+alter table movements add column if not exists gin jsonb;
+
+notify pgrst, 'reload schema';

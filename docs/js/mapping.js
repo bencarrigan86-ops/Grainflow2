@@ -27,10 +27,11 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=359';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=359';
-import { cleanOffFarm } from './offfarm.js?v=359';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=359';
+import { cleanGradeOptions } from './gradeprice.js?v=360';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=360';
+import { cleanGin, hasGin } from './ginning.js?v=360';
+import { cleanOffFarm } from './offfarm.js?v=360';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=360';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -135,6 +136,7 @@ export function movementFromRow(m, legs = [], photo = null) {
     ...(m.outload_no != null ? { outloadNo: m.outload_no, __hasOutloadNo: true } : {}),
     ...(m.manual_docket_no != null ? { manualDocketNo: m.manual_docket_no, __hasManualDocket: true } : {}),
     ...(Array.isArray(m.deductions) && cleanDeductions(m.deductions).length ? { deductions: cleanDeductions(m.deductions), __hasDeductions: true } : {}),
+    ...(m.gin && typeof m.gin === 'object' ? { gin: cleanGin(m.gin), __hasGin: true } : {}),
     ...(m.load_time ? { loadTime: m.load_time, __hasLoadTime: true } : {}),
     ...(m.load_destination ? { destination: m.load_destination, __hasDestination: true } : {}),
     ...(m.order_id ? { orderId: m.order_id, __hasOrderId: true } : {}),
@@ -518,6 +520,8 @@ export function stateToRows(state, farmId) {
         ...((m.manualDocketNo || m.__hasManualDocket) ? { manual_docket_no: orNull(m.manualDocketNo) } : {}),
         // Deductions taken off this load's price (reason and $/t), one json column; sent once there is one, kept after that.
         ...((hasDeductions(m) || m.__hasDeductions) ? { deductions: hasDeductions(m) ? cleanDeductions(m.deductions) : null } : {}),
+        // A cotton ginning run (modules in, lint and seed out, the gin's rates), one json column; sent once there is one.
+        ...((hasGin(m) || m.__hasGin) ? { gin: hasGin(m) ? cleanGin(m.gin) : null } : {}),
         // The time of day it was loaded, optional in the same way.
         ...((m.loadTime || m.__hasLoadTime) ? { load_time: orNull(m.loadTime) } : {}),
         // Where it is going, typed on the load; optional in the same way.

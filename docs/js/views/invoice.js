@@ -1,15 +1,15 @@
-import { db } from '../storage.js?v=359';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=359';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=359';
-import { addressLinesOf } from '../address.js?v=359';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=359';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=359';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=359';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=359';
-import { docBandHTML } from '../docband.js?v=359';
-import { deductionNotes } from '../deductions.js?v=359';
-import { openMovementSheet } from './movements.js?v=359';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=359';
+import { db } from '../storage.js?v=360';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=360';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=360';
+import { addressLinesOf } from '../address.js?v=360';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=360';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=360';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=360';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=360';
+import { docBandHTML } from '../docband.js?v=360';
+import { deductionNotes } from '../deductions.js?v=360';
+import { openMovementSheet } from './movements.js?v=360';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=360';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {

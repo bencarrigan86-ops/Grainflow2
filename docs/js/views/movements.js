@@ -1,23 +1,25 @@
-import { db } from '../storage.js?v=359';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=359';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=359';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=359';
-import { withholdingClash } from '../fumigation.js?v=359';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=359';
-import { compressAndStampImage } from '../img.js?v=359';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=359';
-import { specText, extraSpecKey } from '../outload.js?v=359';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=359';
-import { pickableSilos } from '../silopick.js?v=359';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=359';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=359';
-import { activeSales } from '../paidsales.js?v=359';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=359';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=359';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=359';
-import { nowTime } from '../loadreport.js?v=359';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=359';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=359';
+import { db } from '../storage.js?v=360';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=360';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=360';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=360';
+import { withholdingClash } from '../fumigation.js?v=360';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=360';
+import { compressAndStampImage } from '../img.js?v=360';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=360';
+import { specText, extraSpecKey } from '../outload.js?v=360';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=360';
+import { pickableSilos } from '../silopick.js?v=360';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=360';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=360';
+import { activeSales } from '../paidsales.js?v=360';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=360';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=360';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=360';
+import { nowTime } from '../loadreport.js?v=360';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=360';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=360';
+import { openGinRunSheet } from './ginrun.js?v=360';
+import { hasGin, describeGin, stdBales } from '../ginning.js?v=360';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -97,7 +99,7 @@ function paint(root) {
   paintList(root);
 
   root.querySelector('#add-movement').addEventListener('click', () => openMovementSheet(null));
-  root.querySelector('#log-ginning')?.addEventListener('click', () => openGinningSheet());
+  root.querySelector('#log-ginning')?.addEventListener('click', () => openGinRunSheet(null));
   root.querySelector('#load-report')?.addEventListener('click', () => openLoadReportSheet());
   // a number to quote at a third-party site: the load form opens with the number already in it
   root.querySelector('#get-outload')?.addEventListener('click', () => openMovementSheet(null, { wantOutload: true }));
@@ -125,7 +127,7 @@ function paintList(root) {
     .filter((m) => !q || ticketSearchText(m, ctx).includes(q))
     .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (Number(b.ticketNo) || 0) - (Number(a.ticketNo) || 0));
   const narrowed = !!(q || listFilter.commodityId || listFilter.toFinish);
-  const totalTons = shown.reduce((s, m) => s + (Number(m.tons) || 0), 0);
+  const totalTons = shown.filter((m) => !hasGin(m)).reduce((s, m) => s + (Number(m.tons) || 0), 0);   // a ginning run counts bales and modules, not tonnes
 
   root.querySelector('#move-stats').innerHTML = `
     <div class="stat"><div class="n">${shown.length}</div><div class="l">${narrowed ? 'Loads shown' : 'Loads logged'}</div></div>
@@ -284,15 +286,16 @@ export function movementRow(m, ctx) {
     <div class="list-item stack" data-edit-movement="${m.id}">
       <div class="li-top">
         <div class="main">${esc(fromLabel)} &rarr; ${esc(toLabel)}</div>
-        <div class="main">${tons(m.tons || 0)}</div>
+        <div class="main">${hasGin(m) ? `${num(stdBales(m.gin.lintKg, m.gin.stdBaleKg), 2)} bales` : tons(m.tons || 0)}</div>
       </div>
       <div class="li-foot" style="margin-top:2px">
         <span class="meta">${details}</span>
         <span class="badges"><span class="badge ${stage ? 'warn' : 'pos'}">${stage ? STAGES[stage] : 'Final'}</span>${m.photoDataUrl ? '<span aria-label="Photo waiting to upload" title="Photo waiting to upload">📷⏳</span>' : (m.photoPath ? '<span aria-label="Has photo">📷</span>' : '')}</span>
       </div>
       ${specText(m) ? `<div class="meta">${esc(specText(m))}</div>` : ''}
-      ${fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
-      ${toBreakdown ? `<div class="meta">${esc(toBreakdown)}</div>` : ''}
+      ${hasGin(m) ? `<div class="meta">Ginning${m.gin.ginName ? `, ${esc(m.gin.ginName)}` : ''}: ${esc(describeGin(m.gin))}</div>` : ''}
+      ${!hasGin(m) && fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
+      ${!hasGin(m) && toBreakdown ? `<div class="meta">${esc(toBreakdown)}</div>` : ''}
     </div>
   `;
 }
@@ -438,85 +441,6 @@ function readToRows(container) {
 }
 
 /**
- * Ginning converts round bales sitting at the gin into lint bales + seed —
- * a processing step, not a relocation, so the "in" and "out" quantities
- * deliberately don't match. Movements never enforce froms/tos balancing
- * (see the multi-destination silo-split feature), so this is really just a
- * pre-filled movement: round bales out of one tally storage, lint bales +
- * seed tonnes into two others. Saved as a normal movement — editable
- * afterwards via the regular "Edit movement" sheet like any other.
- */
-function openGinningSheet() {
-  const { storages, commodities } = db.get();
-  const tallyStorages = storages.filter((s) => s.kind === 'tally');
-  const tallyOptions = [{ value: '', label: 'Select…' }, ...tallyStorages.map((s) => ({ value: s.id, label: s.name }))];
-
-  openSheet('Log ginning', (root) => {
-    root.innerHTML = `
-      ${field({ label: 'Date', id: 'g-date', type: 'date' })}
-      ${field({ label: 'Round bale storage', id: 'g-from', type: 'select', options: tallyOptions, hint: 'Where the round bales being ginned are currently tracked' })}
-      ${field({ label: 'Round bales to gin', id: 'g-round', type: 'number', step: '1' })}
-      ${field({ label: 'Ginned bales per round bale', id: 'g-ratio', type: 'number', step: '0.1', placeholder: 'e.g. 4.2', hint: "Defaults from the commodity's setting — editable to match the actual gin docket" })}
-      ${field({ label: 'Lint bale storage', id: 'g-lint-to', type: 'select', options: tallyOptions })}
-      ${field({ label: 'Lint bales produced', id: 'g-lint-bales', type: 'number', step: '1', hint: 'Auto-calculated from the ratio above — adjust to match the docket' })}
-      ${field({ label: 'Seed storage', id: 'g-seed-to', type: 'select', options: tallyOptions })}
-      ${field({ label: 'Seed produced (t)', id: 'g-seed-t', type: 'number', step: '0.01' })}
-      ${field({ label: 'Notes', id: 'g-notes', placeholder: 'Ginning' })}
-      <button class="btn" id="g-save" style="margin-top:12px">Save</button>
-    `;
-
-    const fromSelect = root.querySelector('#g-from');
-    const ratioInput = root.querySelector('#g-ratio');
-    const roundInput = root.querySelector('#g-round');
-    const lintBalesInput = root.querySelector('#g-lint-bales');
-    let lintBalesTouched = false;
-
-    fromSelect.addEventListener('change', () => {
-      const source = tallyStorages.find((s) => s.id === getVal(root, 'g-from'));
-      const commodity = commodities.find((c) => c.id === source?.commodityId);
-      if (commodity?.balesPerRoundBale) ratioInput.value = commodity.balesPerRoundBale;
-      recomputeLint();
-    });
-    const recomputeLint = () => {
-      if (lintBalesTouched) return;
-      const round = getNum(root, 'g-round');
-      const ratio = getNum(root, 'g-ratio');
-      lintBalesInput.value = round > 0 && ratio > 0 ? (Math.round(round * ratio * 10) / 10) : '';
-    };
-    roundInput.addEventListener('input', recomputeLint);
-    ratioInput.addEventListener('input', recomputeLint);
-    lintBalesInput.addEventListener('input', () => { lintBalesTouched = true; });
-
-    root.querySelector('#g-save').addEventListener('click', () => {
-      const fromId = getVal(root, 'g-from');
-      const lintToId = getVal(root, 'g-lint-to');
-      const seedToId = getVal(root, 'g-seed-to');
-      const roundBales = getNum(root, 'g-round');
-      if (!fromId) { fromSelect.focus(); return; }
-      if (!roundBales) { roundInput.focus(); return; }
-      if (!lintToId && !seedToId) { root.querySelector('#g-lint-to').focus(); return; }
-
-      const tos = [];
-      const lintBales = getNum(root, 'g-lint-bales');
-      const seedTons = getNum(root, 'g-seed-t');
-      if (lintToId && lintBales) tos.push({ type: 'silo', id: lintToId, tons: lintBales });
-      if (seedToId && seedTons) tos.push({ type: 'silo', id: seedToId, tons: seedTons });
-      if (tos.length === 0) { root.querySelector('#g-lint-bales').focus(); return; }
-
-      db.upsertMovement({
-        date: getVal(root, 'g-date'),
-        froms: [{ type: 'silo', id: fromId, tons: roundBales }],
-        tos,
-        tons: roundBales,
-        weightStatus: 'final',
-        notes: getVal(root, 'g-notes')?.trim() || 'Ginning',
-      });
-      closeSheet(); toast('Saved');
-    });
-  });
-}
-
-/**
  * `template` pre-fills a brand-new movement from an existing one's details
  * (the "Repeat last movement" shortcut) without editing that record —
  * `existing` stays null so it still saves as a fresh ticket (new id/ticket
@@ -526,6 +450,8 @@ function openGinningSheet() {
  * repeat of it.
  */
 export function openMovementSheet(existing, template) {
+  // a ginning run has a form of its own
+  if (existing && hasGin(existing)) return openGinRunSheet(existing);
   const { fields, storages, sales, commodities, movements } = db.get();
   const orders = db.getOrders();
   const src = existing || template;

@@ -45,7 +45,7 @@ check('the movement list pages its tickets, searches the whole list, and starts 
   assert.ok(src.includes('pageOfRows(shown'), 'the list is paged');
   assert.ok(src.includes('id="mv-more"'), 'there is a Show more button');
   assert.ok(src.includes('listFilter.limit = PAGE_SIZE'), 'a new search or chip starts at the first page again');
-  assert.ok(/shown\.reduce\(\(s, m\) => s \+ \(Number\(m\.tons\)/.test(src), 'the totals are of the whole list, not the page');
+  assert.ok(/shown\.filter\(\(m\) => !hasGin\(m\)\)\.reduce\(\(s, m\) => s \+ \(Number\(m\.tons\)/.test(src), 'the totals are of the whole list, not the page');
 });
 
 check('the To finish chip is amber so it stands out from the other filters', () => {
