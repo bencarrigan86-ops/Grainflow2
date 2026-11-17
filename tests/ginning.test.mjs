@@ -5,7 +5,7 @@
 // I053/23 (90,273 kg of lint, 393 bales pressed): $65.00 a bale to gin, $2.25 research levy, GST on the ginning only.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction } from '../docs/js/ginning.js';
+import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems } from '../docs/js/ginning.js';
 import { saleEconomics } from '../docs/js/derived.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
@@ -90,7 +90,74 @@ check('the sheet asks who pays the gin and defaults it from where the lint goes'
   const g = read('docs/js/views/ginrun.js');
   assert.ok(g.includes("id: 'g-paid-by'") && g.includes('The lint buyer pays it and takes it off the lint payment'));
   assert.ok(g.includes("g.paidBy === 'us' && inv.bales > 0"), 'only a run we pay becomes a bill');
-  assert.ok(g.includes("lintLeg?.type === 'sale' ? 'buyer' : 'us'"));
+  assert.ok(g.includes("parseTarget(startAllocs[0].to)?.type === 'sale' ? 'buyer' : 'us'"));
+});
+
+const lot = (to, baleFrom, baleTo) => ({ to, baleFrom, baleTo });
+const split = { ...run, baleFrom: 'BG027234', baleTo: 'BG027626', paidBy: 'buyer', voluntaryLevy: 1.5 };
+
+check('a bale range counts both ends: BG027234 to BG027626 is the 393 bales pressed', () => {
+  assert.equal(baleRangeCount('BG027234', 'BG027626'), 393);
+  assert.equal(baleRangeCount('bg027234', 'BG027234'), 1, 'one bale, any case');
+  assert.equal(baleRangeCount('BG027234', 'XX027626'), null, 'different letters is not a range');
+  assert.equal(baleRangeCount('BG027626', 'BG027234'), null, 'backwards is not a range');
+  assert.equal(baleRangeCount('', 'BG1'), null);
+  assert.deepEqual(parseBale('BG027234'), { prefix: 'BG', n: 27234, width: 6 });
+});
+
+check('one lot with no range takes the whole run', () => {
+  const a = allocateLint({ ...split, allocations: [lot('sale:s1', '', '')] });
+  assert.equal(a.length, 1);
+  assert.equal(a[0].bales, 393);
+  assert.ok(Math.abs(a[0].std - 397.678) < 0.001);
+  assert.deepEqual(allocationProblems({ ...split, allocations: [lot('sale:s1', '', '')] }), []);
+  assert.equal(allocateLint(split).length, 1, 'a run with no allocations is one whole lot too');
+});
+
+check('a run split by bale range shares the lint weight by bales, and the lots add back to the run', () => {
+  const g = { ...split, allocations: [lot('sale:s1', 'BG027234', 'BG027400'), lot('silo:st1', 'BG027401', 'BG027626')] };
+  const a = allocateLint(g);
+  assert.deepEqual(a.map((x) => x.bales), [167, 226]);
+  assert.ok(Math.abs(a[0].std - 168.988) < 0.001 && Math.abs(a[1].std - 228.690) < 0.001);
+  assert.ok(Math.abs(a[0].std + a[1].std - 397.678) < 0.001);
+  assert.deepEqual(allocationProblems(g), []);
+});
+
+check('bad allocations are named: a gap, an overlap, outside the run, not a range, a wrong count', () => {
+  const p = (allocations) => allocationProblems({ ...split, allocations }).join(' | ');
+  assert.match(p([lot('a', 'BG027234', 'BG027400')]), /167 of the 393 bales are allocated/);
+  assert.match(p([lot('a', 'BG027234', 'BG027400'), lot('b', 'BG027400', 'BG027626')]), /overlap/);
+  assert.match(p([lot('a', 'BG027200', 'BG027626')]), /outside this run/);
+  assert.match(p([lot('a', 'BG027626', 'BG027234')]), /not a bale range/);
+  assert.match(allocationProblems({ ...split, physicalBales: 400 }).join(' '), /range is 393 bales but 400 were pressed/);
+  assert.equal(cleanAllocations([lot('', '', ''), lot('sale:s1', ' BG1 ', 'BG9')]).length, 1, 'a blank lot is dropped');
+});
+
+check('when the buyer pays the gin, each contract is charged for the bales in its range only', () => {
+  const g = { ...split, allocations: [lot('sale:s1', 'BG027234', 'BG027400'), lot('sale:s2', 'BG027401', 'BG027626')] };
+  const legs = allocateLint(g).map((a) => ({ type: 'sale', id: a.to.slice(5), tons: Math.round(a.std * 1000) / 1000 }));
+  const m = { id: 'm1', date: '2026-05-18', tons: 397.678, froms: [], tos: legs, gin: g };
+  const d1 = ginDeduction({ id: 's1' }, [m]);
+  const d2 = ginDeduction({ id: 's2' }, [m]);
+  assert.ok(Math.abs(d1.total + d2.total - 27340.40) < 0.02, 'the two shares make the whole invoice');
+  assert.ok(Math.abs(d1.total - 27340.40 * (167 / 393)) < 0.02);
+  assert.equal(ginDeduction({ id: 's3' }, [m]).total, 0);
+});
+
+check('the sheet takes lint by bale range, with a lot per contract or storage, and warns before saving a mismatch', () => {
+  const g = read('docs/js/views/ginrun.js');
+  assert.ok(g.includes('class="al-from"') && g.includes('class="al-last"') && g.includes('id="g-al-add"'));
+  assert.ok(g.includes('allocateLint(g)') && g.includes('allocationProblems(g)') && g.includes('Save anyway'));
+  assert.ok(!g.includes("id: 'g-lint-to'"), 'the single lint select is gone');
+  assert.ok(read('docs/css/styles.css').includes('.al-range {'));
+});
+
+check('allocations ride in the gin record to the server and back', () => {
+  const g = cleanGin({ ...split, allocations: [lot('sale:s1', 'BG027234', 'BG027400'), lot('silo:st1', 'BG027401', 'BG027626')], seedTo: 'silo:st2' });
+  const st = { currentYear: '2026', years: { 2026: { sales: [], commodities: [], fields: [], storages: [], movements: [{ id: 'm1', date: '2026-05-18', tons: 397.678, froms: [], tos: [], gin: g }] } }, businessDetails: {} };
+  const back = rowsToState(stateToRows(st, 'farm1')).years[2026].movements[0].gin;
+  assert.deepEqual(back.allocations, g.allocations);
+  assert.equal(back.seedTo, 'silo:st2');
 });
 
 check('the run goes to the server and comes back, and a movement without one sends no column', () => {
@@ -109,7 +176,7 @@ check('the movement list and the ticket form hand a ginning run to its own sheet
   assert.ok(m.includes('shown.filter((m) => !hasGin(m))'));
   assert.ok(m.includes('describeGin(m.gin)'));
   const g = read('docs/js/views/ginrun.js');
-  assert.ok(g.includes("id: 'g-lint-to'") && g.includes("id: 'g-seed-to'") && g.includes('We pay it (saved as a bill)'));
+  assert.ok(g.includes("id: 'g-seed-to'") && g.includes('We pay it (saved as a bill)'));
   assert.ok(g.includes('Voluntary levy ($/bale)') && g.includes('db.upsertPayable'));
   assert.ok(read('docs/js/storage.js').includes('rec.__hasGin = true'));
   assert.ok(read('supabase/migrations/20261127000000_movement_gin.sql').includes('add column if not exists gin jsonb'));

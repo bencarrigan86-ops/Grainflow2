@@ -16,6 +16,32 @@ const num = (v) => {
 const round2 = (n) => Math.round(n * 100) / 100;
 
 /** What a run is as saved: numbers as numbers, text trimmed, and a standard bale weight that is never zero. */
+/** A bale number as the gin writes it, "BG027234": its letters, its digits and the number they make. */
+export function parseBale(no) {
+  const m = /^(.*?)([0-9]+)$/.exec(String(no ?? '').trim());
+  return m ? { prefix: m[1].toUpperCase(), n: Number(m[2]), width: m[2].length } : null;
+}
+
+/** How many bales a first and last number cover, both ends counted: BG027234 to BG027626 is 393. Null when they cannot be a range. */
+export function baleRangeCount(from, to) {
+  const a = parseBale(from);
+  const b = parseBale(to);
+  if (!a || !b || a.prefix !== b.prefix || b.n < a.n) return null;
+  return b.n - a.n + 1;
+}
+
+/** The lint allocations as saved: where to, the first and last bale, and how many; blank ones dropped. */
+export function cleanAllocations(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((a) => ({
+      to: String(a?.to ?? '').trim(),
+      baleFrom: String(a?.baleFrom ?? '').trim(), baleTo: String(a?.baleTo ?? '').trim(),
+      bales: Math.max(0, Math.round(Number(a?.bales) || 0)),
+    }))
+    .filter((a) => a.to || a.baleFrom || a.baleTo || a.bales);
+}
+
 export function cleanGin(g) {
   if (!g || typeof g !== 'object') return null;
   const text = (v) => String(v ?? '').trim();
@@ -29,6 +55,9 @@ export function cleanGin(g) {
     gstOnGin: g.gstOnGin !== false,
     // who pays the gin: 'us' (a bill), or 'buyer' (the buyer of the lint pays the gin and takes it off the lint payment)
     paidBy: g.paidBy === 'buyer' ? 'buyer' : 'us',
+    // where the lint went, by bale range: [{ to: 'sale:<id>' | 'silo:<id>', baleFrom, baleTo, bales }]; and where the seed went
+    allocations: cleanAllocations(g.allocations),
+    seedTo: text(g.seedTo),
     ...(g.payableId ? { payableId: String(g.payableId) } : {}),
   };
 }
@@ -95,15 +124,68 @@ export function ginDeduction(sale, movements) {
   for (const m of movements || []) {
     const g = hasGin(m) ? cleanGin(m.gin) : null;
     if (!g || g.paidBy !== 'buyer') continue;
-    const lint = (m.tos || [])[0];
-    if (!lint || lint.type !== 'sale' || lint.id !== sale?.id) continue;
     const all = stdBales(g.lintKg, g.stdBaleKg);
-    // the leg is saved to three decimals, so compare at three decimals: a whole run delivered is a whole share
-    const share = all > 0 ? Math.min(1, Math.round(num(lint.tons) * 1000) / Math.round(all * 1000)) : 0;
+    // what went to this contract: the allocations that name it, or (a run saved before there were any) the first leg
+    const legs = g.allocations.length
+      ? allocateLint(g).filter((a) => a.to === `sale:${sale?.id}`).map((a) => a.std)
+      : [(m.tos || [])[0]].filter((l) => l && l.type === 'sale' && l.id === sale?.id).map((l) => num(l.tons));
+    const std = legs.reduce((s, x) => s + x, 0);
+    // legs are saved to three decimals, so compare at three decimals: a whole run delivered is a whole share
+    const share = all > 0 ? Math.min(1, Math.round(std * 1000) / Math.round(all * 1000)) : 0;
     if (!(share > 0)) continue;
     total += ginInvoice(g).exGst * share;
-    bales += num(lint.tons);
+    bales += std;
     runs += 1;
   }
   return { total: round2(total), bales, runs };
+}
+
+/** The bales in an allocation: what the range says when it is a range, else the count typed. */
+export const allocationBales = (a) => baleRangeCount(a?.baleFrom, a?.baleTo) ?? num(a?.bales);
+
+/**
+ * Split a run's lint between its destinations. Each allocation's weight is the run's lint weight in proportion to its bales
+ * (the gin weighs the run, not every bale; the classing file's own bale weights can replace this later). One allocation with no
+ * range takes the whole run.
+ *
+ * @returns {{to: string, bales: number, kg: number, std: number, baleFrom: string, baleTo: string}[]}
+ */
+export function allocateLint(gin) {
+  const g = cleanGin(gin) || cleanGin({});
+  const list = g.allocations.length ? g.allocations : [{ to: '', baleFrom: '', baleTo: '', bales: 0 }];
+  const pressed = g.physicalBales || baleRangeCount(g.baleFrom, g.baleTo) || 0;
+  return list.map((a) => {
+    const whole = list.length === 1 && !allocationBales(a);
+    const bales = whole ? pressed : allocationBales(a);
+    const kg = pressed > 0 ? g.lintKg * (bales / pressed) : 0;
+    return { to: a.to, baleFrom: whole ? g.baleFrom : a.baleFrom, baleTo: whole ? g.baleTo : a.baleTo, bales, kg, std: stdBales(kg, g.stdBaleKg) };
+  });
+}
+
+/** Things wrong with how a run's bales were allocated, in words; none when it adds up. */
+export function allocationProblems(gin) {
+  const g = cleanGin(gin) || cleanGin({});
+  const out = [];
+  const pressed = g.physicalBales;
+  const runCount = baleRangeCount(g.baleFrom, g.baleTo);
+  if (runCount !== null && pressed && runCount !== pressed) out.push(`The run's bale range is ${runCount} bales but ${pressed} were pressed.`);
+  const runFrom = parseBale(g.baleFrom);
+  const spans = [];
+  for (const a of g.allocations) {
+    if (a.baleFrom && a.baleTo) {
+      const c = baleRangeCount(a.baleFrom, a.baleTo);
+      if (c === null) { out.push(`${a.baleFrom} to ${a.baleTo} is not a bale range.`); continue; }
+      if (a.bales && a.bales !== c) out.push(`${a.baleFrom} to ${a.baleTo} is ${c} bales, not ${a.bales}.`);
+      const f = parseBale(a.baleFrom);
+      const l = parseBale(a.baleTo);
+      spans.push({ a: f.n, b: l.n, label: `${a.baleFrom} to ${a.baleTo}` });
+      const runTo = parseBale(g.baleTo);
+      if (runFrom && runTo && f.prefix === runFrom.prefix && (f.n < runFrom.n || l.n > runTo.n)) out.push(`${a.baleFrom} to ${a.baleTo} is outside this run (${g.baleFrom} to ${g.baleTo}).`);
+    }
+  }
+  const sorted = [...spans].sort((x, y) => x.a - y.a);
+  for (let i = 1; i < sorted.length; i += 1) if (sorted[i].a <= sorted[i - 1].b) out.push(`${sorted[i - 1].label} and ${sorted[i].label} overlap.`);
+  const sum = allocateLint(g).reduce((s, a) => s + a.bales, 0);
+  if (pressed && g.allocations.length && sum !== pressed) out.push(`${sum} of the ${pressed} bales are allocated.`);
+  return out;
 }

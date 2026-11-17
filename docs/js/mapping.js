@@ -27,11 +27,11 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=360';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=360';
-import { cleanGin, hasGin } from './ginning.js?v=360';
-import { cleanOffFarm } from './offfarm.js?v=360';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=360';
+import { cleanGradeOptions } from './gradeprice.js?v=361';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=361';
+import { cleanGin, hasGin } from './ginning.js?v=361';
+import { cleanOffFarm } from './offfarm.js?v=361';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=361';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
