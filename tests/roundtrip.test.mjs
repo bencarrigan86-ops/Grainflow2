@@ -115,6 +115,7 @@ function markerFor(key, ids) {
   if (key === 'invoicing') return 'rcti';                       // only 'seller' and 'rcti' are stored
   if (key === 'gradeOptions') return [{ grade: 'APW1', adjust: 0 }, { grade: 'H2', adjust: 15 }, { grade: 'ASW1', adjust: -20 }];
   if (key === 'offFarm') return { operator: 'GrainCorp', opening: [{ commodityId: ids.commodity, grade: 'APH1', tons: 450 }] };
+  if (key === 'fumigations') return [{ id: 'f1', date: '2026-11-10', product: 'Phosphine', days: 14, endsOn: '2026-11-24' }];
   if (key === 'gradeBands') return [{ tons: 500, grade: 'APH1' }, { tons: 250, grade: 'AUH2', proteinPct: 11.5, moisturePct: 11, fallingNumber: 400 }];
   if (key === 'ticketNo' || key === 'invoiceNo') return 41;
   if (key === 'buyerOrderNo') return 'BO-77';                   // text, though it ends in No

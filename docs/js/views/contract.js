@@ -18,16 +18,16 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=343';
-import { openSheet } from '../ui.js?v=343';
-import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=343';
-import { addressLinesOf } from '../address.js?v=343';
-import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=343';
-import { PATTERN_ON_CONTRACT } from '../deliveryplan.js?v=343';
-import { INVOICING_ON_CONTRACT } from '../invoicing.js?v=343';
-import { contactLines } from '../buyercontact.js?v=343';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=343';
-import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=343';
+import { db } from '../storage.js?v=344';
+import { openSheet } from '../ui.js?v=344';
+import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=344';
+import { addressLinesOf } from '../address.js?v=344';
+import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=344';
+import { PATTERN_ON_CONTRACT } from '../deliveryplan.js?v=344';
+import { INVOICING_ON_CONTRACT } from '../invoicing.js?v=344';
+import { contactLines } from '../buyercontact.js?v=344';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=344';
+import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=344';
 
 const DASH = '—';
 

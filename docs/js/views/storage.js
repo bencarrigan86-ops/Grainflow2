@@ -1,24 +1,24 @@
-import { db } from '../storage.js?v=343';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=343';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=343';
-import { isTransit } from '../transit.js?v=343';
-import { isOffFarm } from '../offfarm.js?v=343';
-import { paintOffFarmCard } from './offfarm.js?v=343';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=343';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=343';
-import { hasStorageQuality } from '../mapping.js?v=343';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=343';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=343';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=343';
-import { renderRelatedMovements } from './movements.js?v=343';
-import { openSiloSetupSheet } from './silosetup.js?v=343';
-import { commodityFills } from '../commodityfill.js?v=343';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=343';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=343';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=343';
+import { db } from '../storage.js?v=344';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=344';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=344';
+import { isTransit } from '../transit.js?v=344';
+import { isOffFarm } from '../offfarm.js?v=344';
+import { paintOffFarmCard } from './offfarm.js?v=344';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=344';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=344';
+import { hasStorageQuality } from '../mapping.js?v=344';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=344';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=344';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=344';
+import { renderRelatedMovements } from './movements.js?v=344';
+import { openSiloSetupSheet } from './silosetup.js?v=344';
+import { commodityFills } from '../commodityfill.js?v=344';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=344';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=344';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=344';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=343';
+} from '../silolayers.js?v=344';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -585,9 +585,9 @@ function computeStorageTons(s, commodities) {
 function qualityFold(existing, commodity) {
   const has = hasStorageQuality(existing || {});
   return `
-    <details class="fold" ${has ? 'open' : ''}>
+    <details class="fold">
       <summary><div><h2>Default grade</h2>
-        <div class="sub">Used only when a load or a sample doesn't record its own</div></div></summary>
+        <div class="sub">Used only when a load or a section doesn't record its own</div></div></summary>
       <div class="grid-2">
         ${field({ label: 'Crop year', id: 'q-year', value: existing?.cropYear, placeholder: 'e.g. 2026/27' })}
         ${gradeFieldHtml({ id: 'q-grade', commodity, value: existing?.grade })}
@@ -810,18 +810,20 @@ function contentsFold(existing, grades, kind = existing?.kind) {
       </div>` : ''}
       <div id="lay-picture"></div>
       <div id="lay-bulk" class="lay-bulk"></div>
-      <div class="subhead" style="margin-top:10px" id="lay-stack-head"></div>
-      <div id="op-stack"></div>
+      <details class="inner-fold" id="stack-fold">
+        <summary id="lay-stack-head"></summary>
+        <div id="op-stack"></div>
+      </details>
       <details class="inner-fold" id="sample-fold" ${rows.length ? 'open' : ''}>
-        <summary>Sampled it? Enter the results <span class="meta">(optional, from the ${isBunker ? 'back' : 'bottom'})</span></summary>
-        <div class="field hint" style="margin:8px 0">Say what each sample covers by tonnes, whichever loads it came from: the first 800 t is APH1 at 11.5% protein, the next
-          600 t is AUH2. A sample replaces what the loads say for that grain. Grain that arrives after the date below, or beyond the last sample,
-          keeps its own grade.</div>
+        <summary>Sampled sections <span class="meta">(optional, counted from the ${isBunker ? 'back' : 'bottom'})</span></summary>
+        <div class="field hint" style="margin:8px 0">Change the grade of set blocks of tonnes, using the aggregated sample results: the first 800 t is APH1 at
+          11.5% protein, the next 600 t is AUH2, whichever loads they came from. A section replaces what the loads say for that grain. Grain that arrives
+          after the date below, or beyond the last section, keeps its own grade.</div>
         <div class="field" style="margin-bottom:8px"><label for="lay-asof">Sampled on</label>
           <input type="date" id="lay-asof" value="${esc(existing?.gradeBandsDate || todayLocal())}" /></div>
         <div id="lay-rows">${rows.map((r) => bandRowHtml(r, grades)).join('')}</div>
         <datalist id="lay-grades">${grades.map((g) => `<option value="${esc(g)}"></option>`).join('')}</datalist>
-        <button type="button" class="btn secondary small" id="lay-add">+ Add the next sample</button>
+        <button type="button" class="btn secondary small" id="lay-add">+ Add the next section</button>
         <div class="field hint" id="lay-total"></div>
       </details>
     </details>
@@ -889,7 +891,7 @@ function buildContents(root, existing, kind = existing?.kind) {
     const base = l.source === 'opening'
       ? 'Opening stock'
       : `Ticket #${l.ticketNo ?? '?'} · ${esc(shortDate(l.date) || 'no date')}${l.rego ? ` · ${esc(l.rego)}` : ''}`;
-    return l.banded ? `${base} <span class="meta">· sample ${l.banded}</span>` : base;
+    return l.banded ? `${base} <span class="meta">· section ${l.banded}</span>` : base;
   };
 
   const redraw = () => {
@@ -951,8 +953,8 @@ function buildContents(root, existing, kind = existing?.kind) {
     });
     const covered = cleanBands(readLayerRows(root)).reduce((a, b) => a + b.tons, 0);
     root.querySelector('#lay-total').textContent = covered > 0
-      ? `These samples cover ${num(Math.min(covered, contents), 1)} t of the ${num(contents, 1)} t in the silo${contents - covered > 0.05 ? `; the top ${num(contents - covered, 1)} t keeps the grade of the loads it came from.` : '.'}`
-      : 'No samples described: each load and the opening stock keep their own grade.';
+      ? `These sections cover ${num(Math.min(covered, contents), 1)} t of the ${num(contents, 1)} t in the silo${contents - covered > 0.05 ? `; the top ${num(contents - covered, 1)} t keeps the grade of the loads it came from.` : '.'}`
+      : 'No sections set: each load and the opening stock keep their own grade.';
     drawPlan();
   };
 
@@ -966,7 +968,7 @@ function buildContents(root, existing, kind = existing?.kind) {
       return `<div class="row"><span class="label">${sp.label}</span><span class="value">${num(v.avg, sp.dp)} ${sp.unit}${range}${partial}</span></div>`;
     }).join('');
     const from = [...new Set(pl.segments.map((sg) => (sg.layer.source === 'opening' ? 'opening stock' : `#${sg.layer.ticketNo ?? '?'}`)
-      + (sg.layer.banded ? ` (sample ${sg.layer.banded})` : '')))].join(', ');
+      + (sg.layer.banded ? ` (section ${sg.layer.banded})` : '')))].join(', ');
     return `<div class="card${whole ? ' whole-outload' : ''}" style="margin:8px 0">
       <h2 style="margin-bottom:4px">${title}</h2>
       <div class="meta">${mix || 'No grade recorded'}</div>
@@ -1315,7 +1317,7 @@ function openStorageSheet(existing) {
         ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete ${kindLabel(existing.kind).toLowerCase()}</button>` : ''}
         <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
       `;
-      if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id);
+      if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id, { collapsed: true });
       buildContents(root, existing, kind);
       wireMeasureSummary(root);
 
@@ -1446,7 +1448,7 @@ function openStorageSheet(existing) {
         ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete ${kindLabel(existing.kind).toLowerCase()}</button>` : ''}
         <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
       `;
-      if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id);
+      if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id, { collapsed: true });
       if (existing) buildPredictor(root, existing);
 
       const kindSel = root.querySelector('#s-kind');

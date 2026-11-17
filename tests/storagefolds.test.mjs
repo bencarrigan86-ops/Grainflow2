@@ -19,7 +19,7 @@ check('the quality fold is the default grade, and no fold is called by the old j
 });
 
 check('the grade summary holds the samples as an optional step, and the plan is a fold of its own', () => {
-  assert.ok(v.includes('<h2>Grade summary</h2>') && v.includes('id="sample-fold"') && v.includes('Sampled it? Enter the results'));
+  assert.ok(v.includes('<h2>Grade summary</h2>') && v.includes('id="sample-fold"') && v.includes('Sampled sections'));
   assert.ok(v.includes('id="plan-fold"') && v.includes('<h2>Plan an outload</h2>'));
   // the planner's boxes are in the plan fold, not the summary
   const plan = v.slice(v.indexOf('function planFold'));
@@ -30,6 +30,14 @@ check('the grade summary holds the samples as an optional step, and the plan is 
 
 check('the time box takes the same iPhone fix as the date box', () => {
   assert.ok(read('docs/css/styles.css').includes('.field input[type="date"], .field input[type="time"] {'));
+});
+
+check('default grade, the loads in it now, and related movements all start closed; the samples are sections', () => {
+  assert.ok(v.includes('<details class="fold">\n      <summary><div><h2>Default grade</h2>'));
+  assert.ok(v.includes('id="stack-fold"') && v.includes('Sampled sections') && v.includes('Change the grade of set blocks of tonnes'));
+  assert.ok(!v.includes('Sampled it?'));
+  assert.ok((v.match(/\{ collapsed: true \}/g) || []).length >= 2);
+  assert.ok(read('docs/js/views/movements.js').includes('id="related-fold"'));
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=343';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=343';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=343';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=343';
-import { describeMerge } from '../merge.js?v=343';
-import { renderRelatedMovements } from './movements.js?v=343';
-import { canSeeYield } from '../nav.js?v=343';
-import { wireJumps } from '../jump.js?v=343';
-import { openMapSheet } from './farmmap.js?v=343';
-import { openInputsSheet } from './inputs.js?v=343';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=343';
-import { stockLevels } from '../inputs.js?v=343';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=343';
-import { openRotationSheet } from './rotation.js?v=343';
-import { openAveragesSheet } from './averages.js?v=343';
+import { db } from '../storage.js?v=344';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=344';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=344';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=344';
+import { describeMerge } from '../merge.js?v=344';
+import { renderRelatedMovements } from './movements.js?v=344';
+import { canSeeYield } from '../nav.js?v=344';
+import { wireJumps } from '../jump.js?v=344';
+import { openMapSheet } from './farmmap.js?v=344';
+import { openInputsSheet } from './inputs.js?v=344';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=344';
+import { stockLevels } from '../inputs.js?v=344';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=344';
+import { openRotationSheet } from './rotation.js?v=344';
+import { openAveragesSheet } from './averages.js?v=344';
 
 let unsub = null;
 
@@ -233,7 +233,7 @@ export function openFieldSheet(existing) {
       ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
       <div class="save-bar"><div class="total" ${showYield ? '' : 'hidden'}><div class="l">Total tons</div><div class="v" id="tons-bar">—</div></div><button class="btn" id="save">Save</button></div>
     `;
-    if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'field', existing.id);
+    if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'field', existing.id, { collapsed: true });
 
     let yieldMode = existing?.yieldMode || 'estimate';
     let applications = (existing?.ureaApplications || []).slice();

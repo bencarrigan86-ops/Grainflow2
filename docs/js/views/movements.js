@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=343';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=343';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=343';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=343';
-import { compressAndStampImage } from '../img.js?v=343';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=343';
-import { specText, extraSpecKey } from '../outload.js?v=343';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=343';
-import { pickableSilos } from '../silopick.js?v=343';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=343';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=343';
-import { activeSales } from '../paidsales.js?v=343';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=343';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=343';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=343';
-import { nowTime } from '../loadreport.js?v=343';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=343';
+import { db } from '../storage.js?v=344';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=344';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=344';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=344';
+import { compressAndStampImage } from '../img.js?v=344';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=344';
+import { specText, extraSpecKey } from '../outload.js?v=344';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=344';
+import { pickableSilos } from '../silopick.js?v=344';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=344';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=344';
+import { activeSales } from '../paidsales.js?v=344';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=344';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=344';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=344';
+import { nowTime } from '../loadreport.js?v=344';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=344';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -216,19 +216,24 @@ export function endpointLabel(type, id, { fields, storages, sales, commodities }
  * sale — the same movement rows shown in the Movement tab, filtered to the
  * ones touching this endpoint. Tapping one opens it for editing.
  */
-export function renderRelatedMovements(container, type, id) {
+export function renderRelatedMovements(container, type, id, { collapsed = false } = {}) {
   if (!container) return;
   const { fields, storages, sales, commodities, movements } = db.get();
   const related = movementsForEndpoint(type, id, movements);
   const ctx = { fields, storages, sales, commodities };
-  container.className = 'card';
+  container.className = collapsed ? '' : 'card';
   // A new load starting from this paddock, or going to this contract (a silo can be either end, so it has no shortcut here)
   const startTemplate = type === 'field' ? { froms: [{ type: 'field', id, tons: '' }], tos: [] } : type === 'sale' ? { froms: [], tos: [{ type: 'sale', id, tons: '' }] } : null;
-  container.innerHTML = `
-    <h2>Related movements</h2>
+  const body = `
     ${related.length === 0 ? `<div class="empty">No movements linked to this yet.</div>` : related.map((m) => movementRow(m, ctx)).join('')}
-    ${startTemplate ? `<button type="button" class="btn secondary small" data-new-movement style="margin-top:8px">+ Add a movement${type === 'field' ? ' from this paddock' : ' to this contract'}</button>` : ''}
-  `;
+    ${startTemplate ? `<button type="button" class="btn secondary small" data-new-movement style="margin-top:8px">+ Add a movement${type === 'field' ? ' from this paddock' : ' to this contract'}</button>` : ''}`;
+  const sum = related.reduce((a, m) => a + (Number(m.tons) || 0), 0);
+  container.innerHTML = collapsed
+    ? `<details class="fold" id="related-fold">
+        <summary><div><h2>Related movements</h2>
+          <div class="sub">${related.length ? `${related.length} load${related.length === 1 ? '' : 's'} · ${num(sum, 1)} t` : 'None yet'}</div></div></summary>${body}
+      </details>`
+    : `<h2>Related movements</h2>${body}`;
   container.querySelector('[data-new-movement]')?.addEventListener('click', () => openMovementSheet(null, startTemplate));
   container.querySelectorAll('[data-edit-movement]').forEach((el) => {
     el.addEventListener('click', () => openMovementSheet(related.find((m) => m.id === el.dataset.editMovement)));

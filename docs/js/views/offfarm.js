@@ -4,15 +4,15 @@
 // into and out of a location are ordinary movements (see the movement form); what a location holds is
 // worked out from them (offfarm.js).
 
-import { db } from '../storage.js?v=343';
-import { openSheet, closeSheet, field, getVal, confirmDelete, toast } from '../ui.js?v=343';
-import { num, esc, money, dmy, todayLocal } from '../fmt.js?v=343';
-import { storageFeesByMonth, feeTermsText, BASES, cleanFee } from '../storagefees.js?v=343';
-import { downloadCSV } from '../csv.js?v=343';
-import { safeFileName } from '../sharefile.js?v=343';
-import { isOffFarm, holdings, totalHeld, cleanOffFarm } from '../offfarm.js?v=343';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=343';
-import { renderRelatedMovements } from './movements.js?v=343';
+import { db } from '../storage.js?v=344';
+import { openSheet, closeSheet, field, getVal, confirmDelete, toast } from '../ui.js?v=344';
+import { num, esc, money, dmy, todayLocal } from '../fmt.js?v=344';
+import { storageFeesByMonth, feeTermsText, BASES, cleanFee } from '../storagefees.js?v=344';
+import { downloadCSV } from '../csv.js?v=344';
+import { safeFileName } from '../sharefile.js?v=344';
+import { isOffFarm, holdings, totalHeld, cleanOffFarm } from '../offfarm.js?v=344';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=344';
+import { renderRelatedMovements } from './movements.js?v=344';
 
 const OPERATORS = ['GrainCorp', 'Viterra', 'Cargill', 'Emerald Grain', 'Louis Dreyfus', 'Olam', 'Bunge', 'CBH'];
 
@@ -148,7 +148,7 @@ export function openOffFarmSheet(existing) {
       root.querySelector('#of-now').innerHTML = now.length
         ? `${holdingsLines(now, commodities)}<div class="row" style="margin-top:6px"><span class="label"><strong>Total</strong></span><span class="value"><strong>${num(totalHeld(now), 1)} t</strong></span></div>`
         : '<div class="hint">Nothing held now.</div>';
-      renderRelatedMovements(root.querySelector('#of-moves'), 'silo', existing.id);
+      renderRelatedMovements(root.querySelector('#of-moves'), 'silo', existing.id, { collapsed: true });
       root.querySelector('#of-del').addEventListener('click', () => {
         confirmDelete(`Delete "${existing.name}"? Loads to and from it keep showing it as missing.`, () => {
           db.deleteStorage(existing.id);
