@@ -1990,3 +1990,8 @@ notify pgrst, 'reload schema';
 alter table commodities add column if not exists cotton jsonb;
 
 notify pgrst, 'reload schema';
+
+-- Cotton modules moved from a paddock to the gin yard
+alter table movements add column if not exists modules jsonb;
+
+notify pgrst, 'reload schema';

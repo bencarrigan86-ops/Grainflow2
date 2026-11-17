@@ -1,25 +1,26 @@
-import { db } from '../storage.js?v=364';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=364';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=364';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=364';
-import { withholdingClash } from '../fumigation.js?v=364';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=364';
-import { compressAndStampImage } from '../img.js?v=364';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=364';
-import { specText, extraSpecKey } from '../outload.js?v=364';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=364';
-import { pickableSilos } from '../silopick.js?v=364';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=364';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=364';
-import { activeSales } from '../paidsales.js?v=364';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=364';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=364';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=364';
-import { nowTime } from '../loadreport.js?v=364';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=364';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=364';
-import { openGinRunSheet } from './ginrun.js?v=364';
-import { hasGin, describeGin, stdBales } from '../ginning.js?v=364';
+import { db } from '../storage.js?v=365';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=365';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=365';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=365';
+import { withholdingClash } from '../fumigation.js?v=365';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=365';
+import { compressAndStampImage } from '../img.js?v=365';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=365';
+import { specText, extraSpecKey } from '../outload.js?v=365';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=365';
+import { pickableSilos } from '../silopick.js?v=365';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=365';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=365';
+import { activeSales } from '../paidsales.js?v=365';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=365';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=365';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=365';
+import { nowTime } from '../loadreport.js?v=365';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=365';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=365';
+import { openGinRunSheet } from './ginrun.js?v=365';
+import { openModuleMoveSheet } from './modulemove.js?v=365';
+import { hasGin, describeGin, stdBales, hasModules, describeModules } from '../ginning.js?v=365';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -72,7 +73,7 @@ function paint(root) {
       <div class="stat-grid" id="move-stats"></div>
 
       <div class="move-tools">
-        ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="log-ginning">+ Log ginning</button>` : ''}
+        ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="move-modules">+ Move modules</button><button class="btn secondary small" id="log-ginning">+ Log ginning</button>` : ''}
         ${movements.length > 0 ? `<button class="btn secondary small" id="load-report">Load report</button>` : ''}
         <button class="btn secondary small" id="get-outload">Outload number</button>
       </div>
@@ -100,6 +101,7 @@ function paint(root) {
 
   root.querySelector('#add-movement').addEventListener('click', () => openMovementSheet(null));
   root.querySelector('#log-ginning')?.addEventListener('click', () => openGinRunSheet(null));
+  root.querySelector('#move-modules')?.addEventListener('click', () => openModuleMoveSheet(null));
   root.querySelector('#load-report')?.addEventListener('click', () => openLoadReportSheet());
   // a number to quote at a third-party site: the load form opens with the number already in it
   root.querySelector('#get-outload')?.addEventListener('click', () => openMovementSheet(null, { wantOutload: true }));
@@ -127,7 +129,7 @@ function paintList(root) {
     .filter((m) => !q || ticketSearchText(m, ctx).includes(q))
     .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (Number(b.ticketNo) || 0) - (Number(a.ticketNo) || 0));
   const narrowed = !!(q || listFilter.commodityId || listFilter.toFinish);
-  const totalTons = shown.filter((m) => !hasGin(m)).reduce((s, m) => s + (Number(m.tons) || 0), 0);   // a ginning run counts bales and modules, not tonnes
+  const totalTons = shown.filter((m) => !hasGin(m) && !hasModules(m)).reduce((s, m) => s + (Number(m.tons) || 0), 0);   // a ginning run or a module move counts bales and modules, not tonnes
 
   root.querySelector('#move-stats').innerHTML = `
     <div class="stat"><div class="n">${shown.length}</div><div class="l">${narrowed ? 'Loads shown' : 'Loads logged'}</div></div>
@@ -286,7 +288,7 @@ export function movementRow(m, ctx) {
     <div class="list-item stack" data-edit-movement="${m.id}">
       <div class="li-top">
         <div class="main">${esc(fromLabel)} &rarr; ${esc(toLabel)}</div>
-        <div class="main">${hasGin(m) ? `${num(stdBales(m.gin.lintKg, m.gin.stdBaleKg), 2)} bales` : tons(m.tons || 0)}</div>
+        <div class="main">${hasGin(m) ? `${num(stdBales(m.gin.lintKg, m.gin.stdBaleKg), 2)} bales` : hasModules(m) ? `${num(m.modules.count, 0)} module${Number(m.modules.count) === 1 ? '' : 's'}` : tons(m.tons || 0)}</div>
       </div>
       <div class="li-foot" style="margin-top:2px">
         <span class="meta">${details}</span>
@@ -294,8 +296,9 @@ export function movementRow(m, ctx) {
       </div>
       ${specText(m) ? `<div class="meta">${esc(specText(m))}</div>` : ''}
       ${hasGin(m) ? `<div class="meta">Ginning${m.gin.ginName ? `, ${esc(m.gin.ginName)}` : ''}: ${esc(describeGin(m.gin))}</div>` : ''}
-      ${!hasGin(m) && fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
-      ${!hasGin(m) && toBreakdown ? `<div class="meta">${esc(toBreakdown)}</div>` : ''}
+      ${hasModules(m) ? `<div class="meta">Modules: ${esc(describeModules(m.modules))}</div>` : ''}
+      ${!hasGin(m) && !hasModules(m) && fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
+      ${!hasGin(m) && !hasModules(m) && toBreakdown ? `<div class="meta">${esc(toBreakdown)}</div>` : ''}
     </div>
   `;
 }
@@ -452,6 +455,7 @@ function readToRows(container) {
 export function openMovementSheet(existing, template) {
   // a ginning run has a form of its own
   if (existing && hasGin(existing)) return openGinRunSheet(existing);
+  if (existing && hasModules(existing)) return openModuleMoveSheet(existing);
   const { fields, storages, sales, commodities, movements } = db.get();
   const orders = db.getOrders();
   const src = existing || template;

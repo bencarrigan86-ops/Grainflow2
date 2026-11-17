@@ -226,13 +226,13 @@ export function allocationProblems(gin) {
 /** About 0.245 t of seed for every 227 kg bale of lint, when no figure has been set. */
 export const SEED_FACTOR_DEFAULT = 0.245;
 
-/** The cotton settings on a commodity: seed price ($/t), seed per bale (t), ginning ($/bale) and levies ($/bale). */
+/** The cotton settings on a commodity: seed price ($/t), seed per bale (t), ginning ($/bale), levies ($/bale) and turnout (%). */
 export function cleanCotton(x) {
   if (!x || typeof x !== 'object') return null;
-  return { seedMtm: num(x.seedMtm), seedFactor: num(x.seedFactor), ginRate: num(x.ginRate), levies: num(x.levies) };
+  return { seedMtm: num(x.seedMtm), seedFactor: num(x.seedFactor), ginRate: num(x.ginRate), levies: num(x.levies), turnout: num(x.turnout) };
 }
 
-export const hasCotton = (x) => { const c = cleanCotton(x); return !!c && (c.seedMtm > 0 || c.seedFactor > 0 || c.ginRate > 0 || c.levies > 0); };
+export const hasCotton = (x) => { const c = cleanCotton(x); return !!c && (c.seedMtm > 0 || c.seedFactor > 0 || c.ginRate > 0 || c.levies > 0 || c.turnout > 0); };
 
 /** What the logged ginning runs of a commodity add up to: standard bales, seed tonnes and the gin invoices (ex GST). */
 export function cottonRunTotals(movements, commodityId) {
@@ -269,4 +269,39 @@ export function cottonComponents(settings, bales, ginned = { bales: 0, seedT: 0,
     ginningCost: num(ginned.exGst) + left * (c.ginRate + c.levies),
     ginned: { bales: num(ginned.bales), seedT: num(ginned.seedT), exGst: num(ginned.exGst) },
   };
+}
+
+// --- Modules: cotton picked into round modules and carted from the paddock to the gin yard ----------------------------------
+//
+// A module move is an ordinary movement: out of a paddock, into the gin yard (a tally storage counting modules), with the
+// facts of the move on its `modules` record. The paddock leg is in estimated standard bales (the paddock's production is
+// in bales), worked out from the modules' weight and the turnout until the gin weighs the lint; the yard leg is in modules,
+// which the ginning run later takes out of the yard.
+
+/** Lint as a share of the picked cotton when no turnout has been set, in percent. */
+export const DEFAULT_TURNOUT = 40;
+
+/** What a module move is as saved: the modules, their weight, the turnout used, and the bales that gives. */
+export function cleanModules(x) {
+  if (!x || typeof x !== 'object') return null;
+  return { count: num(x.count), kg: num(x.kg), turnoutPct: num(x.turnoutPct), estBales: num(x.estBales) };
+}
+
+export const hasModules = (m) => !!m?.modules && typeof m.modules === 'object';
+
+/** Standard bales the picked cotton will gin out to: its weight, times the turnout, over the standard bale. */
+export function estimateBales(kg, turnoutPct, stdBaleKg = STD_BALE_KG) {
+  const per = num(stdBaleKg) > 0 ? num(stdBaleKg) : STD_BALE_KG;
+  return num(kg) > 0 && num(turnoutPct) > 0 ? (num(kg) * num(turnoutPct)) / 100 / per : 0;
+}
+
+/** One line for a list: "18 modules, 222,230 kg, about 397.7 bales". */
+export function describeModules(mod) {
+  const x = cleanModules(mod);
+  if (!x) return '';
+  const bits = [];
+  if (x.count) bits.push(`${x.count} module${x.count === 1 ? '' : 's'}`);
+  if (x.kg) bits.push(`${Math.round(x.kg).toLocaleString('en-AU')} kg`);
+  if (x.estBales) bits.push(`about ${x.estBales.toFixed(1)} bales`);
+  return bits.join(', ');
 }

@@ -6,14 +6,15 @@
 // contract or a storage, which should add up to the bales pressed. The gin's invoice is saved as a bill when we pay it
 // (see ginning.js).
 
-import { db } from '../storage.js?v=364';
-import { num, money, esc, todayLocal } from '../fmt.js?v=364';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=364';
-import { activeSales } from '../paidsales.js?v=364';
+import { db } from '../storage.js?v=365';
+import { num, money, esc, todayLocal } from '../fmt.js?v=365';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=365';
+import { activeSales } from '../paidsales.js?v=365';
+import { storageLedgerStock } from '../derived.js?v=365';
 import {
   STD_BALE_KG, cleanGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice,
   baleRangeCount, allocateLint, allocationProblems,
-} from '../ginning.js?v=364';
+} from '../ginning.js?v=365';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -71,6 +72,7 @@ export function openGinRunSheet(existing = null) {
 
       <h3 style="margin:14px 0 6px">Modules in</h3>
       ${field({ label: 'Gin yard', id: 'g-from', type: 'select', value: yardLeg?.id || '', options: [{ value: '', label: 'Select…' }, ...tally.map((s) => ({ value: s.id, label: s.name }))], hint: 'Where the modules being ginned are counted' })}
+      <div class="field" style="margin-top:-6px"><div class="hint" id="g-yard-note"></div></div>
       <div class="grid-2">
         ${field({ label: 'Modules ginned', id: 'g-modules', type: 'number', step: '1', value: gin.modules || '' })}
         ${field({ label: 'Module weight (kg)', id: 'g-module-kg', type: 'number', step: '1', value: gin.moduleKg || '', hint: 'Total of all modules' })}
@@ -137,6 +139,8 @@ export function openGinRunSheet(existing = null) {
 
     const paint = () => {
       const g = read();
+      const yard = tally.find((s) => s.id === getVal(root, 'g-from'));
+      root.querySelector('#g-yard-note').textContent = yard ? `${num(storageLedgerStock(yard, db.get().movements), 0)} modules in ${yard.name} now` : '';
       const bales = stdBales(g.lintKg, g.stdBaleKg);
       const bits = [];
       if (bales > 0) bits.push(`<strong>${num(bales, 2)} standard bales</strong> (${g.stdBaleKg} kg each)`);

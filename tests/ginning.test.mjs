@@ -5,8 +5,8 @@
 // I053/23 (90,273 kg of lint, 393 bales pressed): $65.00 a bale to gin, $2.25 research levy, GST on the ginning only.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems, cleanCotton, hasCotton, cottonComponents, cottonRunTotals, SEED_FACTOR_DEFAULT, ginPrepaid, lotsForSale } from '../docs/js/ginning.js';
-import { saleEconomics, position, positionAtYield, invoiceLineItems, invoiceTotals } from '../docs/js/derived.js';
+import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems, cleanCotton, hasCotton, cottonComponents, cottonRunTotals, SEED_FACTOR_DEFAULT, ginPrepaid, lotsForSale, cleanModules, hasModules, estimateBales, describeModules, DEFAULT_TURNOUT } from '../docs/js/ginning.js';
+import { saleEconomics, position, positionAtYield, invoiceLineItems, invoiceTotals, storageLedgerStock, fieldTons } from '../docs/js/derived.js';
 import { cottonInvoiceModel, mergeBaleRanges } from '../docs/js/cottoninvoice.js';
 import { xeroInvoices } from '../docs/js/xero.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
@@ -178,7 +178,7 @@ check('the movement list and the ticket form hand a ginning run to its own sheet
   const m = read('docs/js/views/movements.js');
   assert.ok(m.includes('if (existing && hasGin(existing)) return openGinRunSheet(existing);'));
   assert.ok(m.includes("id=\"log-ginning\"") && m.includes('openGinRunSheet(null)'));
-  assert.ok(m.includes('shown.filter((m) => !hasGin(m))'));
+  assert.ok(m.includes('shown.filter((m) => !hasGin(m) && !hasModules(m))'));
   assert.ok(m.includes('describeGin(m.gin)'));
   const g = read('docs/js/views/ginrun.js');
   assert.ok(g.includes("id: 'g-seed-to'") && g.includes('We pay it (saved as a bill)'));
@@ -195,7 +195,7 @@ const ranMove = { id: 'm1', date: '2026-05-18', commodityId: 'cot', tons: 397.67
 check('seed per bale falls back to 0.245 t and the settings are tidied', () => {
   assert.equal(SEED_FACTOR_DEFAULT, 0.245);
   assert.equal(cleanCotton(null), null);
-  assert.deepEqual(cleanCotton({ seedMtm: '500', ginRate: '65' }), { seedMtm: 500, seedFactor: 0, ginRate: 65, levies: 0 });
+  assert.deepEqual(cleanCotton({ seedMtm: '500', ginRate: '65' }), { seedMtm: 500, seedFactor: 0, ginRate: 65, levies: 0, turnout: 0 });
   assert.equal(hasCotton({}), false);
   assert.equal(hasCotton({ levies: 3 }), true);
 });
@@ -354,6 +354,53 @@ check('the builder adds a prepaid gin line for each selected run, the document i
 check('the Position card counts cotton in bales, not tonnes', () => {
   const p = read('docs/js/views/position.js');
   assert.ok(p.includes("const bales = r.commodity.unit === 'bale'") && p.includes("'bales' : 't'}/ha"));
+});
+
+check('modules: the bales they will gin to are their weight times the turnout over the standard bale', () => {
+  assert.equal(DEFAULT_TURNOUT, 40);
+  assert.ok(Math.abs(estimateBales(222230, 40.62) - 397.68) < 0.05, 'the 18 modules of I053/23: 40.62% of 222,230 kg is 397.7 standard bales');
+  assert.equal(estimateBales(0, 40), 0);
+  assert.equal(estimateBales(1000, 0), 0);
+  assert.deepEqual(cleanModules({ count: '18', kg: '222230' }), { count: 18, kg: 222230, turnoutPct: 0, estBales: 0 });
+  assert.equal(cleanModules(null), null);
+  assert.equal(hasModules({ modules: { count: 1 } }), true);
+  assert.equal(hasModules({}), false);
+  assert.equal(describeModules({ count: 18, kg: 222230, estBales: 397.68 }), '18 modules, 222,230 kg, about 397.7 bales');
+  assert.equal(describeModules({ count: 1 }), '1 module');
+});
+
+check('moving modules to the yard counts them in the yard and out of the paddock, then ginning takes them out of the yard', () => {
+  const yard = { id: 'yard', kind: 'tally', unitLabel: 'modules', openingStock: 0 };
+  const paddock = { id: 'f1', name: 'Cotton 1', areaHa: 50, commodityId: 'cot', yieldMode: 'actual' };
+  const move = { id: 'mv1', date: '2026-05-10', commodityId: 'cot', tons: 397.68, froms: [{ type: 'field', id: 'f1', tons: 397.68 }], tos: [{ type: 'silo', id: 'yard', tons: 18 }], modules: { count: 18, kg: 222230, turnoutPct: 40.62, estBales: 397.68 } };
+  assert.equal(storageLedgerStock(yard, [move]), 18, 'eighteen modules in the yard');
+  assert.equal(fieldTons(paddock, [move]), 397.68, 'a paddock on an actual yield has produced the bales those modules will gin to');
+  const ginned = { id: 'g1', date: '2026-05-18', commodityId: 'cot', tons: 397.678, froms: [{ type: 'silo', id: 'yard', tons: 18 }], tos: [], gin: run };
+  assert.equal(storageLedgerStock(yard, [move, ginned]), 0, 'ginned, the yard is empty');
+});
+
+check('a module move goes to the server and back, and a movement without one sends no column', () => {
+  const st = (m) => ({ currentYear: '2026', years: { 2026: { sales: [], commodities: [], fields: [], storages: [], movements: [m] } }, businessDetails: {} });
+  const base = { id: 'm1', date: '2026-05-10', tons: 397.68, froms: [], tos: [] };
+  const mod = cleanModules({ count: 18, kg: 222230, turnoutPct: 40.62, estBales: 397.68 });
+  const rows = stateToRows(st({ ...base, modules: mod }), 'farm1');
+  assert.deepEqual(rows.movements[0].modules, mod);
+  assert.deepEqual(rowsToState(rows).years[2026].movements[0].modules, mod);
+  assert.ok(!('modules' in stateToRows(st(base), 'farm1').movements[0]));
+});
+
+check('the sheet moves modules from a paddock to a gin yard, estimates the bales, and the list and ginning sheet know about it', () => {
+  const s = read('docs/js/views/modulemove.js');
+  assert.ok(s.includes("froms: [{ type: 'field', id: fromId, tons: estBales }]") && s.includes("tos: [{ type: 'silo', id: toId, tons: count }]"));
+  assert.ok(s.includes('estimateBales(getNum(root, ' + "'mm-kg')") && s.includes('DEFAULT_TURNOUT') && s.includes('modules: cleanModules('));
+  const m = read('docs/js/views/movements.js');
+  assert.ok(m.includes('id="move-modules"') && m.includes('openModuleMoveSheet(null)') && m.includes('if (existing && hasModules(existing)) return openModuleMoveSheet(existing);'));
+  assert.ok(m.includes('describeModules(m.modules)'));
+  assert.ok(read('docs/js/views/ginrun.js').includes('g-yard-note') && read('docs/js/views/ginrun.js').includes('storageLedgerStock(yard'));
+  assert.ok(read('docs/js/views/settings.js').includes("label: 'Turnout (%)'"));
+  assert.ok(read('docs/js/storage.js').includes('rec.__hasModules = true'));
+  assert.ok(read('supabase/migrations/20261129000000_movement_modules.sql').includes('add column if not exists modules jsonb'));
+  assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists modules jsonb'));
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
