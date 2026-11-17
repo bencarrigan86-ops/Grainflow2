@@ -1914,3 +1914,10 @@ alter table commodities
   add constraint commodities_harvest_season_check check (harvest_season is null or harvest_season in ('winter', 'summer'));
 
 notify pgrst, 'reload schema';
+
+-- Build 320: the yield expected from the hectares still to harvest on a part-harvested paddock, when it differs from the paddock's own
+-- yield estimate. Blank means the paddock's estimate.
+alter table fields
+  add column if not exists harvest_left_yield numeric;
+
+notify pgrst, 'reload schema';

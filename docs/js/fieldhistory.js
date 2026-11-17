@@ -4,7 +4,7 @@
 // season it was in, the crop, the area, the tonnes (the actual loads once the paddock is on actual, otherwise the
 // estimate) and the yield. This is the rotation question: what went where, and how did it do. Pure.
 
-import { fieldTons } from './derived.js?v=319';
+import { fieldTons } from './derived.js?v=320';
 
 const key = (name) => String(name || '').trim().toLowerCase();
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -34,6 +34,11 @@ export function rotationText(rows) {
   const crops = rows.map((r) => r.crop).filter(Boolean);
   if (!crops.length) return '';
   return crops.map((c, i) => (i === 0 ? c : c.charAt(0).toLowerCase() + c.slice(1))).join(', then ');
+}
+
+/** "2025 Wheat, 2026 Canola, 2027 Barley": each season with its crop, oldest first, a season with no crop left out. */
+export function rotationLine(rows) {
+  return rows.filter((r) => r.crop).map((r) => `${r.year} ${r.crop}`).join(", ");
 }
 
 /** The same crop two seasons in a row, as the seasons: [['2025', '2026'], ...]. */

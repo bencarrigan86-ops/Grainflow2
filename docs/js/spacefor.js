@@ -23,3 +23,16 @@ export function loadHarvestView() {
 export function saveHarvestView(v) {
   try { localStorage.setItem(VIEW_KEY, v === 'winter' || v === 'summer' ? v : 'both'); } catch { /* it just resets */ }
 }
+
+const DONE_KEY = 'grainflow.harvestShowDone';
+
+/** The commodities (by id; 'none' for paddocks with no commodity) whose finished paddocks are showing in the harvest report. */
+export function loadShowDone() {
+  try { const v = JSON.parse(localStorage.getItem(DONE_KEY) || '[]'); return new Set(Array.isArray(v) ? v : []); } catch { return new Set(); }
+}
+
+export function saveShowDone(key, show) {
+  const set = loadShowDone();
+  if (show) set.add(key); else set.delete(key);
+  try { localStorage.setItem(DONE_KEY, JSON.stringify([...set])); } catch { /* it just resets */ }
+}

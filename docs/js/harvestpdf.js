@@ -3,7 +3,7 @@
 // room in the silos, as on the screen. The report's own figures (harvest.js) go in; nothing is worked out again here.
 // Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=319';
+import { createReport, fixed } from './reportpdf.js?v=320';
 
 const pct = (p) => `${Math.round((Number(p) || 0) * 100)}%`;
 const haPct = (done, area) => (area > 0 ? `${Math.round((done / area) * 100)}%` : '-');
@@ -33,7 +33,7 @@ export const HARVEST_COLUMNS_NO_YIELD = [
  *   groups and farm are from harvestReport(), space from siloSpace()
  * @returns {Uint8Array} the PDF
  */
-export function harvestPdf({ groups = [], farm = {}, seasons = [], scopeLabel = '', space = {}, minRoom = 0, nameOf = () => '', showYield = true, business = '', season = '', today = '' } = {}) {
+export function harvestPdf({ groups = [], farm = {}, seasons = [], scopeLabel = '', split = null, space = {}, minRoom = 0, nameOf = () => '', showYield = true, business = '', season = '', today = '' } = {}) {
   const report = createReport({
     title: 'Harvest', business, season, today,
     footerNote: showYield
@@ -67,24 +67,35 @@ export function harvestPdf({ groups = [], farm = {}, seasons = [], scopeLabel = 
   report.gap(8);
 
   // ---- the room in the silos ----
-  const margin = (space.totalRoom || 0) - (farm.toComeT || 0);
+  const margin = split ? split.margin : (space.totalRoom || 0) - (farm.toComeT || 0);
   report.heading('Room in the silos');
+  if (minRoom > 0) report.note(`Silos with less than ${t0(minRoom)} t of room are left out.`);
+  // crop by crop, so room in a silo of a crop with nothing left to cut is not read as room for what is coming
+  if (split && split.rows.length) {
+    report.table([
+      { head: 'Commodity', w: 0.28, left: true, cell: (r) => r.name },
+      { head: 'Silos', w: 0.1, cell: (r) => String(r.silos) },
+      { head: 'Room t', w: 0.16, cell: (r) => t0(r.room) },
+      { head: showYield ? 'To come t' : 'To cut ha', w: 0.18, cell: (r) => (r.finished ? 'All cut' : t0(showYield ? r.toComeT : r.toGoHa)) },
+      { head: showYield ? 'Short t' : '', w: 0.28, cell: (r) => (showYield && r.short > 0.5 ? t0(r.short) : (r.finished && r.room > 0.5 ? 'No use now' : '')) },
+    ], split.rows, { name: 'By crop' });
+  }
   report.pair('In silos already holding a commodity', `${t0((space.totalRoom || 0) - (space.emptyRoom || 0))} t`);
   report.pair(`In empty silos (${space.emptyCount || 0}), for any grain`, `${t0(space.emptyRoom)} t`);
   report.pair('Room left', `${t0(space.totalRoom)} t`, { bold: true });
   if (showYield) {
+    if (split && split.unusable > 0.5) report.pair('Less silos with more room than that crop has to come', `${t0(split.unusable)} t`);
     report.pair('Still to come', `${t0(farm.toComeT)} t`);
     report.pair(margin >= 0 ? 'Room to spare' : 'Short of room by', `${t0(Math.abs(margin))} t`, { bold: true });
   }
-  if (minRoom > 0) report.note(`Silos with less than ${t0(minRoom)} t of room are left out.`);
   if ((space.silos || []).length) {
     report.table([
-      { head: 'Silo', w: 0.3, left: true, cell: (s) => s.name },
-      { head: 'Holds', w: 0.26, left: true, cell: (s) => (s.empty ? (s.assumed ? `Empty, as ${space.assumeName}` : 'Empty, any grain') : nameOf(s.commodityId)) },
+      { head: 'Silo', w: 0.26, left: true, cell: (s) => s.name },
+      { head: 'Commodity', w: 0.3, left: true, cell: (s) => (s.empty ? (s.assumed ? `Empty, as ${space.assumeName}` : 'Empty, any grain') : nameOf(s.commodityId)) },
       { head: 'Stock t', w: 0.14, cell: (s) => t0(s.stock) },
       { head: 'Capacity t', w: 0.15, cell: (s) => t0(s.capacity) },
       { head: 'Room t', w: 0.15, cell: (s) => t0(s.room) },
-    ], space.silos, { name: 'Silos' });
+    ], split ? [...split.rows.flatMap((c) => c.list), ...split.empty] : space.silos, { name: 'Silos' });
   }
   if ((space.notCounted || []).length) report.note(`Not counted: ${space.notCounted.join('; ')}.`);
   report.note('Third-party storage is not counted. An empty silo can take any grain, so it is counted once, in the empty silos, and not under each commodity.');

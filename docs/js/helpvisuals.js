@@ -3,7 +3,7 @@
 // Pure: each function returns an <svg> string. The figures are illustrations of how a part of the app works, with made-up
 // numbers, not live data. The wording they carry is checked by tests/help.test.mjs along with the rest of the guide.
 
-import { TABS_BY_ROLE } from './nav.js?v=319';
+import { TABS_BY_ROLE } from './nav.js?v=320';
 
 const W = 340;
 const C = {

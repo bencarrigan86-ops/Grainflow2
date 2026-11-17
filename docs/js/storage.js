@@ -18,27 +18,27 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=319';
+import { hydrate } from './hydrate.js?v=320';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=319';
-import { chooseBootState, resolveLegacy } from './boot.js?v=319';
-import { isLegacyDirty } from './dirty.js?v=319';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=319';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=319';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=319';
-import { settleLegs, dedupeLegs } from './legs.js?v=319';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=319';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=319';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=319';
-import { setCommodityOrder } from './commodityorder.js?v=319';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=319';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=319';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=319';
-import { schedulePush, pushOnReconnect } from './sync.js?v=319';
-import { hasParts as hasAddressParts } from './address.js?v=319';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=319';
+} from './local.js?v=320';
+import { chooseBootState, resolveLegacy } from './boot.js?v=320';
+import { isLegacyDirty } from './dirty.js?v=320';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=320';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=320';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=320';
+import { settleLegs, dedupeLegs } from './legs.js?v=320';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=320';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=320';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=320';
+import { setCommodityOrder } from './commodityorder.js?v=320';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=320';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=320';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=320';
+import { schedulePush, pushOnReconnect } from './sync.js?v=320';
+import { hasParts as hasAddressParts } from './address.js?v=320';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=320';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -782,12 +782,13 @@ export const db = {
         if (merged.property) merged.__hasProperty = true;   // keeps clearing the farm name reaching the server
         if (merged.harvestDone) merged.__hasHarvestDone = true;   // keeps un-ticking it reaching the server
         if (merged.harvestHaLeft != null) merged.__hasHarvestHaLeft = true;   // and so does clearing the hectares left
+        if (merged.harvestLeftYield != null) merged.__hasHarvestLeftYield = true;   // and clearing their yield
         c.fields[idx] = merged;
       }
       touch('field', field.id);
     } else {
       const id = uid();
-      c.fields.push({ ...field, id, ...(field.harvestDone ? { __hasHarvestDone: true } : {}), ...(field.harvestHaLeft != null ? { __hasHarvestHaLeft: true } : {}) });
+      c.fields.push({ ...field, id, ...(field.harvestDone ? { __hasHarvestDone: true } : {}), ...(field.harvestHaLeft != null ? { __hasHarvestHaLeft: true } : {}), ...(field.harvestLeftYield != null ? { __hasHarvestLeftYield: true } : {}) });
       touch('field', id);
       persist();
       return id;

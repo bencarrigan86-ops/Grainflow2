@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fieldHarvest, harvestReport, siloSpace, pctText } from '../docs/js/harvest.js';
+import { fieldHarvest, harvestReport, siloSpace, roomSplit, pctText } from '../docs/js/harvest.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
 let failures = 0;
@@ -259,6 +259,106 @@ check('the database column is in the paste-in file', () => {
   assert.match(read('supabase/paste-into-sql-editor.sql'), /harvest_done boolean/);
   assert.match(read('supabase/paste-into-sql-editor.sql'), /harvest_ha_left numeric/);
   assert.match(read('docs/js/views/production.js'), /id: 'harvestHaLeft'/);
+});
+
+console.log('\n=== room in silos, crop by crop ===');
+
+const roomSilo = (id, name, commodityId, room, empty = false) => ({ id, name, commodityId, room, empty, stock: 0, capacity: room, pct: 0 });
+const sp = (byCommodity, emptyRoom = 0, silos = []) => ({ byCommodity: new Map(byCommodity), emptyRoom, silos });
+const grp = (id, name, toComeT, toGoHa) => ({ id, name, totals: { toComeT, toGoHa } });
+
+check('room in silos of a crop with nothing left to cut is not counted towards what is still to come', () => {
+  const split = roomSplit(
+    sp([['w', { room: 250, silos: 3 }], ['b', { room: 100, silos: 1 }], ['c', { room: 200, silos: 2 }]], 50),
+    [grp('w', 'Wheat', 400, 80), grp('b', 'Barley', 0, 0), grp('c', 'Chick peas', 150, 40)],
+  );
+  const by = Object.fromEntries(split.rows.map((r) => [r.name, r]));
+  assert.equal(by.Wheat.short, 150);
+  assert.equal(by.Barley.finished, true);
+  assert.equal(by.Barley.unusable, 100, 'all of the barley room is no use with no barley left');
+  assert.equal(by['Chick peas'].unusable, 50);
+  assert.equal(split.shortfall, 150);
+  assert.equal(split.unusable, 150);
+  assert.equal(split.margin, 50 - 150, 'the empty silos have to cover wheat short by 150');
+  assert.deepEqual(split.rows.map((r) => r.name), ['Wheat', 'Chick peas', 'Barley'], 'most room first');
+});
+
+check('a crop with no silo holding it, and a paddock with no commodity, are short until empty silos are counted', () => {
+  const split = roomSplit(sp([], 300), [grp('w', 'Wheat', 120, 30), grp(null, 'No commodity', 40, 10)]);
+  assert.equal(split.shortfall, 160);
+  assert.equal(split.margin, 140);
+  assert.equal(split.rows.length, 2);
+});
+
+check('the sums agree: room left less the room that cannot help less what is still to come is the margin', () => {
+  const split = roomSplit(sp([['w', { room: 100, silos: 1 }]], 20), [grp('w', 'Wheat', 60, 10), grp('o', 'Oats', 0, 0)]);
+  assert.equal(split.rows.length, 1);
+  assert.equal(split.margin, 20);
+  assert.equal(120 - split.unusable - 60, split.margin);
+});
+
+check('each crop lists its own silos under it, and the empty ones are listed apart', () => {
+  const silos = [roomSilo('a', 'Silo 1', 'w', 90), roomSilo('b', 'Silo 2', 'w', 160), roomSilo('c', 'Silo 3', 'b', 100), roomSilo('d', 'Silo 4', null, 40, true)];
+  const split = roomSplit(sp([['w', { room: 250, silos: 2 }], ['b', { room: 100, silos: 1 }]], 40, silos), [grp('w', 'Wheat', 100, 20), grp('b', 'Barley', 0, 0)]);
+  assert.deepEqual(split.rows.find((r) => r.name === 'Wheat').list.map((x) => x.name), ['Silo 1', 'Silo 2']);
+  assert.deepEqual(split.rows.find((r) => r.name === 'Barley').list.map((x) => x.name), ['Silo 3']);
+  assert.deepEqual(split.empty.map((x) => x.name), ['Silo 4']);
+});
+
+check('the screen groups the silos under a heading for each crop, with the leave-out box at the top of the room section', () => {
+  const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../docs/js/views/reports.js'), 'utf8');
+  assert.equal(src.split('${roomBySilo(split, space, {').length - 1, 2, 'both versions of the report');
+  assert.equal(src.split('${minRoomRow(minRoom)}').length - 1, 2);
+  assert.ok(src.indexOf('${minRoomRow(minRoom)}') < src.indexOf("fold('room'"), 'the box is above the room section');
+  assert.ok(!src.includes('Each silo'), 'no flat list of silos any more');
+  assert.equal(src.split('${spaceAsRow(space, assumeOptions, assume, pick)}').length - 1, 2, 'the empty-silo commodity choice is up with the empty silos total in both versions');
+});
+
+console.log('\n=== hectares left with a yield of their own ===');
+
+check('the hectares left at their own yield: 20 ha at 3 t/ha is 60 t to come, not 80 at the paddock estimate of 4', () => {
+  const h = fieldHarvest(f('f1', 'North', 'w', 100, 4, { harvestHaLeft: 20, harvestLeftYield: 3 }), [carted('m1', 'f1', 500)]);
+  assert.equal(h.toComeT, 60);
+  assert.equal(h.expectedT, 560);
+  assert.equal(h.leftYield, 3);
+});
+
+check('blank, zero or nothing set keeps the paddock estimate; with no hectares left it is not used at all', () => {
+  for (const blank of [undefined, null, '', 0]) {
+    assert.equal(fieldHarvest(f('f1', 'N', 'w', 100, 4, { harvestHaLeft: 20, harvestLeftYield: blank }), []).toComeT, 80);
+  }
+  assert.equal(fieldHarvest(f('f1', 'N', 'w', 100, 4, { harvestLeftYield: 9 }), [carted('m1', 'f1', 150)]).toComeT, 250, 'estimate less the tickets');
+  assert.equal(fieldHarvest(f('f1', 'N', 'w', 100, 4, { harvestDone: true, harvestHaLeft: 20, harvestLeftYield: 9 }), []).toComeT, 0);
+});
+
+check('the yield for the hectares left goes to the server and comes back; blank sends nothing; clearing it sends null', () => {
+  const rows = stateToRows(stateOf({ harvestHaLeft: 20, harvestLeftYield: 3.5 }), FARM);
+  assert.equal(rows.fields[0].harvest_left_yield, 3.5);
+  assert.equal(rowsToState(rows).years[2026].fields[0].harvestLeftYield, 3.5);
+  assert.ok(!('harvest_left_yield' in stateToRows(stateOf({}), FARM).fields[0]));
+  assert.equal(stateToRows(stateOf({ harvestLeftYield: null, __hasHarvestLeftYield: true }), FARM).fields[0].harvest_left_yield, null);
+});
+
+check('the paddock form, the save, the CSV and the SQL all have it', () => {
+  const prod = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../docs/js/views/production.js'), 'utf8');
+  assert.ok(prod.includes("id: 'harvestLeftYield'") && prod.includes("harvestLeftYield: String(getVal(root, 'harvestLeftYield')"));
+  assert.ok(prod.includes('id="cut-so-far"') && prod.includes('Cut so far:'), 'what the cut part is yielding, to go by');
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+  assert.ok(readFileSync(join(root, 'docs/js/views/settings.js'), 'utf8').includes('Yield for hectares left (t/ha)'));
+  assert.ok(readFileSync(join(root, 'supabase/paste-into-sql-editor.sql'), 'utf8').includes('add column if not exists harvest_left_yield numeric'));
+  assert.ok(readFileSync(join(root, 'supabase/migrations/20261118970000_harvest_left_yield.sql'), 'utf8').includes('harvest_left_yield'));
+});
+
+console.log('\n=== finished paddocks tucked away ===');
+
+check('the report shows only the paddocks still being harvested unless asked, keeps them all in the Total, and remembers the choice', () => {
+  const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../docs/js/views/reports.js'), 'utf8');
+  assert.equal(src.split('shownRows(g, showDone).map(').length - 1, 2, 'the table in both versions of the report');
+  assert.equal(src.split('${doneToggle(g, showDone)}').length - 1, 2, 'a toggle in both versions of the report');
+  assert.ok(src.includes('data-show-done') && src.includes('saveShowDone(key, !loadShowDone().has(key))'));
+  assert.ok(src.includes('rows.filter((r) => !r.done)'.replace('rows', 'g.rows')));
+  const sf = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../docs/js/spacefor.js'), 'utf8');
+  assert.ok(sf.includes('export function loadShowDone') && sf.includes('export function saveShowDone'));
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }

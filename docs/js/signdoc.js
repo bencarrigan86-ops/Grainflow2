@@ -4,7 +4,7 @@
 // sale, the invoice) draw it as an inline picture; the freight order is a PDF and draws it as lines (see freight.js).
 // This holds the parts that do not need a screen: the picture, the signed block, and what to print under it. Pure.
 
-import { cleanStrokes, hasSignature, strokesToSvgPath, ASPECT } from './signature.js?v=319';
+import { cleanStrokes, hasSignature, strokesToSvgPath, ASPECT } from './signature.js?v=320';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 

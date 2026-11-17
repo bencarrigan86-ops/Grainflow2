@@ -27,9 +27,9 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=319';
-import { cleanOffFarm } from './offfarm.js?v=319';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=319';
+import { cleanGradeOptions } from './gradeprice.js?v=320';
+import { cleanOffFarm } from './offfarm.js?v=320';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=320';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -332,6 +332,8 @@ export function stateToRows(state, farmId) {
         ...((f.harvestDone || f.__hasHarvestDone) ? { harvest_done: !!f.harvestDone } : {}),
         // Hectares still to harvest on a part-harvested paddock. Optional the same way; clearing it sends null.
         ...((f.harvestHaLeft != null || f.__hasHarvestHaLeft) ? { harvest_ha_left: f.harvestHaLeft == null ? null : n(f.harvestHaLeft) } : {}),
+        // The yield expected from those hectares, when it differs from the paddock's. Optional the same way; clearing it sends null.
+        ...((f.harvestLeftYield != null || f.__hasHarvestLeftYield) ? { harvest_left_yield: f.harvestLeftYield == null ? null : n(f.harvestLeftYield) } : {}),
         // The outline on the farm map. Optional the same way; removing the map sends null.
         ...((f.boundary || f.__hasBoundary) ? { boundary: f.boundary || null } : {}),
         // which farm it is on: sent once one is named, so paddocks still save before the column exists
@@ -728,6 +730,7 @@ export function rowsToState(rows) {
           commodityId: f.commodity_id,
           ...(f.harvest_done != null ? { harvestDone: !!f.harvest_done, __hasHarvestDone: true } : {}),
           ...(f.harvest_ha_left != null ? { harvestHaLeft: n(f.harvest_ha_left), __hasHarvestHaLeft: true } : {}),
+          ...(f.harvest_left_yield != null ? { harvestLeftYield: n(f.harvest_left_yield), __hasHarvestLeftYield: true } : {}),
           ...(f.boundary != null ? { boundary: f.boundary, __hasBoundary: true } : {}),
           ...(f.property ? { property: f.property, __hasProperty: true } : {}),
           __agronomyId: a.id,

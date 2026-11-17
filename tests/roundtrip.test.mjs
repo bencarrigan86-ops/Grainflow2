@@ -106,6 +106,7 @@ function markerFor(key, ids) {
   if (key === 'orderId' || key === 'freightOrderId') return uuid();
   if (key === 'harvestDone' || key === 'paid') return true;
   if (key === 'harvestHaLeft') return 7.25;
+  if (key === 'harvestLeftYield') return 3.75;
   if (key === 'freightPaidBy') return 'buyer';
   // the joined line and its parts have to agree, or the parts are not trusted on the way back
   if (key === 'buyerAddress') return '12 Smith Rd, Wagin WA 6315';

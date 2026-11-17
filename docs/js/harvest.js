@@ -5,14 +5,15 @@
 // there is nothing more to come whatever the estimate said. A field that has already given more than its estimate
 // has nothing more expected from it by the estimate, but it is not called finished until someone says so.
 // A part-harvested field can be given the hectares still to cut: what is to come is then those hectares at the field's
-// estimated yield, on top of what is already in, whatever the estimate for the whole field said.
+// estimated yield (or at a yield of their own, when one is given for them), on top of what is already in, whatever the estimate for the
+// whole field said.
 //
 // Pure apart from the two sums it borrows from derived.js.
 
-import { estimateFieldTons, movementTonsFromField, storageLedgerStock, bigFirst } from './derived.js?v=319';
-import { isTransit } from './transit.js?v=319';
-import { capacityInfo, commodityOf } from './storagecapacity.js?v=319';
-import { harvestSeasonOf, HARVEST_SEASONS } from './harvestseason.js?v=319';
+import { estimateFieldTons, movementTonsFromField, storageLedgerStock, bigFirst } from './derived.js?v=320';
+import { isTransit } from './transit.js?v=320';
+import { capacityInfo, commodityOf } from './storagecapacity.js?v=320';
+import { harvestSeasonOf, HARVEST_SEASONS } from './harvestseason.js?v=320';
 
 /**
  * One field.
@@ -31,11 +32,14 @@ export function fieldHarvest(field, movements) {
   // Hectares still to harvest, when the paddock is part done and someone has said how much is left. Blank means not said.
   const left = field?.harvestHaLeft;
   const haLeft = !done && left != null && left !== '' && Number.isFinite(Number(left)) ? Math.min(areaHa, Math.max(0, Number(left))) : null;
-  const toComeT = done ? 0 : haLeft !== null ? haLeft * (Number(field?.yieldTHa) || 0) : Math.max(0, estimateT - inT);
+  // The hectares left can be expected to yield differently from the rest (the best ground is often cut first), so they may be given a yield
+  // of their own. Blank means the paddock's own estimate.
+  const leftYield = Number(field?.harvestLeftYield) > 0 ? Number(field.harvestLeftYield) : (Number(field?.yieldTHa) || 0);
+  const toComeT = done ? 0 : haLeft !== null ? haLeft * leftYield : Math.max(0, estimateT - inT);
   const expectedT = done ? inT : haLeft !== null ? inT + toComeT : Math.max(estimateT, inT);
   const pct = done ? 1 : (expectedT > 0 ? Math.min(1, inT / expectedT) : 0);
   return {
-    areaHa, estimateT, inT, toComeT, expectedT, pct, done, haLeft,
+    areaHa, estimateT, inT, toComeT, expectedT, pct, done, haLeft, leftYield,
     doneHa: done ? areaHa : haLeft !== null ? areaHa - haLeft : 0,
     ahead: !done && haLeft === null && inT > estimateT && estimateT > 0,
     yieldSoFar: areaHa > 0 ? inT / areaHa : 0,
@@ -89,6 +93,57 @@ export const pctText = (p) => `${Math.round((Number(p) || 0) * 100)}%`;
 
 // Under this many tonnes a silo counts as empty, as a rounding crumb is not grain.
 const EMPTY_T = 0.05;
+
+/**
+ * The room in silos already holding a commodity, crop by crop, set against what is still to come of that crop. Room in a barley silo only
+ * helps barley, so 100 t of it is no use when there is no barley left to cut, and the total is misleading if it is lumped in with the rest.
+ *
+ * Each row is a commodity with room in its silos, or with something still to come: `room` and `silos` (from siloSpace), `toComeT` and
+ * `toGoHa` (from the harvest groups), `finished` (no hectares left to cut, so nothing more to come, whatever the estimate says),
+ * `short` (what is still to come beyond the room it has, 0 if none) and `unusable` (room beyond what is still to come, which only that
+ * commodity could take). Empty silos take any grain, so they are what covers a `short`.
+ *
+ *   shortfall = what the empty silos have to cover, `unusable` = room that cannot help, `margin` = empty room less shortfall
+ *   (and equals totalRoom - unusable - still to come).
+ *
+ * Each row also lists its own silos (`list`, most room first), and `empty` lists the empty ones, so the report can show a crop's heading
+ * with all the silos for it underneath.
+ *
+ * @returns {{rows: {id: string|null, name: string, room: number, silos: number, list: object[], toComeT: number, toGoHa: number,
+ *   finished: boolean, short: number, unusable: number}[], empty: object[], shortfall: number, unusable: number, margin: number}}
+ */
+export function roomSplit(space, groups, nameOf = () => '') {
+  const byId = new Map();
+  for (const g of groups || []) byId.set(g.id || null, g);
+  const rows = [];
+  const seen = new Set();
+  const addRow = (id, own) => {
+    const g = byId.get(id);
+    const toGoHa = g ? Math.max(0, g.totals.toGoHa) : 0;
+    const finished = !g || toGoHa <= 0.05;
+    // nothing more to come: every hectare is cut, or (with estimates to go by) the estimate is all in already
+    const nothingToCome = finished || (g.totals.expectedT > 0 && g.totals.toComeT <= 0.5);
+    const toComeT = nothingToCome ? 0 : Math.max(0, g.totals.toComeT);
+    const room = own ? own.room : 0;
+    rows.push({
+      id, name: g ? g.name : nameOf(id), room, silos: own ? own.silos : 0,
+      list: (space?.silos || []).filter((s) => !s.empty && s.commodityId === id), toComeT, toGoHa, finished, nothingToCome,
+      short: Math.max(0, toComeT - room), unusable: Math.max(0, room - toComeT),
+    });
+    seen.add(id);
+  };
+  for (const [id, own] of space?.byCommodity || []) addRow(id, own);
+  // a crop still to come with no silo holding it, and a paddock with no commodity set, are all short until the empty silos are counted
+  for (const g of groups || []) {
+    if (seen.has(g.id || null) || g.totals.toGoHa <= 0.05 || !(g.totals.toComeT > 0.5)) continue;
+    addRow(g.id || null, null);
+  }
+  rows.sort((a, b) => b.room - a.room || String(a.name).localeCompare(String(b.name), undefined, { numeric: true }));
+  const shortfall = rows.reduce((a, r) => a + r.short, 0);
+  const unusable = rows.reduce((a, r) => a + r.unusable, 0);
+  const empty = (space?.silos || []).filter((s) => s.empty);
+  return { rows, empty, shortfall, unusable, margin: (space?.emptyRoom || 0) - shortfall };
+}
 
 /**
  * The room left in the farm's silos and bunkers, against what is still to come.

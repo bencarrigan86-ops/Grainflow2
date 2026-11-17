@@ -11,7 +11,7 @@ import { attentionItems } from '../docs/js/attention.js';
 import { backupDue, backupAgeText, daysSince, BACKUP_EVERY_DAYS } from '../docs/js/backup.js';
 import { cashflow } from '../docs/js/cashflow.js';
 import { buyerStatements, statementPdf } from '../docs/js/statement.js';
-import { fieldHistory, rotationText, repeatCrops, rotationGrid, cropYields } from '../docs/js/fieldhistory.js';
+import { fieldHistory, rotationText, rotationLine, repeatCrops, rotationGrid, cropYields } from '../docs/js/fieldhistory.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -140,6 +140,7 @@ check('the paddock is found in each season by its name and the rows run oldest f
 check('the rotation reads in a line, and the same crop twice running is spotted', () => {
   const rows = fieldHistory('Top Block', years);
   assert.equal(rotationText(rows), 'Wheat, then wheat, then canola');
+  assert.equal(rotationLine(rows), rows.map((r) => r.year + ' ' + r.crop).join(', '), 'the season first, then its crop');
   assert.deepEqual(repeatCrops(rows), [['2025', '2026']]);
 });
 
