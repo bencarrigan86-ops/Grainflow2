@@ -226,13 +226,13 @@ export function allocationProblems(gin) {
 /** About 0.245 t of seed for every 227 kg bale of lint, when no figure has been set. */
 export const SEED_FACTOR_DEFAULT = 0.245;
 
-/** The cotton settings on a commodity: seed price ($/t), seed per bale (t), ginning ($/bale), levies ($/bale) and turnout (%). */
+/** The cotton settings on a commodity: seed price ($/t), seed per bale (t), ginning ($/bale), levies ($/bale), turnout (%) and the average module weight (kg). */
 export function cleanCotton(x) {
   if (!x || typeof x !== 'object') return null;
-  return { seedMtm: num(x.seedMtm), seedFactor: num(x.seedFactor), ginRate: num(x.ginRate), levies: num(x.levies), turnout: num(x.turnout) };
+  return { seedMtm: num(x.seedMtm), seedFactor: num(x.seedFactor), ginRate: num(x.ginRate), levies: num(x.levies), turnout: num(x.turnout), moduleKg: num(x.moduleKg) };
 }
 
-export const hasCotton = (x) => { const c = cleanCotton(x); return !!c && (c.seedMtm > 0 || c.seedFactor > 0 || c.ginRate > 0 || c.levies > 0 || c.turnout > 0); };
+export const hasCotton = (x) => { const c = cleanCotton(x); return !!c && (c.seedMtm > 0 || c.seedFactor > 0 || c.ginRate > 0 || c.levies > 0 || c.turnout > 0 || c.moduleKg > 0); };
 
 /** What the logged ginning runs of a commodity add up to: standard bales, seed tonnes and the gin invoices (ex GST). */
 export function cottonRunTotals(movements, commodityId) {

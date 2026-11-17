@@ -6,7 +6,7 @@
 //
 // Pure functions, no screen: the sheets that use them are in views/modulespicked.js.
 
-import { cleanCotton, hasModules, SEED_FACTOR_DEFAULT } from './ginning.js?v=366';
+import { cleanCotton, hasModules, SEED_FACTOR_DEFAULT } from './ginning.js?v=367';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
@@ -35,6 +35,16 @@ export function pickedTotals(field, movements) {
   const inField = Math.max(0, picked - moved);
   const share = picked > 0 ? Math.min(1, inField / picked) : 0;
   return { picked, moved, inField, kg, estBales, inFieldKg: kg * share, inFieldBales: estBales * share };
+}
+
+/**
+ * The average weight of a module on a paddock, in kg: what was picked on it when that is known, otherwise the commodity's
+ * cotton setting (which every paddock starts from). 0 when neither is set.
+ */
+export function avgModuleKg(field, commodity) {
+  const t = pickedTotals(field, []);
+  if (t.picked > 0 && t.kg > 0) return t.kg / t.picked;
+  return num(commodity?.cotton?.moduleKg);
 }
 
 /** The seed and the ginning that `bales` standard bales will bring, at the commodity's cotton settings. */

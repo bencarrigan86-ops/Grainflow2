@@ -1,10 +1,11 @@
 // Modules picked on a paddock: how many, their estimated weight and the turnout. The bales, the seed and the ginning follow.
 
-import { db } from '../storage.js?v=366';
-import { num, esc, todayLocal, shortDate } from '../fmt.js?v=366';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=366';
-import { estimateBales, DEFAULT_TURNOUT } from '../ginning.js?v=366';
-import { cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=366';
+import { db } from '../storage.js?v=367';
+import { num, esc, todayLocal, shortDate } from '../fmt.js?v=367';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=367';
+import { estimateBales, DEFAULT_TURNOUT } from '../ginning.js?v=367';
+import { cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=367';
+import { cleanCotton } from '../ginning.js?v=367';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -12,6 +13,7 @@ export function openModulesPickedSheet(fieldId, existing = null) {
   const f = db.get().fields.find((x) => x.id === fieldId);
   if (!f) return;
   const commodity = db.get().commodities.find((c) => c.id === f.commodityId);
+  const moduleKgDefault = cleanCotton(commodity?.cotton)?.moduleKg || 0;
   const turnoutDefault = Number(commodity?.cotton?.turnout) > 0 ? Number(commodity.cotton.turnout) : DEFAULT_TURNOUT;
 
   openSheet(existing ? 'Edit modules picked' : 'Modules picked', (root) => {
@@ -20,7 +22,7 @@ export function openModulesPickedSheet(fieldId, existing = null) {
       ${field({ label: 'Date', id: 'mp-date', type: 'date', value: existing?.date || todayLocal() })}
       <div class="grid-2">
         ${field({ label: 'Modules', id: 'mp-count', type: 'number', step: '1', value: existing?.count || '' })}
-        ${field({ label: 'Estimated weight (kg)', id: 'mp-kg', type: 'number', step: '1', value: existing?.kg || '', hint: 'Total of the modules' })}
+        ${field({ label: 'Estimated weight (kg)', id: 'mp-kg', type: 'number', step: '1', value: existing?.kg || '', hint: moduleKgDefault > 0 ? `Starts at ${num(moduleKgDefault, 0)} kg a module` : 'Total of the modules' })}
       </div>
       <div class="grid-2">
         ${field({ label: 'Turnout (%)', id: 'mp-turnout', type: 'number', step: '0.1', value: existing?.turnoutPct || turnoutDefault, hint: 'Lint from the picked cotton' })}
@@ -32,9 +34,15 @@ export function openModulesPickedSheet(fieldId, existing = null) {
     `;
 
     let balesTyped = !!existing?.estBales;
+    let kgTyped = !!existing?.kg;
     const sync = (source) => {
+      if (source === 'kg') kgTyped = String(getVal(root, 'mp-kg') ?? '').trim() !== '';
+      if (!kgTyped && moduleKgDefault > 0) {
+        const n = getNum(root, 'mp-count');
+        root.querySelector('#mp-kg').value = n > 0 ? Math.round(n * moduleKgDefault) : '';
+      }
       if (source === 'bales') balesTyped = true;
-      if (source === 'kg' || source === 'turnout') balesTyped = false;
+      if (source === 'kg' || source === 'turnout' || source === 'count') balesTyped = false;
       if (!balesTyped) {
         const b = estimateBales(getNum(root, 'mp-kg'), getNum(root, 'mp-turnout'));
         root.querySelector('#mp-bales').value = b > 0 ? round3(b) : '';

@@ -1,18 +1,20 @@
-import { db } from '../storage.js?v=366';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=366';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=366';
-import { fertPdf } from '../fertpdf.js?v=366';
-import { seedPdf } from '../seedpdf.js?v=366';
-import { yieldPdf } from '../yieldpdf.js?v=366';
-import { harvestPdf } from '../harvestpdf.js?v=366';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=366';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=366';
-import { field, getVal, getNum } from '../ui.js?v=366';
-import { canSeeYield } from '../nav.js?v=366';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=366';
-import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=366';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=366';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=366';
+import { db } from '../storage.js?v=367';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=367';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=367';
+import { fertPdf } from '../fertpdf.js?v=367';
+import { seedPdf } from '../seedpdf.js?v=367';
+import { yieldPdf } from '../yieldpdf.js?v=367';
+import { harvestPdf } from '../harvestpdf.js?v=367';
+import { modulesPdf } from '../modulespdf.js?v=367';
+import { modulesReport } from '../modulesreport.js?v=367';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=367';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=367';
+import { field, getVal, getNum } from '../ui.js?v=367';
+import { canSeeYield } from '../nav.js?v=367';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=367';
+import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=367';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=367';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=367';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -25,6 +27,9 @@ export function renderReports(root) {
 
 function paint(root) {
   const showYield = canSeeYield(db.getRole());
+  const { commodities: cs, fields: fs0, movements: ms0 } = db.get();
+  const hasCotton = cs.some((c) => c.unit === 'bale') || fs0.some((f) => (f.modulesPicked || []).length) || ms0.some((m) => m.modules);
+  if (view === 'modules' && !hasCotton) view = 'fert';
   if (view === 'yield' && !showYield) view = 'fert';   // harvest is for everyone, but shows no tonnes or yields to a role that is not shown them
   root.innerHTML = `
     <div class="topbar">
@@ -39,6 +44,7 @@ function paint(root) {
         <button data-view="harvest" class="${view === 'harvest' ? 'active' : ''}">Harvest</button>
         <button data-view="fert" class="${view === 'fert' ? 'active' : ''}">Fert</button>
         <button data-view="seed" class="${view === 'seed' ? 'active' : ''}">Seed</button>
+        ${hasCotton ? `<button data-view="modules" class="${view === 'modules' ? 'active' : ''}">Modules</button>` : ''}
       </div><div id="reports-pdf-slot"></div></div>
       <div id="reports-body" style="margin-top:12px"></div>
     </div>
@@ -55,6 +61,8 @@ function paint(root) {
     paintSeed(root);
   } else if (view === 'yield') {
     paintYield(root);
+  } else if (view === 'modules') {
+    paintModules(root);
   } else if (view === 'harvest') {
     paintHarvest(root, showYield);
   } else {
@@ -77,6 +85,80 @@ function dockPdf(root) {
   b.classList.add('small');
   slot.innerHTML = '';
   slot.appendChild(b);
+}
+
+/** Where the modules are: picked on each paddock, still in the field, carted to the gin, with the estimated weight and bales. */
+const weighedText = (p) => (p >= 0.995 ? 'All' : (p > 0 ? `${Math.round(p * 100)}%` : 'None'));
+
+function paintModules(root) {
+  const { fields, movements, storages } = db.get();
+  const report = modulesReport({ fields, movements, storages });
+  const t = report.totals;
+  const body = root.querySelector('#reports-body');
+  if (!report.rows.length) {
+    body.innerHTML = `<div class="card report"><h2><span class="dot report"></span>Modules</h2><div class="empty">Nothing yet. Open a cotton paddock in Production and tap + Log modules picked.</div></div>`;
+    return;
+  }
+  body.innerHTML = `
+    <button type="button" class="btn secondary" id="modules-pdf" style="margin-bottom:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>
+    <div class="card report">
+      <h2><span class="dot report"></span>Where the modules are</h2>
+      <div class="stat-grid">
+        <div class="stat"><div class="n">${num(t.picked, 0)}</div><div class="l">Picked</div></div>
+        <div class="stat"><div class="n">${num(t.inField, 0)}</div><div class="l">Still in the field</div></div>
+        <div class="stat"><div class="n">${num(t.moved, 0)}</div><div class="l">Moved to the gin</div></div>
+        <div class="stat"><div class="n">${num(t.estBales, 0)}</div><div class="l">Expected bales</div></div>
+      </div>
+      <div class="table-scroll tight-wrap" style="margin-top:8px">
+        <table class="tight wrap-first">
+          <colgroup><col style="width:28%"><col style="width:17%"><col style="width:19%"><col style="width:16%"><col style="width:20%"></colgroup>
+          <thead><tr><th>Field</th><th>Picked</th><th>In field</th><th>To gin</th><th>Bales</th></tr></thead>
+          <tbody>
+            ${report.rows.map((r) => `<tr><td><span class="fname" title="${esc(r.field.name)}">${esc(r.field.name)}</span></td><td>${num(r.picked, 0)}</td><td>${num(r.inField, 0)}</td><td>${num(r.moved, 0)}</td><td>${num(r.estBales, 0)}</td></tr>`).join('')}
+          </tbody>
+          <tfoot><tr><td>Total</td><td>${num(t.picked, 0)}</td><td>${num(t.inField, 0)}</td><td>${num(t.moved, 0)}</td><td>${num(t.estBales, 0)}</td></tr></tfoot>
+        </table>
+      </div>
+      <h3 style="margin:14px 0 4px;font-size:14px">Weight</h3>
+      <div class="table-scroll tight-wrap">
+        <table class="tight wrap-first">
+          <colgroup><col style="width:28%"><col style="width:26%"><col style="width:26%"><col style="width:20%"></colgroup>
+          <thead><tr><th>Field</th><th>Weight kg</th><th>Avg module kg</th><th>Weighed</th></tr></thead>
+          <tbody>
+            ${report.rows.map((r) => `<tr><td><span class="fname" title="${esc(r.field.name)}">${esc(r.field.name)}</span></td><td>${num(r.kg, 0)}</td><td>${num(r.avgKg, 0)}</td><td>${weighedText(r.weighedPct)}</td></tr>`).join('')}
+          </tbody>
+          <tfoot><tr><td>Total</td><td>${num(t.kg, 0)}</td><td>${num(t.avgKg, 0)}</td><td>${weighedText(t.weighedPct)}</td></tr></tfoot>
+        </table>
+      </div>
+      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Weight is the weighbridge weight for the loads weighed at the gin yard, and the estimate for modules still in the field or not yet weighed. Bales follow the weight, until the ginning runs give the real lint.</div>
+    </div>
+    ${report.ginned.rows.length ? `<div class="card report">
+      <h2><span class="dot report"></span>Already ginned</h2>
+      <div class="table-scroll tight-wrap">
+        <table class="tight wrap-first">
+          <colgroup><col style="width:28%"><col style="width:16%"><col style="width:15%"><col style="width:21%"><col style="width:20%"></colgroup>
+          <thead><tr><th>Field</th><th>Modules</th><th>Bales</th><th>Avg kg</th><th>Turnout</th></tr></thead>
+          <tbody>
+            ${report.ginned.rows.map((r) => `<tr><td><span class="fname">${r.field ? esc(r.field.name) : 'Not from a recorded move'}</span></td><td>${num(r.modules, 0)}</td><td>${num(r.bales, 0)}</td><td>${num(r.avgKg, 0)}</td><td>${r.turnoutPct > 0 ? `${num(r.turnoutPct, 1)}%` : '-'}</td></tr>`).join('')}
+          </tbody>
+          <tfoot><tr><td>Total</td><td>${num(report.ginned.totals.modules, 0)}</td><td>${num(report.ginned.totals.bales, 0)}</td><td>${num(report.ginned.totals.avgKg, 0)}</td><td>${report.ginned.totals.turnoutPct > 0 ? `${num(report.ginned.totals.turnoutPct, 1)}%` : '-'}</td></tr></tfoot>
+        </table>
+      </div>
+      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">From the ginning runs. Modules come out of the yard in the order they arrived, so a run that mixed paddocks is shared between them by module weight.</div>
+    </div>` : ''}
+    ${report.yards.length || report.pending.loads ? `<div class="card report">
+      <h2><span class="dot report"></span>Gin yard</h2>
+      ${report.yards.map((y) => `<div class="row"><span class="label">${esc(y.storage.name)}: in the yard now</span><span class="value">${num(y.inYard, 0)} modules</span></div><div class="row"><span class="label">${esc(y.storage.name)}: ginned</span><span class="value">${num(y.ginned, 0)} modules</span></div>`).join('')}
+      ${report.pending.loads ? `<div class="row" id="modules-pending" style="cursor:pointer"><span class="label">Loads waiting for the weighbridge weight</span><span class="value"><span class="badge warn">${report.pending.loads} · ${num(report.pending.modules, 0)} modules</span></span></div>` : ''}
+    </div>` : ''}`;
+  body.querySelector('#modules-pdf')?.addEventListener('click', async () => {
+    const season = db.getCurrentYear();
+    const bytes = modulesPdf({ report, business: db.getBusinessDetails().entityName || '', season, today: dmy(todayLocal()) });
+    const fileName = safeFileName(`Modules ${season} ${dmy(todayLocal())}`);
+    if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
+    await sharePdf(bytes, fileName, { title: `Modules ${season}` });
+  });
+  body.querySelector('#modules-pending')?.addEventListener('click', () => { location.hash = '#movement'; });
 }
 
 function paintFert(root) {

@@ -52,6 +52,8 @@ export function stageOf(m, storages) {
   const tos = m?.tos || [];
   const inTransit = tos.length === 0 || tos.some((t) => t.type === 'silo' && isTransit((storages || []).find((s) => s.id === t.id)));
   if (inTransit) return 'destination';
+  // a truck of cotton modules has no quality to record: it is waiting only for the gin's weighbridge weight
+  if (m.modules && typeof m.modules === 'object') return m.weightStatus === 'final' ? null : 'weight';
   if (m.weightStatus === 'final') return null;
   return hasQualityRecorded(m) ? 'weight' : 'quality';
 }

@@ -1,26 +1,26 @@
-import { db } from '../storage.js?v=366';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=366';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=366';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=366';
-import { withholdingClash } from '../fumigation.js?v=366';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=366';
-import { compressAndStampImage } from '../img.js?v=366';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=366';
-import { specText, extraSpecKey } from '../outload.js?v=366';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=366';
-import { pickableSilos } from '../silopick.js?v=366';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=366';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=366';
-import { activeSales } from '../paidsales.js?v=366';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=366';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=366';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=366';
-import { nowTime } from '../loadreport.js?v=366';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=366';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=366';
-import { openGinRunSheet } from './ginrun.js?v=366';
-import { openModuleMoveSheet } from './modulemove.js?v=366';
-import { hasGin, describeGin, stdBales, hasModules, describeModules } from '../ginning.js?v=366';
+import { db } from '../storage.js?v=367';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=367';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=367';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=367';
+import { withholdingClash } from '../fumigation.js?v=367';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=367';
+import { compressAndStampImage } from '../img.js?v=367';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=367';
+import { specText, extraSpecKey } from '../outload.js?v=367';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=367';
+import { pickableSilos } from '../silopick.js?v=367';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=367';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=367';
+import { activeSales } from '../paidsales.js?v=367';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=367';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=367';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=367';
+import { nowTime } from '../loadreport.js?v=367';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=367';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=367';
+import { openGinRunSheet } from './ginrun.js?v=367';
+import { openModuleMoveSheet } from './modulemove.js?v=367';
+import { hasGin, describeGin, stdBales, hasModules, describeModules } from '../ginning.js?v=367';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -296,7 +296,7 @@ export function movementRow(m, ctx) {
       </div>
       ${specText(m) ? `<div class="meta">${esc(specText(m))}</div>` : ''}
       ${hasGin(m) ? `<div class="meta">Ginning${m.gin.ginName ? `, ${esc(m.gin.ginName)}` : ''}: ${esc(describeGin(m.gin))}</div>` : ''}
-      ${hasModules(m) ? `<div class="meta">Modules: ${esc(describeModules(m.modules))}</div>` : ''}
+      ${hasModules(m) ? `<div class="meta">Modules: ${esc(describeModules(m.modules))}${m.weightStatus === 'final' ? '' : ' (weight estimated)'}</div>` : ''}
       ${!hasGin(m) && !hasModules(m) && fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
       ${!hasGin(m) && !hasModules(m) && toBreakdown ? `<div class="meta">${esc(toBreakdown)}</div>` : ''}
     </div>

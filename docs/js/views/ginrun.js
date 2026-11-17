@@ -6,15 +6,16 @@
 // contract or a storage, which should add up to the bales pressed. The gin's invoice is saved as a bill when we pay it
 // (see ginning.js).
 
-import { db } from '../storage.js?v=366';
-import { num, money, esc, todayLocal } from '../fmt.js?v=366';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=366';
-import { activeSales } from '../paidsales.js?v=366';
-import { storageLedgerStock } from '../derived.js?v=366';
+import { db } from '../storage.js?v=367';
+import { num, money, esc, todayLocal } from '../fmt.js?v=367';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=367';
+import { activeSales } from '../paidsales.js?v=367';
+import { storageLedgerStock } from '../derived.js?v=367';
+import { offerGinYard } from './modulemove.js?v=367';
 import {
   STD_BALE_KG, cleanGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice,
   baleRangeCount, allocateLint, allocationProblems,
-} from '../ginning.js?v=366';
+} from '../ginning.js?v=367';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -60,7 +61,7 @@ export function openGinRunSheet(existing = null) {
 
   openSheet(existing ? 'Edit ginning run' : 'Log ginning', (root) => {
     if (!tally.length) {
-      root.innerHTML = `<div class="empty">Add the gin yard first: in Storage, add a Tally storage (for example "Gin yard", counting modules). The modules are moved there from the paddock, then ginned from it.</div>`;
+      offerGinYard(root, 'The modules are moved to a gin yard from the paddock, then ginned from it. Create it here, or add a Tally storage in Storage.', () => openGinRunSheet(existing));
       return;
     }
     root.innerHTML = `

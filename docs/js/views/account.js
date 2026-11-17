@@ -5,18 +5,18 @@
 // navigation per role, and that is when this gets a proper home in the
 // interface. Until then it is reachable at #/account.
 
-import { notify } from '../ui.js?v=366';
-import { db } from '../storage.js?v=366';
+import { notify } from '../ui.js?v=367';
+import { db } from '../storage.js?v=367';
 import {
   getSession, getMembership, signOut, listMyInvitations, acceptInvitation, listMyFarms, setPreferredFarm,
-} from '../auth.js?v=366';
-import { roleLabel, expiryText } from '../invites.js?v=366';
-import { esc } from '../fmt.js?v=366';
-import { openReportProblemSheet } from './support.js?v=366';
+} from '../auth.js?v=367';
+import { roleLabel, expiryText } from '../invites.js?v=367';
+import { esc } from '../fmt.js?v=367';
+import { openReportProblemSheet } from './support.js?v=367';
 import {
   platformOf, isStandalone, installSteps, installState, requestPersistence, storageStatus, storageText, canPromptInstall, promptInstall,
-} from '../pwa.js?v=366';
-import { toast } from '../ui.js?v=366';
+} from '../pwa.js?v=367';
+import { toast } from '../ui.js?v=367';
 
 const ROLE_LABELS = {
   owner: 'Owner',
