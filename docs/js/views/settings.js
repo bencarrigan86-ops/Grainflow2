@@ -1,45 +1,46 @@
-import { db } from '../storage.js?v=324';
-import { getTheme, setTheme } from '../theme.js?v=324';
-import { num, money, esc, todayLocal } from '../fmt.js?v=324';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=324';
-import { openLoadImportSheet } from './importloads.js?v=324';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=324';
-import { openPastSeasonsSheet } from './pastseasons.js?v=324';
-import { openPastSalesSheet } from './pastsales.js?v=324';
-import { openLineupSheet } from './lineup.js?v=324';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=324';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=324';
-import { openDangerSheet } from './dangerconfirm.js?v=324';
-import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=324';
-import { seasonContents, contentsText } from '../seasondelete.js?v=324';
-import { openDeletedSheet } from './deleted.js?v=324';
-import { APP_VERSION } from '../version.js?v=324';
-import { exportRowsAsCSV } from '../csv.js?v=324';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=324';
-import { orderedNames, moveName } from '../commodityorder.js?v=324';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=324';
-import { endpointLabel } from './movements.js?v=324';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=324';
-import { layersForStorage } from '../outload.js?v=324';
-import { traceLoads, traceText } from '../trace.js?v=324';
-import { holdings, totalHeld } from '../offfarm.js?v=324';
-import { kindLabel, billTotal } from '../payables.js?v=324';
-import { orderState, STATE_LABEL } from '../orders.js?v=324';
-import { fieldHarvest } from '../harvest.js?v=324';
-import { capacityFor } from '../storagecapacity.js?v=324';
-import { autoSeasonText } from '../harvestseason.js?v=324';
-import { openMySignatureSheet } from './signaturepad.js?v=324';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=324';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=324';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=324';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=324';
+import { db } from '../storage.js?v=325';
+import { getTheme, setTheme } from '../theme.js?v=325';
+import { num, money, esc, todayLocal } from '../fmt.js?v=325';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=325';
+import { openLoadImportSheet } from './importloads.js?v=325';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=325';
+import { openPastSeasonsSheet } from './pastseasons.js?v=325';
+import { openPastSalesSheet } from './pastsales.js?v=325';
+import { openLineupSheet } from './lineup.js?v=325';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=325';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=325';
+import { openDangerSheet } from './dangerconfirm.js?v=325';
+import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=325';
+import { seasonContents, contentsText } from '../seasondelete.js?v=325';
+import { openDeletedSheet } from './deleted.js?v=325';
+import { APP_VERSION } from '../version.js?v=325';
+import { exportRowsAsCSV } from '../csv.js?v=325';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=325';
+import { orderedNames, moveName } from '../commodityorder.js?v=325';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=325';
+import { endpointLabel } from './movements.js?v=325';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=325';
+import { layersForStorage } from '../outload.js?v=325';
+import { traceLoads, traceText } from '../trace.js?v=325';
+import { holdings, totalHeld } from '../offfarm.js?v=325';
+import { kindLabel, billTotal } from '../payables.js?v=325';
+import { orderState, STATE_LABEL } from '../orders.js?v=325';
+import { fieldHarvest } from '../harvest.js?v=325';
+import { capacityFor } from '../storagecapacity.js?v=325';
+import { autoSeasonText } from '../harvestseason.js?v=325';
+import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=325';
+import { openMySignatureSheet } from './signaturepad.js?v=325';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=325';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=325';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=325';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=325';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=324';
+} from '../invites.js?v=325';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=324';
+} from '../auth.js?v=325';
 
 let unsub = null;
 
@@ -1253,6 +1254,8 @@ function offerLastSeasonsClosing(root) {
 
 function openCommoditySheet(existing) {
   const { fields } = db.get();
+  // the hectares sown to this commodity, to turn a cost per hectare into a total
+  const gmArea = commodityAreaHa(fields, existing?.id);
   openSheet(existing ? 'Edit commodity' : 'Add commodity', (root) => {
     root.innerHTML = `
       ${field({ label: 'Name', id: 'name', value: existing?.name, placeholder: 'e.g. Wheat' })}
@@ -1285,12 +1288,26 @@ function openCommoditySheet(existing) {
         <div class="row"><span class="label">Fields using this commodity</span><span class="value">${fields.filter((f) => f.commodityId === existing.id).length}</span></div>
       ` : ''}
       <hr class="sep" />
-      ${field({ label: 'Gross margin cost ($)', id: 'gmCost', type: 'number', step: '1', value: existing?.grossMarginCost ?? 0, hint: 'Total input cost for this commodity, for the Position tab' })}
+      <div class="grid-2">
+        ${field({ label: 'Gross margin cost ($/ha)', id: 'gmCostHa', type: 'number', step: '0.01', value: perHaFromTotal(existing?.grossMarginCost, gmArea) || '' })}
+        ${field({ label: 'Gross margin cost ($)', id: 'gmCost', type: 'number', step: '1', value: existing?.grossMarginCost ?? 0 })}
+      </div>
+      <div class="field hint" id="gm-hint" style="margin-top:-6px"></div>
       ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
       ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete commodity</button>` : ''}
       <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
     `;
     offerLastSeasonsClosing(root);
+    // Cost: type $/ha and the total follows; type the total and $/ha follows. The total is what is kept.
+    const gmHa = root.querySelector('#gmCostHa');
+    const gmTotal = root.querySelector('#gmCost');
+    const gmHint = root.querySelector('#gm-hint');
+    gmHint.textContent = gmArea > 0
+      ? `Over the ${num(gmArea, 1)} ha sown to ${existing?.name || 'this commodity'}: type either one and the other follows.`
+      : 'No fields use this commodity yet, so $/ha has nothing to work from. Write the total.';
+    if (!(gmArea > 0)) gmHa.disabled = true;
+    gmHa.addEventListener('input', () => { gmTotal.value = totalFromPerHa(gmHa.value, gmArea) || ''; });
+    gmTotal.addEventListener('input', () => { gmHa.value = perHaFromTotal(gmTotal.value, gmArea) || ''; });
     // the automatic choice says what it comes to for the name as typed
     const autoOpt = root.querySelector('#harvestSeason option[value=""]');
     const syncAuto = () => { if (autoOpt) autoOpt.textContent = `Automatic: ${autoSeasonText(getVal(root, 'name'))}`; };

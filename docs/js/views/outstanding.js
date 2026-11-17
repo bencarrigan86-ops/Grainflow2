@@ -4,21 +4,21 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=324';
-import { openSheet } from '../ui.js?v=324';
-import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=324';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=324';
-import { windowText } from '../orders.js?v=324';
-import { openOrderSheet } from './orders.js?v=324';
-import { openInvoiceListSheet } from './invoice.js?v=324';
-import { renderPayables, returnToAfterBill } from './payables.js?v=324';
-import { openXeroSheet } from './xero.js?v=324';
-import { cashflow } from '../cashflow.js?v=324';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=324';
-import { buyerStatements, statementPdf } from '../statement.js?v=324';
-import { sharePdf } from '../sharefile.js?v=324';
-import { emailIn } from '../vendordec.js?v=324';
-import { invoiceLabel } from '../adjustment.js?v=324';
+import { db } from '../storage.js?v=325';
+import { openSheet } from '../ui.js?v=325';
+import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=325';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=325';
+import { windowText } from '../orders.js?v=325';
+import { openOrderSheet } from './orders.js?v=325';
+import { openInvoiceListSheet } from './invoice.js?v=325';
+import { renderPayables, returnToAfterBill } from './payables.js?v=325';
+import { openXeroSheet } from './xero.js?v=325';
+import { cashflow } from '../cashflow.js?v=325';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=325';
+import { buyerStatements, statementPdf } from '../statement.js?v=325';
+import { sharePdf } from '../sharefile.js?v=325';
+import { emailIn } from '../vendordec.js?v=325';
+import { invoiceLabel } from '../adjustment.js?v=325';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);

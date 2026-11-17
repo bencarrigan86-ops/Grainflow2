@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=324';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=324';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=324';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=324';
-import { describeMerge } from '../merge.js?v=324';
-import { renderRelatedMovements } from './movements.js?v=324';
-import { canSeeYield } from '../nav.js?v=324';
-import { wireJumps } from '../jump.js?v=324';
-import { openMapSheet } from './farmmap.js?v=324';
-import { openInputsSheet } from './inputs.js?v=324';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=324';
-import { stockLevels } from '../inputs.js?v=324';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=324';
-import { openRotationSheet } from './rotation.js?v=324';
-import { openAveragesSheet } from './averages.js?v=324';
+import { db } from '../storage.js?v=325';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=325';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=325';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=325';
+import { describeMerge } from '../merge.js?v=325';
+import { renderRelatedMovements } from './movements.js?v=325';
+import { canSeeYield } from '../nav.js?v=325';
+import { wireJumps } from '../jump.js?v=325';
+import { openMapSheet } from './farmmap.js?v=325';
+import { openInputsSheet } from './inputs.js?v=325';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=325';
+import { stockLevels } from '../inputs.js?v=325';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=325';
+import { openRotationSheet } from './rotation.js?v=325';
+import { openAveragesSheet } from './averages.js?v=325';
 
 let unsub = null;
 

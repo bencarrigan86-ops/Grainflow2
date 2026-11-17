@@ -70,8 +70,7 @@ export function filterByTab(storages, commodities, tabId) {
 // ---- sorting -----------------------------------------------------------------
 
 export const SORTS = [
-  { id: 'volume', label: 'Most grain first' },
-  { id: 'newest', label: 'Newest added' },
+  { id: 'volume', label: 'Tonnes held' },
   { id: 'name', label: 'Name' },
   { id: 'grade', label: 'Grade' },
   { id: 'crop', label: 'Crop year' },

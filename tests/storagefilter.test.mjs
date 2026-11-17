@@ -158,9 +158,11 @@ check('a silo with no figure counts as empty and does not break the order', () =
   assert.equal(sorted[0], '13 Silo');
   assert.equal(sorted.length, GRADED.length);
 });
-check('most grain first is what the list opens on, and is the first choice offered', () => {
+check('tonnes held is what the list opens on, and is the first choice offered', () => {
   assert.equal(SORTS[0].id, 'volume');
-  assert.equal(SORTS[0].label, 'Most grain first');
+  assert.equal(SORTS[0].label, 'Tonnes held');
+  assert.ok(!SORTS.some((x) => x.id === 'newest'), 'newest added is gone');
+  assert.deepEqual(SORTS.map((x) => x.label), ['Tonnes held', 'Name', 'Grade', 'Crop year'], 'name stays in the list for the By commodity view');
   // with no way to tell how much each holds, it falls back to name order rather than failing
   assert.deepEqual(names(sortStorages(GRADED)), names(sortStorages(GRADED, 'name')));
 });
@@ -190,6 +192,15 @@ check('a commodity tab (and No commodity) shows a total: held, room when full an
   assert.ok(src.includes('function tabTotalLine('), 'the total is built in one place');
   assert.ok(src.includes('if (commodityTab) chipsEl.innerHTML += tabTotalLine('), 'only when a tab is picked');
   assert.ok(src.includes('capacityInfo(s, c || assume).tons'), 'a silo with no commodity is worked out as the commodity picked, like its row');
+});
+
+check('the commodity for silos with no commodity sits where those silos are, not above the whole list', () => {
+  const src = fs.readFileSync(new URL('../docs/js/views/storage.js', import.meta.url), 'utf8');
+  assert.ok(!src.includes('id="storage-assume"'), 'no always-on block above the list');
+  assert.ok(src.includes('function assumeBlock('));
+  assert.ok(src.includes("g.name === 'No commodity' ? assumeBlock(g.rows, commodities)"), 'under the No commodity heading');
+  assert.ok(src.includes('commodityTab === NO_COMMODITY ? assumeBlock(noCommodity, commodities)'), 'at the top of the No commodity tab');
+  assert.ok(src.includes("e.target.id !== 'storage-assume-sel'"), 'the change is heard on the list');
 });
 
 console.log('');

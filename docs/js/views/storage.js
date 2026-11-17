@@ -1,26 +1,27 @@
-import { db } from '../storage.js?v=324';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=324';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=324';
-import { isTransit } from '../transit.js?v=324';
-import { isOffFarm } from '../offfarm.js?v=324';
-import { paintOffFarmCard } from './offfarm.js?v=324';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=324';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=324';
-import { hasStorageQuality } from '../mapping.js?v=324';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=324';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=324';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=324';
-import { renderRelatedMovements } from './movements.js?v=324';
-import { openSiloSetupSheet } from './silosetup.js?v=324';
-import { commodityFills } from '../commodityfill.js?v=324';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=324';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=324';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=324';
+import { db } from '../storage.js?v=325';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=325';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=325';
+import { isTransit } from '../transit.js?v=325';
+import { isOffFarm } from '../offfarm.js?v=325';
+import { paintOffFarmCard } from './offfarm.js?v=325';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=325';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=325';
+import { hasStorageQuality } from '../mapping.js?v=325';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=325';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=325';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=325';
+import { renderRelatedMovements } from './movements.js?v=325';
+import { openSiloSetupSheet } from './silosetup.js?v=325';
+import { commodityFills } from '../commodityfill.js?v=325';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=325';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=325';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=325';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=324';
+} from '../silolayers.js?v=325';
 
 let unsub = null;
+// 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
 let listMode = 'commodity';
 let view = 'saved';
 let quickKind = 'silo';
@@ -110,20 +111,19 @@ function paint(root) {
       </div>` : ''}
       <div class="segmented" id="list-mode">
         <button data-mode="commodity" class="${listMode === 'commodity' ? 'active' : ''}">By commodity</button>
-        <button data-mode="chronological" class="${listMode === 'chronological' ? 'active' : ''}">Chronological</button>
+        <button data-mode="name" class="${listMode === 'name' ? 'active' : ''}">By name</button>
       </div>
-      <div class="storage-find">
+      <div class="storage-find ${listMode === 'name' ? 'one' : ''}">
         <div class="field">
           <label for="storage-search">Search</label>
           <input type="search" id="storage-search" placeholder="Number, name, grade&hellip;" value="${esc(searchText)}" />
         </div>
-        <div class="field">
+        ${listMode === 'name' ? '' : `<div class="field">
           <label for="storage-sort">Sort by</label>
           <select id="storage-sort">${SORTS.map((x) => `<option value="${x.id}" ${sortMode === x.id ? 'selected' : ''}>${x.label}</option>`).join('')}</select>
-        </div>
+        </div>`}
       </div>
       <div id="storage-chips" style="margin-top:10px"></div>
-      <div id="storage-assume"></div>
       <div id="storage-list" style="margin-top:10px"></div>
     </div>
     <div id="offfarm-card"></div>
@@ -137,7 +137,7 @@ function paint(root) {
     paintStorageParts(root);
   });
 
-  body.querySelector('#storage-sort').addEventListener('change', (e) => {
+  body.querySelector('#storage-sort')?.addEventListener('change', (e) => {
     sortMode = e.target.value;
     try { localStorage.setItem(SORT_KEY, sortMode); } catch { /* private mode: it just resets */ }
     paintStorageParts(root);
@@ -152,6 +152,11 @@ function paint(root) {
     const chip = e.target.closest('[data-tab]');
     if (!chip) return;
     commodityTab = chip.dataset.tab;
+    paintStorageParts(root);
+  });
+  body.querySelector('#storage-list').addEventListener('change', (e) => {
+    if (e.target.id !== 'storage-assume-sel') return;
+    saveSpaceAs(e.target.value);
     paintStorageParts(root);
   });
   body.querySelector('#storage-list').addEventListener('click', (e) => {
@@ -235,22 +240,6 @@ function paintStorageParts(root) {
         </table>
       </div>
     </div>`;
-
-  // ---- the commodity to work empty silos out as: only when some silo has a volume and nothing set to go in it ----
-  const assumeEl = root.querySelector('#storage-assume');
-  const assumeFor = storages.filter((x) => x.kind !== 'tally' && wantsCommodity(x));
-  const assumeOptions = commodities.filter((x) => Number(x.testWeight) > 0);
-  if (assumeEl) {
-    if (assumeFor.length && assumeOptions.length) {
-      const now = assumedCommodity(commodities, loadSpaceAs());
-      assumeEl.innerHTML = `<div class="field" style="margin:10px 0 0"><label for="storage-assume-sel">Space in the ${assumeFor.length} storage${assumeFor.length === 1 ? '' : 's'} with no commodity is worked out as</label>
-        <select id="storage-assume-sel">${assumeOptions.map((x) => `<option value="${esc(x.name)}" ${now?.name === x.name ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
-        <div class="hint">Their volume needs a test weight to become tonnes. This only changes what is shown here and on the harvest report; nothing is saved on the storage.</div></div>`;
-      assumeEl.querySelector('select').addEventListener('change', (e) => { saveSpaceAs(e.target.value); paintStorageParts(root); });
-    } else {
-      assumeEl.innerHTML = '';
-    }
-  }
 
   // ---- commodity tabs: only in the By commodity view ----
   const chipsEl = root.querySelector('#storage-chips');
@@ -496,6 +485,21 @@ function commoditiesByStock(commodities, storages, movements) {
   return [...commodities].sort(bigFirst((c) => held.get(c.id), (c) => c.name));
 }
 
+/**
+ * The commodity the space in silos with no commodity is worked out as: one small line where those silos are listed (under the
+ * "No commodity" heading, at the top of the No commodity tab, or above a flat list that has some), never above everything else.
+ * Only when some silo listed has a volume and nothing set to go in it, and some commodity has a test weight to work it out with.
+ */
+function assumeBlock(silos, commodities) {
+  const wanting = silos.filter((x) => x.kind !== 'tally' && wantsCommodity(x));
+  const options = commodities.filter((x) => Number(x.testWeight) > 0);
+  if (!wanting.length || !options.length) return '';
+  const now = assumedCommodity(commodities, loadSpaceAs());
+  return `<div class="assume-line"><label for="storage-assume-sel">Space in the ${wanting.length} with no commodity is worked out as</label>
+    <select id="storage-assume-sel">${options.map((x) => `<option value="${esc(x.name)}" ${now?.name === x.name ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+    <div class="hint">Volume needs a test weight to become tonnes. Only changes this screen and the harvest report.</div></div>`;
+}
+
 /** The two columns down the right edge, labelled once above the list. */
 function columnHead() {
   return `<div class="storage-head" aria-hidden="true"><span></span>${showMeasured ? '<span class="sr-col">Measured</span>' : ''}<span class="sr-col">Tracked</span></div>`;
@@ -504,7 +508,9 @@ function columnHead() {
 function renderStorageList(storages, commodities, movements) {
   // How much each silo holds, for sorting: what the books say, then the dip.
   const volumeOf = (s) => ({ tracked: storageLedgerStock(s, movements), measured: computeStorageTons(s, commodities).tons });
-  const sortBy = (list) => sortStorages(list, sortMode, volumeOf);
+  // By name is one flat list A to Z; otherwise the order chosen in Sort by
+  const effectiveSort = listMode === 'name' ? 'name' : sortMode;
+  const sortBy = (list) => sortStorages(list, effectiveSort, volumeOf);
   const row = (s) => storageRow(s, commodities, movements);
 
   // Sorted by grade (or crop year) the rows are laid out in sections, one per
@@ -513,11 +519,11 @@ function renderStorageList(storages, commodities, movements) {
   // tab, or inside each commodity heading — so a grade is always something you
   // can see the extent of at a glance, not a word to read in every row.
   const sections = (rows, nested) => {
-    if (!sortGroupLabel(rows[0] ?? {}, sortMode)) return rows.map(row).join('');
+    if (!sortGroupLabel(rows[0] ?? {}, effectiveSort)) return rows.map(row).join('');
     const order = [];
     const by = new Map();
     for (const s of rows) {
-      const label = sortGroupLabel(s, sortMode);
+      const label = sortGroupLabel(s, effectiveSort);
       if (!by.has(label)) { by.set(label, []); order.push(label); }
       by.get(label).push(s);
     }
@@ -536,15 +542,16 @@ function renderStorageList(storages, commodities, movements) {
     if (noCommodity.length > 0) groups.push({ name: 'No commodity', rows: sortBy(noCommodity) });
 
     // One commodity chosen: just its silos, no group heading to repeat what the tab says.
-    if (commodityTab) return columnHead() + sections(groups.flatMap((g) => g.rows), false);
+    if (commodityTab) return (commodityTab === NO_COMMODITY ? assumeBlock(noCommodity, commodities) : '') + columnHead() + sections(groups.flatMap((g) => g.rows), false);
 
     return columnHead() + groups.map((g) => `
       <div class="group-label"><span>${esc(g.name)}</span></div>
+      ${g.name === 'No commodity' ? assumeBlock(g.rows, commodities) : ''}
       ${sections(g.rows, true)}
     `).join('');
   }
 
-  return columnHead() + sections(sortBy(storages), false);
+  return assumeBlock(storages, commodities) + columnHead() + sections(sortBy(storages), false);
 }
 
 function commodityOptions(commodities, includeNone = true) {

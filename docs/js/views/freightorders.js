@@ -5,21 +5,21 @@
 // It goes to the carrier as a PDF (shared or emailed) and a copy is filed with the contract. Loads then name the
 // freight order they travel on, and the carrier's bill is recorded against it. The arithmetic is in freight.js.
 
-import { db } from '../storage.js?v=324';
-import { signToggleHtml, wireSignToggle } from './signtoggle.js?v=324';
-import { signerName } from '../signdoc.js?v=324';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=324';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=324';
-import { orderTitle } from '../orders.js?v=324';
-import { activeSales } from '../paidsales.js?v=324';
+import { db } from '../storage.js?v=325';
+import { signToggleHtml, wireSignToggle } from './signtoggle.js?v=325';
+import { signerName } from '../signdoc.js?v=325';
+import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=325';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=325';
+import { orderTitle } from '../orders.js?v=325';
+import { activeSales } from '../paidsales.js?v=325';
 import {
   BASES, STATE_LABEL, freightState, freightOwed, freightTitle, freightDefaults, freightProblems,
   perTonne, rateText, estimatedTotal, windowText, freightOrderPdf,
-} from '../freight.js?v=324';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=324';
-import { fileSentCopy } from '../sentcopy.js?v=324';
-import { movementRow, openMovementSheet } from './movements.js?v=324';
-import { openBillSheet, returnToAfterBill } from './payables.js?v=324';
+} from '../freight.js?v=325';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=325';
+import { fileSentCopy } from '../sentcopy.js?v=325';
+import { movementRow, openMovementSheet } from './movements.js?v=325';
+import { openBillSheet, returnToAfterBill } from './payables.js?v=325';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | closed | all
