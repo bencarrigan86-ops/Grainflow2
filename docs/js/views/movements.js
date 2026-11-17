@@ -1,20 +1,21 @@
-import { db } from '../storage.js?v=344';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=344';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=344';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=344';
-import { compressAndStampImage } from '../img.js?v=344';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=344';
-import { specText, extraSpecKey } from '../outload.js?v=344';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=344';
-import { pickableSilos } from '../silopick.js?v=344';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=344';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=344';
-import { activeSales } from '../paidsales.js?v=344';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=344';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=344';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=344';
-import { nowTime } from '../loadreport.js?v=344';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=344';
+import { db } from '../storage.js?v=345';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=345';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=345';
+import { withholdingClash } from '../fumigation.js?v=345';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=345';
+import { compressAndStampImage } from '../img.js?v=345';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=345';
+import { specText, extraSpecKey } from '../outload.js?v=345';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=345';
+import { pickableSilos } from '../silopick.js?v=345';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=345';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=345';
+import { activeSales } from '../paidsales.js?v=345';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=345';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=345';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=345';
+import { nowTime } from '../loadreport.js?v=345';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=345';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -1003,7 +1004,7 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
     });
     if (template?.wantOutload && !existing) root.querySelector('#ol-get').click();
 
-    root.querySelector('#save').addEventListener('click', () => {
+    root.querySelector('#save').addEventListener('click', async () => {
       const olNo = normaliseOutloadNo(getVal(root, 'outloadNo'));
       if (olNo) {
         const clash = movements.find((m) => m.id !== existing?.id && normaliseOutloadNo(m.outloadNo) === olNo);
@@ -1028,9 +1029,19 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
         else toBody.querySelector('.to-select')?.focus();
         return;
       }
+      // grain still in its withholding period after a fumigation: a warning, not a block
+      const loadDate = getVal(root, 'date');
+      if (!existing || existing.date !== loadDate) {
+        const held = froms.filter((f) => f.type === 'silo').map((f) => storages.find((x) => x.id === f.id)).filter(Boolean)
+          .map((x) => ({ x, hit: withholdingClash(x, loadDate) })).filter((h) => h.hit);
+        if (held.length) {
+          const msg = held.map((h) => `${h.x.name} was fumigated on ${dmy(h.hit.date)} and is withheld until ${dmy(h.hit.endsOn)}`).join('. ');
+          if (!(await askConfirm(`${msg}. Save this load out anyway?`, { confirmLabel: 'Save anyway', danger: true }))) return;
+        }
+      }
       db.upsertMovement({
         id: existing?.id,
-        date: getVal(root, 'date'),
+        date: loadDate,
         froms,
         tos,
         // the commodity of the load, when one is chosen: holdings off-farm are kept by commodity and grade

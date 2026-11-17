@@ -1954,3 +1954,9 @@ alter table freight_orders
   add column if not exists buyer_order_no text;
 
 notify pgrst, 'reload schema';
+
+-- Fumigations on storages
+alter table storages
+  add column if not exists fumigations jsonb;
+
+notify pgrst, 'reload schema';

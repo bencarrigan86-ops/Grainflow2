@@ -1,24 +1,25 @@
-import { db } from '../storage.js?v=344';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=344';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=344';
-import { isTransit } from '../transit.js?v=344';
-import { isOffFarm } from '../offfarm.js?v=344';
-import { paintOffFarmCard } from './offfarm.js?v=344';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=344';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=344';
-import { hasStorageQuality } from '../mapping.js?v=344';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=344';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=344';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=344';
-import { renderRelatedMovements } from './movements.js?v=344';
-import { openSiloSetupSheet } from './silosetup.js?v=344';
-import { commodityFills } from '../commodityfill.js?v=344';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=344';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=344';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=344';
+import { db } from '../storage.js?v=345';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=345';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=345';
+import { isTransit } from '../transit.js?v=345';
+import { isOffFarm } from '../offfarm.js?v=345';
+import { paintOffFarmCard } from './offfarm.js?v=345';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=345';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=345';
+import { hasStorageQuality } from '../mapping.js?v=345';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=345';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=345';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=345';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=345';
+import { renderRelatedMovements } from './movements.js?v=345';
+import { openSiloSetupSheet } from './silosetup.js?v=345';
+import { commodityFills } from '../commodityfill.js?v=345';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=345';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=345';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=345';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=344';
+} from '../silolayers.js?v=345';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -707,11 +708,18 @@ function storageRow(s, commodities, movements) {
         ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
         ${noteLine(s) ? `<div class="meta" style="font-style:italic">${noteLine(s)}</div>` : ''}
         ${mixLine}
+        ${fumigationBadge(s)}
         ${bar}
         ${tarp ? `<div class="meta">Tarp needed: ${num(tarp.tarpWidthNeeded, 1)} x ${num(tarp.tarpLengthNeeded, 1)} m</div>` : ''}
       </div>
       ${columns(num(r.tons, 1))}
     </div>`;
+}
+
+/** On the list: a red-ish line while the grain is being withheld after a fumigation, nothing once it is clear. */
+function fumigationBadge(s) {
+  const st = fumigationState(s, todayLocal());
+  return st.withheld ? `<div class="meta"><span class="badge warn">Withholding</span> until ${esc(dmy(st.clearOn))} · fumigated ${esc(dmy(st.last.date))}</div>` : '';
 }
 
 /** A silo's free-text note. */
@@ -814,8 +822,8 @@ function contentsFold(existing, grades, kind = existing?.kind) {
         <summary id="lay-stack-head"></summary>
         <div id="op-stack"></div>
       </details>
-      <details class="inner-fold" id="sample-fold" ${rows.length ? 'open' : ''}>
-        <summary>Sampled sections <span class="meta">(optional, counted from the ${isBunker ? 'back' : 'bottom'})</span></summary>
+      <details class="inner-fold" id="sample-fold">
+        <summary><span>Sampled sections <span class="meta">${rows.length ? `· ${rows.length} set` : '· optional'}</span></span></summary>
         <div class="field hint" style="margin:8px 0">Change the grade of set blocks of tonnes, using the aggregated sample results: the first 800 t is APH1 at
           11.5% protein, the next 600 t is AUH2, whichever loads they came from. A section replaces what the loads say for that grain. Grain that arrives
           after the date below, or beyond the last section, keeps its own grade.</div>
@@ -828,6 +836,65 @@ function contentsFold(existing, grades, kind = existing?.kind) {
       </details>
     </details>
     ${planFold()}`;
+}
+
+/**
+ * Fumigation: a record of each time the grain was fumigated, with the date the withholding period ends. The newest
+ * one decides whether the grain is clear to load out. Entries are kept on the form until Save, like the samples.
+ */
+function fumigationFold(list) {
+  const st = fumigationState({ fumigations: list }, todayLocal());
+  return `
+    <details class="fold ${st.withheld ? 'feature' : ''}" id="fumigation-fold" ${st.withheld ? 'open' : ''}>
+      <summary><div class="${st.withheld ? 'feature-head' : ''}"><h2>Fumigation</h2>
+        <div class="sub" id="fum-sub">${esc(fumigationLine(st, dmy) || 'Not recorded yet')}</div></div></summary>
+      <div id="fum-list"></div>
+      <div class="subhead">Record a fumigation</div>
+      <div class="grid-2">
+        ${field({ label: 'Fumigated on', id: 'fum-date', type: 'date', value: todayLocal() })}
+        ${field({ label: 'Product', id: 'fum-product', list: 'dl-fum-products', placeholder: 'e.g. Phosphine' })}
+      </div>
+      <div class="grid-2">
+        ${field({ label: 'Withholding (days)', id: 'fum-days', type: 'number', step: '1', placeholder: 'From the label' })}
+        ${field({ label: 'Clear to load out from', id: 'fum-end', type: 'date' })}
+      </div>
+      <button type="button" class="btn secondary small" id="fum-add">+ Add to the record</button>
+      <datalist id="dl-fum-products">${[...new Set(['Phosphine', ...db.get().storages.flatMap((x) => (x.fumigations || []).map((f) => f.product)).filter(Boolean)])].map((p) => `<option value="${esc(p)}">`).join('')}</datalist>
+    </details>`;
+}
+
+/** Draws the record and takes new entries. `getList`/`setList` hold the entries until the storage is saved. */
+function wireFumigation(root, getList, setList) {
+  const listEl = root.querySelector('#fum-list');
+  if (!listEl) return;
+  const draw = () => {
+    const log = fumigationLog(getList());
+    const st = fumigationState({ fumigations: log }, todayLocal());
+    root.querySelector('#fum-sub').textContent = fumigationLine(st, dmy) || 'Not recorded yet';
+    listEl.innerHTML = log.length ? log.map((f, i) => `
+      <div class="row" style="align-items:flex-start">
+        <span class="label"><strong>${esc(dmy(f.date))}</strong>${f.product ? ` · ${esc(f.product)}` : ''}${f.days != null ? ` · ${f.days} day${f.days === 1 ? '' : 's'}` : ''}
+          <div class="meta">${f.endsOn ? (i === 0 && st.withheld ? `<span class="badge warn">Withholding</span> until ${esc(dmy(f.endsOn))}` : `Clear from ${esc(dmy(f.endsOn))}`) : 'No withholding period recorded'}</div></span>
+        <button type="button" class="btn ghost-danger small" data-fum-del="${esc(f.id)}" style="width:auto;margin:0;padding:6px 12px" aria-label="Remove this fumigation">&times;</button>
+      </div>`).join('') : '<div class="field hint">Nothing recorded yet.</div>';
+    listEl.querySelectorAll('[data-fum-del]').forEach((b) => b.addEventListener('click', () => { setList(getList().filter((f) => f.id !== b.dataset.fumDel)); draw(); }));
+  };
+  // the clear-to date follows the date and days until it is typed over
+  let typedEnd = false;
+  const dateEl = root.querySelector('#fum-date'); const daysEl = root.querySelector('#fum-days'); const endEl = root.querySelector('#fum-end');
+  const follow = () => { if (!typedEnd) endEl.value = withholdingEnd(dateEl.value, daysEl.value); };
+  dateEl.addEventListener('input', follow); daysEl.addEventListener('input', follow);
+  endEl.addEventListener('input', () => { typedEnd = true; });
+  root.querySelector('#fum-add').addEventListener('click', () => {
+    if (!dateEl.value) { dateEl.focus(); return; }
+    const entry = { id: `f${dateEl.value}-${Math.random().toString(36).slice(2, 7)}`, date: dateEl.value, product: getVal(root, 'fum-product') || '', days: daysEl.value, endsOn: endEl.value, notes: '' };
+    entry.endsOn = clearOn(entry);
+    setList([...getList(), entry]);
+    daysEl.value = ''; endEl.value = ''; typedEnd = false; root.querySelector('#fum-product').value = '';
+    draw();
+    toast('Added. Save to keep it.');
+  });
+  draw();
 }
 
 /** Plan an outload: the tonnes and the truck size in, what each truck will carry out. Reads the grade summary above it. */
@@ -916,9 +983,9 @@ function buildContents(root, existing, kind = existing?.kind) {
 
     // the grain that comes out first is listed first
     const top = outEnd === 'first' ? [...layers] : [...layers].reverse();
-    root.querySelector('#lay-stack-head').textContent = isBunker
+    root.querySelector('#lay-stack-head').innerHTML = `<span>${isBunker
       ? `In it now, ${outEnd === 'first' ? 'back' : 'front'} (start of outload) first`
-      : 'In it now, top first';
+      : 'In it now, top first'} <span class="meta">· ${layers.length} load${layers.length === 1 ? '' : 's'}</span></span>`;
     stackEl.innerHTML = top.length
       ? top.slice(0, 14).map((l) => `<div class="row" style="align-items:flex-start"><span class="label"><i class="sw" style="background:${gradeMix([l])[0].color}"></i>${layerLabel(l)}
           <div class="meta">${esc(specText(l.spec)) || 'no grade or quality recorded'}</div></span><span class="value">${num(l.tons, 1)} t${l.source === 'load' && l.id && !l.banded ? `<div><button type="button" class="btn secondary small le-open" data-load="${esc(l.id)}" style="min-height:30px;padding:4px 12px;margin-top:4px">Grade</button></div>` : ''}</span></div>`).join('')
@@ -1247,6 +1314,8 @@ function openStorageSheet(existing) {
   const fixedMovementNet = existing ? movementNetForStorage(existing.id, movements) : 0;
   // a storage saved as a silo that is measured like a bunker, or called one, is shown as one (it can be changed below)
   let kind = existing ? (looksLikeBunker(existing) ? 'bunker' : (existing.kind || 'silo')) : 'silo';
+  // the fumigation record, kept here so switching between silo and bunker doesn't lose what was added
+  let fumigations = [...(existing?.fumigations || [])];
 
   const body = openSheet(existing ? 'Edit storage' : 'Add storage', (root) => {
     build();
@@ -1266,6 +1335,7 @@ function openStorageSheet(existing) {
         ${qualityFold(existing, commodities.find((c) => c.id === existing?.commodityId))}
         ${notesField(existing)}
         ${contentsFold(existing, gradesInUse, kind)}
+        ${fumigationFold(fumigations)}
         <details class="fold feature" id="measure-fold" ${existing ? '' : 'open'}>
           <summary><div class="feature-head"><h2>Measure &amp; dimensions</h2>
             <div class="sub" id="measure-sub">&nbsp;</div></div></summary>
@@ -1319,6 +1389,7 @@ function openStorageSheet(existing) {
       `;
       if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'silo', existing.id, { collapsed: true });
       buildContents(root, existing, kind);
+      wireFumigation(root, () => fumigations, (l) => { fumigations = l; });
       wireMeasureSummary(root);
 
       const kindSel = root.querySelector('#s-kind');
@@ -1394,6 +1465,7 @@ function openStorageSheet(existing) {
           testWeight: twOverride ? parseFloat(twOverride) : null,
           gradeBands: cleanBands(readLayerRows(root)),
           gradeBandsDate: root.querySelector('#lay-asof')?.value || todayLocal(),
+          fumigations: fumigationLog(fumigations),
           // only a bunker has an end to choose, and it is sent once chosen (or once it has been set before)
           ...(kind === 'bunker' && (existing?.outloadEnd || existing?.__hasOutloadEnd || (root.querySelector('#lay-end .active')?.dataset.end === 'first')) ? { outloadEnd: root.querySelector('#lay-end .active')?.dataset.end || existing?.outloadEnd || 'last' } : {}),
           ...readQuality(root, gradeCtl),

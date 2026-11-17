@@ -1162,9 +1162,29 @@ details.fold-band .field textarea { background: var(--surface); }
 .fab[hidden] { display: none; }
 
 /* A small optional step inside a fold: a line to tap, not another banded panel */
-details.inner-fold { margin: 12px 0 4px; border-top: 1px solid var(--border); padding-top: 10px; }
-details.inner-fold > summary { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--text); list-style: none; }
+details.inner-fold {
+  margin: 12px 0;
+  border: 1px solid color-mix(in srgb, var(--accent-summary) 45%, var(--border));
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+}
+details.inner-fold > summary {
+  cursor: pointer; list-style: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 13px 14px; min-height: 44px;
+  font-size: 15px; font-weight: 700; color: var(--accent-summary);
+}
 details.inner-fold > summary::-webkit-details-marker { display: none; }
-details.inner-fold > summary::before { content: "\25B8"; display: inline-block; width: 1.1em; color: var(--text-dim); }
-details.inner-fold[open] > summary::before { content: "\25BE"; }
+details.inner-fold > summary::after {
+  content: ""; flex: none; width: 9px; height: 9px;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-2px); transition: transform .15s;
+}
+details.inner-fold[open] > summary { border-bottom: 1px solid var(--border); }
+details.inner-fold[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
+details.inner-fold > summary .meta { font-weight: 500; color: var(--text-dim); font-size: 12.5px; }
+details.inner-fold > :not(summary) { margin-left: 14px; margin-right: 14px; }
+details.inner-fold > :last-child { margin-bottom: 14px; }
+details.inner-fold > summary + * { margin-top: 12px; }
 details.inner-fold .hint, details.inner-fold .field.hint { font-size: 11.5px; color: var(--text-dim); }

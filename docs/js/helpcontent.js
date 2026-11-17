@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=344';
+import { ROLES, canOpen } from './nav.js?v=345';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
