@@ -1,14 +1,14 @@
-import { db } from '../storage.js?v=355';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=355';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=355';
-import { addressLinesOf } from '../address.js?v=355';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=355';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=355';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=355';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=355';
-import { docBandHTML } from '../docband.js?v=355';
-import { openMovementSheet } from './movements.js?v=355';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=355';
+import { db } from '../storage.js?v=356';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=356';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=356';
+import { addressLinesOf } from '../address.js?v=356';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=356';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=356';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=356';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=356';
+import { docBandHTML } from '../docband.js?v=356';
+import { openMovementSheet } from './movements.js?v=356';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=356';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {

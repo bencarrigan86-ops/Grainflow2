@@ -18,17 +18,17 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=355';
-import { openSheet, toast, notify, askConfirm } from '../ui.js?v=355';
-import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=355';
-import { addressLinesOf } from '../address.js?v=355';
-import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=355';
-import { contactLines, splitContact } from '../buyercontact.js?v=355';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=355';
-import { DASH, longDate, termRows, confirmationPdf, CONFIRMATION_FOOTING } from '../contractpdf.js?v=355';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=355';
-import { fileSentCopy } from '../sentcopy.js?v=355';
-import { docBandHTML } from '../docband.js?v=355';
+import { db } from '../storage.js?v=356';
+import { openSheet, toast, notify, askConfirm } from '../ui.js?v=356';
+import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=356';
+import { addressLinesOf } from '../address.js?v=356';
+import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=356';
+import { contactLines, splitContact } from '../buyercontact.js?v=356';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=356';
+import { DASH, longDate, termRows, confirmationPdf, CONFIRMATION_FOOTING } from '../contractpdf.js?v=356';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=356';
+import { fileSentCopy } from '../sentcopy.js?v=356';
+import { docBandHTML } from '../docband.js?v=356';
 
 /** One term, its value on one line or on several (an array). Omitted entirely when empty — a blank line invites a pen. */
 const term = (label, value) => {
@@ -55,7 +55,6 @@ export function contractDocHTML(sale, business, commodity, signed = null, { show
       ${docBandHTML(business, { title: 'CONFIRMATION OF SALE', meta: [
         `<span>Contract ${esc(sale.contractNo || DASH)}</span>`,
         `<span>Date: <strong>${esc(longDate(sale.date) || DASH)}</strong></span>`,
-        sale.cropYear ? `<span>Season: <strong>${esc(sale.cropYear)}</strong></span>` : '',
         sale.contractType ? `<span>${esc(sale.contractType)}</span>` : '',
       ] })}
 
@@ -84,7 +83,7 @@ export function contractDocHTML(sale, business, commodity, signed = null, { show
       <div class="line" style="margin:0 0 10px">The Seller agrees to sell and the Buyer agrees to
         purchase the following commodity on the terms set out below.</div>
 
-      <div class="invoice-totals">
+      <div class="invoice-totals contract-terms">
         ${termRows(sale, commodity, { showFreight, showComments }).map(([label, lines]) => term(label, lines)).join('')}
       </div>
 

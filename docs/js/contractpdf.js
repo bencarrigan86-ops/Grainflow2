@@ -3,17 +3,17 @@
 // The same terms, in the same order, as the page on screen (views/contract.js reads its rows from here too, so the two can
 // never say different things). Pure: it builds bytes from the sale and the farm's details and touches nothing else.
 
-import { Pdf, wrapText } from './pdf.js?v=355';
-import { drawBrandLogo } from './brand.js?v=355';
-import { letterheadLine } from './docband.js?v=355';
-import { addressLinesOf } from './address.js?v=355';
-import { num, money, dmy } from './fmt.js?v=355';
-import { PATTERN_ON_CONTRACT } from './deliveryplan.js?v=355';
-import { INVOICING_ON_CONTRACT } from './invoicing.js?v=355';
-import { contactLines } from './buyercontact.js?v=355';
-import { signerName } from './signdoc.js?v=355';
-import { toleranceText, gradeTermsLines, gradeNamesText } from './contractterms.js?v=355';
-import { hasSignature, strokesInBox } from './signature.js?v=355';
+import { Pdf, wrapText } from './pdf.js?v=356';
+import { drawBrandLogo } from './brand.js?v=356';
+import { letterheadLine } from './docband.js?v=356';
+import { addressLinesOf } from './address.js?v=356';
+import { num, money, dmy } from './fmt.js?v=356';
+import { PATTERN_ON_CONTRACT } from './deliveryplan.js?v=356';
+import { INVOICING_ON_CONTRACT } from './invoicing.js?v=356';
+import { contactLines } from './buyercontact.js?v=356';
+import { signerName } from './signdoc.js?v=356';
+import { toleranceText, gradeTermsLines, gradeNamesText } from './contractterms.js?v=356';
+import { hasSignature, strokesInBox } from './signature.js?v=356';
 
 export const DASH = '—';
 
@@ -64,6 +64,7 @@ export function termRows(sale, commodity, { showFreight = true, showComments = t
   const gradeLines = gradeTermsLines(sale, perUnit);
   const rows = [
     ['Commodity', commodity?.name || DASH],
+    ['Season', sale.cropYear],
     [gradeLines.length ? 'Grades' : 'Grade', gradeLines.length ? gradeNamesText(sale) : sale.grade],
     ['Quality', 'As per Grain Trade Australia standards'],
     ['Quantity', [`${num(sale.tons, 0)} ${unit}`, toleranceText(sale, unit)]],
@@ -116,7 +117,7 @@ export function confirmationPdf({ sale, business = {}, commodity = null, signatu
   const from = letterheadLine(business);
   if (from) pdf.text(M, 11, from, { size: 9.5, bold: true, gray: 0.93 });
   pdf.text(M, 25, 'CONFIRMATION OF SALE', { size: 19, bold: true, gray: 1 });
-  const meta = [`Contract ${sale.contractNo || DASH}`, `Date: ${longDate(sale.date) || DASH}`, sale.cropYear ? `Season: ${sale.cropYear}` : '', sale.contractType || '']
+  const meta = [`Contract ${sale.contractNo || DASH}`, `Date: ${longDate(sale.date) || DASH}`, sale.contractType || '']
     .filter(Boolean).join('     ');
   pdf.text(M, 52, wrapText(meta, rx - M - 6, 9.5)[0] || '', { size: 9.5, gray: 0.95 });
 

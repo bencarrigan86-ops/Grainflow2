@@ -42,7 +42,7 @@ check('the freight rate and the comments follow their tickboxes, as on the page'
 check('the page and the PDF say the same thing: one list of terms, leaving out what is empty', () => {
   const rows = termRows(sale, commodity);
   const labels = rows.map(([l]) => l);
-  assert.deepEqual(labels.slice(0, 5), ['Commodity', 'Grade', 'Quality', 'Quantity', 'Price']);
+  assert.deepEqual(labels.slice(0, 6), ['Commodity', 'Season', 'Grade', 'Quality', 'Quantity', 'Price']);
   assert.ok(!labels.includes('Broker') && !labels.includes('Carry'), 'nothing empty is printed');
   assert.ok(labels.includes('Trade rules'));
   assert.deepEqual(termRows(sale, commodity, { showFreight: false }).map(([l]) => l).includes('Freight'), false);
@@ -78,6 +78,15 @@ check('a sheet set aside carries a class, so it is out of the printout too', () 
   const ui = read('docs/js/ui.js');
   assert.ok(ui.includes("backdrop.classList.add('held')") && ui.includes("back.backdrop.classList.remove('held')"));
   assert.ok(read('docs/css/styles.css').includes('.sheet-backdrop.held { display: none !important; }'));
+});
+
+check('the season is a line in the terms, not in the header band, and the terms read left-aligned beside their labels', () => {
+  const pdfSrc = read('docs/js/contractpdf.js');
+  assert.ok(!pdfSrc.includes('Season: ${sale.cropYear}') && !read('docs/js/views/contract.js').includes('Season: <strong>'));
+  assert.ok(termRows(sale, commodity).some(([l, v]) => l === 'Season' && v[0] === '2026'));
+  assert.ok(!termRows({ ...sale, cropYear: '' }, commodity).some(([l]) => l === 'Season'), 'none when there is none');
+  assert.ok(read('docs/js/views/contract.js').includes('class="invoice-totals contract-terms"'));
+  assert.ok(read('docs/css/styles.css').includes('.invoice-doc .contract-terms .row .value { text-align: left; }'));
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

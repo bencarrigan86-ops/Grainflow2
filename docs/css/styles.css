@@ -1242,3 +1242,7 @@ details.inner-fold .hint, details.inner-fold .field.hint { font-size: 11.5px; co
 
 /* A sheet set aside under another one (see holdSheet in ui.js) is out of sight on screen and does not print. */
 .sheet-backdrop.held { display: none !important; }
+
+/* The terms on a confirmation of sale read as a label and its words, the words starting just right of the labels (as on the PDF), not pushed to the edge. */
+.invoice-doc .contract-terms .row { display: grid; grid-template-columns: 38% 1fr; gap: 10px; align-items: baseline; }
+.invoice-doc .contract-terms .row .value { text-align: left; }
