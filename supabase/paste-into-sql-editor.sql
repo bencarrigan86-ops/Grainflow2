@@ -1948,3 +1948,9 @@ alter table freight_orders
   add column if not exists deliver_to_parts jsonb;
 
 notify pgrst, 'reload schema';
+
+-- Buyer order number on freight orders
+alter table freight_orders
+  add column if not exists buyer_order_no text;
+
+notify pgrst, 'reload schema';

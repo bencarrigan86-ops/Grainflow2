@@ -117,6 +117,7 @@ function markerFor(key, ids) {
   if (key === 'offFarm') return { operator: 'GrainCorp', opening: [{ commodityId: ids.commodity, grade: 'APH1', tons: 450 }] };
   if (key === 'gradeBands') return [{ tons: 500, grade: 'APH1' }, { tons: 250, grade: 'AUH2', proteinPct: 11.5, moisturePct: 11, fallingNumber: 400 }];
   if (key === 'ticketNo' || key === 'invoiceNo') return 41;
+  if (key === 'buyerOrderNo') return 'BO-77';                   // text, though it ends in No
   // A few the suffix rule below cannot see: the quantity word is in the middle
   // of the name, and widening the pattern to catch them would also turn
   // seedVariety and brokerNote into numbers.

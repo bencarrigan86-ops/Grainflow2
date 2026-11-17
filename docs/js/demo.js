@@ -11,8 +11,8 @@
 // remapIds() reissues every one on import and two trial accounts never collide
 // on a primary key.
 
-import { DEFAULT_BUSINESS_DETAILS, prepareImport } from './import.js?v=341';
-import { APP_VERSION } from './version.js?v=341';
+import { DEFAULT_BUSINESS_DETAILS, prepareImport, newId } from './import.js?v=342';
+import { APP_VERSION } from './version.js?v=342';
 
 const WANTED_KEY = 'grainflow.seedSample';
 
@@ -102,6 +102,38 @@ export function sampleHistoryFrom(seed, have = []) {
     };
   }
   return out;
+}
+
+/**
+ * Is this the sample farm, with the sample contract that carries the sample orders, and with no grain orders or freight
+ * orders yet? Offered to the owner and manager only. A farm made before the sample had orders is the one that gets it.
+ */
+export function sampleOrdersOffered(sales = [], orders = [], freightOrders = [], currentYear = '', role = 'owner') {
+  return /^sample/i.test(currentYear || '') && ['owner', 'manager'].includes(role)
+    && !orders.length && !freightOrders.length && sales.some((s) => s.contractNo === SAMPLE_ORDER_CONTRACT);
+}
+
+/** The contract the sample's grain order and freight order are against. */
+export const SAMPLE_ORDER_CONTRACT = 'RGT-4471';
+
+/**
+ * The sample grain order and the freight order that carts it, ready to add to a sample farm made before it had any:
+ * linked to that farm's own copy of the contract, with ids of their own so no two farms share one.
+ * @param {object} seed   the parsed seed file
+ * @param {object[]} sales the farm's contracts now
+ * @returns {{order: object, freightOrder: object}|null} null when the seed has none, or the farm has no such contract
+ */
+export function sampleOrdersFrom(seed, sales = []) {
+  const y = seed?.years?.[seed.currentYear] || Object.values(seed?.years || {})[0];
+  const order = y?.orders?.[0];
+  const freight = y?.freightOrders?.[0];
+  const sale = sales.find((s) => s.contractNo === SAMPLE_ORDER_CONTRACT);
+  if (!order || !freight || !sale) return null;
+  const orderId = newId();
+  return {
+    order: { ...order, id: orderId, saleId: sale.id },
+    freightOrder: { ...freight, id: newId(), saleId: sale.id, orderId },
+  };
 }
 
 /** Fetch the seed. Versioned so a device cannot be served last release's. */

@@ -10,11 +10,11 @@
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { Pdf, wrapText } from './pdf.js?v=341';
-import { drawBrandLogo } from './brand.js?v=341';
-import { dmy } from './fmt.js?v=341';
-import { movementTonsToSale } from './derived.js?v=341';
-import { hasSignature, strokesInBox } from './signature.js?v=341';
+import { Pdf, wrapText } from './pdf.js?v=342';
+import { drawBrandLogo } from './brand.js?v=342';
+import { dmy } from './fmt.js?v=342';
+import { movementTonsToSale } from './derived.js?v=342';
+import { hasSignature, strokesInBox } from './signature.js?v=342';
 
 export const BASES = [
   { key: 'per_t', label: '$ per tonne' },
@@ -135,6 +135,7 @@ export function freightDefaults({ sale, order = null, freightOrders = [], carrie
     saleId: sale?.id || '',
     orderId: order?.id || '',
     freightNo: contractFreightNo(sale, freightOrders),
+    buyerOrderNo: clean(order?.orderNo),
     carrier,
     carrierEmail: carrierEmails[carrier.toLowerCase()] || '',
     tons: order ? num(order.tons) : num(sale?.tons),
@@ -233,7 +234,7 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
   const half = (W - 24) / 2;
   y = labelled(pdf, M + 8, y, 60, W - 76, 'Commodity:', [commodityName, sale?.grade ? `(${sale.grade})` : ''].filter(Boolean).join(' '));
   y = labelled(pdf, M + 8, y, 60, W - 76, 'Contract no:', sale?.contractNo);
-  y = labelled(pdf, M + 8, y, 60, W - 76, "Buyer's order:", order?.orderNo ? `${order.orderNo}` : '');
+  y = labelled(pdf, M + 8, y, 60, W - 76, "Buyer's order:", clean(fo.buyerOrderNo) || (order?.orderNo ? `${order.orderNo}` : ''));
   labelled(pdf, M + 8, y, 60, half - 52, 'Tonnes:', num(fo.tons) ? `${num(fo.tons)} t` : '');
   y = labelled(pdf, M + 20 + half, y, 56, half - 60, 'Dates:', windowText(fo));
   y = labelled(pdf, M + 8, y, 60, W - 76, 'Pick up from:', fo.pickup, 2);

@@ -5,22 +5,22 @@
 // It goes to the carrier as a PDF (shared or emailed) and a copy is filed with the contract. Loads then name the
 // freight order they travel on, and the carrier's bill is recorded against it. The arithmetic is in freight.js.
 
-import { db } from '../storage.js?v=341';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=341';
-import { signerName } from '../signdoc.js?v=341';
-import { addressFields, readAddress, partsOf, joinAddress } from '../address.js?v=341';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=341';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=341';
-import { orderTitle } from '../orders.js?v=341';
-import { activeSales } from '../paidsales.js?v=341';
+import { db } from '../storage.js?v=342';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=342';
+import { signerName } from '../signdoc.js?v=342';
+import { addressFields, readAddress, partsOf, joinAddress } from '../address.js?v=342';
+import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=342';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=342';
+import { orderTitle } from '../orders.js?v=342';
+import { activeSales } from '../paidsales.js?v=342';
 import {
-  BASES, STATE_LABEL, freightState, freightOwed, freightTitle, freightDefaults, freightProblems,
+  BASES, STATE_LABEL, contractFreightNo, freightState, freightOwed, freightTitle, freightDefaults, freightProblems,
   perTonne, rateText, estimatedTotal, windowText, freightOrderPdf,
-} from '../freight.js?v=341';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=341';
-import { fileSentCopy } from '../sentcopy.js?v=341';
-import { movementRow, openMovementSheet } from './movements.js?v=341';
-import { openBillSheet, returnToAfterBill } from './payables.js?v=341';
+} from '../freight.js?v=342';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=342';
+import { fileSentCopy } from '../sentcopy.js?v=342';
+import { movementRow, openMovementSheet } from './movements.js?v=342';
+import { openBillSheet, returnToAfterBill } from './payables.js?v=342';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | closed | all
@@ -126,28 +126,41 @@ export function openFreightOrderSheet(existing, start = {}) {
   ].map((x) => String(x || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
   openSheet(existing ? 'Freight order' : 'Add a freight order', (root) => {
+    const foldOpen = {};
+    const isOpen = (k, dflt) => (k in foldOpen ? foldOpen[k] : dflt);
     const paint = () => {
       const sale = sales.find((s) => s.id === d.saleId) || startSale;
       const saleOrders = orders.filter((o) => o.saleId === sale.id);
       const st = existing ? freightState(d, movements) : null;
+      const nLoads = existing ? movements.filter((m) => m.freightOrderId === existing.id).length : 0;
+      const loadsLine = `${nLoads} load${nLoads === 1 ? '' : 's'} so far`;
+      // the number is offered as the contract's own (CF-1094-01); an older freight order keeps the one it has until asked
+      const base = String(sale.contractNo || sale.ourRef || '').trim();
+      const suggested = contractFreightNo(sale, all.filter((f) => f.id !== d.id));
+      const numberHint = !base
+        ? '<div class="hint" style="margin:-6px 0 10px">Give the contract a number and freight orders are numbered from it (CF-1094-01).</div>'
+        : String(d.freightNo || '').startsWith(`${base}-`) ? ''
+          : `<div class="hint" style="margin:-6px 0 10px">Not numbered from the contract. <button type="button" class="link-btn" id="fo-renumber">Use ${esc(suggested)}</button></div>`;
       root.innerHTML = `
         <datalist id="dl-carriers">${carriers.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
         ${field({ label: 'Contract', id: 'fo-sale', type: 'select', value: d.saleId,
           options: activeSales(sales, [d.saleId]).map((s) => ({ value: s.id, label: contractLabel(s, commodities) })) })}
         <div class="row" style="margin:-4px 0 10px"><span class="label">Contract no.</span><span class="value">${esc(sale.contractNo || 'none on this contract')}</span></div>
-        <div class="row" style="margin:-4px 0 10px"><span class="label">Buyer's order no.</span><span class="value">${esc(orders.find((o) => o.id === d.orderId)?.orderNo || 'N/A')}</span></div>
         ${field({ label: 'Select grain order', id: 'fo-order', type: 'select', value: d.orderId || '',
           options: [{ value: '', label: 'N/A' }, ...saleOrders.map((o) => ({ value: o.id, label: [orderTitle(o), o.freightCompany].filter(Boolean).join(' · ') }))],
           hint: 'Choosing one fills in its tonnes, window, carrier and where it is going. N/A if there is no grain order.' })}
+        ${field({ label: "Buyer's order no.", id: 'fo-boo', value: d.buyerOrderNo || orders.find((o) => o.id === d.orderId)?.orderNo || '', placeholder: "The number on the buyer's order", hint: "Comes from the grain order when you choose one. Type it here if there is none. It is printed on the carrier's copy." })}
         ${existing ? '<div id="fo-progress" style="margin:0 0 12px"></div>' : ''}
         <div class="grid-2">
           ${field({ label: 'Freight order no.', id: 'fo-no', value: d.freightNo })}
           ${field({ label: 'Tonnes to cart', id: 'fo-tons', type: 'number', step: '0.01', value: d.tons ?? '' })}
         </div>
+        ${numberHint}
         ${field({ label: 'Carrier', id: 'fo-carrier', value: d.carrier, placeholder: 'Who is carting it', list: 'dl-carriers' })}
         ${field({ label: 'Carrier email (to send it to)', id: 'fo-email', type: 'email', value: d.carrierEmail })}
 
-        <div class="subhead">Rate</div>
+        <details class="fold feature" data-fold="rate" ${isOpen('rate', !(Number(d.rate) > 0)) ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Rate</h2><div class="sub">${esc(Number(d.rate) > 0 ? rateText(d) : 'Not set yet')}</div></div></summary>
         <div class="segmented" id="fo-basis" style="margin-bottom:10px">
           ${BASES.map((b) => `<button data-basis="${b.key}" class="${d.rateBasis === b.key ? 'active' : ''}">${esc(b.label)}</button>`).join('')}
         </div>
@@ -157,8 +170,10 @@ export function openFreightOrderSheet(existing, start = {}) {
           ${d.rateBasis !== 'per_t' ? field({ label: 'Distance (km)', id: 'fo-km', type: 'number', step: '0.1', value: d.distanceKm ?? '' }) : '<div></div>'}
         </div>
         <div class="row"><span class="label">Works out at</span><span class="value" id="fo-calc">-</span></div>
+        </details>
 
-        <div class="subhead">The job</div>
+        <details class="fold feature" data-fold="job" ${isOpen('job', !(d.pickup && d.deliverTo)) ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Pick up and delivery</h2><div class="sub">${esc([d.pickup && d.deliverTo ? 'Addresses filled in' : 'Addresses needed', windowText(d)].filter(Boolean).join(' · '))}</div></div></summary>
         <div class="subhead">Pick up from</div>
         ${addressFields('fo-pick', partsOf(d.pickup, d.pickupParts), { label: 'Pick up from' })}
         <div class="subhead">Deliver to</div>
@@ -167,7 +182,12 @@ export function openFreightOrderSheet(existing, start = {}) {
           ${field({ label: 'Deliver from (date)', id: 'fo-from', type: 'date', value: d.loadFrom })}
           ${field({ label: 'Deliver to (date)', id: 'fo-by', type: 'date', value: d.loadBy })}
         </div>
-        ${field({ label: 'Instructions', id: 'fo-notes', type: 'textarea', value: d.notes, hint: 'Booking, truck type, gate hours, who to call. Goes on the carrier\'s copy.' })}
+        </details>
+
+        <details class="fold" data-fold="notes" ${isOpen('notes', !!d.notes) ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Instructions</h2><div class="sub">${esc(d.notes ? 'Added' : 'Booking, truck type, gate hours, who to call')}</div></div></summary>
+        ${field({ label: 'Instructions', id: 'fo-notes', type: 'textarea', value: d.notes, hint: "Goes on the carrier's copy." })}
+        </details>
         ${existing ? `
         <div class="field">
           <label>Status</label>
@@ -177,10 +197,16 @@ export function openFreightOrderSheet(existing, start = {}) {
           </div>
           <div class="hint">Mark it done once the carting is finished. Loads and bills stay linked.</div>
         </div>
-        <div id="fo-loads" class="card" style="margin:12px 0"></div>` : ''}
+        <details class="fold" data-fold="loads" ${isOpen('loads', false) ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Loads carted</h2><div class="sub">${esc(loadsLine)}</div></div></summary>
+        <div id="fo-loads" style="margin:8px 0"></div>
+        </details>` : ''}
 
+        <details class="fold" data-fold="sign" ${isOpen('sign', !!mySig) ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Signing</h2><div class="sub">Sign it, or choose who it is issued by</div></div></summary>
         ${signToggleHtml('fo-sign', 'Sign it with my signature', !!mySig)}
         ${signerPickHtml('fo-signer')}
+        </details>
         <div id="fo-problems" class="hint" style="color:var(--danger);margin:8px 0"></div>
         <button class="btn" id="fo-send">${canShareFiles() ? 'Save and send to carrier' : 'Save, download and email'}</button>
         <button class="btn secondary" id="fo-download" style="margin-top:8px">Save and download PDF</button>
@@ -216,6 +242,7 @@ export function openFreightOrderSheet(existing, start = {}) {
       d = {
         ...d,
         freightNo: val('fo-no').trim(),
+        buyerOrderNo: val('fo-boo').trim(),
         tons: val('fo-tons') === '' ? '' : getNum(root, 'fo-tons'),
         carrier: val('fo-carrier').trim(),
         carrierEmail: val('fo-email').trim(),
@@ -240,6 +267,14 @@ export function openFreightOrderSheet(existing, start = {}) {
     };
 
     const wire = () => {
+      root.querySelectorAll('details[data-fold]').forEach((el) => el.addEventListener('toggle', () => { foldOpen[el.dataset.fold] = el.open; }));
+      root.querySelector('#fo-renumber')?.addEventListener('click', () => {
+        collect();
+        const sale = sales.find((s) => s.id === d.saleId);
+        d.freightNo = contractFreightNo(sale, all.filter((f) => f.id !== d.id));
+        autoNo = d.freightNo;
+        paint();
+      });
       root.querySelector('#fo-sale').addEventListener('change', () => {
         collect();
         const sale = sales.find((s) => s.id === getVal(root, 'fo-sale'));
@@ -255,7 +290,7 @@ export function openFreightOrderSheet(existing, start = {}) {
         if (order) {
           const fresh = make(sale, order);
           // the buyer's order fills in what it knows, over what was there; the rate and the pick up stay as typed
-          d = { ...d, tons: fresh.tons, loadFrom: fresh.loadFrom, loadBy: fresh.loadBy, carrier: fresh.carrier || d.carrier, carrierEmail: fresh.carrierEmail || d.carrierEmail, deliverTo: d.deliverTo || fresh.deliverTo, deliverToParts: d.deliverTo ? d.deliverToParts : undefined, notes: d.notes || fresh.notes };
+          d = { ...d, buyerOrderNo: fresh.buyerOrderNo || d.buyerOrderNo, tons: fresh.tons, loadFrom: fresh.loadFrom, loadBy: fresh.loadBy, carrier: fresh.carrier || d.carrier, carrierEmail: fresh.carrierEmail || d.carrierEmail, deliverTo: d.deliverTo || fresh.deliverTo, deliverToParts: d.deliverTo ? d.deliverToParts : undefined, notes: d.notes || fresh.notes };
         }
         paint();
       });

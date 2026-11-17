@@ -39,5 +39,30 @@ check('the freight order has both addresses in full', () => {
   for (const k of ['pickupParts', 'deliverToParts']) assert.ok(f[k].line1 && f[k].town && f[k].state && f[k].postcode, k);
 });
 
+import { sampleOrdersFrom, sampleOrdersOffered } from '../docs/js/demo.js';
+check('a sample farm made before the orders existed can be given them, against its own contract, with ids of their own', () => {
+  const seed = JSON.parse(raw);
+  const sales = [{ id: 'my-sale', contractNo: 'RGT-4471' }];
+  const made = sampleOrdersFrom(seed, sales);
+  assert.equal(made.order.saleId, 'my-sale');
+  assert.equal(made.freightOrder.saleId, 'my-sale');
+  assert.equal(made.freightOrder.orderId, made.order.id);
+  assert.ok(isUuid(made.order.id) && isUuid(made.freightOrder.id));
+  assert.notEqual(made.order.id, sampleOrdersFrom(seed, sales).order.id, 'two farms would share an id');
+  assert.equal(sampleOrdersFrom(seed, [{ id: 'x', contractNo: 'OTHER' }]), null);
+});
+check('it is offered only on a sample farm, to an owner or manager, that has the contract and no orders yet', () => {
+  const sales = [{ contractNo: 'RGT-4471' }];
+  assert.equal(sampleOrdersOffered(sales, [], [], 'Sample 2026', 'owner'), true);
+  assert.equal(sampleOrdersOffered(sales, [], [], 'Sample 2026', 'driver'), false);
+  assert.equal(sampleOrdersOffered(sales, [], [], '2026', 'owner'), false, 'a real farm must never be offered it');
+  assert.equal(sampleOrdersOffered(sales, [{ id: 'o' }], [], 'Sample 2026', 'owner'), false);
+  assert.equal(sampleOrdersOffered([{ contractNo: 'X' }], [], [], 'Sample 2026', 'owner'), false);
+});
+check('Settings has the button, and it saves through the db', () => {
+  const s = readFileSync(new URL('../docs/js/views/settings.js', import.meta.url), 'utf8');
+  assert.ok(s.includes('id="add-sample-orders"') && s.includes('db.upsertOrder(made.order)') && s.includes('db.upsertFreightOrder(made.freightOrder)'));
+});
+
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
 console.log('\nall passed');

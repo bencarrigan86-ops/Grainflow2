@@ -27,9 +27,9 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=341';
-import { cleanOffFarm } from './offfarm.js?v=341';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=341';
+import { cleanGradeOptions } from './gradeprice.js?v=342';
+import { cleanOffFarm } from './offfarm.js?v=342';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=342';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -607,6 +607,8 @@ export function stateToRows(state, farmId) {
         pickup: orNull(f.pickup), deliver_to: orNull(f.deliverTo),
         ...(partsOut(f.pickupParts, f.__hasPickupParts) ? { pickup_parts: partsOut(f.pickupParts, f.__hasPickupParts).v } : {}),
         ...(partsOut(f.deliverToParts, f.__hasDeliverToParts) ? { deliver_to_parts: partsOut(f.deliverToParts, f.__hasDeliverToParts).v } : {}),
+        // the buyer's order number typed on the freight order: sent once there is one, so the others save before the column exists
+        ...(f.buyerOrderNo || f.__hasBuyerOrderNo ? { buyer_order_no: orNull(f.buyerOrderNo) } : {}),
         load_from: orNull(f.loadFrom), load_by: orNull(f.loadBy),
         status: f.status || 'open',
         notes: orNull(f.notes),
@@ -883,6 +885,7 @@ export function rowsToState(rows) {
         pickup: f.pickup ?? '', deliverTo: f.deliver_to ?? '',
         ...(f.pickup_parts != null ? { __hasPickupParts: true, ...(partsIn(f.pickup_parts, f.pickup) ? { pickupParts: partsIn(f.pickup_parts, f.pickup) } : {}) } : {}),
         ...(f.deliver_to_parts != null ? { __hasDeliverToParts: true, ...(partsIn(f.deliver_to_parts, f.deliver_to) ? { deliverToParts: partsIn(f.deliver_to_parts, f.deliver_to) } : {}) } : {}),
+        ...('buyer_order_no' in f ? { __hasBuyerOrderNo: true, buyerOrderNo: f.buyer_order_no ?? '' } : {}),
         loadFrom: f.load_from ?? '', loadBy: f.load_by ?? '',
         status: f.status || 'open', notes: f.notes ?? '',
       })),

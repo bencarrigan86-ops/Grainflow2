@@ -1158,3 +1158,5 @@ details.fold-band .field input:not([type="checkbox"]):not([type="radio"]),
 details.fold-band .field select,
 details.fold-band .field textarea { background: var(--surface); }
 .form-section .readout { background: var(--surface); border-style: solid; }
+
+.fab[hidden] { display: none; }

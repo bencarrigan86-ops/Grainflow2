@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=341';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=341';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=341';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=341';
-import { compressAndStampImage } from '../img.js?v=341';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=341';
-import { specText, extraSpecKey } from '../outload.js?v=341';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=341';
-import { pickableSilos } from '../silopick.js?v=341';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=341';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=341';
-import { activeSales } from '../paidsales.js?v=341';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=341';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=341';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=341';
-import { nowTime } from '../loadreport.js?v=341';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=341';
+import { db } from '../storage.js?v=342';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=342';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=342';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=342';
+import { compressAndStampImage } from '../img.js?v=342';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=342';
+import { specText, extraSpecKey } from '../outload.js?v=342';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=342';
+import { pickableSilos } from '../silopick.js?v=342';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=342';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=342';
+import { activeSales } from '../paidsales.js?v=342';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=342';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=342';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=342';
+import { nowTime } from '../loadreport.js?v=342';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=342';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -297,7 +297,7 @@ function addFromRow(container, ctx, onChange, existingFrom) {
         <label>Tons</label>
         <input type="number" step="0.01" inputmode="decimal" class="from-tons" value="${existingFrom?.tons ?? ''}" />
       </div>
-      <button type="button" class="btn danger small from-remove" style="width:auto">&times;</button>
+      <button type="button" class="btn ghost-danger small from-remove" style="width:auto;margin:0;padding:8px 12px" aria-label="Remove this source">&times;</button>
     </div>
   `;
   container.appendChild(row);
@@ -360,7 +360,7 @@ function addToRow(container, ctx, onChange, existingTo) {
       <label>Tons</label>
       <input type="number" step="0.01" inputmode="decimal" class="to-tons" value="${existingTo?.tons ?? ''}" />
     </div>
-    <button type="button" class="btn danger small to-remove" style="width:auto">&times;</button>
+    <button type="button" class="btn ghost-danger small to-remove" style="width:auto;margin:0;padding:8px 12px" aria-label="Remove this destination">&times;</button>
   `;
   container.appendChild(row);
 
@@ -541,75 +541,90 @@ export function openMovementSheet(existing, template) {
     root.innerHTML = `
       <datalist id="dl-regos">${distinctOf(movements, 'truckRego').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
       <datalist id="dl-drivers">${distinctOf(movements, 'driver').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
-      <div class="grid-2">
-        ${field({ label: 'Date', id: 'date', type: 'date', value: existing ? existing.date : todayLocal() })}
-        ${field({ label: 'Time', id: 'loadTime', type: 'time', value: existing ? (existing.loadTime || '') : nowTime() })}
-      </div>
-      ${pickableOrders.length ? `
-      <div class="field">
-        <label for="m-order">Delivering against a grain order</label>
-        <select id="m-order">
-          <option value="">No grain order</option>
-          ${pickableOrders.map((o) => `<option value="${esc(o.id)}" ${o.id === existing?.orderId ? 'selected' : ''}>${esc(orderOptionLabel(o))}</option>`).join('')}
-        </select>
-        <div class="hint" id="m-order-note">Choosing a grain order fills in its contract, the commodity and the grade.</div>
-      </div>` : ''}
-      <div class="field">
-        <label>Commodity</label>
-        <select id="m-commodity">
-          <option value="">All commodities</option>
-          ${commodities.map((c) => `<option value="${c.id}" ${c.id === ctx.commodityId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
-        </select>
-        <div class="hint">Narrows the paddocks, silos and contracts below to this grain.</div>
-      </div>
-      <div class="field"><label>From (add more if a load blends multiple silos/fields)</label></div>
-      <div id="from-rows"></div>
-      <button type="button" class="btn secondary small" id="add-from">+ Add source</button>
-      <div class="row" style="margin-bottom:14px"><span class="label">Sources total</span><span class="value" id="from-sources-total">0.0 t</span></div>
-      <div id="offfarm-note" class="hint" style="margin:-6px 0 12px"></div>
-      <div class="field">
-        <label>To</label>
-        <div class="segmented" id="to-kind">
-          <button type="button" data-kind="silo" class="${!existingSaleTo ? 'active' : ''}">Silo</button>
-          <button type="button" data-kind="sale" class="${existingSaleTo ? 'active' : ''}">Contract</button>
+      <section class="form-section">
+        <div class="subhead">Load</div>
+        <div class="grid-2">
+          ${field({ label: 'Date', id: 'date', type: 'date', value: existing ? existing.date : todayLocal() })}
+          ${field({ label: 'Time', id: 'loadTime', type: 'time', value: existing ? (existing.loadTime || '') : nowTime() })}
         </div>
-      </div>
-      <div id="to-body" style="margin-top:8px"></div>
-      <datalist id="dl-destinations">${[...new Set([...distinctOf(movements, 'destination'), ...distinctOf(db.get().sales, 'location')])].sort((a, b) => a.localeCompare(b)).map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
-      ${field({ label: 'Destination', id: 'destination', value: src?.destination, list: 'dl-destinations', placeholder: DEST_HINT, hint: 'Where this load is going. Shown on the load ticket and report. Leave blank to use the delivery site on the contract.' })}
-      <div class="grid-2">
-        ${field({ label: 'Truck rego', id: 'truckRego', value: src?.truckRego, list: 'dl-regos' })}
-        ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
-      </div>
-      ${field({ label: 'Their ticket no.', id: 'extTicket', value: existing?.externalTicketNo, placeholder: 'Their number for this load', hint: 'When the load goes to another site, the number on their ticket' })}
-      <div class="field">
-        <label for="outloadNo">Outload number</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="outloadNo" type="text" inputmode="numeric" autocomplete="off" style="flex:1" value="${esc(existing?.outloadNo || '')}" placeholder="The number quoted at the site" />
-          <button type="button" class="btn secondary small" id="ol-get">Get a number</button>
+        ${pickableOrders.length ? `
+        <div class="field">
+          <label for="m-order">Delivering against a grain order</label>
+          <select id="m-order">
+            <option value="">No grain order</option>
+            ${pickableOrders.map((o) => `<option value="${esc(o.id)}" ${o.id === existing?.orderId ? 'selected' : ''}>${esc(orderOptionLabel(o))}</option>`).join('')}
+          </select>
+          <div class="hint" id="m-order-note">Fills in the contract, commodity and grade.</div>
+        </div>` : ''}
+        <div class="field">
+          <label>Commodity</label>
+          <select id="m-commodity">
+            <option value="">All commodities</option>
+            ${commodities.map((c) => `<option value="${c.id}" ${c.id === ctx.commodityId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
+          </select>
+          <div class="hint">Narrows the lists below to this grain.</div>
         </div>
-        <div class="hint" id="ol-hint">The number the driver gives the site. It comes back on the site's delivery file, which is matched to this load by it. Save the load to keep it.</div>
-      </div>
-      <hr class="sep" />
-      <div class="field"><label>Weight</label></div>
-      <div class="grid-2">
-        ${field({ label: 'Gross (t, optional)', id: 'gross', type: 'number', step: '0.01', value: src?.grossWeight })}
-        ${field({ label: 'Tare (t, optional)', id: 'tare', type: 'number', step: '0.01', value: src?.tareWeight })}
-      </div>
-      ${field({ label: 'Net weight (t)', id: 'tons', type: 'number', step: '0.01', value: src?.tons, hint: 'Auto-fills from Gross − Tare, or enter it directly if those are unknown' })}
-      <div class="field">
-        <label>Weight status</label>
-        <div class="segmented" id="m-status">
-          <button data-status="estimate" class="${(src?.weightStatus || 'estimate') === 'estimate' ? 'active' : ''}">Estimate</button>
-          <button data-status="final" class="${src?.weightStatus === 'final' ? 'active' : ''}">Final</button>
+      </section>
+
+      <section class="form-section alt">
+        <div class="subhead">From and to</div>
+        <div class="field"><label>From (add a source if the load blends silos or fields)</label></div>
+        <div id="from-rows"></div>
+        <button type="button" class="btn secondary small" id="add-from">+ Add source</button>
+        <div class="row" style="margin:10px 0 14px"><span class="label">Sources total</span><span class="value" id="from-sources-total">0.0 t</span></div>
+        <div id="offfarm-note" class="hint" style="margin:-6px 0 12px"></div>
+        <div class="field">
+          <label>To</label>
+          <div class="segmented" id="to-kind">
+            <button type="button" data-kind="silo" class="${!existingSaleTo ? 'active' : ''}">Silo</button>
+            <button type="button" data-kind="sale" class="${existingSaleTo ? 'active' : ''}">Contract</button>
+          </div>
         </div>
-      </div>
-      ${existing?.sourceRef ? `<div class="field hint" style="margin-bottom:8px">Movement number from the freight platform: <strong>${esc(existing.sourceRef)}</strong></div>` : ''}
+        <div id="to-body" style="margin-top:8px"></div>
+        <datalist id="dl-destinations">${[...new Set([...distinctOf(movements, 'destination'), ...distinctOf(db.get().sales, 'location')])].sort((a, b) => a.localeCompare(b)).map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
+        ${field({ label: 'Destination', id: 'destination', value: src?.destination, list: 'dl-destinations', placeholder: DEST_HINT, hint: "Shown on the load ticket. Blank uses the contract's delivery site." })}
+      </section>
+
+      <section class="form-section">
+        <div class="subhead">Truck and tickets</div>
+        <div class="grid-2">
+          ${field({ label: 'Truck rego', id: 'truckRego', value: src?.truckRego, list: 'dl-regos' })}
+          ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
+        </div>
+        <div class="grid-2">
+          ${field({ label: 'Their ticket no.', id: 'extTicket', value: existing?.externalTicketNo, placeholder: 'On their ticket' })}
+          <div class="field">
+            <label for="outloadNo">Outload number</label>
+            <input id="outloadNo" type="text" inputmode="numeric" autocomplete="off" value="${esc(existing?.outloadNo || '')}" placeholder="Quoted at the site" />
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin:-2px 0 10px">
+          <button type="button" class="btn secondary small" id="ol-get" style="width:auto;flex:none">Get a number</button>
+          <div class="hint" id="ol-hint" style="margin:0;font-size:11.5px;color:var(--text-dim)">The driver gives this to the site. It matches the site's delivery file to this load.</div>
+        </div>
+      </section>
+
+      <section class="form-section alt">
+        <div class="subhead">Weight</div>
+        <div class="grid-2">
+          ${field({ label: 'Gross (t, optional)', id: 'gross', type: 'number', step: '0.01', value: src?.grossWeight })}
+          ${field({ label: 'Tare (t, optional)', id: 'tare', type: 'number', step: '0.01', value: src?.tareWeight })}
+        </div>
+        ${field({ label: 'Net weight (t)', id: 'tons', type: 'number', step: '0.01', value: src?.tons, hint: 'Fills from gross minus tare, or enter it directly.' })}
+        <div class="field">
+          <label>Weight status</label>
+          <div class="segmented" id="m-status">
+            <button data-status="estimate" class="${(src?.weightStatus || 'estimate') === 'estimate' ? 'active' : ''}">Estimate</button>
+            <button data-status="final" class="${src?.weightStatus === 'final' ? 'active' : ''}">Final</button>
+          </div>
+        </div>
+        ${existing?.sourceRef ? `<div class="hint" style="margin-bottom:8px">Movement number from the freight platform: <strong>${esc(existing.sourceRef)}</strong></div>` : ''}
+      </section>
+
       <details class="fold feature" id="lq-fold" ${existing && (existing.grade || existing.proteinPct != null || existing.moisturePct != null || existing.oilPct != null || existing.ffaPct != null || existing.retentionPct != null) ? 'open' : ''}>
         <summary><div class="feature-head"><h2>Load quality</h2>
           <div class="sub" id="lq-sub">${esc(specText(existing) || 'Not recorded yet · tap to add grade, protein, moisture and more')}</div></div></summary>
-        <div class="field hint" style="margin-bottom:8px">What was on this truck. It lets the storage it went into say what
-          each load out of it will carry.</div>
+        <div class="hint" style="margin-bottom:8px">What was on the truck. Storage uses it to say what each load out will carry.</div>
         ${gradeFieldHtml({ id: 'lq-grade', commodity: commodities.find((c) => c.id === ctx.commodityId), value: existing?.grade })}
         <div class="grid-2">
           ${field({ label: 'Moisture (%)', id: 'lq-moisture', type: 'number', step: '0.1', value: existing?.moisturePct ?? '' })}
@@ -628,27 +643,32 @@ export function openMovementSheet(existing, template) {
         </div>
         <div id="lq-ffa-wrap" class="grid-2">${field({ label: 'Free fatty acid (%)', id: 'lq-ffa', type: 'number', step: '0.01', value: existing?.ffaPct ?? '', hint: 'Canola' })}</div>
       </details>
-      ${field({ label: 'Notes', id: 'notes', value: src?.notes })}
-      <div class="field">
-        <label>Photo (e.g. truck rego)</label>
-        <div style="display:flex;gap:8px">
-          <button type="button" class="btn secondary small" id="m-photo-take" style="flex:1">Take photo</button>
-          <button type="button" class="btn secondary small" id="m-photo-pick" style="flex:1">Choose from library</button>
+      <details class="fold" id="np-fold" ${src?.notes || existing?.photoPath || existing?.photoDataUrl ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Notes and photo</h2><div class="sub">${esc(src?.notes || 'A note, or a photo of the truck rego')}</div></div></summary>
+        ${field({ label: 'Notes', id: 'notes', value: src?.notes })}
+        <div class="field">
+          <label>Photo (e.g. truck rego)</label>
+          <div style="display:flex;gap:8px">
+            <button type="button" class="btn secondary small" id="m-photo-take" style="flex:1">Take photo</button>
+            <button type="button" class="btn secondary small" id="m-photo-pick" style="flex:1">Choose from library</button>
+          </div>
+          <input id="m-photo-file" type="file" accept="image/*" capture="environment" hidden />
+          <input id="m-photo-lib" type="file" accept="image/*" hidden />
+          <div class="hint">Kept with the load and uploaded when you have signal, stamped with the date and time.</div>
+          <div id="m-photo-preview" style="margin-top:8px"></div>
         </div>
-        <input id="m-photo-file" type="file" accept="image/*" capture="environment" hidden />
-        <input id="m-photo-lib" type="file" accept="image/*" hidden />
-        <div class="hint">Kept with this load and uploaded once you have signal. A date/time stamp is added automatically: now for a new photo, or when the photo was taken for one from your library.</div>
-        <div id="m-photo-preview" style="margin-top:8px"></div>
-      </div>
-      ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete movement</button>` : ''}
-      ${existing ? `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+      </details>
+      ${existing ? `<details class="fold" id="tk-fold">
+        <summary><div class="feature-head"><h2>Send as a PDF</h2><div class="sub">Choose what shows on the load ticket, then send it</div></div></summary>
+        <div style="padding-top:6px">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:6px 0 10px"><input type="checkbox" id="tk-origin" ${readOrigin() ? 'checked' : ''} style="width:18px;height:18px" /> Show where it came from (storage or paddock)</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-split" ${readSplit() ? 'checked' : ''} style="width:18px;height:18px" /> Tonnes from each, when it came from more than one</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-dest" ${readDestination() ? 'checked' : ''} style="width:18px;height:18px" /> Show the destination</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-comments" ${readComments() ? 'checked' : ''} style="width:18px;height:18px" /> Comments box (this load's notes, and room to write)</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-quality" ${readQuality() ? 'checked' : ''} style="width:18px;height:18px" /> Quality results (if the load was tested)</label>
         <button class="btn secondary" id="tk-send" type="button">Send this load as a PDF</button>
-        <div class="meta" style="margin-top:6px;font-size:12px">Sends the load as it is on the screen now. Save the ticket to keep any changes.</div></div>` : ''}
+        <div class="meta" style="margin-top:6px;font-size:12px">Sends the load as it is on the screen now. Save the ticket to keep any changes.</div></div></details>` : ''}
+${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete movement</button>` : ''}
       <div class="save-bar"><div class="total"><div class="l">Net load</div><div class="v" id="load-preview">—</div></div><button class="btn" id="save">Save</button></div>
     `;
 

@@ -17,7 +17,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 export const isUuid = (v) => typeof v === 'string' && UUID_RE.test(v);
 
-const newId = () =>
+export const newId = () =>
   (globalThis.crypto?.randomUUID
     ? globalThis.crypto.randomUUID()
     // Node before 19 in the CLI validator; never used in the browser.

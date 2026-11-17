@@ -1,47 +1,47 @@
-import { db } from '../storage.js?v=341';
-import { getTheme, setTheme } from '../theme.js?v=341';
-import { num, money, esc, todayLocal } from '../fmt.js?v=341';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=341';
-import { openLoadImportSheet } from './importloads.js?v=341';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=341';
-import { openPastSeasonsSheet } from './pastseasons.js?v=341';
-import { openPastSalesSheet } from './pastsales.js?v=341';
-import { openLineupSheet } from './lineup.js?v=341';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=341';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=341';
-import { openDangerSheet } from './dangerconfirm.js?v=341';
-import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=341';
-import { seasonContents, contentsText } from '../seasondelete.js?v=341';
-import { openDeletedSheet } from './deleted.js?v=341';
-import { APP_VERSION } from '../version.js?v=341';
-import { logoFromFile } from '../logo.js?v=341';
-import { exportRowsAsCSV } from '../csv.js?v=341';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=341';
-import { orderedNames, moveName } from '../commodityorder.js?v=341';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=341';
-import { endpointLabel } from './movements.js?v=341';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=341';
-import { layersForStorage } from '../outload.js?v=341';
-import { traceLoads, traceText } from '../trace.js?v=341';
-import { holdings, totalHeld } from '../offfarm.js?v=341';
-import { kindLabel, billTotal } from '../payables.js?v=341';
-import { orderState, STATE_LABEL } from '../orders.js?v=341';
-import { fieldHarvest } from '../harvest.js?v=341';
-import { capacityFor } from '../storagecapacity.js?v=341';
-import { autoSeasonText } from '../harvestseason.js?v=341';
-import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=341';
-import { openMySignatureSheet } from './signaturepad.js?v=341';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=341';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=341';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=341';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=341';
+import { db } from '../storage.js?v=342';
+import { getTheme, setTheme } from '../theme.js?v=342';
+import { num, money, esc, todayLocal } from '../fmt.js?v=342';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=342';
+import { openLoadImportSheet } from './importloads.js?v=342';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=342';
+import { openPastSeasonsSheet } from './pastseasons.js?v=342';
+import { openPastSalesSheet } from './pastsales.js?v=342';
+import { openLineupSheet } from './lineup.js?v=342';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=342';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=342';
+import { openDangerSheet } from './dangerconfirm.js?v=342';
+import { sampleHistoryFrom, sampleHistoryOffered, sampleOrdersFrom, sampleOrdersOffered } from '../demo.js?v=342';
+import { seasonContents, contentsText } from '../seasondelete.js?v=342';
+import { openDeletedSheet } from './deleted.js?v=342';
+import { APP_VERSION } from '../version.js?v=342';
+import { logoFromFile } from '../logo.js?v=342';
+import { exportRowsAsCSV } from '../csv.js?v=342';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=342';
+import { orderedNames, moveName } from '../commodityorder.js?v=342';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=342';
+import { endpointLabel } from './movements.js?v=342';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=342';
+import { layersForStorage } from '../outload.js?v=342';
+import { traceLoads, traceText } from '../trace.js?v=342';
+import { holdings, totalHeld } from '../offfarm.js?v=342';
+import { kindLabel, billTotal } from '../payables.js?v=342';
+import { orderState, STATE_LABEL } from '../orders.js?v=342';
+import { fieldHarvest } from '../harvest.js?v=342';
+import { capacityFor } from '../storagecapacity.js?v=342';
+import { autoSeasonText } from '../harvestseason.js?v=342';
+import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=342';
+import { openMySignatureSheet } from './signaturepad.js?v=342';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=342';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=342';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=342';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=342';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=341';
+} from '../invites.js?v=342';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=341';
+} from '../auth.js?v=342';
 
 let unsub = null;
 
@@ -151,6 +151,8 @@ function paint(root) {
         </div>
         ${sampleHistoryOffered(years, currentYear, db.getRole()) ?`<div class="hint" style="margin-top:8px">This is the sample farm, set up before it had earlier seasons. Add two, with rotated crops and contracts, so the history screens have something to show. Nothing else changes.</div>
         <button class="btn secondary small" id="add-sample-history" style="margin-top:6px">Add the sample history (2024 and 2025)</button>` : ''}
+        ${sampleOrdersOffered(db.get().sales, db.getOrders(), db.getFreightOrders(), currentYear, db.getRole()) ? `<div class="hint" style="margin-top:8px">This sample farm has no grain orders or freight orders. Add one of each, against the Riverina Grain Traders wheat contract, to see how they look.</div>
+        <button class="btn secondary small" id="add-sample-orders" style="margin-top:6px">Add a sample grain order and freight order</button>` : ''}
         ${years.length > 1 && db.getRole() === 'owner' ?`<button class="btn danger small" id="delete-year" style="margin-top:8px">Delete "${esc(currentYear)}" season&hellip;</button>` : ''}
       </div>
 
@@ -297,7 +299,7 @@ function paint(root) {
 
       `)}
     </div>
-    <button class="fab" id="add-commodity">+</button>
+    <button class="fab" id="add-commodity" aria-label="Add a commodity" ${openGroups.has('season') ? '' : 'hidden'}>+</button>
   `;
 
   // Fenced off deliberately. Everything below this line in Settings — seasons,
@@ -419,6 +421,19 @@ function paint(root) {
       toast(added ? `Added ${added} earlier season${added === 1 ? '' : 's'}` : 'Those seasons are already here');
     } catch (err) { notify(err.message || 'The sample history could not be added.'); btn.disabled = false; }
   });
+  root.querySelector('#add-sample-orders')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget; btn.disabled = true;
+    try {
+      const res = await fetch(`./demo/seed.json?v=${APP_VERSION}`, { cache: 'no-cache' });
+      if (!res.ok) throw new Error(`The sample orders could not be fetched (${res.status}).`);
+      const made = sampleOrdersFrom(await res.json(), db.get().sales);
+      if (!made) throw new Error('This farm does not have the sample contract the orders go against.');
+      db.upsertOrder(made.order);
+      db.upsertFreightOrder(made.freightOrder);
+      toast('Added a grain order and a freight order');
+      btn.hidden = true;
+    } catch (err) { notify(err.message || 'The sample orders could not be added.'); btn.disabled = false; }
+  });
   const deleteYearBtn = root.querySelector('#delete-year');
   if (deleteYearBtn) {
     deleteYearBtn.addEventListener('click', () => {
@@ -441,7 +456,11 @@ function paint(root) {
   });
   root.querySelector('#export-csv').addEventListener('click', () => openExportCsvSheet());
   root.querySelector('#open-import')?.addEventListener('click', () => openImportSheet());
-  root.querySelectorAll('details[data-group]').forEach((d) => d.addEventListener('toggle', () => { if (d.open) openGroups.add(d.dataset.group); else openGroups.delete(d.dataset.group); }));
+  // the + adds a commodity, so it is only there while Season and crops is open
+  root.querySelectorAll('details[data-group]').forEach((d) => d.addEventListener('toggle', () => {
+    if (d.open) openGroups.add(d.dataset.group); else openGroups.delete(d.dataset.group);
+    root.querySelector('#add-commodity').hidden = !openGroups.has('season');
+  }));
   root.querySelector('#open-deleted')?.addEventListener('click', () => openDeletedSheet());
   root.querySelector('#open-my-signature')?.addEventListener('click', () => openMySignatureSheet());
   const importFile = root.querySelector('#import-file');
