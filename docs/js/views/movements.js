@@ -1,26 +1,26 @@
-import { db } from '../storage.js?v=365';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=365';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=365';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=365';
-import { withholdingClash } from '../fumigation.js?v=365';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=365';
-import { compressAndStampImage } from '../img.js?v=365';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=365';
-import { specText, extraSpecKey } from '../outload.js?v=365';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=365';
-import { pickableSilos } from '../silopick.js?v=365';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=365';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=365';
-import { activeSales } from '../paidsales.js?v=365';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=365';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=365';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=365';
-import { nowTime } from '../loadreport.js?v=365';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=365';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=365';
-import { openGinRunSheet } from './ginrun.js?v=365';
-import { openModuleMoveSheet } from './modulemove.js?v=365';
-import { hasGin, describeGin, stdBales, hasModules, describeModules } from '../ginning.js?v=365';
+import { db } from '../storage.js?v=366';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=366';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=366';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=366';
+import { withholdingClash } from '../fumigation.js?v=366';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=366';
+import { compressAndStampImage } from '../img.js?v=366';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=366';
+import { specText, extraSpecKey } from '../outload.js?v=366';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=366';
+import { pickableSilos } from '../silopick.js?v=366';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=366';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=366';
+import { activeSales } from '../paidsales.js?v=366';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=366';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=366';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=366';
+import { nowTime } from '../loadreport.js?v=366';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=366';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=366';
+import { openGinRunSheet } from './ginrun.js?v=366';
+import { openModuleMoveSheet } from './modulemove.js?v=366';
+import { hasGin, describeGin, stdBales, hasModules, describeModules } from '../ginning.js?v=366';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -73,7 +73,7 @@ function paint(root) {
       <div class="stat-grid" id="move-stats"></div>
 
       <div class="move-tools">
-        ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="move-modules">+ Move modules</button><button class="btn secondary small" id="log-ginning">+ Log ginning</button>` : ''}
+        ${(storages.some((s) => s.kind === 'tally') || commodities.some((c) => c.unit === 'bale')) ? `<button class="btn secondary small" id="move-modules">+ Move modules</button><button class="btn secondary small" id="log-ginning">+ Log ginning</button>` : ''}
         ${movements.length > 0 ? `<button class="btn secondary small" id="load-report">Load report</button>` : ''}
         <button class="btn secondary small" id="get-outload">Outload number</button>
       </div>

@@ -9,9 +9,9 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase } from './supabase.js?v=365';
-import { pickMembership, recallMembership, farmChoices } from './membership.js?v=365';
-import { newToken, expiryFrom } from './invites.js?v=365';
+import { supabase } from './supabase.js?v=366';
+import { pickMembership, recallMembership, farmChoices } from './membership.js?v=366';
+import { newToken, expiryFrom } from './invites.js?v=366';
 
 /** The signed-in user, or null. */
 export async function getUser() {

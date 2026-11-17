@@ -1995,3 +1995,8 @@ notify pgrst, 'reload schema';
 alter table movements add column if not exists modules jsonb;
 
 notify pgrst, 'reload schema';
+
+-- Cotton modules picked on a paddock
+alter table fields add column if not exists modules_picked jsonb;
+
+notify pgrst, 'reload schema';

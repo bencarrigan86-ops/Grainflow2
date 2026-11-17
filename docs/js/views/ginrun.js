@@ -6,15 +6,15 @@
 // contract or a storage, which should add up to the bales pressed. The gin's invoice is saved as a bill when we pay it
 // (see ginning.js).
 
-import { db } from '../storage.js?v=365';
-import { num, money, esc, todayLocal } from '../fmt.js?v=365';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=365';
-import { activeSales } from '../paidsales.js?v=365';
-import { storageLedgerStock } from '../derived.js?v=365';
+import { db } from '../storage.js?v=366';
+import { num, money, esc, todayLocal } from '../fmt.js?v=366';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=366';
+import { activeSales } from '../paidsales.js?v=366';
+import { storageLedgerStock } from '../derived.js?v=366';
 import {
   STD_BALE_KG, cleanGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice,
   baleRangeCount, allocateLint, allocationProblems,
-} from '../ginning.js?v=365';
+} from '../ginning.js?v=366';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 

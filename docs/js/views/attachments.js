@@ -6,12 +6,12 @@
 // nothing to hang the file on yet, so the sheet mints the record's id up front, holds the files, and hands them
 // over with the rest when Save is pressed.
 
-import { db } from '../storage.js?v=365';
+import { db } from '../storage.js?v=366';
 import {
   RECORD_DOCUMENT_KINDS, kindLabel, uploadRecordDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=365';
-import { esc } from '../fmt.js?v=365';
-import { confirmDelete, getVal } from '../ui.js?v=365';
+} from '../documents.js?v=366';
+import { esc } from '../fmt.js?v=366';
+import { confirmDelete, getVal } from '../ui.js?v=366';
 
 /** The markup. `open` keeps the fold open when there is already something attached. */
 export function attachmentsHtml(parentType, docs = [], { title = 'Documents', sub = 'Files kept with this record' } = {}) {

@@ -5,22 +5,22 @@
 // It goes to the carrier as a PDF (shared or emailed) and a copy is filed with the contract. Loads then name the
 // freight order they travel on, and the carrier's bill is recorded against it. The arithmetic is in freight.js.
 
-import { db } from '../storage.js?v=365';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=365';
-import { signerName } from '../signdoc.js?v=365';
-import { addressFields, readAddress, partsOf, joinAddress } from '../address.js?v=365';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=365';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=365';
-import { orderTitle } from '../orders.js?v=365';
-import { activeSales } from '../paidsales.js?v=365';
+import { db } from '../storage.js?v=366';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=366';
+import { signerName } from '../signdoc.js?v=366';
+import { addressFields, readAddress, partsOf, joinAddress } from '../address.js?v=366';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=366';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=366';
+import { orderTitle } from '../orders.js?v=366';
+import { activeSales } from '../paidsales.js?v=366';
 import {
   BASES, STATE_LABEL, contractFreightNo, freightState, freightOwed, freightTitle, freightDefaults, freightProblems,
   perTonne, rateText, estimatedTotal, windowText, freightOrderPdf,
-} from '../freight.js?v=365';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=365';
-import { fileSentCopy } from '../sentcopy.js?v=365';
-import { movementRow, openMovementSheet } from './movements.js?v=365';
-import { openBillSheet, returnToAfterBill } from './payables.js?v=365';
+} from '../freight.js?v=366';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=366';
+import { fileSentCopy } from '../sentcopy.js?v=366';
+import { movementRow, openMovementSheet } from './movements.js?v=366';
+import { openBillSheet, returnToAfterBill } from './payables.js?v=366';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | closed | all

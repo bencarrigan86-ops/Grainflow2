@@ -1,18 +1,20 @@
-import { db } from '../storage.js?v=365';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=365';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=365';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=365';
-import { describeMerge } from '../merge.js?v=365';
-import { renderRelatedMovements } from './movements.js?v=365';
-import { canSeeYield } from '../nav.js?v=365';
-import { wireJumps } from '../jump.js?v=365';
-import { openMapSheet } from './farmmap.js?v=365';
-import { openInputsSheet } from './inputs.js?v=365';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=365';
-import { stockLevels } from '../inputs.js?v=365';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=365';
-import { openRotationSheet } from './rotation.js?v=365';
-import { openAveragesSheet } from './averages.js?v=365';
+import { db } from '../storage.js?v=366';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=366';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=366';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=366';
+import { describeMerge } from '../merge.js?v=366';
+import { renderRelatedMovements } from './movements.js?v=366';
+import { canSeeYield } from '../nav.js?v=366';
+import { wireJumps } from '../jump.js?v=366';
+import { openMapSheet } from './farmmap.js?v=366';
+import { openInputsSheet } from './inputs.js?v=366';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=366';
+import { stockLevels } from '../inputs.js?v=366';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=366';
+import { openRotationSheet } from './rotation.js?v=366';
+import { openAveragesSheet } from './averages.js?v=366';
+import { openModulesPickedSheet } from './modulespicked.js?v=366';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=366';
 
 let unsub = null;
 
@@ -126,11 +128,12 @@ function fieldRow(f, movements, showYield = true) {
   const yieldTHa = f.areaHa > 0 ? t / f.areaHa : 0;
   const actualTons = movementTonsFromField(f.id, movements);
   const actualYieldTHa = f.areaHa > 0 ? actualTons / f.areaHa : 0;
+  const inFieldModules = pickedTotals(f, movements).inField;
   return `
     <div class="list-item" data-edit-field="${f.id}">
       <div>
         <div class="main">${esc(f.name)}</div>
-        <div class="meta">${ha(f.areaHa, 0)}${f.harvestDone ? ' · <span class="badge pos">Harvested</span>' : (f.harvestHaLeft != null ? ` · <span class="badge neg">${ha(f.harvestHaLeft, 0)} to cut</span>` : '')}${showYield ? ` · <span class="badge ${isActual ? 'pos' : 'neg'}">${isActual ? 'Actual' : 'Estimate'}</span>` : ''}</div>
+        <div class="meta">${ha(f.areaHa, 0)}${f.harvestDone ? ' · <span class="badge pos">Harvested</span>' : (f.harvestHaLeft != null ? ` · <span class="badge neg">${ha(f.harvestHaLeft, 0)} to cut</span>` : '')}${showYield ? ` · <span class="badge ${isActual ? 'pos' : 'neg'}">${isActual ? 'Actual' : 'Estimate'}</span>` : ''}${inFieldModules > 0 ? ` · ${num(inFieldModules, 0)} module${inFieldModules === 1 ? '' : 's'} in field` : ''}</div>
         ${showYield && !isActual && actualTons > 0 ? `<div class="actual-flag">Harvest tickets: ${num(actualTons, 0)} t · ${num(actualYieldTHa, 2)} t/ha. Switch to Actual</div>` : ''}
       </div>
       ${showYield ? `<div class="right">
@@ -147,6 +150,18 @@ export function openFieldSheet(existing) {
   const commodityOptions = commodities.map((c) => ({ value: c.id, label: c.name }));
   const actualTons = existing ? movementTonsFromField(existing.id, movements) : 0;
   const initialCommodity = commodities.find((c) => c.id === (existing?.commodityId ?? commodities[0]?.id));
+
+  // cotton paddocks: the modules picked, and how many are still in the field
+  const isCotton = existing && initialCommodity?.unit === 'bale';
+  const pk = isCotton ? pickedTotals(existing, movements) : null;
+  const modulesBlock = isCotton ? `
+      <div class="field">
+        <label>Modules picked</label>
+        <div class="row"><span class="label">Picked · moved · in the field</span><span class="value">${num(pk.picked, 0)} · ${num(pk.moved, 0)} · ${num(pk.inField, 0)}</span></div>
+        ${cleanPicked(existing.modulesPicked).map((p) => `<div class="row" data-edit-picked="${esc(p.id)}" style="cursor:pointer"><span class="label">${esc(shortDate(p.date))}</span><span class="value">${num(p.count, 0)} module${p.count === 1 ? '' : 's'}${p.kg ? `, ${num(p.kg, 0)} kg` : ''}</span></div>`).join('')}
+        ${pk.inField > 0 && describeEstimate(moduleEstimate(initialCommodity.cotton, pk.inFieldBales)) ? `<div class="hint">In the field: ${esc(describeEstimate(moduleEstimate(initialCommodity.cotton, pk.inFieldBales)))}</div>` : ''}
+        <button class="btn secondary small" id="log-picked" style="margin-top:6px">+ Log modules picked</button>
+      </div>` : '';
 
   const body = openSheet(existing ? 'Edit field' : 'Add field', (root) => {
     root.innerHTML = `
@@ -167,6 +182,7 @@ export function openFieldSheet(existing) {
       </div>
       <div class="hint" style="margin:-4px 0 4px;font-size:12px;color:var(--text-dim)">For a paddock part cut. The harvest report counts the hectares left at their own yield (or the yield estimate above if that is blank), on top of the tonnes already in. Leave the hectares blank to use the whole paddock's estimate less the tickets.</div>
       <div class="hint" id="cut-so-far" style="margin:0 0 10px;font-size:12px;color:var(--text-dim)"></div>
+      ${modulesBlock}
       <div class="yield-only" ${showYield ? '' : 'hidden'}>
       <div class="field">
         <label>Drive tons from</label>
@@ -491,6 +507,11 @@ export function openFieldSheet(existing) {
       });
       closeSheet(); toast('Saved');
     });
+    root.querySelector('#log-picked')?.addEventListener('click', () => { closeSheet(); openModulesPickedSheet(existing.id); });
+    root.querySelectorAll('[data-edit-picked]').forEach((el) => el.addEventListener('click', () => {
+      const p = cleanPicked(existing.modulesPicked).find((x) => x.id === el.dataset.editPicked);
+      closeSheet(); openModulesPickedSheet(existing.id, p);
+    }));
     root.querySelector('#merge-field')?.addEventListener('click', () => { closeSheet(); openMergeSheet(existing); });
     const del = root.querySelector('#del');
     if (del) {

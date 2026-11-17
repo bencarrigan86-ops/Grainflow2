@@ -4,10 +4,11 @@
 // `modules` record. The paddock leg is in estimated standard bales, from the weight and the turnout, so the paddock's
 // production is in bales like everything else; the gin yard leg is in modules, which the ginning run takes out again.
 
-import { db } from '../storage.js?v=365';
-import { num, esc, todayLocal } from '../fmt.js?v=365';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=365';
-import { cleanModules, estimateBales, describeModules, DEFAULT_TURNOUT } from '../ginning.js?v=365';
+import { db } from '../storage.js?v=366';
+import { num, esc, todayLocal } from '../fmt.js?v=366';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=366';
+import { cleanModules, estimateBales, describeModules, DEFAULT_TURNOUT } from '../ginning.js?v=366';
+import { pickedTotals, moduleEstimate, describeEstimate } from '../modulespicked.js?v=366';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -36,7 +37,7 @@ export function openModuleMoveSheet(existing = null) {
       ${field({ label: 'To gin yard', id: 'mm-to', type: 'select', value: toLeg?.id || (yards.length === 1 ? yards[0].id : ''), options: [{ value: '', label: 'Select…' }, ...yards.map((s) => ({ value: s.id, label: s.name }))] })}
       <div class="grid-2">
         ${field({ label: 'Modules', id: 'mm-count', type: 'number', step: '1', value: mod.count || '' })}
-        ${field({ label: 'Weight (kg)', id: 'mm-kg', type: 'number', step: '1', value: mod.kg || '', hint: 'Total of the modules, if weighed' })}
+        ${field({ label: 'Weight (kg)', id: 'mm-kg', type: 'number', step: '1', value: mod.kg || '', hint: 'Actual weight of these modules' })}
       </div>
       <div class="grid-2">
         ${field({ label: 'Turnout (%)', id: 'mm-turnout', type: 'number', step: '0.1', value: mod.turnoutPct || '', hint: 'Lint from the picked cotton' })}
@@ -67,10 +68,18 @@ export function openModuleMoveSheet(existing = null) {
         if (source === 'kg' || source === 'turnout') balesTyped = false;
       }
       const f = fields.find((x) => x.id === fromId);
-      root.querySelector('#mm-field-note').textContent = f && f.yieldMode !== 'actual'
-        ? 'This paddock is on an estimated yield, so these modules do not change its production yet. Set it to an actual yield when picking is finished.' : '';
+      const notes = [];
+      if (f) {
+        const pk = pickedTotals(f, db.get().movements.filter((m) => m.id !== existing?.id));
+        if (pk.picked > 0) notes.push(`${num(pk.inField, 0)} of ${num(pk.picked, 0)} modules picked are still in ${f.name}${pk.inFieldKg ? ` (about ${num(pk.inFieldKg, 0)} kg)` : ''}.`);
+        if (f.yieldMode !== 'actual') notes.push('This paddock is on an estimated yield, so these modules do not change its production yet. Set it to an actual yield when picking is finished.');
+      }
+      root.querySelector('#mm-field-note').textContent = notes.join(' ');
       const modules = getNum(root, 'mm-count');
       root.querySelector('#mm-line').textContent = describeModules({ count: modules, kg: getNum(root, 'mm-kg'), estBales: getNum(root, 'mm-bales') });
+      const cotton = commodities.find((c) => c.id === f?.commodityId)?.cotton;
+      const est = describeEstimate(moduleEstimate(cotton, getNum(root, 'mm-bales')));
+      if (est) root.querySelector('#mm-line').textContent += `${root.querySelector('#mm-line').textContent ? ' · ' : ''}${est.split(' · ').slice(1).join(' · ')}`;
       const to = yards.find((s) => s.id === getVal(root, 'mm-to'));
       if (to && !existing) {
         const stock = db.get().movements.reduce((s, m) => s + (m.tos || []).filter((t) => t.type === 'silo' && t.id === to.id).reduce((a, t) => a + (Number(t.tons) || 0), 0)

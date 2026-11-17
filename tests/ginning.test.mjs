@@ -6,6 +6,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems, cleanCotton, hasCotton, cottonComponents, cottonRunTotals, SEED_FACTOR_DEFAULT, ginPrepaid, lotsForSale, cleanModules, hasModules, estimateBales, describeModules, DEFAULT_TURNOUT } from '../docs/js/ginning.js';
+import { cleanPicked, pickedTotals, moduleEstimate, describeEstimate } from '../docs/js/modulespicked.js';
 import { saleEconomics, position, positionAtYield, invoiceLineItems, invoiceTotals, storageLedgerStock, fieldTons } from '../docs/js/derived.js';
 import { cottonInvoiceModel, mergeBaleRanges } from '../docs/js/cottoninvoice.js';
 import { xeroInvoices } from '../docs/js/xero.js';
@@ -401,6 +402,60 @@ check('the sheet moves modules from a paddock to a gin yard, estimates the bales
   assert.ok(read('docs/js/storage.js').includes('rec.__hasModules = true'));
   assert.ok(read('supabase/migrations/20261129000000_movement_modules.sql').includes('add column if not exists modules jsonb'));
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists modules jsonb'));
+});
+
+check('modules picked on a paddock: picked, moved to the yard and still in the field, with the bales, seed and ginning they should come to', () => {
+  const field = { id: 'f1', modulesPicked: [
+    { id: 'a', date: '2026-05-01', count: 10, kg: 120000, turnoutPct: 40, estBales: 211.45 },
+    { id: 'b', date: '2026-05-05', count: 8, kg: 102230, turnoutPct: 40, estBales: 180.1 },
+    { id: 'zero', count: 0 },
+  ] };
+  assert.equal(cleanPicked(field.modulesPicked).length, 2, 'an entry with no modules is not kept');
+  const move = { id: 'm1', froms: [{ type: 'field', id: 'f1', tons: 211 }], tos: [{ type: 'silo', id: 'yard', tons: 10 }], modules: { count: 10, kg: 121500, turnoutPct: 40, estBales: 214 } };
+  const other = { id: 'm2', froms: [{ type: 'field', id: 'f2', tons: 50 }], tos: [], modules: { count: 3, kg: 1, turnoutPct: 40, estBales: 1 } };
+  const none = pickedTotals(field, []);
+  assert.deepEqual([none.picked, none.moved, none.inField], [18, 0, 18]);
+  const p = pickedTotals(field, [move, other]);
+  assert.deepEqual([p.picked, p.moved, p.inField], [18, 10, 8], 'only the moves out of this paddock count');
+  assert.ok(Math.abs(p.inFieldBales - 391.55 * 8 / 18) < 0.001 && Math.abs(p.inFieldKg - 222230 * 8 / 18) < 0.01);
+  assert.equal(pickedTotals({ id: 'f1', modulesPicked: [{ count: 5 }] }, [move]).inField, 0, 'never below nothing in the field');
+  const e = moduleEstimate({ seedMtm: 500, seedFactor: 0.25, ginRate: 65, levies: 3.75 }, 400);
+  assert.equal(e.seedT, 100); assert.equal(e.seedValue, 50000); assert.equal(e.ginning, 27500);
+  assert.equal(describeEstimate(e), 'about 400.0 bales · 100.0 t seed ($50,000) · ginning $27,500');
+  assert.equal(describeEstimate(moduleEstimate(null, 100)), 'about 100.0 bales · 24.5 t seed', 'no prices set: seed at the standard factor, no dollar figures');
+  assert.equal(describeEstimate(moduleEstimate(null, 0)), '');
+});
+
+check('modules picked go to the server and back, and a paddock without any sends no column', () => {
+  const st = (f) => ({ currentYear: '2026', years: { 2026: { sales: [], commodities: [], storages: [], movements: [], fields: [f] } }, businessDetails: {} });
+  const base = { id: 'f1', name: 'Cotton 1', areaHa: 50, commodityId: null, yieldTHa: 0, yieldMode: 'estimate' };
+  const picked = [{ id: 'a', date: '2026-05-01', count: 10, kg: 120000, turnoutPct: 40, estBales: 211.45 }];
+  const rows = stateToRows(st({ ...base, modulesPicked: picked }), 'farm1');
+  assert.deepEqual(rows.fields[0].modules_picked, picked);
+  assert.deepEqual(rowsToState(rows).years[2026].fields[0].modulesPicked, picked);
+  assert.ok(!('modules_picked' in stateToRows(st(base), 'farm1').fields[0]));
+  const cleared = stateToRows(st({ ...base, modulesPicked: [], __hasModulesPicked: true }), 'farm1').fields[0];
+  assert.deepEqual(cleared.modules_picked, [], 'deleting the last entry still reaches the server');
+});
+
+check('the paddock sheet logs modules picked, shows what is in the field, and the move sheet says so too', () => {
+  const v = read('docs/js/views/modulespicked.js');
+  assert.ok(v.includes("db.upsertField({ id: f.id, modulesPicked: cleanPicked(list) })") && v.includes('estimateBales(getNum(root, ' + "'mp-kg')") && v.includes('describeEstimate(moduleEstimate('));
+  const p = read('docs/js/views/production.js');
+  assert.ok(p.includes('id="log-picked"') && p.includes('openModulesPickedSheet(existing.id') && p.includes('pickedTotals(existing, movements)') && p.includes('in field'));
+  const mv = read('docs/js/views/modulemove.js');
+  assert.ok(mv.includes('pickedTotals(f,') && mv.includes('are still in'));
+  assert.ok(read('docs/js/storage.js').includes('__hasModulesPicked = true'));
+  assert.ok(read('supabase/migrations/20261130000000_field_modules_picked.sql').includes('add column if not exists modules_picked jsonb'));
+  assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists modules_picked jsonb'));
+  assert.ok(read('docs/js/views/movements.js').includes("commodities.some((c) => c.unit === 'bale')"), 'the module buttons show for a farm with cotton, even before the gin yard is set up');
+});
+
+check('the Position shows income per hectare and gross margin per hectare, for each commodity and for the farm', () => {
+  const p = read('docs/js/views/position.js');
+  assert.ok(p.includes('money(r.totalValue / r.area, 0)') && p.includes('money(r.grossMargin / r.area, 0)'));
+  assert.ok(p.includes('money(totals.totalValue / totals.area, 0)') && p.includes('money(totals.grossMargin / totals.area, 0)'));
+  assert.ok(p.includes('r.area > 0 ?') && p.includes('totals.area > 0 ?'), 'nothing is divided by a zero area');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

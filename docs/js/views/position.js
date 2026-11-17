@@ -1,16 +1,16 @@
-import { db } from '../storage.js?v=365';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=365';
-import { num, tons, money, pct, esc } from '../fmt.js?v=365';
-import { payablesCost } from '../payables.js?v=365';
-import { openEofySheet } from './eofy.js?v=365';
-import { startProgress } from '../helpcontent.js?v=365';
-import { attentionItems } from '../attention.js?v=365';
-import { lastBackup } from '../backup.js?v=365';
-import { todayLocal, dmy } from '../fmt.js?v=365';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=365';
-import { openSheet, closeSheet } from '../ui.js?v=365';
-import { positionPdf } from '../positionpdf.js?v=365';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=365';
+import { db } from '../storage.js?v=366';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=366';
+import { num, tons, money, pct, esc } from '../fmt.js?v=366';
+import { payablesCost } from '../payables.js?v=366';
+import { openEofySheet } from './eofy.js?v=366';
+import { startProgress } from '../helpcontent.js?v=366';
+import { attentionItems } from '../attention.js?v=366';
+import { lastBackup } from '../backup.js?v=366';
+import { todayLocal, dmy } from '../fmt.js?v=366';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=366';
+import { openSheet, closeSheet } from '../ui.js?v=366';
+import { positionPdf } from '../positionpdf.js?v=366';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=366';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -97,6 +97,14 @@ function paint(root) {
           <div class="n">${money(totals.unsoldValue, 0)}</div>
           <div class="l">Unsold value (MTM)</div>
         </div>
+        ${totals.area > 0 ? `<div class="stat">
+          <div class="n">${money(totals.totalValue / totals.area, 0)}</div>
+          <div class="l">Income per ha</div>
+        </div>
+        <div class="stat">
+          <div class="n">${money(totals.grossMargin / totals.area, 0)}</div>
+          <div class="l">Gross margin per ha</div>
+        </div>` : ''}
       </div>
 
       ${rows.length === 0 ? `<div class="empty">Nothing to report yet.<br/>Add a paddock in Production, or a contract in Sales, and your position appears here.</div>` : ''}
@@ -236,6 +244,8 @@ function commodityCard(r) {
       <div class="row" style="margin-top:8px"><span class="label">Total position value</span><span class="value">${money(r.totalValue, 0)}</span></div>
       `}
       <div class="row"><span class="label">Gross margin</span><span class="value">${money(r.grossMargin, 0)} <span class="badge ${r.grossMargin >= 0 ? 'pos' : 'neg'}">${pct(r.grossMarginPct)}</span></span></div>
+      ${r.area > 0 ? `<div class="row"><span class="label">Income per ha</span><span class="value">${money(r.totalValue / r.area, 0)}/ha</span></div>
+      <div class="row"><span class="label">Gross margin per ha</span><span class="value">${money(r.grossMargin / r.area, 0)}/ha</span></div>` : ''}
       <details class="fold">
         <summary><div><h2>Full breakdown</h2><div class="sub">Values, stock and costs</div></div></summary>
         <div class="row"><span class="label">Avg sold price</span><span class="value">${money(r.avgSoldPrice, 2)}/${per}</span></div>

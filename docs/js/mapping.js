@@ -27,11 +27,12 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=365';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=365';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=365';
-import { cleanOffFarm } from './offfarm.js?v=365';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=365';
+import { cleanGradeOptions } from './gradeprice.js?v=366';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=366';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=366';
+import { cleanPicked } from './modulespicked.js?v=366';
+import { cleanOffFarm } from './offfarm.js?v=366';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=366';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -366,6 +367,8 @@ export function stateToRows(state, farmId) {
         ...((f.boundary || f.__hasBoundary) ? { boundary: f.boundary || null } : {}),
         // which farm it is on: sent once one is named, so paddocks still save before the column exists
         ...((f.property || f.__hasProperty) ? { property: orNull(String(f.property || '').trim()) } : {}),
+        // modules picked on a cotton paddock. Optional the same way; deleting the last one sends an empty list.
+        ...((cleanPicked(f.modulesPicked).length || f.__hasModulesPicked) ? { modules_picked: cleanPicked(f.modulesPicked) } : {}),
       });
       // The agronomy half. Always written, even when empty — a missing row and
       // a zeroed row are different things, and the app expects the fields to
@@ -776,6 +779,7 @@ export function rowsToState(rows) {
           ...(f.harvest_left_yield != null ? { harvestLeftYield: n(f.harvest_left_yield), __hasHarvestLeftYield: true } : {}),
           ...(f.boundary != null ? { boundary: f.boundary, __hasBoundary: true } : {}),
           ...(f.property ? { property: f.property, __hasProperty: true } : {}),
+          ...(Array.isArray(f.modules_picked) ? { modulesPicked: cleanPicked(f.modules_picked), __hasModulesPicked: true } : {}),
           __agronomyId: a.id,
           yieldTHa: n(a.yield_t_ha),
           yieldMode: a.yield_mode || 'estimate',
