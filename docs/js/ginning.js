@@ -189,3 +189,58 @@ export function allocationProblems(gin) {
   if (pressed && g.allocations.length && sum !== pressed) out.push(`${sum} of the ${pressed} bales are allocated.`);
   return out;
 }
+
+// --- The cotton position: lint, seed and ginning as three values ---------------------------------------------------------
+//
+// A cotton commodity is valued as three separate components: the lint (bales at the contract prices and the MTM price, as
+// for any commodity), the seed (tonnes at a seed MTM price) and the ginning (a cost, per standard bale, with the levies).
+// Seed and ginning exist from the first bale, before any contract or gin invoice, so they are estimated from per-bale
+// settings and replaced by the real figures (the seed weighed and the gin invoiced) as runs are logged.
+
+/** About 0.245 t of seed for every 227 kg bale of lint, when no figure has been set. */
+export const SEED_FACTOR_DEFAULT = 0.245;
+
+/** The cotton settings on a commodity: seed price ($/t), seed per bale (t), ginning ($/bale) and levies ($/bale). */
+export function cleanCotton(x) {
+  if (!x || typeof x !== 'object') return null;
+  return { seedMtm: num(x.seedMtm), seedFactor: num(x.seedFactor), ginRate: num(x.ginRate), levies: num(x.levies) };
+}
+
+export const hasCotton = (x) => { const c = cleanCotton(x); return !!c && (c.seedMtm > 0 || c.seedFactor > 0 || c.ginRate > 0 || c.levies > 0); };
+
+/** What the logged ginning runs of a commodity add up to: standard bales, seed tonnes and the gin invoices (ex GST). */
+export function cottonRunTotals(movements, commodityId) {
+  let bales = 0;
+  let seedT = 0;
+  let exGst = 0;
+  let runs = 0;
+  for (const m of movements || []) {
+    if (!hasGin(m) || (commodityId && m.commodityId !== commodityId)) continue;
+    const g = cleanGin(m.gin);
+    bales += stdBales(g.lintKg, g.stdBaleKg);
+    seedT += seedTonnes(g.seedKg);
+    exGst += ginInvoice(g).exGst;
+    runs += 1;
+  }
+  return { bales, seedT, exGst: round2(exGst), runs };
+}
+
+/**
+ * The seed and the ginning for `bales` standard bales: what the ginned runs really came to, plus the bales not yet ginned at
+ * the per-bale settings. Seed is valued at the seed MTM price; ginning is a cost (ginning plus levies, ex GST), and counts
+ * whoever pays the gin, since it is real money out of the crop.
+ */
+export function cottonComponents(settings, bales, ginned = { bales: 0, seedT: 0, exGst: 0 }) {
+  const c = cleanCotton(settings) || cleanCotton({});
+  const total = Math.max(0, num(bales));
+  const done = Math.min(total, num(ginned.bales));
+  const left = Math.max(0, total - done);
+  const factor = c.seedFactor > 0 ? c.seedFactor : SEED_FACTOR_DEFAULT;
+  const seedT = num(ginned.seedT) + left * factor;
+  return {
+    bales: total, ginnedBales: done, unginnedBales: left, seedFactor: factor,
+    seedT, seedMtm: c.seedMtm, seedValue: seedT * c.seedMtm,
+    ginningCost: num(ginned.exGst) + left * (c.ginRate + c.levies),
+    ginned: { bales: num(ginned.bales), seedT: num(ginned.seedT), exGst: num(ginned.exGst) },
+  };
+}

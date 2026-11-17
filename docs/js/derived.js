@@ -1,10 +1,10 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=362';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=362';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=362';
-import { ginDeduction } from './ginning.js?v=362';
-import { commoditySort } from './commodityorder.js?v=362';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=363';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=363';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=363';
+import { ginDeduction, cottonComponents, cottonRunTotals } from './ginning.js?v=363';
+import { commoditySort } from './commodityorder.js?v=363';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -442,7 +442,10 @@ export function position(commodities, fields, sales, movements = []) {
     // What the opening stock was worth when last season closed. That income was
     // counted then; counting it again now would overstate this season, so it comes off.
     const openingValue = Number(c.openingValue) || 0;
-    const totalValue = s.totalValue + unsoldValue - openingValue;
+    // Cotton is three values: the lint (sold and unsold, as above), the seed and the ginning cost. The seed and the ginning
+    // are there from the first bale, so they are estimated from the commodity's per-bale settings until runs are logged.
+    const cotton = c.unit === 'bale' ? cottonComponents(c.cotton, opening + p.tons, cottonRunTotals(movements, c.id)) : null;
+    const totalValue = s.totalValue + unsoldValue - openingValue + (cotton ? cotton.seedValue - cotton.ginningCost : 0);
     const pctSold = (p.tons - retainedSeed) > 0 ? s.tons / (p.tons - retainedSeed) : 0;
     const grossMarginCost = Number(c.grossMarginCost) || 0;
     const grossMargin = totalValue - grossMarginCost;
@@ -463,6 +466,7 @@ export function position(commodities, fields, sales, movements = []) {
       mtmPrice,
       unsoldValue,
       totalValue,
+      cotton,
       grossMarginCost,
       grossMargin,
       grossMarginPct,
@@ -517,7 +521,9 @@ export function positionAtYield(rows, adjustPct = 0) {
     const productionTons = r.productionTons * k;
     const unsoldTons = r.opening + productionTons - r.soldTons - r.retainedSeed;
     const unsoldValue = unsoldTons * r.mtmPrice;
-    const totalValue = r.soldValue + unsoldValue - (r.openingValue || 0);
+    // a cotton crop that comes in lighter or heavier has more or less seed and ginning with it
+    const cotton = r.cotton ? cottonComponents(r.commodity.cotton, r.opening + productionTons, r.cotton.ginned) : null;
+    const totalValue = r.soldValue + unsoldValue - (r.openingValue || 0) + (cotton ? cotton.seedValue - cotton.ginningCost : 0);
     const grossMargin = totalValue - r.grossMarginCost;
     return {
       ...r,
@@ -526,6 +532,7 @@ export function positionAtYield(rows, adjustPct = 0) {
       unsoldTons,
       unsoldValue,
       totalValue,
+      cotton,
       grossMargin,
       grossMarginPct: totalValue > 0 ? grossMargin / totalValue : 0,
       pctSold: (productionTons - r.retainedSeed) > 0 ? r.soldTons / (productionTons - r.retainedSeed) : 0,

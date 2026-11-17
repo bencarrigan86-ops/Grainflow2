@@ -5,8 +5,8 @@
 // I053/23 (90,273 kg of lint, 393 bales pressed): $65.00 a bale to gin, $2.25 research levy, GST on the ginning only.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems } from '../docs/js/ginning.js';
-import { saleEconomics } from '../docs/js/derived.js';
+import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems, cleanCotton, hasCotton, cottonComponents, cottonRunTotals, SEED_FACTOR_DEFAULT } from '../docs/js/ginning.js';
+import { saleEconomics, position, positionAtYield } from '../docs/js/derived.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
 let failures = 0;
@@ -184,6 +184,84 @@ check('the movement list and the ticket form hand a ginning run to its own sheet
   assert.ok(read('docs/js/storage.js').includes('rec.__hasGin = true'));
   assert.ok(read('supabase/migrations/20261127000000_movement_gin.sql').includes('add column if not exists gin jsonb'));
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists gin jsonb'));
+});
+
+const cotCom = { id: 'cot', name: 'Cotton', unit: 'bale', mtmPrice: 600, openingStock: 0, retainedSeed: 0, cotton: { seedMtm: 500, ginRate: 65, levies: 3.75 } };
+const cotField = { id: 'f1', name: 'Cotton paddock', areaHa: 100, commodityId: 'cot', yieldTHa: 10 };   // 1,000 bales
+const ranMove = { id: 'm1', date: '2026-05-18', commodityId: 'cot', tons: 397.678, froms: [], tos: [], gin: { ...run, voluntaryLevy: 1.5 } };
+
+check('seed per bale falls back to 0.245 t and the settings are tidied', () => {
+  assert.equal(SEED_FACTOR_DEFAULT, 0.245);
+  assert.equal(cleanCotton(null), null);
+  assert.deepEqual(cleanCotton({ seedMtm: '500', ginRate: '65' }), { seedMtm: 500, seedFactor: 0, ginRate: 65, levies: 0 });
+  assert.equal(hasCotton({}), false);
+  assert.equal(hasCotton({ levies: 3 }), true);
+});
+
+check('before any run: seed is bales x seed per bale at the seed price, ginning is bales x (ginning + levies)', () => {
+  const c = cottonComponents(cotCom.cotton, 1000);
+  assert.equal(c.seedT, 245);
+  assert.equal(c.seedValue, 122500);
+  assert.equal(c.ginningCost, 68750);
+  assert.equal(cottonComponents({ ...cotCom.cotton, seedFactor: 0.25 }, 1000).seedT, 250);
+});
+
+check('logged runs replace the estimate for the bales they ginned, the rest stay estimated', () => {
+  const r = cottonRunTotals([ranMove, { ...ranMove, id: 'other', commodityId: 'wheat' }, { id: 'plain', commodityId: 'cot' }], 'cot');
+  assert.equal(r.runs, 1);
+  assert.ok(Math.abs(r.bales - 397.678) < 0.001 && Math.abs(r.seedT - 99.418) < 0.0001);
+  assert.equal(r.exGst, 27340.40);
+  const c = cottonComponents(cotCom.cotton, 1000, r);
+  assert.ok(Math.abs(c.unginnedBales - 602.322) < 0.001);
+  assert.ok(Math.abs(c.seedT - (99.418 + 602.322 * 0.245)) < 0.001);
+  assert.ok(Math.abs(c.ginningCost - (27340.40 + 602.322 * 68.75)) < 0.1);
+  assert.equal(cottonComponents(cotCom.cotton, 100, r).ginnedBales, 100, 'never more ginned than bales');
+});
+
+check('the position of cotton is the lint, plus the seed, less the ginning; other commodities are unchanged', () => {
+  const wheat = { id: 'w', name: 'Wheat', unit: 't', mtmPrice: 400 };
+  const wf = { id: 'f2', name: 'W', areaHa: 100, commodityId: 'w', yieldTHa: 3 };
+  const rows = position([cotCom, wheat], [cotField, wf], [], []);
+  const cot = rows.find((r) => r.commodity.id === 'cot');
+  assert.equal(cot.unsoldValue, 1000 * 600);
+  assert.equal(cot.cotton.seedValue, 122500);
+  assert.equal(cot.totalValue, 600000 + 122500 - 68750, 'lint + seed - ginning');
+  const w = rows.find((r) => r.commodity.id === 'w');
+  assert.equal(w.cotton, null);
+  assert.equal(w.totalValue, 300 * 400);
+});
+
+check('a contract does not change the seed or the ginning: only the lint moves to the contract price', () => {
+  const sale = { id: 's1', commodityId: 'cot', tons: 500, price: 650 };
+  const cot = position([cotCom], [cotField], [sale], []).find((r) => r.commodity.id === 'cot');
+  assert.equal(cot.soldValue, 500 * 650);
+  assert.equal(cot.totalValue, 500 * 650 + 500 * 600 + 122500 - 68750);
+  const withGin = position([cotCom], [cotField], [{ ...sale }], [{ ...ranMove, gin: { ...ranMove.gin, paidBy: 'buyer' }, tos: [{ type: 'sale', id: 's1', tons: 397.678 }] }]).find((r) => r.commodity.id === 'cot');
+  assert.ok(Math.abs(withGin.cotton.ginningCost - (27340.40 + 602.322 * 68.75)) < 0.1, 'the gin counts even when the buyer pays it');
+});
+
+check('a lighter crop has less seed and ginning with it', () => {
+  const rows = position([cotCom], [cotField], [], []);
+  const light = positionAtYield(rows, -10)[0];
+  assert.equal(light.cotton.bales, 900);
+  assert.equal(light.totalValue, 900 * 600 + 900 * 0.245 * 500 - 900 * 68.75);
+  assert.equal(positionAtYield(rows, 0)[0].totalValue, rows[0].totalValue, 'at 0% it matches the Position tab');
+});
+
+check('the cotton settings go to the server and back, are only sent once set, and the sheet and the card show them', () => {
+  const st = (c) => ({ currentYear: '2026', years: { 2026: { sales: [], commodities: [c], fields: [], storages: [], movements: [] } }, businessDetails: {} });
+  const base = { id: 'cot', name: 'Cotton', unit: 'bale' };
+  assert.ok(!('cotton' in stateToRows(st(base), 'f').commodities[0]), 'a database without the column is untouched until it is used');
+  const rows = stateToRows(st({ ...base, cotton: cotCom.cotton }), 'f');
+  assert.deepEqual(rows.commodities[0].cotton, cotCom.cotton && cleanCotton(cotCom.cotton));
+  assert.deepEqual(rowsToState(rows).years[2026].commodities[0].cotton, cleanCotton(cotCom.cotton));
+  assert.equal(stateToRows(st({ ...base, cotton: null, __hasCotton: true }), 'f').commodities[0].cotton, null, 'clearing it still reaches the server');
+  const s = read('docs/js/views/settings.js');
+  assert.ok(s.includes("label: 'Seed price ($/t)'") && s.includes("label: 'Seed per bale (t)'") && s.includes("label: 'Levies ($/bale)'") && s.includes('cleanCotton('));
+  const p = read('docs/js/views/position.js');
+  assert.ok(p.includes('Cotton (lint)') && p.includes("row('Seed'") && p.includes('Less ginning'));
+  assert.ok(read('supabase/migrations/20261128000000_commodity_cotton.sql').includes('add column if not exists cotton jsonb'));
+  assert.ok(read('supabase/paste-into-sql-editor.sql').includes('alter table commodities add column if not exists cotton jsonb'));
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

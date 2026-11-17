@@ -1,16 +1,16 @@
-import { db } from '../storage.js?v=362';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=362';
-import { num, tons, money, pct, esc } from '../fmt.js?v=362';
-import { payablesCost } from '../payables.js?v=362';
-import { openEofySheet } from './eofy.js?v=362';
-import { startProgress } from '../helpcontent.js?v=362';
-import { attentionItems } from '../attention.js?v=362';
-import { lastBackup } from '../backup.js?v=362';
-import { todayLocal, dmy } from '../fmt.js?v=362';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=362';
-import { openSheet, closeSheet } from '../ui.js?v=362';
-import { positionPdf } from '../positionpdf.js?v=362';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=362';
+import { db } from '../storage.js?v=363';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=363';
+import { num, tons, money, pct, esc } from '../fmt.js?v=363';
+import { payablesCost } from '../payables.js?v=363';
+import { openEofySheet } from './eofy.js?v=363';
+import { startProgress } from '../helpcontent.js?v=363';
+import { attentionItems } from '../attention.js?v=363';
+import { lastBackup } from '../backup.js?v=363';
+import { todayLocal, dmy } from '../fmt.js?v=363';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=363';
+import { openSheet, closeSheet } from '../ui.js?v=363';
+import { positionPdf } from '../positionpdf.js?v=363';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=363';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -187,6 +187,21 @@ function farmSummaryCard(totals, overheads, pl, cost) {
   `;
 }
 
+/** Cotton's position as three values, shown apart: the lint, the seed, and the ginning that comes off. */
+function cottonLines(r) {
+  const c = r.cotton;
+  if (!c || !(c.seedValue || c.ginningCost)) return '';
+  const sub = (t) => `<small style="display:block;font-size:11.5px;color:var(--text-dim);font-weight:400">${t}</small>`;
+  const row = (label, note, value) => `<div class="row"><span class="label">${label}${sub(note)}</span><span class="value" style="white-space:nowrap">${value}</span></div>`;
+  const est = c.unginnedBales > 0.5 ? `${num(c.unginnedBales, 0)} bales to gin, estimated` : 'From the gin invoices';
+  return `
+      <div style="margin-top:8px">
+      ${row('Cotton (lint)', 'Sold plus unsold at MTM', money(r.soldValue + r.unsoldValue, 0))}
+      ${row('Seed', `${num(c.seedT, 1)} t at ${money(c.seedMtm, 0)}/t`, money(c.seedValue, 0))}
+      ${row('Less ginning', est, `&minus;${money(c.ginningCost, 0)}`)}
+      </div>`;
+}
+
 function commodityCard(r) {
   const sold = Math.min(1, Math.max(0, r.pctSold));
   const pctSoldBadge = r.pctSold >= 1
@@ -205,9 +220,10 @@ function commodityCard(r) {
         <div class="kv sm"><div class="l">Area</div><div class="v">${num(r.area, 0)} ha</div></div>
         <div class="kv sm"><div class="l">Yield</div><div class="v">${num(r.yieldTHa, 2)} t/ha</div></div>
         <div class="kv sm"><div class="l">Avg sold</div><div class="v">${money(r.avgSoldPrice, 0)}/t</div></div>
-        <div class="kv sm"><div class="l">MTM</div><div class="v">${money(r.mtmPrice, 0)}/t</div></div>
+        <div class="kv sm"><div class="l">MTM</div><div class="v">${money(r.mtmPrice, 0)}/${r.commodity.unit === 'bale' ? 'bale' : 't'}</div></div>
       </div>
       <div class="gauge" role="img" aria-label="${Math.round(sold * 100)} percent sold"><i style="width:${sold * 100}%"></i></div>
+      ${cottonLines(r)}
       ${r.openingValue ? `
       <div class="row" style="margin-top:8px"><span class="label">Total Value (Sold + MTM)</span><span class="value">${money(r.totalValue + r.openingValue, 0)}</span></div>
       <div class="row"><span class="label">Less opening stock</span><span class="value">&minus;${money(r.openingValue, 0)}</span></div>

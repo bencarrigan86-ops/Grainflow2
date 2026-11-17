@@ -1985,3 +1985,8 @@ notify pgrst, 'reload schema';
 alter table movements add column if not exists gin jsonb;
 
 notify pgrst, 'reload schema';
+
+-- Cotton settings on a commodity: seed price, seed per bale, ginning and levies per bale
+alter table commodities add column if not exists cotton jsonb;
+
+notify pgrst, 'reload schema';
