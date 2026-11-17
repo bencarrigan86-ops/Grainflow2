@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=325';
+import { ROLES, canOpen } from './nav.js?v=331';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -234,7 +234,7 @@ export const GUIDES = [
     blurb: 'What is still to deliver, and what is owed.',
     steps: [
       'Grain orders: the buyer\'s orders against a contract, with a date to deliver by and what is left.',
-      'Deliveries to go: contracts with tonnes still to deliver and how close their delivery period is to ending.',
+      'Delivery timeline: contracts with tonnes still to deliver and how close their delivery period is to ending.',
       'Receivables and payables: invoices you are owed and the bills you owe. Bills (brokerage, freight, storage) are entered by the owner, manager or bookkeeper.',
       'On Receivables and payables, By month shows when the money lands: what is invoiced, what is expected from grain not yet invoiced (a forecast, in italics), and the bills going out, with a running balance. By buyer lists what each buyer owes, with a Send statement button that makes a PDF statement.',
       'Freight orders: the trucks booked to move a contract\'s grain. A freight order can be signed with your own signature before it is sent to the carrier.',
@@ -273,7 +273,7 @@ export const GUIDES = [
     steps: [
       'Open Position. If anything needs you, a Needs attention card sits at the top, worst first.',
       'Each line says what and how much: invoices or bills overdue, contracts past their end with grain still to go, orders that missed their date, and grain delivered but not yet invoiced.',
-      'Tap a line to open the screen that deals with it (Receivables and payables, Deliveries to go, or Settings).',
+      'Tap a line to open the screen that deals with it (Receivables and payables, Delivery timeline, or Settings).',
       'A line goes when the thing is fixed. With nothing to do, the card is not shown.',
     ],
     tips: [

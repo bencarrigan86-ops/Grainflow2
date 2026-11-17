@@ -1,48 +1,72 @@
-import { db } from '../storage.js?v=325';
-import { getTheme, setTheme } from '../theme.js?v=325';
-import { num, money, esc, todayLocal } from '../fmt.js?v=325';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=325';
-import { openLoadImportSheet } from './importloads.js?v=325';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=325';
-import { openPastSeasonsSheet } from './pastseasons.js?v=325';
-import { openPastSalesSheet } from './pastsales.js?v=325';
-import { openLineupSheet } from './lineup.js?v=325';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=325';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=325';
-import { openDangerSheet } from './dangerconfirm.js?v=325';
-import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=325';
-import { seasonContents, contentsText } from '../seasondelete.js?v=325';
-import { openDeletedSheet } from './deleted.js?v=325';
-import { APP_VERSION } from '../version.js?v=325';
-import { exportRowsAsCSV } from '../csv.js?v=325';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=325';
-import { orderedNames, moveName } from '../commodityorder.js?v=325';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=325';
-import { endpointLabel } from './movements.js?v=325';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=325';
-import { layersForStorage } from '../outload.js?v=325';
-import { traceLoads, traceText } from '../trace.js?v=325';
-import { holdings, totalHeld } from '../offfarm.js?v=325';
-import { kindLabel, billTotal } from '../payables.js?v=325';
-import { orderState, STATE_LABEL } from '../orders.js?v=325';
-import { fieldHarvest } from '../harvest.js?v=325';
-import { capacityFor } from '../storagecapacity.js?v=325';
-import { autoSeasonText } from '../harvestseason.js?v=325';
-import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=325';
-import { openMySignatureSheet } from './signaturepad.js?v=325';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=325';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=325';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=325';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=325';
+import { db } from '../storage.js?v=331';
+import { getTheme, setTheme } from '../theme.js?v=331';
+import { num, money, esc, todayLocal } from '../fmt.js?v=331';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=331';
+import { openLoadImportSheet } from './importloads.js?v=331';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=331';
+import { openPastSeasonsSheet } from './pastseasons.js?v=331';
+import { openPastSalesSheet } from './pastsales.js?v=331';
+import { openLineupSheet } from './lineup.js?v=331';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=331';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=331';
+import { openDangerSheet } from './dangerconfirm.js?v=331';
+import { sampleHistoryFrom, sampleHistoryOffered } from '../demo.js?v=331';
+import { seasonContents, contentsText } from '../seasondelete.js?v=331';
+import { openDeletedSheet } from './deleted.js?v=331';
+import { APP_VERSION } from '../version.js?v=331';
+import { exportRowsAsCSV } from '../csv.js?v=331';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=331';
+import { orderedNames, moveName } from '../commodityorder.js?v=331';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=331';
+import { endpointLabel } from './movements.js?v=331';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=331';
+import { layersForStorage } from '../outload.js?v=331';
+import { traceLoads, traceText } from '../trace.js?v=331';
+import { holdings, totalHeld } from '../offfarm.js?v=331';
+import { kindLabel, billTotal } from '../payables.js?v=331';
+import { orderState, STATE_LABEL } from '../orders.js?v=331';
+import { fieldHarvest } from '../harvest.js?v=331';
+import { capacityFor } from '../storagecapacity.js?v=331';
+import { autoSeasonText } from '../harvestseason.js?v=331';
+import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=331';
+import { openMySignatureSheet } from './signaturepad.js?v=331';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=331';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=331';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=331';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=331';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=325';
+} from '../invites.js?v=331';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=325';
+} from '../auth.js?v=331';
 
 let unsub = null;
+
+// Which groups on the page are open, kept while the page repaints (it repaints whenever the farm's data changes).
+const openGroups = new Set();
+/** One fold of the Settings page: a tinted panel whose closed header says what is inside. */
+const group = (key, title, sub, inner) => `<details class="fold feature" data-group="${key}" ${openGroups.has(key) ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>${title}</h2><div class="sub">${sub}</div></div></summary>${inner}</details>`;
+
+/** The CSV imports, behind one button on the Data card. */
+function openImportSheet() {
+  openSheet('Import from CSV', (root) => {
+    root.innerHTML = `
+      <div class="field hint" style="margin-bottom:10px">Pick what you are bringing in from a spreadsheet.</div>
+      <button type="button" class="btn secondary" id="import-loads" style="margin-bottom:8px">Truck loads (CSV)&hellip;</button>
+      <button type="button" class="btn secondary" id="import-deliveries" style="margin-bottom:8px">Site deliveries (CSV)&hellip;</button>
+      <button type="button" class="btn secondary" id="import-past" style="margin-bottom:8px">Past seasons (CSV)&hellip;</button>
+      <button type="button" class="btn secondary" id="import-past-sales" style="margin-bottom:8px">Past sales (CSV)&hellip;</button>
+      <button type="button" class="btn secondary" id="line-up">Line up paddock names (CSV)&hellip;</button>`;
+    root.querySelector('#import-loads').addEventListener('click', () => openLoadImportSheet());
+    root.querySelector('#import-deliveries').addEventListener('click', () => openDeliveryImportSheet());
+    root.querySelector('#import-past').addEventListener('click', () => openPastSeasonsSheet());
+    root.querySelector('#import-past-sales').addEventListener('click', () => openPastSalesSheet());
+    root.querySelector('#line-up').addEventListener('click', () => openLineupSheet());
+  });
+}
 
 export function renderSettings(root) {
   if (unsub) unsub();
@@ -110,14 +134,13 @@ function paint(root) {
     </div>
     <div class="view">
       <button type="button" class="btn secondary" id="open-help" style="margin-bottom:12px">How to use Commodity Mate, and who can do what</button>
-      <div class="card">
-        <h2>Appearance</h2>
+      <div class="theme-line">
+        <span class="label">Appearance</span>
         <div class="segmented" id="theme-seg">
-          ${[['auto', 'Match my phone'], ['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => `<button type="button" data-theme-choice="${v}" class="${getTheme() === v ? 'active' : ''}">${l}</button>`).join('')}
+          ${[['auto', 'Auto', 'Match my phone'], ['light', 'Light', 'Light'], ['dark', 'Dark', 'Dark']].map(([v, l, t]) => `<button type="button" data-theme-choice="${v}" title="${t}" class="${getTheme() === v ? 'active' : ''}">${l}</button>`).join('')}
         </div>
-        <div class="field hint" style="margin-top:6px">Kept on this device only. "Match my phone" follows its light or dark setting.</div>
       </div>
-
+      ${group('season', 'Season and crops', `${esc(currentYear)} &middot; ${commodities.length} commodit${commodities.length === 1 ? 'y' : 'ies'}`, `
       <div class="card">
         <h2>Season</h2>
         ${field({ label: 'Viewing', id: 'year-select', type: 'select', value: currentYear, options: years.map((y) => ({ value: y, label: y })) })}
@@ -141,28 +164,16 @@ function paint(root) {
         </div>
       </div>
 
+      `)}
+      ${group('business', 'Farm and business', esc(business.farmName || 'Farm name, business details, overheads, signature'), `
       <div class="card">
-        <details class="fold" style="border-top:none;margin-top:0">
-          <summary><div><h2>Overheads</h2><div class="sub">Whole-farm costs used for profit on the Position tab</div></div></summary>
-        <div class="field hint" style="margin-bottom:6px">Whole-farm costs, subtracted from total gross margin in the Position tab.</div>
-        ${field({ label: 'Finance ($)', id: 'oh-finance', type: 'number', step: '1', value: overheads.finance })}
-        ${field({ label: 'Equipment repayments ($)', id: 'oh-equipment', type: 'number', step: '1', value: overheads.equipmentRepayments })}
-        ${field({ label: 'Depreciation ($)', id: 'oh-depreciation', type: 'number', step: '1', value: overheads.depreciation })}
-        ${field({ label: 'Wages ($)', id: 'oh-wages', type: 'number', step: '1', value: overheads.wages })}
-        ${field({ label: 'Drawings ($)', id: 'oh-drawings', type: 'number', step: '1', value: overheads.drawings })}
-        ${field({ label: 'Admin ($)', id: 'oh-admin', type: 'number', step: '1', value: overheads.admin })}
-        ${field({ label: 'Energy ($)', id: 'oh-energy', type: 'number', step: '1', value: overheads.energy })}
-        ${field({ label: 'Insurance ($)', id: 'oh-insurance', type: 'number', step: '1', value: overheads.insurance })}
-        ${field({ label: 'R&amp;M ($)', id: 'oh-rm', type: 'number', step: '1', value: overheads.repairsMaintenance })}
-        ${field({ label: 'Other ($)', id: 'oh-other', type: 'number', step: '1', value: overheads.other })}
-        <button class="btn" id="save-overheads">Save overheads</button>
-        </details>
-      </div>
-
-      <div class="card">
-        <h2>My signature</h2>
-        <div class="hint" style="margin-bottom:8px">Draw your signature once. It signs the documents you choose to sign, such as a vendor declaration. Only you can see or use it.</div>
-        <button class="btn secondary" id="open-my-signature">My signature&hellip;</button>
+        <h2>Farm</h2>
+        <div class="field hint" style="margin-bottom:6px">What this place is called in the app and in invitations. The entity on invoices is set under Business details.</div>
+        ${field({ label: 'Farm / property name', id: 'bd-farm', value: business.farmName, placeholder: 'e.g. Sunnyridge' })}
+        ${canEditBusiness ? '<button class="btn" id="save-farm">Save farm name</button>' : '<div class="hint">Only the owner can rename the farm.</div>'}
+        ${db.getRole() === 'owner' ? `<hr class="sep" />
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:6px 0"><input type="checkbox" id="show-aircair" ${business.showAircair ? 'checked' : ''} style="width:18px;height:18px" /> Offer Aircair's form on spray requests</label>
+        <div class="hint">Off for most farms: a spray request goes out on our own form. Switch on if you send Aircair's own form.</div>` : ''}
       </div>
 
       <div class="card" id="business-card">
@@ -199,46 +210,60 @@ function paint(root) {
       </div>
 
       <div class="card">
-        <h2>Farm</h2>
-        <div class="field hint" style="margin-bottom:6px">What this place is called in the app and in invitations. The entity on invoices is set under Business details.</div>
-        ${field({ label: 'Farm / property name', id: 'bd-farm', value: business.farmName, placeholder: 'e.g. Sunnyridge' })}
-        ${canEditBusiness ? '<button class="btn" id="save-farm">Save farm name</button>' : '<div class="hint">Only the owner can rename the farm.</div>'}
-        ${db.getRole() === 'owner' ? `<hr class="sep" />
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:6px 0"><input type="checkbox" id="show-aircair" ${business.showAircair ? 'checked' : ''} style="width:18px;height:18px" /> Offer Aircair's form on spray requests</label>
-        <div class="hint">Off for most farms: a spray request goes out on our own form. Switch on if you send Aircair's own form.</div>` : ''}
+        <details class="fold" style="border-top:none;margin-top:0">
+          <summary><div><h2>Overheads</h2><div class="sub">Whole-farm costs used for profit on the Position tab</div></div></summary>
+        <div class="field hint" style="margin-bottom:6px">Whole-farm costs, subtracted from total gross margin in the Position tab.</div>
+        ${field({ label: 'Finance ($)', id: 'oh-finance', type: 'number', step: '1', value: overheads.finance })}
+        ${field({ label: 'Equipment repayments ($)', id: 'oh-equipment', type: 'number', step: '1', value: overheads.equipmentRepayments })}
+        ${field({ label: 'Depreciation ($)', id: 'oh-depreciation', type: 'number', step: '1', value: overheads.depreciation })}
+        ${field({ label: 'Wages ($)', id: 'oh-wages', type: 'number', step: '1', value: overheads.wages })}
+        ${field({ label: 'Drawings ($)', id: 'oh-drawings', type: 'number', step: '1', value: overheads.drawings })}
+        ${field({ label: 'Admin ($)', id: 'oh-admin', type: 'number', step: '1', value: overheads.admin })}
+        ${field({ label: 'Energy ($)', id: 'oh-energy', type: 'number', step: '1', value: overheads.energy })}
+        ${field({ label: 'Insurance ($)', id: 'oh-insurance', type: 'number', step: '1', value: overheads.insurance })}
+        ${field({ label: 'R&amp;M ($)', id: 'oh-rm', type: 'number', step: '1', value: overheads.repairsMaintenance })}
+        ${field({ label: 'Other ($)', id: 'oh-other', type: 'number', step: '1', value: overheads.other })}
+        <button class="btn" id="save-overheads">Save overheads</button>
+        </details>
       </div>
 
-      ${db.getRole() === 'owner' ? '<div class="card" id="people-card"></div>' : ''}
+      <div class="card">
+        <h2>My signature</h2>
+        <div class="hint" style="margin-bottom:8px">Draw your signature once. It signs the documents you choose to sign, such as a vendor declaration. Only you can see or use it.</div>
+        <button class="btn secondary" id="open-my-signature">My signature&hellip;</button>
+      </div>
 
+      `)}
+      ${db.getRole() === 'owner' ? group('people', 'People', 'Members and invitations', '<div class="card" id="people-card"></div>') : ''}
+      ${group('data', 'Data and backup', `<span id="last-backup">Last backup: ${backupAgeText(lastBackup())}</span>`, `
       <div class="card">
         <h2>Data</h2>
         <div class="field hint" style="margin-bottom:8px">Your farm is kept on this device and synced to the server when you have signal. A backup is your own copy, in case.</div>
-        <div class="hint" id="last-backup" style="margin-bottom:8px">Last backup: ${backupAgeText(lastBackup())}</div>
-        <div class="swipe-actions">
+        <div class="tile-grid">
           <button class="btn secondary small" id="export">Export backup</button>
           <button class="btn secondary small" id="import">Import backup</button>
+          <button class="btn secondary small" id="export-csv">Export CSV (Excel)&hellip;</button>
+          ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="open-import">Import from CSV&hellip;</button>` : ''}
+          ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="open-deleted">Recently deleted&hellip;</button>` : ''}
         </div>
-        <button class="btn secondary small" id="export-csv" style="margin-top:8px">Export CSV (Excel)&hellip;</button>
-        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-loads" style="margin-top:8px">Import truck loads (CSV)&hellip;</button>` : ''}
-        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-deliveries" style="margin-top:8px">Import site deliveries (CSV)&hellip;</button>` : ''}
-        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-past" style="margin-top:8px">Import past seasons (CSV)&hellip;</button>` : ''}
-        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="import-past-sales" style="margin-top:8px">Import past sales (CSV)&hellip;</button>` : ''}
-        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="line-up" style="margin-top:8px">Line up paddock names (CSV)&hellip;</button>` : ''}
-        ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="open-deleted" style="margin-top:8px">Recently deleted&hellip;</button>` : ''}
-        ${db.getRole() === 'owner' ? '<button class="btn danger small" id="reset" style="margin-top:10px">Reset all data&hellip;</button>' : ''}
+        ${db.getRole() === 'owner' ? '<button class="btn danger small" id="reset" style="margin-top:12px">Reset all data&hellip;</button>' : ''}
         <input type="file" id="import-file" accept="application/json" style="display:none" />
       </div>
+      `)}
 
       <div class="card" id="sync-card"></div>
 
       ${trialFarmsSlotHtml()}
       ${db.getRole() === 'owner' ? trialOwnSlotHtml() : ''}
 
-      ${db.getRole() === 'owner' ? supportCardHtml() : ''}
-      <button type="button" class="btn secondary" id="report-problem" style="margin-bottom:12px">Report a problem</button>
+      <div class="tile-grid">
+        <button type="button" class="btn secondary tool-tile" id="report-problem"><b>Report a problem</b><span>tell us what went wrong</span></button>
+        <button type="button" class="btn secondary tool-tile" id="go-account"><b>Account</b><span>sign out, your role</span></button>
+      </div>
 
+      ${group('app', db.getRole() === 'owner' ? 'App and support' : 'App', `Version ${esc(APP_VERSION)}${db.getRole() === 'owner' ? ' &middot; support access' : ''}`, `
+      ${db.getRole() === 'owner' ? supportCardHtml() : ''}
       <div class="card">
-        <h2>App</h2>
         <div class="row"><span class="label">Version</span><span class="value">${esc(APP_VERSION)}</span></div>
         <div class="field hint" style="margin-top:6px">If something looks out of date after an update, tap this to force the app to fetch the latest version.</div>
         <button class="btn secondary small" id="force-refresh" style="margin-top:6px">Force refresh app</button>
@@ -258,11 +283,7 @@ function paint(root) {
            style="display:block;text-align:center;text-decoration:none;margin-top:6px">Storage diagnostics</a>
       </div>
 
-      <div class="card">
-        <h2>Account</h2>
-        <div class="field hint" style="margin-bottom:8px">Who you are signed in as, your role on this farm, and the way out.</div>
-        <button class="btn secondary" id="go-account">Account &amp; sign out</button>
-      </div>
+      `)}
     </div>
     <button class="fab" id="add-commodity">+</button>
   `;
@@ -389,11 +410,8 @@ function paint(root) {
     if (line) line.textContent = `Last backup: ${backupAgeText(lastBackup())}`;
   });
   root.querySelector('#export-csv').addEventListener('click', () => openExportCsvSheet());
-  root.querySelector('#import-loads')?.addEventListener('click', () => openLoadImportSheet());
-  root.querySelector('#import-deliveries')?.addEventListener('click', () => openDeliveryImportSheet());
-  root.querySelector('#import-past')?.addEventListener('click', () => openPastSeasonsSheet());
-  root.querySelector('#import-past-sales')?.addEventListener('click', () => openPastSalesSheet());
-  root.querySelector('#line-up')?.addEventListener('click', () => openLineupSheet());
+  root.querySelector('#open-import')?.addEventListener('click', () => openImportSheet());
+  root.querySelectorAll('details[data-group]').forEach((d) => d.addEventListener('toggle', () => { if (d.open) openGroups.add(d.dataset.group); else openGroups.delete(d.dataset.group); }));
   root.querySelector('#open-deleted')?.addEventListener('click', () => openDeletedSheet());
   root.querySelector('#open-my-signature')?.addEventListener('click', () => openMySignatureSheet());
   const importFile = root.querySelector('#import-file');

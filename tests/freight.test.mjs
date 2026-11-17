@@ -244,7 +244,7 @@ check('a freight order can be made from the contract itself, for the contract', 
 check('a buyer\'s order is called a grain order wherever it is named, so it is not mistaken for a freight order', () => {
   const orders = read('docs/js/views/orders.js');
   assert.ok(orders.includes("openSheet('Grain orders'") && orders.includes("'Add a grain order'") && orders.includes('<h2>Grain orders</h2>'));
-  assert.ok(read('docs/js/views/sales.js').includes('id="open-orders" style="margin-bottom:12px">Grain orders'));
+  assert.ok(read('docs/js/views/sales.js').includes('id="open-orders"><b>Grain orders</b>'));
   assert.ok(read('docs/js/views/movements.js').includes('Delivering against a grain order'));
 });
 

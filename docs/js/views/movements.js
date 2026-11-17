@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=325';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=325';
-import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=325';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=325';
-import { compressAndStampImage } from '../img.js?v=325';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=325';
-import { specText, extraSpecKey } from '../outload.js?v=325';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=325';
-import { pickableSilos } from '../silopick.js?v=325';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=325';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=325';
-import { activeSales } from '../paidsales.js?v=325';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=325';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=325';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=325';
-import { nowTime } from '../loadreport.js?v=325';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=325';
+import { db } from '../storage.js?v=331';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=331';
+import { num, tons, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=331';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=331';
+import { compressAndStampImage } from '../img.js?v=331';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=331';
+import { specText, extraSpecKey } from '../outload.js?v=331';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=331';
+import { pickableSilos } from '../silopick.js?v=331';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=331';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=331';
+import { activeSales } from '../paidsales.js?v=331';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=331';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=331';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=331';
+import { nowTime } from '../loadreport.js?v=331';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=331';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -66,9 +66,11 @@ function paint(root) {
     <div class="view">
       <div class="stat-grid" id="move-stats"></div>
 
-      ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="log-ginning" style="margin-bottom:10px">+ Log ginning</button>` : ''}
-      ${movements.length > 0 ? `<button class="btn secondary small" id="load-report" style="margin-bottom:10px">Send a load report</button>` : ''}
-      <button class="btn secondary small" id="get-outload" style="margin-bottom:10px">Outload number for a truck</button>
+      <div class="move-tools">
+        ${storages.some((s) => s.kind === 'tally') ? `<button class="btn secondary small" id="log-ginning">+ Log ginning</button>` : ''}
+        ${movements.length > 0 ? `<button class="btn secondary small" id="load-report">Load report</button>` : ''}
+        <button class="btn secondary small" id="get-outload">Outload number</button>
+      </div>
 
       ${movements.length > 0 ? `
       <div class="filterbar">

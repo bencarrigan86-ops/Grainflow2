@@ -1084,15 +1084,33 @@ details.fold.feature > *:last-child { margin-bottom: 14px; }
 /* Storage tab: the Measured switch and the Tools button share one line; the tools open beneath as a quiet row. */
 .storage-tools-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
 .storage-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: -2px 0 10px; padding: 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
-.tab-total { margin-top: 10px; padding: 9px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; font-size: 13px; color: var(--text-dim); }
-.tab-total strong { color: var(--text); font-size: 15px; }
-.tab-total-fig { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 3px; color: var(--text); }
-.tab-total-fig b { font-weight: 800; }
+.tab-total { margin-top: 12px; padding: 12px 14px; background: color-mix(in srgb, var(--accent-summary) 10%, var(--surface)); border: 2px solid var(--accent-summary); border-radius: 12px; font-size: 14px; color: var(--text-dim); }
+.tab-total strong { color: var(--text); font-size: 18px; font-weight: 800; }
+.tab-total-fig { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px; color: var(--text); font-size: 15px; }
+.tab-total-fig b { font-weight: 800; font-size: 20px; }
 .storage-find { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 8px; margin-top: 10px; }
 .storage-find .field { margin: 0; min-width: 0; }
 .storage-find select, .storage-find input { width: 100%; min-width: 0; text-overflow: ellipsis; }
-.assume-line { margin: 10px 0 4px; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
-.assume-line label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 4px; }
-.assume-line select { width: 100%; }
+.assume-line { margin: 10px 0 8px; padding: 12px 14px; background: color-mix(in srgb, var(--accent-summary) 6%, var(--surface)); border: 2px solid var(--accent-summary); border-radius: 12px; }
+.assume-line label { display: block; font-size: 14px; font-weight: 800; margin-bottom: 8px; color: var(--text); }
+.assume-line select { width: 100%; min-height: 46px; font-size: 17px; font-weight: 700; border: 2px solid var(--accent-summary); border-radius: 10px; }
 .assume-line .hint { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
 .storage-find.one { grid-template-columns: minmax(0, 1fr); }
+.prod-tools, .tile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.prod-tools .tool-tile, .tile-grid .tool-tile { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; min-height: 54px; padding: 8px 12px; text-align: left; margin: 0; min-width: 0; }
+.prod-tools .tool-tile b, .tile-grid .tool-tile b { font-size: 15px; font-weight: 800; }
+.prod-tools .tool-tile span, .tile-grid .tool-tile span { font-size: 12px; font-weight: 600; opacity: .8; }
+.tab-total-fig .short, .tab-total-fig .short b { color: var(--danger); }
+.tile-grid .btn { margin: 0; min-width: 0; }
+.theme-line { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.theme-line .label { font-size: 13px; font-weight: 700; color: var(--text-dim); }
+.theme-line .segmented { flex: 1; }
+.move-tools { display: flex; gap: 8px; margin-bottom: 10px; }
+.move-tools .btn { flex: 1; margin: 0; min-width: 0; padding-left: 8px; padding-right: 8px; }
+.reports-bar { display: flex; align-items: stretch; gap: 8px; }
+.reports-bar .segmented { flex: 1; min-width: 0; }
+#reports-pdf-slot .btn { width: auto; margin: 0; min-height: 100%; padding: 0 14px; white-space: nowrap; }
+tr.sum-head td { font-weight: 800; background: var(--surface-2); }
+.card.report .table-scroll table td.sum-sub, .card.report .table-scroll table.tight td.sum-sub { padding-left: 20px; font-weight: 500; }
+.mtm.pos { color: var(--accent-summary); font-weight: 800; }
+.mtm.neg { color: var(--danger); font-weight: 800; }

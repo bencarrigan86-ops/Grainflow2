@@ -4,8 +4,8 @@
 // end, orders that missed their date, grain delivered but not invoiced, a backup that is due) and says it in a line each,
 // the worst first, so the farm is not left to go and look. Pure: it touches neither storage nor the page.
 
-import { receivables, payablesDue, deliveries, uninvoiced } from './outstanding.js?v=325';
-import { backupDue, backupAgeText } from './backup.js?v=325';
+import { receivables, payablesDue, deliveries, uninvoiced } from './outstanding.js?v=331';
+import { backupDue, backupAgeText } from './backup.js?v=331';
 
 const MONEY_ROLES = ['owner', 'manager', 'bookkeeper'];
 const SEVERITY = { bad: 0, warn: 1, info: 2 };
@@ -17,7 +17,7 @@ const money0 = (n) => `$${Math.round(Number(n) || 0).toLocaleString('en-AU')}`;
  * @param {{role: string, today: string, invoices?: object[], sales?: object[], movements?: object[], orders?: object[],
  *          payables?: object[], lastBackup?: number|null, now?: number}} s
  * @returns {{id: string, tone: 'bad'|'warn'|'info', title: string, detail: string, action: string}[]}
- *   `action` is what tapping it opens: 'money' (Receivables & payables), 'deliveries' (Deliveries to go) or 'settings'.
+ *   `action` is what tapping it opens: 'money' (Receivables & payables), 'deliveries' (Delivery timeline) or 'settings'.
  */
 export function attentionItems(s) {
   const { role, today, invoices = [], sales = [], movements = [], orders = [], payables = [], lastBackup = null, now = Date.now() } = s;

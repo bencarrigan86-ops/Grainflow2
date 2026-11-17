@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=325';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures } from '../fertfigures.js?v=325';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=325';
-import { fertPdf } from '../fertpdf.js?v=325';
-import { seedPdf } from '../seedpdf.js?v=325';
-import { yieldPdf } from '../yieldpdf.js?v=325';
-import { harvestPdf } from '../harvestpdf.js?v=325';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=325';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=325';
-import { field, getVal, getNum } from '../ui.js?v=325';
-import { canSeeYield } from '../nav.js?v=325';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=325';
-import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=325';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=325';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=325';
+import { db } from '../storage.js?v=331';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=331';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=331';
+import { fertPdf } from '../fertpdf.js?v=331';
+import { seedPdf } from '../seedpdf.js?v=331';
+import { yieldPdf } from '../yieldpdf.js?v=331';
+import { harvestPdf } from '../harvestpdf.js?v=331';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=331';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=331';
+import { field, getVal, getNum } from '../ui.js?v=331';
+import { canSeeYield } from '../nav.js?v=331';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=331';
+import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=331';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=331';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=331';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -34,12 +34,12 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
-      <div class="segmented" id="reports-view">
+      <div class="reports-bar"><div class="segmented" id="reports-view">
         ${showYield ? `<button data-view="yield" class="${view === 'yield' ? 'active' : ''}">Yield</button>` : ''}
         <button data-view="harvest" class="${view === 'harvest' ? 'active' : ''}">Harvest</button>
         <button data-view="fert" class="${view === 'fert' ? 'active' : ''}">Fert</button>
         <button data-view="seed" class="${view === 'seed' ? 'active' : ''}">Seed</button>
-      </div>
+      </div><div id="reports-pdf-slot"></div></div>
       <div id="reports-body" style="margin-top:12px"></div>
     </div>
   `;
@@ -60,6 +60,23 @@ function paint(root) {
   } else {
     paintFert(root);
   }
+  dockPdf(root);
+}
+
+/**
+ * Each report draws its own Share/Download PDF button at the top of its body. Move it up beside the switcher, so it is
+ * not a full-width row of its own on every report. The label is shortened; the full one stays as its title.
+ */
+function dockPdf(root) {
+  const slot = root.querySelector('#reports-pdf-slot');
+  const b = root.querySelector('#reports-body button[id$="-pdf"]');
+  if (!slot || !b) return;
+  b.title = b.textContent.trim();
+  b.textContent = 'PDF';
+  b.removeAttribute('style');
+  b.classList.add('small');
+  slot.innerHTML = '';
+  slot.appendChild(b);
 }
 
 function paintFert(root) {
@@ -87,11 +104,11 @@ function paintFert(root) {
     <div class="card report">
       <h2><span class="dot report"></span>Urea</h2>
       ${groups.length === 0 ? '' : `<div class="n-key"><span><i class="sw n"></i>Nitrogen (N)</span><span><i class="sw u"></i>Urea equivalent (N &divide; ${UREA_N_PCT / 100})</span></div>`}
-      ${groups.length === 0 ? `<div class="empty">Add fields with urea rates in the Production tab.</div>` : groups.map((g) => ureaTable(g, commodities.find((c) => c.id === g.id))).join('')}
+      ${groups.length === 0 ? `<div class="empty">Add fields with urea rates in the Production tab.</div>` : `${groups.length > 1 ? fertSummaryTable(ureaSummary(groups.map((g) => ureaFigures(g, commodities.find((c) => c.id === g.id))))) : ''}${groups.map((g) => ureaTable(g, commodities.find((c) => c.id === g.id))).join('')}`}
     </div>
     <div class="card report">
       <h2><span class="dot report"></span>Starter fertiliser</h2>
-      ${groups.length === 0 ? `<div class="empty">Add fields with starter rates in the Production tab.</div>` : groups.map((g) => starterTable(g)).join('')}
+      ${groups.length === 0 ? `<div class="empty">Add fields with starter rates in the Production tab.</div>` : `${groups.length > 1 ? fertSummaryTable(starterSummary(groups.map((g) => starterFigures(g)))) : ''}${groups.map((g) => starterTable(g)).join('')}`}
     </div>
   `;
   buildNitrogenCalc(body, commodities);
@@ -103,7 +120,7 @@ function paintFert(root) {
 async function exportFertPdf(groups, commodities) {
   const season = db.getCurrentYear();
   const bytes = fertPdf(
-    { urea: groups.map((g) => ureaFigures(g, commodities.find((c) => c.id === g.id))), starter: groups.map((g) => starterFigures(g)) },
+    { urea: groups.map((g) => ureaFigures(g, commodities.find((c) => c.id === g.id))), starter: groups.map((g) => starterFigures(g)), summary: groups.length > 1 },
     { business: db.getBusinessDetails().entityName || '', season, today: dmy(todayLocal()), ureaNPct: UREA_N_PCT },
   );
   const fileName = safeFileName(`Fertiliser ${season} ${dmy(todayLocal())}`);
@@ -261,6 +278,36 @@ function buildNitrogenCalc(root, commodities) {
   recompute();
 }
 
+/** The whole farm's urea or starter in one small table: a row for each commodity and a total, so what is left to buy is one glance. */
+function fertSummaryTable(sum) {
+  const { rows, total } = sum;
+  return `
+    <div class="group-label"><span>By commodity</span></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Commodity</th><th>Area</th><th>Req t</th><th>App t</th><th>Left t</th></tr></thead>
+        <tbody>
+          ${rows.map((r) => `
+            <tr>
+              <td>${esc(r.name)}</td>
+              <td>${num(r.area, 1)}</td>
+              <td>${num(r.reqT, 2)}</td>
+              <td>${num(r.appT, 2)}</td>
+              <td>${num(r.leftT, 2)}</td>
+            </tr>`).join('')}
+        </tbody>
+        <tfoot><tr>
+          <td>Total</td>
+          <td>${num(total.area, 1)}</td>
+          <td>${num(total.reqT, 2)}</td>
+          <td>${num(total.appT, 2)}</td>
+          <td>${num(total.leftT, 2)}</td>
+        </tr></tfoot>
+      </table>
+    </div>
+  `;
+}
+
 function ureaTable(g, commodity) {
   const { rows, total } = ureaFigures(g, commodity);
 
@@ -352,7 +399,7 @@ function paintSeed(root) {
     ${groups.length === 0 ? '' : `<button type="button" class="btn secondary" id="seed-pdf" style="margin-bottom:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>`}
     <div class="card report">
       <h2><span class="dot report"></span>Seed</h2>
-      ${groups.length === 0 ? `<div class="empty">Add fields with a seed rate in the Production tab.</div>` : groups.map((g) => seedTable(g)).join('')}
+      ${groups.length === 0 ? `<div class="empty">Add fields with a seed rate in the Production tab.</div>` : seedSummaryTable(seedSummary(groups.map((g) => seedFigures(g)))) + groups.map((g) => seedTable(g)).join('')}
     </div>
   `;
   body.querySelector('#seed-pdf')?.addEventListener('click', () => exportSeedPdf(groups));
@@ -365,6 +412,39 @@ async function exportSeedPdf(groups) {
   const fileName = safeFileName(`Seed ${season} ${dmy(todayLocal())}`);
   if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
   await sharePdf(bytes, fileName, { title: `Seed ${season}` });
+}
+
+/**
+ * Seed as it is ordered: each commodity with its varieties under it, and the hectares, rate and tonnes for each. Left out when it
+ * would only repeat the field tables below: one commodity, one variety.
+ */
+function seedSummaryTable(commodities) {
+  if (commodities.length < 2 && !commodities.some((c) => c.varieties.length > 1)) return '';
+  return `
+    <div class="group-label"><span>By commodity and variety</span></div>
+    <div class="table-scroll">
+      <table class="tight">
+        <thead><tr><th>Variety</th><th>Area ha</th><th>kg/ha</th><th>Req t</th><th>+${num(SEED_BUFFER_PCT, 0)}% t</th></tr></thead>
+        <tbody>
+          ${commodities.map((c) => `
+            <tr class="sum-head">
+              <td>${esc(c.name)}</td>
+              <td>${num(c.total.area, 1)}</td>
+              <td>${num(c.total.rate, 0)}</td>
+              <td>${num(c.total.requiredT, 2)}</td>
+              <td>${num(c.total.bufferedT, 2)}</td>
+            </tr>${c.varieties.map((v) => `
+            <tr>
+              <td class="sum-sub">${esc(v.variety)}</td>
+              <td>${num(v.area, 1)}</td>
+              <td>${num(v.rate, 0)}</td>
+              <td>${num(v.requiredT, 2)}</td>
+              <td>${num(v.bufferedT, 2)}</td>
+            </tr>`).join('')}`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 function seedTable(g) {
@@ -461,7 +541,7 @@ function paintHarvest(root, showYield = true) {
       <summary>${summary}</summary>
       ${inner}
     </details>`;
-  if (!showYield) { body.innerHTML = pdfButton + picker + harvestNoYieldHtml({ groups, farm, seasons: scope ? [] : seasons, space, minRoom, t1, haPct, fold, nameOf, assumeOptions, assume, pick, title, scopeNote, showDone }); wireHarvest(root, body, showYield); wirePdf(); return; }
+  if (!showYield) { body.innerHTML = pdfButton + picker + harvestNoYieldHtml({ groups, farm, seasons: scope ? [] : seasons, space, minRoom, t1, haPct, fold, nameOf, assumeOptions, assume, pick, title, scopeNote, showDone }); wireHarvest(root, body, showYield); wirePdf(); dockPdf(root); return; }
   body.innerHTML = `
     ${pdfButton}${picker}
     <div class="card report">
@@ -527,6 +607,7 @@ function paintHarvest(root, showYield = true) {
 
   wireHarvest(root, body, showYield);
   wirePdf();
+  dockPdf(root);
 }
 
 /** The Harvest report as a PDF: the report's own figures, with no tonnes for a role that is not shown yields. */

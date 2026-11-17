@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=325';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=325';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=325';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=325';
-import { describeMerge } from '../merge.js?v=325';
-import { renderRelatedMovements } from './movements.js?v=325';
-import { canSeeYield } from '../nav.js?v=325';
-import { wireJumps } from '../jump.js?v=325';
-import { openMapSheet } from './farmmap.js?v=325';
-import { openInputsSheet } from './inputs.js?v=325';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=325';
-import { stockLevels } from '../inputs.js?v=325';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=325';
-import { openRotationSheet } from './rotation.js?v=325';
-import { openAveragesSheet } from './averages.js?v=325';
+import { db } from '../storage.js?v=331';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=331';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=331';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=331';
+import { describeMerge } from '../merge.js?v=331';
+import { renderRelatedMovements } from './movements.js?v=331';
+import { canSeeYield } from '../nav.js?v=331';
+import { wireJumps } from '../jump.js?v=331';
+import { openMapSheet } from './farmmap.js?v=331';
+import { openInputsSheet } from './inputs.js?v=331';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=331';
+import { stockLevels } from '../inputs.js?v=331';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=331';
+import { openRotationSheet } from './rotation.js?v=331';
+import { openAveragesSheet } from './averages.js?v=331';
 
 let unsub = null;
 
@@ -50,11 +50,12 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
-      ${fields.length ? `<button type="button" class="btn secondary" id="open-map" style="margin-bottom:12px">Farm map${fields.some((f) => f.boundary) ? ` &middot; ${fields.filter((f) => f.boundary).length} of ${fields.length} paddocks mapped` : ' &middot; add your paddock outlines'}</button>` : ''}
-      ${fields.length ? '<button type="button" class="btn secondary" id="open-rotation" style="margin-bottom:12px">Rotation and yield history &middot; every paddock, every season</button>' : ''}
-      ${showYield ? '<button type="button" class="btn secondary" id="open-averages" style="margin-bottom:12px">Averages by commodity &middot; yield and price, every season</button>' : ''}
-      ${canSeeInputs ? `<button type="button" class="btn secondary" id="open-inputs" style="margin-bottom:12px">Inputs and stock${inputProducts ? ` &middot; ${inputProducts} product${inputProducts === 1 ? '' : 's'} in stock` : ' &middot; seed, fertiliser, fuel, chemical'}</button>` : ''}
-      ${sprayAllowed && fields.length ? `<button type="button" class="btn secondary" id="open-spray" style="margin-bottom:12px">Spray requests${sprayOpen ? ` &middot; ${sprayOpen} open` : ' &middot; send a job to a contractor'}</button>` : ''}
+      <div class="prod-tools">
+        ${fields.length ? `<button type="button" class="btn secondary tool-tile" id="open-map"><b>Farm map</b><span>${fields.some((f) => f.boundary) ? `${fields.filter((f) => f.boundary).length} of ${fields.length} mapped` : 'add your outlines'}</span></button>` : ''}
+        ${canSeeInputs ? `<button type="button" class="btn secondary tool-tile" id="open-inputs"><b>Inputs and stock</b><span>${inputProducts ? `${inputProducts} product${inputProducts === 1 ? '' : 's'} in stock` : 'seed, fert, fuel'}</span></button>` : ''}
+        ${sprayAllowed && fields.length ? `<button type="button" class="btn secondary tool-tile" id="open-spray"><b>Spray requests</b><span>${sprayOpen ? `${sprayOpen} open` : 'send a job'}</span></button>` : ''}
+        ${fields.length || showYield ? `<button type="button" class="btn secondary tool-tile" id="open-reports"><b>Reports</b><span>${fields.length ? 'rotation' : ''}${fields.length && showYield ? ', ' : ''}${showYield ? 'averages' : ''}</span></button>` : ''}
+      </div>
       ${rollup.length === 0 ? '' : `
       <div class="card report">
         <h2><span class="dot report"></span>By commodity</h2>
@@ -99,14 +100,24 @@ function paint(root) {
   });
   root.querySelector('#add-field').addEventListener('click', () => openFieldSheet(null));
   root.querySelector('#open-inputs')?.addEventListener('click', () => openInputsSheet());
-  root.querySelector('#open-rotation')?.addEventListener('click', () => openRotationSheet());
-  root.querySelector('#open-averages')?.addEventListener('click', () => openAveragesSheet());
+  root.querySelector('#open-reports')?.addEventListener('click', () => openReportsSheet(fields.length > 0, showYield));
   root.querySelector('#open-map')?.addEventListener('click', () => openMapSheet({
     onOpenField: openFieldSheet,
     onSpray: canSpray(db.getRole()) ? (ids) => openSprayFormSheet(null, { ids }) : undefined,
   }));
   root.querySelector('#open-spray')?.addEventListener('click', () => openSprayJobsSheet());
   root.querySelector('#empty-add-field')?.addEventListener('click', () => openFieldSheet(null));
+}
+
+/** The look-back reports, behind one button so the top of Production stays short: rotation and yield history, and the averages by commodity. */
+function openReportsSheet(hasFields, showYield) {
+  openSheet('Reports', (root) => {
+    root.innerHTML = `
+      ${hasFields ? '<button type="button" class="btn secondary" id="open-rotation" style="margin-bottom:12px">Rotation and yield history &middot; every paddock, every season</button>' : ''}
+      ${showYield ? '<button type="button" class="btn secondary" id="open-averages" style="margin-bottom:12px">Averages by commodity &middot; yield and price, every season</button>' : ''}`;
+    root.querySelector('#open-rotation')?.addEventListener('click', () => openRotationSheet());
+    root.querySelector('#open-averages')?.addEventListener('click', () => openAveragesSheet());
+  });
 }
 
 function fieldRow(f, movements, showYield = true) {

@@ -4,21 +4,23 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=325';
-import { openSheet } from '../ui.js?v=325';
-import { num, money, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=325';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=325';
-import { windowText } from '../orders.js?v=325';
-import { openOrderSheet } from './orders.js?v=325';
-import { openInvoiceListSheet } from './invoice.js?v=325';
-import { renderPayables, returnToAfterBill } from './payables.js?v=325';
-import { openXeroSheet } from './xero.js?v=325';
-import { cashflow } from '../cashflow.js?v=325';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=325';
-import { buyerStatements, statementPdf } from '../statement.js?v=325';
-import { sharePdf } from '../sharefile.js?v=325';
-import { emailIn } from '../vendordec.js?v=325';
-import { invoiceLabel } from '../adjustment.js?v=325';
+import { db } from '../storage.js?v=331';
+import { openSheet } from '../ui.js?v=331';
+import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=331';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=331';
+import { windowText } from '../orders.js?v=331';
+import { openOrderSheet } from './orders.js?v=331';
+import { openInvoiceListSheet } from './invoice.js?v=331';
+import { renderPayables, returnToAfterBill } from './payables.js?v=331';
+import { openXeroSheet } from './xero.js?v=331';
+import { cashflow } from '../cashflow.js?v=331';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=331';
+import { buyerStatements, statementPdf } from '../statement.js?v=331';
+import { buyerExposure } from '../exposure.js?v=331';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=331';
+import { exposurePdf } from '../exposurepdf.js?v=331';
+import { emailIn } from '../vendordec.js?v=331';
+import { invoiceLabel } from '../adjustment.js?v=331';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -63,7 +65,7 @@ function timelineHtml(shown, commodities, today) {
 
 /** Grain still to deliver, contract by contract. */
 export function openDeliveriesSheet() {
-  openSheet('Deliveries to go', (root) => {
+  openSheet('Delivery timeline', (root) => {
     const draw = () => {
       const { sales, movements, commodities } = db.get();
       const today = todayLocal();
@@ -116,7 +118,9 @@ export function openDeliveriesSheet() {
  * with due dates. The toggle picks the side; Payables is the full bills screen (paid, types, brokerage not yet billed,
  * add a bill).
  */
-export function openMoneySheet() {
+/** `side` opens it on that tab: 'in' (receivables) or 'out' (payables); left out, it opens where it was last left. */
+export function openMoneySheet(side = null) {
+  if (side === 'in' || side === 'out') moneySide = side;
   returnToAfterBill(() => openMoneySheet());
   openSheet('Receivables & payables', (root) => {
     const draw = () => {
@@ -139,7 +143,7 @@ export function openMoneySheet() {
           <button data-side="month" class="${moneySide === 'month' ? 'active' : ''}">By month</button>
           <button data-side="buyer" class="${moneySide === 'buyer' ? 'active' : ''}">By buyer</button>
         </div>
-        ${moneySide === 'month' ? cashflowHtml(cashflow(invoices, sales, db.getPayables(), today, 6, expectedReceipts(deliveries(sales, movements, db.getOrders(), today).rows, unb.rows, today))) : moneySide === 'buyer' ? buyersHtml(buyerStatements(invoices, sales, movements, today), commodities) : moneySide === 'out' ? '<div id="money-bills"></div>' : `
+        ${moneySide === 'month' ? cashflowHtml(cashflow(invoices, sales, db.getPayables(), today, 6, expectedReceipts(deliveries(sales, movements, db.getOrders(), today).rows, unb.rows, today))) : moneySide === 'buyer' ? buyersHtml(buyerExposure(invoices, sales, movements, commodities, today), commodities) : moneySide === 'out' ? '<div id="money-bills"></div>' : `
         <div class="subhead">Delivered, not yet invoiced</div>
         ${unb.rows.length === 0 ? '<div class="empty" style="padding:6px 0">Every delivery is on an invoice.</div>' : `
         <div class="hint" style="margin-bottom:6px">${num(unb.total.tons, 1)} t worth about ${money(unb.total.value, 0)} has gone to buyers with no invoice yet. Tap a contract to invoice it.</div>
@@ -168,6 +172,7 @@ export function openMoneySheet() {
       root.querySelectorAll('[data-invoice-sale]').forEach((el) => el.addEventListener('click', () => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.invoiceSale))));
       root.querySelectorAll('[data-open-invoices]').forEach((el) => el.addEventListener('click', () => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.openInvoices))));
       root.querySelector('#open-xero')?.addEventListener('click', () => openXeroSheet());
+      root.querySelector('#exposure-pdf')?.addEventListener('click', () => exportExposurePdf(buyerExposure(invoices, sales, movements, commodities, today), today));
       root.querySelectorAll('[data-statement]').forEach((b) => b.addEventListener('click', () => sendStatement(b.dataset.statement, { invoices, sales, movements, commodities, today })));
       const bills = root.querySelector('#money-bills');
       if (bills) renderPayables(bills, { stats: false });
@@ -195,18 +200,67 @@ function cashflowHtml(cf) {
     </table></div>`;
 }
 
-/** What each buyer owes: unpaid invoices plus grain not yet invoiced, with a statement to send. */
-function buyersHtml(list, commodities) {
-  if (!list.length) return '<div class="empty" style="padding:6px 0">No buyer owes you anything, and every delivery is on an invoice.</div>';
+/** The MTM gap in colour: green above zero, red with a minus sign below, plain at zero. */
+const mtmHtml = (v) => {
+  const r = Math.round(v);
+  return r === 0 ? money(0, 0) : `<span class="mtm ${r > 0 ? 'pos' : 'neg'}">${r < 0 ? '-' : ''}${money(Math.abs(r), 0)}</span>`;
+};
+
+/**
+ * What each buyer could cost the farm: what they owe now (unpaid invoices and grain not yet invoiced), the grain still to go to
+ * them and what it is worth, and how far their contracts sit from the market. A statement can be sent to any buyer who owes.
+ */
+function buyersHtml({ buyers, total, weeks }, commodities) {
+  if (!buyers.length) return '<div class="empty" style="padding:6px 0">No buyer owes you anything, and there is no grain still to deliver.</div>';
+  const gapNote = total.noMtm ? ` ${total.noMtm} contract${total.noMtm === 1 ? ' has' : 's have'} no MTM price set on the commodity, so ${total.noMtm === 1 ? 'it is' : 'they are'} left out.` : '';
   return `
-    <div class="hint" style="margin-bottom:8px">What each buyer owes: unpaid invoices, and grain delivered to them that is not on an invoice yet. Send a buyer their statement as a PDF.</div>
-    ${list.map((b) => `
+    <button type="button" class="btn secondary small" id="exposure-pdf" style="margin-bottom:10px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>
+    <div class="stat-grid">
+      <div class="stat" style="grid-column:1 / -1"><div class="n">${money(total.owing, 0)}</div><div class="l">Owing now · ${total.overdueTotal ? `<span class="mtm neg">${money(total.overdueTotal, 0)} overdue</span>` : 'none overdue'}</div></div>
+      <div class="stat"><div class="n">${money(total.unpaidTotal, 0)}</div><div class="l">Invoiced, unpaid</div></div>
+      <div class="stat"><div class="n">${money(total.notInvoicedValue, 0)}</div><div class="l">Delivered, not invoiced (${num(total.notInvoicedTons, 0)} t)</div></div>
+      <div class="stat"><div class="n">${money(total.dueValue, 0)}</div><div class="l">Still to go (${num(total.dueTons, 0)} t)</div></div>
+      <div class="stat"><div class="n">${mtmHtml(total.mtmGap)}</div><div class="l">Contracts vs MTM</div></div>
+    </div>
+    ${weeks.length ? `
+    <div class="subhead" style="margin-top:12px">Invoices due, by week</div>
+    <div class="table-scroll" style="margin:0">
+      <table class="tight">
+        <thead><tr><th>Due</th><th>Invoices</th><th>Amount</th></tr></thead>
+        <tbody>
+          ${weeks.map((w) => `
+            <tr>
+              <td>${w.late ? `<span class="mtm neg">${esc(w.label)}</span>` : esc(w.label)}</td>
+              <td>${w.count}</td>
+              <td>${w.late ? `<span class="mtm neg">${money(w.amount, 0)}</span>` : money(w.amount, 0)}</td>
+            </tr>`).join('')}
+        </tbody>
+        <tfoot><tr>
+          <td>Total</td>
+          <td>${weeks.reduce((n, w) => n + w.count, 0)}</td>
+          <td>${money(total.unpaidTotal, 0)}</td>
+        </tr></tfoot>
+      </table>
+    </div>` : ''}
+    <div class="hint" style="margin:8px 0">Owing now is credit already given: invoices not yet paid, plus grain delivered that is not on an invoice. Still to go is the tonnes left on open contracts at the contract price. Against MTM is the contract price less your MTM price over those tonnes: above zero, the contracts are worth more than the market today, which is what you are out if the buyer does not take the grain.${esc(gapNote)}</div>
+    ${buyers.map((b) => `
       <div class="list-item stack">
         <div class="li-top"><div class="main">${esc(b.buyer)}</div><div class="main">${money(b.owing, 0)}</div></div>
-        <div class="meta">${b.unpaid.length ? `${b.unpaid.length} unpaid invoice${b.unpaid.length === 1 ? '' : 's'} · ${money(b.unpaidTotal, 0)}` : 'No unpaid invoices'}${b.notInvoicedValue ? ` · ${num(b.notInvoicedTons, 1)} t not invoiced, ${money(b.notInvoicedValue, 0)}` : ''}</div>
-        <div class="li-foot"><span class="badges">${b.overdueTotal ? `<span class="badge neg">${money(b.overdueTotal, 0)} overdue</span>` : '<span class="badge muted">None overdue</span>'}</span>
-          <button type="button" class="btn secondary small" data-statement="${esc(b.key)}">Send statement</button></div>
+        <div class="meta">${b.unpaidCount ? `${b.unpaidCount} unpaid invoice${b.unpaidCount === 1 ? '' : 's'} · ${money(b.unpaidTotal, 0)}` : 'No unpaid invoices'}${b.notInvoicedValue ? ` · ${num(b.notInvoicedTons, 1)} t not invoiced · ${money(b.notInvoicedValue, 0)}` : ''}</div>
+        ${b.nextDue ? `<div class="meta">Next payment: ${money(b.nextDue.amount, 0)} due ${esc(shortDate(b.nextDue.date))}</div>` : ''}
+        <div class="meta">${b.dueTons > 0 ? `To go: ${num(b.dueTons, 0)} t on ${b.contracts} contract${b.contracts === 1 ? '' : 's'} · ${money(b.dueValue, 0)}${b.contracts > b.noMtm ? ` · <strong>${mtmHtml(b.mtmGap)} vs MTM</strong>` : ' · no MTM price set'}` : 'Nothing left to deliver'}</div>
+        <div class="li-foot"><span class="badges">${b.overdueTotal ? `<span class="badge neg">${money(b.overdueTotal, 0)} overdue</span>` : '<span class="badge muted">None overdue</span>'}${b.share >= 0.005 ? `<span class="badge muted">${Math.round(b.share * 100)}% of what is owed</span>` : ''}</span>
+          ${b.owing > 0 ? `<button type="button" class="btn secondary small" data-statement="${esc(b.key)}">Send statement</button>` : ''}</div>
       </div>`).join('')}`;
+}
+
+/** The buyer exposure as a PDF: shared where the phone can share, downloaded elsewhere. */
+async function exportExposurePdf(exposure, today) {
+  const biz = db.getBusinessDetails();
+  const bytes = exposurePdf(exposure, { business: biz.entityName || biz.farmName || '', today: dmy(today) });
+  const name = safeFileName(`Buyer exposure ${dmy(today)}`);
+  if (!canShareFiles()) { downloadFile(bytes, name); return; }
+  await sharePdf(bytes, name, { title: 'Buyer exposure' });
 }
 
 /** Makes the buyer's statement as a PDF and sends it on: the share sheet on a phone, a download and an email on a computer. */

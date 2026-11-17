@@ -2,7 +2,8 @@
 // buffer on top. Portrait A4 in the same style as the Position and Fert pages. The figures come from fertfigures.js
 // (seedFigures), the same ones the screen uses. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=325';
+import { Pdf, wrapText } from './pdf.js?v=331';
+import { seedSummary } from './fertfigures.js?v=331';
 
 const PAGE = { width: 595.28, height: 841.89 };
 const M = 36;
@@ -72,6 +73,43 @@ export function seedPdf(figures = [], { business = '', season = '', today = '', 
     columns.forEach((c, i) => put(i, c.head, { bold: true, size: HEAD, gray: 1 }));
     y += 20;
   };
+
+  // each commodity with its varieties under it, as the seed is ordered; left out when it would only repeat the tables below
+  const bought = seedSummary(figures);
+  if (bought.length > 1 || bought.some((c) => c.varieties.length > 1)) {
+    const sumCols = [
+      { head: 'Commodity / variety', w: 0.4, left: true },
+      { head: 'Area (ha)', w: 0.15 }, { head: 'Rate kg/ha', w: 0.15 }, { head: 'Required t', w: 0.15 }, { head: `+${fixed(bufferPct, 0)}% t`, w: 0.15 },
+    ];
+    const sw = sumCols.map((c) => c.w * W);
+    const se = sw.reduce((a, w, i) => { a.push(a[i] + w); return a; }, [0]);
+    const cell = (i, str, opts = {}) => (sumCols[i].left
+      ? pdf.text(M + se[i] + 5 + (opts.indent || 0), y, wrapText(String(str ?? ''), sw[i] - 10 - (opts.indent || 0), BODY, !!opts.bold)[0] || '', { size: BODY, ...opts })
+      : pdf.text(M + se[i] + sw[i] / 2, y, String(str), { size: BODY, align: 'center', ...opts }));
+    const sumHead = () => {
+      pdf.rect(M, y - 5, W, 19, { stroke: null, fill: GREEN });
+      sumCols.forEach((c, i) => cell(i, c.head, { bold: true, size: HEAD, gray: 1 }));
+      y += 20;
+    };
+    ensure(22 + 20 + 18 * 3);
+    pdf.text(M, y, 'By commodity and variety', { size: 13, bold: true, gray: GREEN });
+    pdf.line(M, y + 18, M + W, y + 18, { width: 1, gray: GREEN });
+    y += 30;
+    sumHead();
+    bought.forEach((c) => {
+      if (y + 20 * 2 > BOTTOM) { newPage(); sumHead(); }
+      pdf.rect(M, y - 5, W, 18, { stroke: null, fill: TOTAL });
+      [c.name, fixed(c.total.area, 1), fixed(c.total.rate, 0), fixed(c.total.requiredT, 2), fixed(c.total.bufferedT, 2)].forEach((str, i) => cell(i, str, { bold: true }));
+      y += 18;
+      c.varieties.forEach((v, n) => {
+        if (y + 20 > BOTTOM) { newPage(); sumHead(); }
+        if (n % 2 === 1) pdf.rect(M, y - 5, W, 18, { stroke: null, fill: BAND });
+        [v.variety, fixed(v.area, 1), fixed(v.rate, 0), fixed(v.requiredT, 2), fixed(v.bufferedT, 2)].forEach((str, i) => cell(i, str, i === 0 ? { indent: 14 } : {}));
+        y += 18;
+      });
+    });
+    y += 22;
+  }
 
   figures.forEach((fig) => {
     ensure(22 + 20 + 18 * 2 + 24);

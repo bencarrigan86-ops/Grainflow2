@@ -324,10 +324,13 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 check('Sales has buttons for both reports, for the roles that may see them', () => {
   const src = read('docs/js/views/sales.js');
-  assert.match(src, /\['owner', 'manager', 'bookkeeper'\]\.includes\(db\.getRole\(\)\) \? `<button type="button" class="btn secondary" id="open-deliveries"/);
-  assert.match(src, /\['owner', 'manager', 'bookkeeper'\]\.includes\(db\.getRole\(\)\) \? `<button type="button" class="btn secondary" id="open-money"/);
+  assert.ok(src.includes("['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div class=\"tile-grid\">"), 'one role gate for the three tiles');
+  assert.match(src, /class="btn secondary tool-tile" id="open-deliveries"/);
+  assert.match(src, /class="btn secondary tool-tile" id="open-money"/);
   assert.match(src, /openDeliveriesSheet\(\)/);
-  assert.match(src, /openMoneySheet\(\)/);
+  assert.match(src, /openMoneySheet\('in'\)/);
+  assert.match(src, /id="open-payables"/);
+  assert.match(src, /openMoneySheet\('out'\)/);
 });
 check('an invoice worked out again gets its dates back if it had lost them', () => {
   assert.match(read('docs/js/views/invoice.js'), /existingInvoice\.issueDate \? \{\} : \{ issueDate: today \}/);

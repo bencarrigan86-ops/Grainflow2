@@ -2,7 +2,8 @@
 // style with the Position page. Nitrogen columns are amber and urea-equivalent columns green, as on the screen.
 // The figures come from fertfigures.js (ureaFigures, starterFigures), the same ones the screen uses. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=325';
+import { Pdf, wrapText } from './pdf.js?v=331';
+import { ureaSummary, starterSummary } from './fertfigures.js?v=331';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;
@@ -58,7 +59,7 @@ export const hasStarter = (fig) => fig.rows.some((r) => num(r.req) || num(r.app)
  * @param {{business?: string, season?: string, today?: string, ureaNPct?: number}} [opts]
  * @returns {Uint8Array} the PDF
  */
-export function fertPdf({ urea = [], starter = [] } = {}, { business = '', season = '', today = '', ureaNPct = 46 } = {}) {
+export function fertPdf({ urea = [], starter = [], summary = false } = {}, { business = '', season = '', today = '', ureaNPct = 46 } = {}) {
   const pdf = new Pdf(PAGE);
   const W = PAGE.width - M * 2;
   const BOTTOM = PAGE.height - 40;
@@ -152,10 +153,14 @@ export function fertPdf({ urea = [], starter = [] } = {}, { business = '', seaso
     });
   };
 
+  const asCommodity = (cols) => cols.map((c, i) => (i === 0 ? { ...c, head: ['Commodity', ''] } : c));
+  // with more than one commodity, the whole farm first: a row for each and a total, then each commodity's paddocks
+  if (summary && urea.length > 1) section('Urea: all commodities', [ureaSummary(urea)], asCommodity(UREA_COLUMNS));
   section('Urea', urea, UREA_COLUMNS);
   const withStarter = starter.filter(hasStarter);
   if (withStarter.length) {
     if (urea.length) y += 6;
+    if (summary && withStarter.length > 1) section('Starter fertiliser: all commodities', [starterSummary(withStarter)], asCommodity(STARTER_COLUMNS));
     section('Starter fertiliser', withStarter, STARTER_COLUMNS);
   }
 

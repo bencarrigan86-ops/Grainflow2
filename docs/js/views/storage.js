@@ -1,24 +1,24 @@
-import { db } from '../storage.js?v=325';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=325';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=325';
-import { isTransit } from '../transit.js?v=325';
-import { isOffFarm } from '../offfarm.js?v=325';
-import { paintOffFarmCard } from './offfarm.js?v=325';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=325';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=325';
-import { hasStorageQuality } from '../mapping.js?v=325';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=325';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=325';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=325';
-import { renderRelatedMovements } from './movements.js?v=325';
-import { openSiloSetupSheet } from './silosetup.js?v=325';
-import { commodityFills } from '../commodityfill.js?v=325';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=325';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=325';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=325';
+import { db } from '../storage.js?v=331';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=331';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=331';
+import { isTransit } from '../transit.js?v=331';
+import { isOffFarm } from '../offfarm.js?v=331';
+import { paintOffFarmCard } from './offfarm.js?v=331';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=331';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=331';
+import { hasStorageQuality } from '../mapping.js?v=331';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=331';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=331';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=331';
+import { renderRelatedMovements } from './movements.js?v=331';
+import { openSiloSetupSheet } from './silosetup.js?v=331';
+import { commodityFills } from '../commodityfill.js?v=331';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=331';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=331';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=331';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=325';
+} from '../silolayers.js?v=331';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -283,7 +283,7 @@ function tabTotalLine(silos, commodities, movements, name) {
   const spare = room - held;
   const asNote = !silos.some((s) => commodities.some((x) => x.id === s.commodityId)) && assume ? ` as ${esc(assume.name)}` : '';
   return `<div class="tab-total"><strong>${esc(name)} total</strong> · ${counted} silo${counted === 1 ? '' : 's'}
-    <div class="tab-total-fig"><span><b>${num(held, 1)} t</b> held</span><span><b>${num(room, 0)} t</b> room when full${asNote}</span>${room > 0 ? `<span><b>${num(spare, 0)} t</b> spare</span>` : ''}</div>
+    <div class="tab-total-fig"><span><b>${num(held, 1)} t</b> held</span><span><b>${num(room, 0)} t</b> room when full${asNote}</span>${room > 0 ? `<span${spare < 0 ? ' class="short"' : ''}><b>${num(Math.abs(spare), 0)} t</b> ${spare < 0 ? 'short' : 'spare'}</span>` : ''}</div>
     ${unknown ? `<div class="meta">${unknown} silo${unknown === 1 ? ' has' : 's have'} no volume or tonnes set, so no room is counted for ${unknown === 1 ? 'it' : 'them'}.</div>` : ''}</div>`;
 }
 
