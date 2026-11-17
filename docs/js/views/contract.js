@@ -18,16 +18,17 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=352';
-import { openSheet } from '../ui.js?v=352';
-import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=352';
-import { addressLinesOf } from '../address.js?v=352';
-import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=352';
-import { PATTERN_ON_CONTRACT } from '../deliveryplan.js?v=352';
-import { INVOICING_ON_CONTRACT } from '../invoicing.js?v=352';
-import { contactLines } from '../buyercontact.js?v=352';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=352';
-import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=352';
+import { db } from '../storage.js?v=354';
+import { openSheet } from '../ui.js?v=354';
+import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=354';
+import { addressLinesOf } from '../address.js?v=354';
+import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=354';
+import { PATTERN_ON_CONTRACT } from '../deliveryplan.js?v=354';
+import { INVOICING_ON_CONTRACT } from '../invoicing.js?v=354';
+import { contactLines } from '../buyercontact.js?v=354';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=354';
+import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=354';
+import { docBandHTML } from '../docband.js?v=354';
 
 const DASH = '—';
 
@@ -100,18 +101,12 @@ export function contractDocHTML(sale, business, commodity, signed = null, { show
 
   return `
     <div class="invoice-doc branded">
-      <div class="doc-band">
-        <div class="doc-band-main">
-          <h2 class="title">CONFIRMATION OF SALE</h2>
-          <div class="invoice-meta">
-            <span>Contract ${esc(sale.contractNo || DASH)}</span>
-            <span>Date: <strong>${esc(longDate(sale.date) || DASH)}</strong></span>
-            ${sale.cropYear ? `<span>Season: <strong>${esc(sale.cropYear)}</strong></span>` : ''}
-            ${sale.contractType ? `<span>${esc(sale.contractType)}</span>` : ''}
-          </div>
-        </div>
-        ${business.logo && !business.logoOff ? `<div class="doc-band-logo"><img src="${esc(business.logo)}" alt="" /></div>` : ''}
-      </div>
+      ${docBandHTML(business, { title: 'CONFIRMATION OF SALE', meta: [
+        `<span>Contract ${esc(sale.contractNo || DASH)}</span>`,
+        `<span>Date: <strong>${esc(longDate(sale.date) || DASH)}</strong></span>`,
+        sale.cropYear ? `<span>Season: <strong>${esc(sale.cropYear)}</strong></span>` : '',
+        sale.contractType ? `<span>${esc(sale.contractType)}</span>` : '',
+      ] })}
 
       <div class="invoice-parties">
         <div class="invoice-block">

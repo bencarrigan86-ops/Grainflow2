@@ -1,10 +1,42 @@
 let backdrop = null;
+// Sheets set aside while another one is looked at: the contract under its confirmation of sale, the invoice under a load being corrected.
+// Closing the sheet on top brings the one beneath back, as it was left, so nobody is dropped out to the tab they started from.
+const held = [];
 
-export function closeSheet() {
+function removeTop() {
   if (backdrop) {
     backdrop.remove();
     backdrop = null;
   }
+}
+
+export function closeSheet() {
+  removeTop();
+  const back = held.pop();
+  if (!back) return;
+  back.backdrop.style.display = '';
+  backdrop = back.backdrop;
+  // the sheet beneath may be showing something that changed while it was out of sight
+  try { back.onResume?.(); } catch (e) { console.error(e); }
+}
+
+/**
+ * Sets the open sheet aside, out of sight but kept exactly as it is (what was typed stays typed), so the next sheet opens over it.
+ * When that sheet is closed or saved the one set aside comes back, and `onResume` runs so it can show what changed meanwhile.
+ * Returns false when no sheet is open (a screen, not a sheet, was the starting point), in which case nothing is set aside.
+ */
+export function holdSheet(onResume) {
+  if (!backdrop) return false;
+  backdrop.style.display = 'none';
+  held.push({ backdrop, onResume });
+  backdrop = null;
+  return true;
+}
+
+/** Opens another sheet over this one, and comes back to this one when it is done. */
+export function openOver(open, onResume) {
+  holdSheet(onResume);
+  open();
 }
 
 /** Is a form sheet open? Used to avoid swapping data out from under somebody typing. */
@@ -22,7 +54,7 @@ export function escHtml(v) {
  * to populate with fields/buttons. Returns the content container for convenience.
  */
 export function openSheet(title, buildBody, { askBeforeClose = true } = {}) {
-  closeSheet();
+  removeTop();
   backdrop = document.createElement('div');
   backdrop.className = 'sheet-backdrop';
   // Tapping outside, or Close, used to throw away whatever had been typed

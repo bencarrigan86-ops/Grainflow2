@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=352';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=352';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=352';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=352';
-import { describeMerge } from '../merge.js?v=352';
-import { renderRelatedMovements } from './movements.js?v=352';
-import { canSeeYield } from '../nav.js?v=352';
-import { wireJumps } from '../jump.js?v=352';
-import { openMapSheet } from './farmmap.js?v=352';
-import { openInputsSheet } from './inputs.js?v=352';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=352';
-import { stockLevels } from '../inputs.js?v=352';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=352';
-import { openRotationSheet } from './rotation.js?v=352';
-import { openAveragesSheet } from './averages.js?v=352';
+import { db } from '../storage.js?v=354';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=354';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=354';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=354';
+import { describeMerge } from '../merge.js?v=354';
+import { renderRelatedMovements } from './movements.js?v=354';
+import { canSeeYield } from '../nav.js?v=354';
+import { wireJumps } from '../jump.js?v=354';
+import { openMapSheet } from './farmmap.js?v=354';
+import { openInputsSheet } from './inputs.js?v=354';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=354';
+import { stockLevels } from '../inputs.js?v=354';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=354';
+import { openRotationSheet } from './rotation.js?v=354';
+import { openAveragesSheet } from './averages.js?v=354';
 
 let unsub = null;
 
@@ -115,8 +115,8 @@ function openReportsSheet(hasFields, showYield) {
     root.innerHTML = `
       ${hasFields ? '<button type="button" class="btn secondary" id="open-rotation" style="margin-bottom:12px">Rotation and yield history &middot; every paddock, every season</button>' : ''}
       ${showYield ? '<button type="button" class="btn secondary" id="open-averages" style="margin-bottom:12px">Averages by commodity &middot; yield and price, every season</button>' : ''}`;
-    root.querySelector('#open-rotation')?.addEventListener('click', () => openRotationSheet());
-    root.querySelector('#open-averages')?.addEventListener('click', () => openAveragesSheet());
+    root.querySelector('#open-rotation')?.addEventListener('click', () => openOver(() => openRotationSheet()));
+    root.querySelector('#open-averages')?.addEventListener('click', () => openOver(() => openAveragesSheet()));
   });
 }
 

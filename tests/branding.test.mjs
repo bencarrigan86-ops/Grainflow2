@@ -91,7 +91,7 @@ check('the logo is kept with the farm: saved, sent once there is one, read back,
   assert.ok(m.includes('logo: orNull(b.logo)') && m.includes('farm.logo != null'));
   assert.ok(m.includes('logo_off: !!b.logoOff') && m.includes('farm.logo_off != null'), 'the on/off switch is kept with the farm');
   assert.ok(read('docs/js/storage.js').includes("setBrandLogo(data.businessDetails?.logoOff ? '' : data.businessDetails?.logo)"), 'a logo that is off is not handed to the PDFs');
-  assert.ok(read('docs/js/views/settings.js').includes('id="bd-logo-on"') && read('docs/js/views/contract.js').includes('business.logo && !business.logoOff'));
+  assert.ok(read('docs/js/views/settings.js').includes('id="bd-logo-on"') && read('docs/js/docband.js').includes('business?.logo && !business?.logoOff'));
   assert.ok(read('supabase/migrations/20261119000000_farm_logo.sql').includes('add column if not exists logo text'));
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists logo text'));
   const s = read('docs/js/views/settings.js');
@@ -130,7 +130,9 @@ check("Seller's option is a delivery option, kept with the contract, and printed
 console.log('\n=== the confirmation of sale ===');
 check('it has the green band with the logo, the contact lines, the delivery option, the freight rate when ticked and the signer', () => {
   const c = read('docs/js/views/contract.js');   // the views reach the network, so they are read here rather than run
-  assert.ok(c.includes('class="doc-band"') && c.includes('class="doc-band-logo"') && c.includes('business.logo'));
+  const band = read('docs/js/docband.js');   // the band is one piece shared by the invoice, the adjustment note and this
+  assert.ok(band.includes('class="doc-band"') && band.includes('class="doc-band-logo"') && band.includes('business.logo') && band.includes('doc-band-from'));
+  assert.ok(c.includes('docBandHTML(business') && read('docs/js/views/invoice.js').includes('docBandHTML(business'));
   assert.ok(c.includes('contactLines(sale.buyerContact)'));
   assert.ok(c.includes("term('Delivery option', PATTERN_ON_CONTRACT[sale.deliveryPattern])"));
   assert.ok(c.includes('showFreight && sale.freight'), 'the freight rate follows the tickbox');

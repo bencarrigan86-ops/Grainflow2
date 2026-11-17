@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=352';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=352';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=352';
-import { withholdingClash } from '../fumigation.js?v=352';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=352';
-import { compressAndStampImage } from '../img.js?v=352';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=352';
-import { specText, extraSpecKey } from '../outload.js?v=352';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=352';
-import { pickableSilos } from '../silopick.js?v=352';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=352';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=352';
-import { activeSales } from '../paidsales.js?v=352';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=352';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=352';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=352';
-import { nowTime } from '../loadreport.js?v=352';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=352';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=352';
+import { db } from '../storage.js?v=354';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=354';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=354';
+import { withholdingClash } from '../fumigation.js?v=354';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=354';
+import { compressAndStampImage } from '../img.js?v=354';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=354';
+import { specText, extraSpecKey } from '../outload.js?v=354';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=354';
+import { pickableSilos } from '../silopick.js?v=354';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=354';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=354';
+import { activeSales } from '../paidsales.js?v=354';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=354';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=354';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=354';
+import { nowTime } from '../loadreport.js?v=354';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=354';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=354';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -38,7 +38,7 @@ function ticketSearchText(m, ctx) {
   const fo = m.freightOrderId ? (ctx.freightOrders || []).find((f) => f.id === m.freightOrderId) : null;
   // a date is searchable as it is written on paperwork (05-11-2026) as well as stored (2026-11-05)
   const written = /^(\d{4})-(\d{2})-(\d{2})/.exec(m.date || '');
-  return [m.ticketNo, m.sourceRef, m.externalTicketNo, m.outloadNo, m.date, written ? `${written[3]}-${written[2]}-${written[1]} ${written[3]}/${written[2]}/${written[1]}` : '', m.truckRego, m.driver, m.notes, m.grade, m.tons, c?.name,
+  return [m.ticketNo, m.sourceRef, m.externalTicketNo, m.manualDocketNo, m.outloadNo, m.date, written ? `${written[3]}-${written[2]}-${written[1]} ${written[3]}/${written[2]}/${written[1]}` : '', m.truckRego, m.driver, m.notes, m.grade, m.tons, c?.name,
     ...linked.flatMap((s) => [s.buyer, s.contractNo, s.ourRef]), fo?.carrier, fo?.freightNo, ...ends].filter((x) => x !== undefined && x !== null && x !== '').join(' ').toLowerCase();
 }
 
@@ -241,9 +241,15 @@ export function renderRelatedMovements(container, type, id, { collapsed = false 
           <div class="sub">${related.length ? `${related.length} load${related.length === 1 ? '' : 's'} · ${num(sum, 1)} t` : 'None yet'}</div></div></summary>${body}
       </details>`
     : `<h2>Related movements</h2>${body}`;
-  container.querySelector('[data-new-movement]')?.addEventListener('click', () => openMovementSheet(null, startTemplate));
+  // a load opened from here opens over the sheet this list is in (the contract, silo or paddock), which comes back, with this list up to date, when the load is saved or closed
+  const back = () => {
+    const open = !!container.querySelector('#related-fold')?.open;
+    renderRelatedMovements(container, type, id, { collapsed });
+    if (open) { const f = container.querySelector('#related-fold'); if (f) f.open = true; }
+  };
+  container.querySelector('[data-new-movement]')?.addEventListener('click', () => openOver(() => openMovementSheet(null, startTemplate), back));
   container.querySelectorAll('[data-edit-movement]').forEach((el) => {
-    el.addEventListener('click', () => openMovementSheet(related.find((m) => m.id === el.dataset.editMovement)));
+    el.addEventListener('click', () => openOver(() => openMovementSheet(related.find((m) => m.id === el.dataset.editMovement)), back));
   });
 }
 
@@ -272,7 +278,7 @@ export function movementRow(m, ctx) {
     : null;
   // the order it was delivered against, if any
   const order = m.orderId ? (ctx.orders || db.getOrders()).find((o) => o.id === m.orderId) : null;
-  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', m.outloadNo ? `outload ${m.outloadNo}${ctx.dupOutloads?.has(normaliseOutloadNo(m.outloadNo)) ? ' (used on more than one load)' : ''}` : '', order ? (order.orderNo ? `grain order #${order.orderNo}` : 'against a grain order') : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date, { tight: true }) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
+  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', m.manualDocketNo ? `docket ${m.manualDocketNo}` : '', m.outloadNo ? `outload ${m.outloadNo}${ctx.dupOutloads?.has(normaliseOutloadNo(m.outloadNo)) ? ' (used on more than one load)' : ''}` : '', order ? (order.orderNo ? `grain order #${order.orderNo}` : 'against a grain order') : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date, { tight: true }) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
   return `
     <div class="list-item stack" data-edit-movement="${m.id}">
       <div class="li-top">
@@ -605,10 +611,11 @@ export function openMovementSheet(existing, template) {
         </div>
         <div class="grid-2">
           ${field({ label: 'Their ticket no.', id: 'extTicket', value: existing?.externalTicketNo, placeholder: 'On their ticket' })}
-          <div class="field">
-            <label for="outloadNo">Outload number</label>
-            <input id="outloadNo" type="text" inputmode="numeric" autocomplete="off" value="${esc(existing?.outloadNo || '')}" placeholder="Quoted at the site" />
-          </div>
+          ${field({ label: 'Manual docket no.', id: 'manualDocket', value: existing?.manualDocketNo, placeholder: 'Our paper docket' })}
+        </div>
+        <div class="field">
+          <label for="outloadNo">Outload number</label>
+          <input id="outloadNo" type="text" inputmode="numeric" autocomplete="off" value="${esc(existing?.outloadNo || '')}" placeholder="Quoted at the site" />
         </div>
         <div style="display:flex;gap:10px;align-items:center;margin:-2px 0 10px">
           <button type="button" class="btn secondary small" id="ol-get" style="width:auto;flex:none">Get a number</button>
@@ -1055,6 +1062,7 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
         loadTime: getVal(root, 'loadTime') || '',
         destination: getVal(root, 'destination')?.trim() || '',
         externalTicketNo: getVal(root, 'extTicket')?.trim() || '',
+        manualDocketNo: getVal(root, 'manualDocket')?.trim() || '',
         outloadNo: olNo,
         // the order it fills; only a load going to a contract can be against one
         orderId: toKind === 'sale' ? (getVal(root, 'to-order-select') || null) : null,

@@ -4,23 +4,23 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=352';
-import { openSheet } from '../ui.js?v=352';
-import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=352';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=352';
-import { windowText } from '../orders.js?v=352';
-import { openOrderSheet } from './orders.js?v=352';
-import { openInvoiceListSheet } from './invoice.js?v=352';
-import { renderPayables, returnToAfterBill } from './payables.js?v=352';
-import { openXeroSheet } from './xero.js?v=352';
-import { cashflow } from '../cashflow.js?v=352';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=352';
-import { buyerStatements, statementPdf } from '../statement.js?v=352';
-import { buyerExposure } from '../exposure.js?v=352';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=352';
-import { exposurePdf } from '../exposurepdf.js?v=352';
-import { emailIn } from '../vendordec.js?v=352';
-import { invoiceLabel } from '../adjustment.js?v=352';
+import { db } from '../storage.js?v=354';
+import { openSheet, openOver } from '../ui.js?v=354';
+import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=354';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=354';
+import { windowText } from '../orders.js?v=354';
+import { openOrderSheet } from './orders.js?v=354';
+import { openInvoiceListSheet } from './invoice.js?v=354';
+import { renderPayables, returnToAfterBill } from './payables.js?v=354';
+import { openXeroSheet } from './xero.js?v=354';
+import { cashflow } from '../cashflow.js?v=354';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=354';
+import { buyerStatements, statementPdf } from '../statement.js?v=354';
+import { buyerExposure } from '../exposure.js?v=354';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=354';
+import { exposurePdf } from '../exposurepdf.js?v=354';
+import { emailIn } from '../vendordec.js?v=354';
+import { invoiceLabel } from '../adjustment.js?v=354';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -169,9 +169,9 @@ export function openMoneySheet(side = null) {
         ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? '<button type="button" class="btn secondary" id="open-xero" style="margin-top:14px">Export for Xero</button>' : ''}`;
 
       root.querySelector('#money-side').addEventListener('click', (e) => { const b = e.target.closest('[data-side]'); if (b) { moneySide = b.dataset.side; draw(); } });
-      root.querySelectorAll('[data-invoice-sale]').forEach((el) => el.addEventListener('click', () => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.invoiceSale))));
-      root.querySelectorAll('[data-open-invoices]').forEach((el) => el.addEventListener('click', () => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.openInvoices))));
-      root.querySelector('#open-xero')?.addEventListener('click', () => openXeroSheet());
+      root.querySelectorAll('[data-invoice-sale]').forEach((el) => el.addEventListener('click', () => openOver(() => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.invoiceSale)), draw)));
+      root.querySelectorAll('[data-open-invoices]').forEach((el) => el.addEventListener('click', () => openOver(() => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.openInvoices)), draw)));
+      root.querySelector('#open-xero')?.addEventListener('click', () => openOver(() => openXeroSheet()));
       root.querySelector('#exposure-pdf')?.addEventListener('click', () => exportExposurePdf(buyerExposure(invoices, sales, movements, commodities, today), today));
       root.querySelectorAll('[data-statement]').forEach((b) => b.addEventListener('click', () => sendStatement(b.dataset.statement, { invoices, sales, movements, commodities, today })));
       const bills = root.querySelector('#money-bills');

@@ -4,17 +4,17 @@
 // carting it and the buyer's own order number. Everything else about the sale is the contract's and is shown from it.
 // Loads are matched to an order on the movement. The arithmetic is in orders.js.
 
-import { db } from '../storage.js?v=352';
-import { openSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=352';
-import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=352';
-import { movementTonsToSale } from '../derived.js?v=352';
-import { activeSales } from '../paidsales.js?v=352';
-import { movementRow, openMovementSheet } from './movements.js?v=352';
-import { openVendorDecSheet } from './vendordec.js?v=352';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=352';
-import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=352';
-import { freightTitle, freightState, rateText } from '../freight.js?v=352';
-import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=352';
+import { db } from '../storage.js?v=354';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=354';
+import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=354';
+import { movementTonsToSale } from '../derived.js?v=354';
+import { activeSales } from '../paidsales.js?v=354';
+import { movementRow, openMovementSheet } from './movements.js?v=354';
+import { openVendorDecSheet } from './vendordec.js?v=354';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=354';
+import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=354';
+import { freightTitle, freightState, rateText } from '../freight.js?v=354';
+import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=354';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | filled | closed | all
@@ -197,7 +197,7 @@ export function openOrderSheet(existing, defaults = {}) {
       loadsEl.innerHTML = `<h2>Related movements</h2>${against.length
         ? against.map((m) => movementRow(m, { fields, storages, sales, commodities, orders })).join('')
         : '<div class="empty">No loads against it yet. On a movement going to this contract, choose it under "Fills order".</div>'}`;
-      loadsEl.querySelectorAll('[data-edit-movement]').forEach((el) => el.addEventListener('click', () => openMovementSheet(against.find((m) => m.id === el.dataset.editMovement))));
+      loadsEl.querySelectorAll('[data-edit-movement]').forEach((el) => el.addEventListener('click', () => openOver(() => openMovementSheet(against.find((m) => m.id === el.dataset.editMovement)))));
       // the freight orders made from it, with a way to make another
       const fosEl = root.querySelector('#o-fos');
       const mine = db.getFreightOrders().filter((f) => f.orderId === existing.id);

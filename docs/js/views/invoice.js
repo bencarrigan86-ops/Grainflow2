@@ -1,12 +1,14 @@
-import { db } from '../storage.js?v=352';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=352';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=352';
-import { addressLinesOf } from '../address.js?v=352';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=352';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=352';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=352';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=352';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=352';
+import { db } from '../storage.js?v=354';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=354';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=354';
+import { addressLinesOf } from '../address.js?v=354';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=354';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=354';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=354';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=354';
+import { docBandHTML } from '../docband.js?v=354';
+import { openMovementSheet } from './movements.js?v=354';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=354';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -81,7 +83,7 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
   const allForSale = movementsForEndpoint('sale', sale.id, movements);
   const otherInvoices = db.getInvoicesForSale(sale.id).filter((inv) => inv.id !== existingInvoice?.id);
   const usedByOthers = invoicedMovementIds(otherInvoices);
-  const available = allForSale.filter((m) => !usedByOthers.has(m.id));
+  let available = allForSale.filter((m) => !usedByOthers.has(m.id));
   const alreadyCount = allForSale.length - available.length;
   const existingMovementIds = new Set((existingInvoice?.lines || []).map((l) => l.movementId).filter(Boolean));
   // the freight $/t each load had when this invoice was made (older invoices have none: they take the contract's)
@@ -94,21 +96,7 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
   const body = openSheet(existingInvoice ? `Edit invoice #${existingInvoice.invoiceNo}` : 'New invoice', (root) => {
     root.innerHTML = `
       ${alreadyCount > 0 ? `<div class="field hint" style="margin-bottom:10px">${alreadyCount} load${alreadyCount === 1 ? '' : 's'} already on another invoice — not shown below.</div>` : ''}
-      ${available.length === 0 ? `<div class="empty">No un-invoiced loads for this contract.</div>` : available.map((m) => `
-        <label class="list-item" style="cursor:pointer">
-          <div style="display:flex;align-items:center;gap:10px">
-            <input type="checkbox" class="ld-check" data-mid="${m.id}" ${existingInvoice ? (existingMovementIds.has(m.id) ? 'checked' : '') : 'checked'} style="width:18px;height:18px" />
-            <div>
-              <div class="main">${esc(dmy(m.date) || 'No date')}${m.truckRego ? ` &middot; ${esc(m.truckRego)}` : ''}</div>
-              <div class="meta">${num(toTonsForEndpoint(m, 'sale', sale.id), 2)} t</div>
-            </div>
-            ${freightOnInvoice(sale) ? `<div style="margin-left:auto;flex:none;width:88px">
-              <input type="number" inputmode="decimal" step="0.01" class="ld-freight" style="width:100%;min-width:0;box-sizing:border-box;padding:8px 6px" data-mid="${m.id}" value="${existingLineFreight.has(m.id) ? existingLineFreight.get(m.id) : (Number(sale.freight) || 0)}" aria-label="Freight $/t for this load" />
-              <div class="meta" style="text-align:right">freight $/t</div>
-            </div>` : ''}
-          </div>
-        </label>
-      `).join('')}
+      <div id="ld-list"></div>
       <hr class="sep" />
       ${field({ label: 'Manual line (optional — tons not linked to a load)', id: 'manual-tons', type: 'number', step: '0.01', value: existingManual?.tons })}
       <hr class="sep" />
@@ -133,9 +121,55 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
     existingCustoms.forEach((c) => addCustomItemRow(customContainer, recomputeTotals, c));
     root.querySelector('#add-custom-item').addEventListener('click', () => addCustomItemRow(customContainer, recomputeTotals));
 
-    root.querySelectorAll('.ld-check').forEach((el) => el.addEventListener('change', recomputeTotals));
+    // One row a load: tick it on or off, set its freight, or open the load itself to correct it (a quality figure, a typo in the
+    // weight). The load opens over this sheet; saving it or closing it brings this back with the loads and totals up to date.
+    const readKeep = () => ({
+      checked: new Set(Array.from(root.querySelectorAll('.ld-check:checked')).map((el) => el.dataset.mid)),
+      freight: new Map(Array.from(root.querySelectorAll('.ld-freight')).map((el) => [el.dataset.mid, el.value])),
+    });
+    const rowHtml = (m, keep) => {
+      const ticked = keep ? keep.checked.has(m.id) : (existingInvoice ? existingMovementIds.has(m.id) : true);
+      const rate = keep && keep.freight.has(m.id) ? keep.freight.get(m.id) : (existingLineFreight.has(m.id) ? existingLineFreight.get(m.id) : (Number(sale.freight) || 0));
+      const bits = [`${num(toTonsForEndpoint(m, 'sale', sale.id), 2)} t`, m.ticketNo ? `ticket ${m.ticketNo}` : '', m.grade || ''].filter(Boolean);
+      return `
+        <div class="list-item ld-row">
+          <div style="width:100%">
+            <div style="display:flex;align-items:center;gap:10px">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0">
+                <input type="checkbox" class="ld-check" data-mid="${m.id}" ${ticked ? 'checked' : ''} style="width:18px;height:18px;flex:none" />
+                <div style="min-width:0">
+                  <div class="main">${esc(dmy(m.date) || 'No date')}${m.truckRego ? ` &middot; ${esc(m.truckRego)}` : ''}</div>
+                  <div class="meta">${esc(bits.join(' · '))}</div>
+                </div>
+              </label>
+              ${freightOnInvoice(sale) ? `<div style="flex:none;width:88px">
+                <input type="number" inputmode="decimal" step="0.01" class="ld-freight" style="width:100%;min-width:0;box-sizing:border-box;padding:8px 6px" data-mid="${m.id}" value="${rate}" aria-label="Freight $/t for this load" />
+                <div class="meta" style="text-align:right">freight $/t</div>
+              </div>` : ''}
+            </div>
+            <button type="button" class="link-btn ld-open" data-mid="${m.id}" style="padding:6px 0 0 28px">Edit this load</button>
+          </div>
+        </div>`;
+    };
+    const paintLoads = (keep) => {
+      const el = root.querySelector('#ld-list');
+      el.innerHTML = available.length === 0 ? '<div class="empty">No un-invoiced loads for this contract.</div>' : available.map((m) => rowHtml(m, keep)).join('');
+      el.querySelectorAll('.ld-check').forEach((c) => c.addEventListener('change', recomputeTotals));
+      el.querySelectorAll('.ld-freight').forEach((c) => c.addEventListener('input', recomputeTotals));
+      el.querySelectorAll('.ld-open').forEach((btn) => btn.addEventListener('click', () => {
+        const load = available.find((m) => m.id === btn.dataset.mid);
+        if (!load) return;
+        openOver(() => openMovementSheet(load), () => {
+          const keepNow = readKeep();
+          available = movementsForEndpoint('sale', sale.id, db.get().movements).filter((m) => !usedByOthers.has(m.id));
+          paintLoads(keepNow);
+          recomputeTotals();
+          toast('Load saved. The invoice totals are worked out again from it.');
+        });
+      }));
+    };
+    paintLoads(null);
     root.querySelector('#manual-tons').addEventListener('input', recomputeTotals);
-    root.querySelectorAll('.ld-freight').forEach((el) => el.addEventListener('input', recomputeTotals));
     ['t-subtotal', 't-freight', 't-levies', 't-gst'].forEach((id) => root.querySelector(`#${id}`).addEventListener('input', recomputeFinalTotal));
 
     function buildLines() {
@@ -265,18 +299,29 @@ function partiesHTML(sale, business) {
       </div>`;
 }
 
+/** How to pay: the bank, the account name, the BSB and the account number, one to a line, or nothing when none has been entered. */
+export function bankDetailsHTML(business) {
+  const rows = [['Bank', business.bankName], ['Account name', business.accountName], ['BSB', business.bsb], ['Account number', business.accountNumber]]
+    .filter(([, v]) => String(v ?? '').trim());
+  if (!rows.length) return '';
+  return `
+      <div class="invoice-bank">
+        <strong>Payment details</strong>
+        <div class="bank-rows">${rows.map(([k, v]) => `<div class="bank-row"><span class="bank-label">${esc(k)}</span><span class="bank-value">${esc(String(v).trim())}</span></div>`).join('')}</div>
+      </div>`;
+}
+
 function invoiceDocHTML(sale, invoice, business, commodity, signed = null) {
   // loads with freight taken off go in a section of their own below the grain, not in the grain table
   const freightLines = invoice.lines.filter((l) => l.movementId && Number(l.freight) > 0);
   return `
-    <div class="invoice-doc">
-      <h2 class="title">TAX INVOICE</h2>
-      <div class="invoice-meta">
-        <span>Invoice #${invoice.invoiceNo}</span>
-        <span>Invoice date: <strong>${esc(dmy(invoice.issueDate))}</strong></span>
-        <span>Payment due: <strong>${esc(dmy(invoice.dueDate))}</strong></span>
-        ${sale.contractNo ? `<span>Contract: <strong>${esc(sale.contractNo)}</strong></span>` : ''}
-      </div>
+    <div class="invoice-doc branded">
+      ${docBandHTML(business, { title: 'TAX INVOICE', meta: [
+        `<span>Invoice #${invoice.invoiceNo}</span>`,
+        `<span>Invoice date: <strong>${esc(dmy(invoice.issueDate))}</strong></span>`,
+        `<span>Payment due: <strong>${esc(dmy(invoice.dueDate))}</strong></span>`,
+        sale.contractNo ? `<span>Contract: <strong>${esc(sale.contractNo)}</strong></span>` : '',
+      ] })}
       ${partiesHTML(sale, business)}
       <div class="line" style="margin-bottom:10px"><strong>Commodity:</strong> ${esc(commodity?.name || '—')}${sale.grade ? ` (${esc(sale.grade)})` : ''}${sale.location ? ` &middot; ${esc(sale.location)}` : ''}</div>
       <div class="table-scroll">
@@ -336,11 +381,7 @@ function invoiceDocHTML(sale, invoice, business, commodity, signed = null) {
         <div class="row"><span class="label">GST</span><span class="value">${money(invoice.gst, 2)}</span></div>
         <div class="row total"><span class="label">Total amount payable</span><span class="value">${money(invoice.totalPayable, 2)}</span></div>
       </div>
-      ${(business.bankName || business.accountNumber) ? `
-      <div class="invoice-bank">
-        <strong>Payment details</strong><br/>
-        ${business.bankName ? `${esc(business.bankName)} &middot; ` : ''}${business.accountName ? `${esc(business.accountName)} &middot; ` : ''}${business.bsb ? `BSB ${esc(business.bsb)} &middot; ` : ''}${business.accountNumber ? `Acc ${esc(business.accountNumber)}` : ''}
-      </div>` : ''}
+      ${bankDetailsHTML(business)}
       ${signed && canSign(signed.sig) ? `<div class="invoice-bank">${signedBlockHTML({ ...signed.sig, name: String(signed.name || signed.sig.name || business.contactName || '').trim() }, { date: signed.date })}</div>` : ''}
     </div>
   `;
@@ -518,14 +559,13 @@ function adjustmentDocHTML(sale, note, business, invoices) {
   const credit = Number(note.totalPayable) < 0;
   const adjusts = original ? `invoice #${esc(original.invoiceNo)}${original.issueDate ? ` dated ${esc(dmy(original.issueDate))}` : ''}` : (note.adjustsInvoiceNo != null ? `invoice #${esc(note.adjustsInvoiceNo)}` : 'an earlier invoice');
   return `
-    <div class="invoice-doc">
-      <h2 class="title">ADJUSTMENT NOTE</h2>
-      <div class="invoice-meta">
-        <span>Adjustment note <strong>${esc(noteLabel(note))}</strong></span>
-        <span>Date: <strong>${esc(dmy(note.issueDate))}</strong></span>
-        ${original ? `<span>Adjusts invoice: <strong>#${esc(original.invoiceNo)}</strong></span>` : ''}
-        ${sale.contractNo ? `<span>Contract: <strong>${esc(sale.contractNo)}</strong></span>` : ''}
-      </div>
+    <div class="invoice-doc branded">
+      ${docBandHTML(business, { title: 'ADJUSTMENT NOTE', meta: [
+        `<span>Adjustment note <strong>${esc(noteLabel(note))}</strong></span>`,
+        `<span>Date: <strong>${esc(dmy(note.issueDate))}</strong></span>`,
+        original ? `<span>Adjusts invoice: <strong>#${esc(original.invoiceNo)}</strong></span>` : '',
+        sale.contractNo ? `<span>Contract: <strong>${esc(sale.contractNo)}</strong></span>` : '',
+      ] })}
       ${partiesHTML(sale, business)}
       <div class="line" style="margin-bottom:10px"><strong>Reason:</strong> ${esc(note.reason || '')}</div>
       <div class="line" style="margin-bottom:10px">This note ${credit ? 'decreases' : 'increases'} the amount payable on ${adjusts}.</div>
@@ -540,11 +580,7 @@ function adjustmentDocHTML(sale, note, business, invoices) {
         <div class="row"><span class="label">Adjustment notes to date</span><span class="value">${money(adjustments, 2)}</span></div>
         <div class="row total"><span class="label">Amount now payable</span><span class="value">${money(net, 2)}</span></div>
       </div>` : ''}
-      ${!credit && (business.bankName || business.accountNumber) ? `
-      <div class="invoice-bank">
-        <strong>Payment details</strong><br/>
-        ${business.bankName ? `${esc(business.bankName)} &middot; ` : ''}${business.accountName ? `${esc(business.accountName)} &middot; ` : ''}${business.bsb ? `BSB ${esc(business.bsb)} &middot; ` : ''}${business.accountNumber ? `Acc ${esc(business.accountNumber)}` : ''}
-      </div>` : ''}
+      ${credit ? '' : bankDetailsHTML(business)}
     </div>`;
 }
 

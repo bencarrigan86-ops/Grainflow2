@@ -1960,3 +1960,9 @@ alter table storages
   add column if not exists fumigations jsonb;
 
 notify pgrst, 'reload schema';
+
+-- Manual docket number on a movement
+alter table movements
+  add column if not exists manual_docket_no text;
+
+notify pgrst, 'reload schema';
