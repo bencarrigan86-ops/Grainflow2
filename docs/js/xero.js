@@ -7,13 +7,13 @@
 //
 // Pure: the sheet (views/xero.js) supplies the data and downloads the files.
 
-import { invoiceTotals } from './derived.js?v=367';
-import { kindLabel } from './payables.js?v=367';
-import { emailIn } from './vendordec.js?v=367';
-import { toCSV } from './csv.js?v=367';
-import { partsOf, hasParts } from './address.js?v=367';
-import { isAdjustment, noteLabel } from './adjustment.js?v=367';
-import { deductionNotes } from './deductions.js?v=367';
+import { invoiceTotals } from './derived.js?v=368';
+import { kindLabel } from './payables.js?v=368';
+import { emailIn } from './vendordec.js?v=368';
+import { toCSV } from './csv.js?v=368';
+import { partsOf, hasParts } from './address.js?v=368';
+import { isAdjustment, noteLabel } from './adjustment.js?v=368';
+import { deductionNotes } from './deductions.js?v=368';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const round2 = (n) => Math.round(n * 100) / 100;

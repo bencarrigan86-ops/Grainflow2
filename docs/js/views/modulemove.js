@@ -7,11 +7,11 @@
 // One move is one truck load. The driver gives the number of modules and the weight is estimated from what was picked on the
 // paddock (its kilograms a module); when the load is weighed at the gin the weighbridge weight is typed over it and the load is final.
 
-import { db } from '../storage.js?v=367';
-import { num, esc, todayLocal } from '../fmt.js?v=367';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=367';
-import { cleanModules, estimateBales, describeModules, DEFAULT_TURNOUT } from '../ginning.js?v=367';
-import { pickedTotals, moduleEstimate, describeEstimate, avgModuleKg } from '../modulespicked.js?v=367';
+import { db } from '../storage.js?v=368';
+import { num, esc, todayLocal } from '../fmt.js?v=368';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=368';
+import { cleanModules, estimateBales, describeModules, DEFAULT_TURNOUT } from '../ginning.js?v=368';
+import { pickedTotals, moduleEstimate, describeEstimate, avgModuleKg } from '../modulespicked.js?v=368';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 

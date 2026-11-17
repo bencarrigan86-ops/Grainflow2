@@ -562,5 +562,13 @@ check('the average module weight is a cotton setting that every paddock starts f
   assert.ok(read('docs/js/views/reports.js').includes('<th>Avg module kg</th>') && read('docs/js/modulespdf.js').includes("head: 'Avg module kg'"));
 });
 
+check('the cotton Position shows the seed and the ginning in dollars a bale as well', () => {
+  const p = read('docs/js/views/position.js');
+  assert.ok(p.includes('perBale(c.seedValue)') && p.includes('perBale(c.ginningCost)') && p.includes('/bale'));
+  const c = cottonComponents({ seedMtm: 500, seedFactor: 0.25, ginRate: 65, levies: 3.75 }, 400);
+  assert.equal(c.seedValue / c.bales, 125, 'seed is $125 a bale: 0.25 t a bale at $500 a tonne');
+  assert.equal(c.ginningCost / c.bales, 68.75, 'ginning and levies come to $68.75 a bale');
+});
+
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
 console.log('\nall passed');

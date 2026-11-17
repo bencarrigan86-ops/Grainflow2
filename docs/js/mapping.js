@@ -27,12 +27,13 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=367';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=367';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=367';
-import { cleanPicked } from './modulespicked.js?v=367';
-import { cleanOffFarm } from './offfarm.js?v=367';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=367';
+import { cleanGradeOptions } from './gradeprice.js?v=368';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=368';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=368';
+import { cleanPicked } from './modulespicked.js?v=368';
+import { cleanHay, hasHay, cleanBaled } from './hay.js?v=368';
+import { cleanOffFarm } from './offfarm.js?v=368';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=368';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -338,6 +339,8 @@ export function stateToRows(state, farmId) {
         ...((c.harvestSeason || c.__hasHarvestSeason) ? { harvest_season: c.harvestSeason || null } : {}),
         // Cotton's seed price, seed per bale, ginning and levies per bale. Optional in the same way.
         ...((hasCotton(c.cotton) || c.__hasCotton) ? { cotton: hasCotton(c.cotton) ? cleanCotton(c.cotton) : null } : {}),
+        // Hay: the kind of bale and its average weight. Optional in the same way.
+        ...((hasHay(c.hay) || c.__hasHay) ? { hay: hasHay(c.hay) ? cleanHay(c.hay) : null } : {}),
         gross_margin_cost: n(c.grossMarginCost),
         // Cotton is counted in bales, not tonnes; without unit and the ginning
         // ratio the whole lint/seed flow has nothing to work from.
@@ -369,6 +372,8 @@ export function stateToRows(state, farmId) {
         ...((f.property || f.__hasProperty) ? { property: orNull(String(f.property || '').trim()) } : {}),
         // modules picked on a cotton paddock. Optional the same way; deleting the last one sends an empty list.
         ...((cleanPicked(f.modulesPicked).length || f.__hasModulesPicked) ? { modules_picked: cleanPicked(f.modulesPicked) } : {}),
+        // bales baled on a hay paddock. Optional the same way; deleting the last one sends an empty list.
+        ...((cleanBaled(f.balesBaled).length || f.__hasBalesBaled) ? { bales_baled: cleanBaled(f.balesBaled) } : {}),
       });
       // The agronomy half. Always written, even when empty — a missing row and
       // a zeroed row are different things, and the app expects the fields to
@@ -761,6 +766,7 @@ export function rowsToState(rows) {
         ...(Array.isArray(c.custom_grades) ? { customGrades: c.custom_grades, __hasCustomGrades: true } : {}),
         ...(c.harvest_season ? { harvestSeason: c.harvest_season, __hasHarvestSeason: true } : {}),
         ...(c.cotton && typeof c.cotton === 'object' ? { cotton: cleanCotton(c.cotton), __hasCotton: true } : {}),
+        ...(c.hay && typeof c.hay === 'object' ? { hay: cleanHay(c.hay), __hasHay: true } : {}),
         grossMarginCost: n(c.gross_margin_cost),
         unit: c.unit ?? 't',
         balesPerRoundBale: n(c.bales_per_round_bale),
@@ -780,6 +786,7 @@ export function rowsToState(rows) {
           ...(f.boundary != null ? { boundary: f.boundary, __hasBoundary: true } : {}),
           ...(f.property ? { property: f.property, __hasProperty: true } : {}),
           ...(Array.isArray(f.modules_picked) ? { modulesPicked: cleanPicked(f.modules_picked), __hasModulesPicked: true } : {}),
+          ...(Array.isArray(f.bales_baled) ? { balesBaled: cleanBaled(f.bales_baled), __hasBalesBaled: true } : {}),
           __agronomyId: a.id,
           yieldTHa: n(a.yield_t_ha),
           yieldMode: a.yield_mode || 'estimate',

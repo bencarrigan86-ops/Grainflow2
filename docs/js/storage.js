@@ -18,30 +18,31 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=367';
-import { setBrandLogo } from './brand.js?v=367';
+import { hydrate } from './hydrate.js?v=368';
+import { setBrandLogo } from './brand.js?v=368';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=367';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=367';
-import { isLegacyDirty } from './dirty.js?v=367';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=367';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=367';
-import { hasDeductions } from './deductions.js?v=367';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=367';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=367';
-import { settleLegs, dedupeLegs } from './legs.js?v=367';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=367';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=367';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=367';
-import { setCommodityOrder } from './commodityorder.js?v=367';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=367';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=367';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=367';
-import { schedulePush, pushOnReconnect } from './sync.js?v=367';
-import { hasParts as hasAddressParts } from './address.js?v=367';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=367';
+} from './local.js?v=368';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=368';
+import { isLegacyDirty } from './dirty.js?v=368';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=368';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=368';
+import { hasDeductions } from './deductions.js?v=368';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=368';
+import { hasHay } from './hay.js?v=368';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=368';
+import { settleLegs, dedupeLegs } from './legs.js?v=368';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=368';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=368';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=368';
+import { setCommodityOrder } from './commodityorder.js?v=368';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=368';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=368';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=368';
+import { schedulePush, pushOnReconnect } from './sync.js?v=368';
+import { hasParts as hasAddressParts } from './address.js?v=368';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=368';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -769,6 +770,7 @@ export const db = {
         if (merged.customGrades?.length) merged.__hasCustomGrades = true;
         if (merged.harvestSeason) merged.__hasHarvestSeason = true;   // so going back to automatic still reaches the server
         if (hasCotton(merged.cotton)) merged.__hasCotton = true;      // and clearing the cotton settings does too
+        if (hasHay(merged.hay)) merged.__hasHay = true;               // and the hay settings
         c.commodities[idx] = merged;
       }
       touch('commodity', commodity.id);
@@ -778,6 +780,7 @@ export const db = {
       if (Number(made.openingValue)) made.__hasOpeningValue = true;
       if (made.harvestSeason) made.__hasHarvestSeason = true;
       if (hasCotton(made.cotton)) made.__hasCotton = true;
+      if (hasHay(made.hay)) made.__hasHay = true;
       c.commodities.push(made);
       touch('commodity', id);
       persist();
@@ -805,6 +808,7 @@ export const db = {
         if (merged.harvestHaLeft != null) merged.__hasHarvestHaLeft = true;   // and so does clearing the hectares left
         if (merged.harvestLeftYield != null) merged.__hasHarvestLeftYield = true;   // and clearing their yield
         if (Array.isArray(merged.modulesPicked)) merged.__hasModulesPicked = true;   // and deleting the last modules picked
+        if (Array.isArray(merged.balesBaled)) merged.__hasBalesBaled = true;   // and deleting the last bales baled
         c.fields[idx] = merged;
       }
       touch('field', field.id);

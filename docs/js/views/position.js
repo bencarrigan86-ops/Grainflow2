@@ -1,16 +1,16 @@
-import { db } from '../storage.js?v=367';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=367';
-import { num, tons, money, pct, esc } from '../fmt.js?v=367';
-import { payablesCost } from '../payables.js?v=367';
-import { openEofySheet } from './eofy.js?v=367';
-import { startProgress } from '../helpcontent.js?v=367';
-import { attentionItems } from '../attention.js?v=367';
-import { lastBackup } from '../backup.js?v=367';
-import { todayLocal, dmy } from '../fmt.js?v=367';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=367';
-import { openSheet, closeSheet } from '../ui.js?v=367';
-import { positionPdf } from '../positionpdf.js?v=367';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=367';
+import { db } from '../storage.js?v=368';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=368';
+import { num, tons, money, pct, esc } from '../fmt.js?v=368';
+import { payablesCost } from '../payables.js?v=368';
+import { openEofySheet } from './eofy.js?v=368';
+import { startProgress } from '../helpcontent.js?v=368';
+import { attentionItems } from '../attention.js?v=368';
+import { lastBackup } from '../backup.js?v=368';
+import { todayLocal, dmy } from '../fmt.js?v=368';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=368';
+import { openSheet, closeSheet } from '../ui.js?v=368';
+import { positionPdf } from '../positionpdf.js?v=368';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=368';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -202,11 +202,13 @@ function cottonLines(r) {
   const sub = (t) => `<small style="display:block;font-size:11.5px;color:var(--text-dim);font-weight:400">${t}</small>`;
   const row = (label, note, value) => `<div class="row"><span class="label">${label}${sub(note)}</span><span class="value" style="white-space:nowrap">${value}</span></div>`;
   const est = c.unginnedBales > 0.5 ? `${num(c.unginnedBales, 0)} bales to gin, estimated` : 'From the gin invoices';
+  // each as dollars a bale of lint too, so it reads against the lint price
+  const perBale = (v) => (c.bales > 0 ? ` · ${money(v / c.bales, 2)}/bale` : '');
   return `
       <div style="margin-top:8px">
       ${row('Cotton (lint)', 'Sold plus unsold at MTM', money(r.soldValue + r.unsoldValue, 0))}
-      ${row('Seed', `${num(c.seedT, 1)} t at ${money(c.seedMtm, 0)}/t`, money(c.seedValue, 0))}
-      ${row('Less ginning', est, `&minus;${money(c.ginningCost, 0)}`)}
+      ${row('Seed', `${num(c.seedT, 1)} t at ${money(c.seedMtm, 0)}/t${perBale(c.seedValue)}`, money(c.seedValue, 0))}
+      ${row('Less ginning', `${est}${perBale(c.ginningCost)}`, `&minus;${money(c.ginningCost, 0)}`)}
       </div>`;
 }
 

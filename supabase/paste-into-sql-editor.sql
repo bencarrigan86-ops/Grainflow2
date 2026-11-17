@@ -2000,3 +2000,9 @@ notify pgrst, 'reload schema';
 alter table fields add column if not exists modules_picked jsonb;
 
 notify pgrst, 'reload schema';
+
+-- Hay: bale settings on the commodity, bales baled on a paddock
+alter table commodities add column if not exists hay jsonb;
+alter table fields add column if not exists bales_baled jsonb;
+
+notify pgrst, 'reload schema';
