@@ -4,7 +4,7 @@
 // A deduction on a load's ticket (a fault the contract does not price) comes off its price on the invoice, with the reason under it.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { cleanDeductions, deductionPerTon, deductionRateFor, deductionAdjustment, deductionNotes, hasDeductions } from '../docs/js/deductions.js';
+import { cleanDeductions, deductionPerTon, deductionRateFor, deductionAdjustment, deductionNotes, hasDeductions, amountOnTicket, perTonFromTicket } from '../docs/js/deductions.js';
 import { invoiceLineItems, invoiceTotals, saleEconomics } from '../docs/js/derived.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
@@ -63,6 +63,17 @@ check('the note under the load says what it is, the $/t and the dollars', () => 
   assert.deepEqual(deductionNotes([]), []);
 });
 
+check('on the ticket a discount is typed as a minus and a premium as a plus, and kept the other way round', () => {
+  assert.equal(perTonFromTicket('-10'), 10, 'a $10 discount is typed -10');
+  assert.equal(perTonFromTicket('4'), -4, 'a $4 premium is typed 4');
+  assert.equal(perTonFromTicket(''), '');
+  assert.equal(amountOnTicket({ reason: 'x', perTon: 10 }), -10, 'and shows as -10 again');
+  assert.equal(amountOnTicket({ reason: 'x', perTon: -4 }), 4);
+  assert.equal(amountOnTicket({ reason: 'x', perTon: 0 }), '');
+  const typed = perTonFromTicket('-10');
+  assert.equal(deductionRateFor(load('a', 30, [{ reason: 'Screenings', perTon: typed }])), -10, 'a typed -10 lowers the rate by 10');
+});
+
 check('the deductions go to the server and come back; no column is sent for a load that never had any', () => {
   const st = (m) => ({ currentYear: '2026', years: { 2026: { sales: [], commodities: [], fields: [], storages: [], movements: [m] } }, businessDetails: {} });
   const base = { id: 'm1', date: '2026-11-17', tons: 30, froms: [], tos: [] };
@@ -77,7 +88,7 @@ check('the deductions go to the server and come back; no column is sent for a lo
 
 check('the ticket has the section, saves it, and the invoice, the Xero export and the column are wired', () => {
   const m = read('docs/js/views/movements.js');
-  assert.ok(m.includes('id="ded-fold"') && m.includes('id="ded-add"') && m.includes('deductions: readDeductions(root.querySelector(\'#ded-rows\'))'));
+  assert.ok(m.includes('id="ded-fold"') && m.includes('id="ded-add"') && m.includes('<h2>Premium / discount</h2>') && m.includes('perTonFromTicket(row.querySelector') && m.includes('deductions: readDeductions(root.querySelector(\'#ded-rows\'))'));
   assert.ok(m.indexOf('id="ded-fold"') > m.indexOf('id="lq-fold"') && m.indexOf('id="ded-fold"') < m.indexOf('id="np-fold"'), 'between quality and notes');
   assert.ok(read('docs/js/views/invoice.js').includes('deductionNotes(l.deductions, l.tons)') && read('docs/js/views/invoice.js').includes('class="ded-note"'));
   assert.ok(read('docs/js/xero.js').includes('deductionNotes(l.deductions)'));

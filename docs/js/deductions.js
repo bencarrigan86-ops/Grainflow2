@@ -62,3 +62,10 @@ export function deductionNotes(deductions, tons = 0) {
     return `${sign}${dollars(d.perTon)}/t ${what}${d.reason ? ` for ${d.reason}` : ''}${total}`;
   });
 }
+
+/**
+ * On the ticket the amount is written the way a price is: a premium is plus and a discount is minus, so a $10 discount is
+ * typed -10. It is kept the other way round (`perTon` is what is taken off), so these two turn one into the other.
+ */
+export const amountOnTicket = (d) => (num(d?.perTon) === 0 ? '' : -num(d.perTon));
+export const perTonFromTicket = (typed) => (String(typed ?? '').trim() === '' ? '' : -num(typed));

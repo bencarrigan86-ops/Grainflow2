@@ -1,23 +1,23 @@
-import { db } from '../storage.js?v=357';
-import { cleanDeductions, deductionNotes } from '../deductions.js?v=357';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=357';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=357';
-import { withholdingClash } from '../fumigation.js?v=357';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=357';
-import { compressAndStampImage } from '../img.js?v=357';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=357';
-import { specText, extraSpecKey } from '../outload.js?v=357';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=357';
-import { pickableSilos } from '../silopick.js?v=357';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=357';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=357';
-import { activeSales } from '../paidsales.js?v=357';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=357';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=357';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=357';
-import { nowTime } from '../loadreport.js?v=357';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=357';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=357';
+import { db } from '../storage.js?v=358';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=358';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=358';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=358';
+import { withholdingClash } from '../fumigation.js?v=358';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=358';
+import { compressAndStampImage } from '../img.js?v=358';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=358';
+import { specText, extraSpecKey } from '../outload.js?v=358';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=358';
+import { pickableSilos } from '../silopick.js?v=358';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=358';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=358';
+import { activeSales } from '../paidsales.js?v=358';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=358';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=358';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=358';
+import { nowTime } from '../loadreport.js?v=358';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=358';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=358';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -297,12 +297,12 @@ export function movementRow(m, ctx) {
   `;
 }
 
-/** One deduction on the ticket: what it is and the $/t taken off. */
+/** One premium or discount on the ticket: what it is and the $/t, plus for a premium and minus for a discount. */
 function dedRowHtml(d) {
   return `<div class="ded-row">
-    <input class="ded-reason" type="text" placeholder="Reason, e.g. Screenings 6% vs contract 5%" value="${esc(d.reason || '')}" aria-label="Deduction reason" />
-    <input class="ded-per" type="number" step="0.01" inputmode="decimal" placeholder="$/t" value="${d.perTon === '' || d.perTon == null ? '' : esc(d.perTon)}" aria-label="Dollars per tonne taken off" />
-    <button type="button" class="btn ghost-danger small ded-del" style="width:auto;margin:0;padding:8px 12px" aria-label="Remove this deduction">&times;</button>
+    <input class="ded-reason" type="text" placeholder="Reason, e.g. Screenings 6% vs contract 5%" value="${esc(d.reason || '')}" aria-label="Reason for the premium or discount" />
+    <input class="ded-per" type="number" step="0.01" inputmode="decimal" placeholder="+/- $/t" value="${esc(amountOnTicket(d))}" aria-label="Dollars per tonne: plus for a premium, minus for a discount" />
+    <button type="button" class="btn ghost-danger small ded-del" style="width:auto;margin:0;padding:8px 12px" aria-label="Remove this premium or discount">&times;</button>
   </div>`;
 }
 
@@ -310,14 +310,14 @@ function dedRowHtml(d) {
 function readDeductions(container) {
   return cleanDeductions(Array.from(container?.querySelectorAll('.ded-row') || []).map((row) => ({
     reason: row.querySelector('.ded-reason').value,
-    perTon: row.querySelector('.ded-per').value,
+    perTon: perTonFromTicket(row.querySelector('.ded-per').value),
   })));
 }
 
 /** The line under the heading of the deductions section. */
 function dedSummary(list) {
   const notes = deductionNotes(list);
-  return notes.length ? notes.join('; ') : 'None. Tap to take something off this load for a fault the contract does not price';
+  return notes.length ? notes.join('; ') : 'None. Tap to add a premium or discount the contract does not cover';
 }
 
 function addFromRow(container, ctx, onChange, existingFrom) {
@@ -687,10 +687,10 @@ export function openMovementSheet(existing, template) {
         <div id="lq-ffa-wrap" class="grid-2">${field({ label: 'Free fatty acid (%)', id: 'lq-ffa', type: 'number', step: '0.01', value: existing?.ffaPct ?? '', hint: 'Canola' })}</div>
       </details>
       <details class="fold" id="ded-fold" ${cleanDeductions(existing?.deductions).length ? 'open' : ''}>
-        <summary><div class="feature-head"><h2>Deductions</h2><div class="sub" id="ded-sub">${esc(dedSummary(existing?.deductions))}</div></div></summary>
+        <summary><div class="feature-head"><h2>Premium / discount</h2><div class="sub" id="ded-sub">${esc(dedSummary(existing?.deductions))}</div></div></summary>
         <div id="ded-rows">${cleanDeductions(existing?.deductions).map(dedRowHtml).join('')}</div>
-        <button type="button" class="btn secondary small" id="ded-add">Add a deduction</button>
-        <div class="hint" style="margin-top:6px">For a fault the contract does not price. The $/t comes off this load's price on the invoice, with the reason under the load. A minus adds instead.</div>
+        <button type="button" class="btn secondary small" id="ded-add">Add a premium / discount</button>
+        <div class="hint" style="margin-top:6px">For something the contract does not cover. Type a discount as a minus (-10) and a premium as a plus (4). It moves this load's price on the invoice, with the reason under the load.</div>
       </details>
       <details class="fold" id="np-fold" ${src?.notes || existing?.photoPath || existing?.photoDataUrl ? 'open' : ''}>
         <summary><div class="feature-head"><h2>Notes and photo</h2><div class="sub">${esc(src?.notes || 'A note, or a photo of the truck rego')}</div></div></summary>
@@ -755,7 +755,7 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
     const lqFold = root.querySelector('#lq-fold');
     lqFold.addEventListener('input', () => setTimeout(paintLqSub, 0));
     lqFold.addEventListener('change', () => setTimeout(paintLqSub, 0));
-    // deductions: a reason and a $/t each, added and removed here, read back when the ticket is saved
+    // premiums and discounts: a reason and a $/t each, added and removed here, read back when the ticket is saved
     const dedRowsEl = root.querySelector('#ded-rows');
     const paintDedSub = () => { root.querySelector('#ded-sub').textContent = dedSummary(readDeductions(dedRowsEl)); };
     root.querySelector('#ded-add').addEventListener('click', () => {

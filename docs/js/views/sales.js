@@ -1,31 +1,31 @@
-import { db } from '../storage.js?v=357';
+import { db } from '../storage.js?v=358';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=357';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=357';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=357';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=357';
-import { PATTERNS } from '../deliveryplan.js?v=357';
-import { INVOICING } from '../invoicing.js?v=357';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=357';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=357';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=357';
-import { renderRelatedMovements } from './movements.js?v=357';
-import { openInvoiceListSheet } from './invoice.js?v=357';
-import { openContractDocSheet } from './contract.js?v=357';
-import { wireJumps } from '../jump.js?v=357';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=357';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=357';
-import { freightState } from '../freight.js?v=357';
-import { activeSales, paidSales } from '../paidsales.js?v=357';
-import { openVendorDecSheet } from './vendordec.js?v=357';
-import { summarise as summariseOrders } from '../orders.js?v=357';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=357';
-import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=357';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=357';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=357';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=357';
-import { standardFor } from '../grades.js?v=357';
+} from '../documents.js?v=358';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=358';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=358';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=358';
+import { PATTERNS } from '../deliveryplan.js?v=358';
+import { INVOICING } from '../invoicing.js?v=358';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=358';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=358';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=358';
+import { renderRelatedMovements } from './movements.js?v=358';
+import { openInvoiceListSheet } from './invoice.js?v=358';
+import { openContractDocSheet } from './contract.js?v=358';
+import { wireJumps } from '../jump.js?v=358';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=358';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=358';
+import { freightState } from '../freight.js?v=358';
+import { activeSales, paidSales } from '../paidsales.js?v=358';
+import { openVendorDecSheet } from './vendordec.js?v=358';
+import { summarise as summariseOrders } from '../orders.js?v=358';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=358';
+import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=358';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=358';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=358';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=358';
+import { standardFor } from '../grades.js?v=358';
 
 let unsub = null;
 
