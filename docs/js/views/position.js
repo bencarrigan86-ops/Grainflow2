@@ -1,16 +1,16 @@
-import { db } from '../storage.js?v=338';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=338';
-import { num, tons, money, pct, esc } from '../fmt.js?v=338';
-import { payablesCost } from '../payables.js?v=338';
-import { openEofySheet } from './eofy.js?v=338';
-import { startProgress } from '../helpcontent.js?v=338';
-import { attentionItems } from '../attention.js?v=338';
-import { lastBackup } from '../backup.js?v=338';
-import { todayLocal, dmy } from '../fmt.js?v=338';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=338';
-import { openSheet, closeSheet } from '../ui.js?v=338';
-import { positionPdf } from '../positionpdf.js?v=338';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=338';
+import { db } from '../storage.js?v=339';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=339';
+import { num, tons, money, pct, esc } from '../fmt.js?v=339';
+import { payablesCost } from '../payables.js?v=339';
+import { openEofySheet } from './eofy.js?v=339';
+import { startProgress } from '../helpcontent.js?v=339';
+import { attentionItems } from '../attention.js?v=339';
+import { lastBackup } from '../backup.js?v=339';
+import { todayLocal, dmy } from '../fmt.js?v=339';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=339';
+import { openSheet, closeSheet } from '../ui.js?v=339';
+import { positionPdf } from '../positionpdf.js?v=339';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=339';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 

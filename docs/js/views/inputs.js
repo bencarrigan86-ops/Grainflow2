@@ -4,16 +4,16 @@
 // and Bought, Used and Count record an entry. Seed and fertiliser also show what this season's paddocks call for
 // against what is in the shed. The arithmetic is in inputs.js.
 
-import { db } from '../storage.js?v=338';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=338';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=338';
-import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=338';
-import { isTransit } from '../transit.js?v=338';
-import { isOffFarm } from '../offfarm.js?v=338';
+import { db } from '../storage.js?v=339';
+import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=339';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=339';
+import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=339';
+import { isTransit } from '../transit.js?v=339';
+import { isOffFarm } from '../offfarm.js?v=339';
 import {
   KINDS, UNITS, MOVE_TYPES, kindLabel, defaultUnit, productKey, stockLevels, productMoves, stockValue,
   plannedNeeds, planVsStock, inputProblems, adjustmentFor, moveDelta, qtyText, onHandAt,
-} from '../inputs.js?v=338';
+} from '../inputs.js?v=339';
 
 // A farm worker sees what is on hand and records what is used and counts. The prices are not sent to their phone
 // at all (see the migration); this keeps the screens from showing blanks where a price would be, and from offering a delivery.

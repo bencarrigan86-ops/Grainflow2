@@ -2,9 +2,9 @@
 // buffer on top. Portrait A4 in the same style as the Position and Fert pages. The figures come from fertfigures.js
 // (seedFigures), the same ones the screen uses. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=338';
-import { drawBrandLogo } from './brand.js?v=338';
-import { seedSummary } from './fertfigures.js?v=338';
+import { Pdf, wrapText } from './pdf.js?v=339';
+import { drawBrandLogo } from './brand.js?v=339';
+import { seedSummary } from './fertfigures.js?v=339';
 
 const PAGE = { width: 595.28, height: 841.89 };
 const M = 36;

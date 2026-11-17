@@ -18,16 +18,16 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=338';
-import { openSheet } from '../ui.js?v=338';
-import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=338';
-import { addressLinesOf } from '../address.js?v=338';
-import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=338';
-import { PATTERN_ON_CONTRACT } from '../deliveryplan.js?v=338';
-import { INVOICING_ON_CONTRACT } from '../invoicing.js?v=338';
-import { contactLines } from '../buyercontact.js?v=338';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=338';
-import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=338';
+import { db } from '../storage.js?v=339';
+import { openSheet } from '../ui.js?v=339';
+import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=339';
+import { addressLinesOf } from '../address.js?v=339';
+import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=339';
+import { PATTERN_ON_CONTRACT } from '../deliveryplan.js?v=339';
+import { INVOICING_ON_CONTRACT } from '../invoicing.js?v=339';
+import { contactLines } from '../buyercontact.js?v=339';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=339';
+import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=339';
 
 const DASH = '—';
 
@@ -83,10 +83,11 @@ const term = (label, value) => {
  * @param {object} business  the farm's business details (the logo is printed in the header when it has one)
  * @param {object} commodity
  * @param {{sig: object, date: string}|null} signed  the seller's saved signature, to print instead of the lines to sign on
- * @param {{showFreight?: boolean, printedName?: string}} [opts]  showFreight: whether the freight rate is printed (default: yes, when there is one);
+ * @param {{showFreight?: boolean, showComments?: boolean, printedName?: string}} [opts]  showFreight: whether the freight rate is printed (default: yes, when there is one);
+ *   showComments: whether the contract's comments are printed (default: yes, when there are any);
  *   printedName: the person's name printed under the seller's signature (default: the signed-in person's)
  */
-export function contractDocHTML(sale, business, commodity, signed = null, { showFreight = true, printedName = '' } = {}) {
+export function contractDocHTML(sale, business, commodity, signed = null, { showFreight = true, showComments = true, printedName = '' } = {}) {
   const unit = commodity?.unit === 'bale' ? 'bales' : 't';
   const perUnit = commodity?.unit === 'bale' ? 'bale' : 'tonne';
   const sellerName = String(printedName || signerName(signed?.sig, business)).trim();   // the person signing for the seller, printed under the signature
@@ -159,7 +160,7 @@ export function contractDocHTML(sale, business, commodity, signed = null, { show
         ${term('Carry', carryText(sale))}
         ${term('Broker', brokerText(sale))}
         ${term('Trade rules', sale.tradeRules || 'Grain Trade Australia Trade Rules apply')}
-        ${term('Notes', sale.notes)}
+        ${term('Comments', showComments ? sale.notes : '')}
       </div>
 
       <div class="line" style="margin:14px 0 0;font-size:12px;color:#555">
@@ -220,6 +221,9 @@ export function openContractDocSheet(sale) {
         ${Number(sale.freight) > 0 ? `<label class="row" style="gap:10px;align-items:center;cursor:pointer;margin:6px 0">
           <input type="checkbox" id="show-freight" checked style="width:18px;height:18px" />
           <span>Include the freight rate (${esc(money(sale.freight, 2))} per ${commodity?.unit === 'bale' ? 'bale' : 'tonne'})</span></label>` : ''}
+        ${String(sale.notes || '').trim() ? `<label class="row" style="gap:10px;align-items:center;cursor:pointer;margin:6px 0">
+          <input type="checkbox" id="show-comments" checked style="width:18px;height:18px" />
+          <span>Include the comments</span></label>` : ''}
       </div>
       <div id="doc-holder">${contractDocHTML(sale, business, commodity)}</div>
       <div class="doc-actions">
@@ -231,10 +235,12 @@ export function openContractDocSheet(sale) {
     let printedName = '';
     const paintDoc = () => {
       const showFreight = root.querySelector('#show-freight')?.checked !== false;
-      root.querySelector('#doc-holder').innerHTML = contractDocHTML(sale, business, commodity, signedWith ? { sig: signedWith, date: dmy(todayLocal()) } : null, { showFreight, printedName });
+      const showComments = root.querySelector('#show-comments')?.checked !== false;
+      root.querySelector('#doc-holder').innerHTML = contractDocHTML(sale, business, commodity, signedWith ? { sig: signedWith, date: dmy(todayLocal()) } : null, { showFreight, showComments, printedName });
     };
     wireSignToggle(root, 'sign-doc', (sig) => { signedWith = sig; paintDoc(); });
     root.querySelector('#show-freight')?.addEventListener('change', paintDoc);
+    root.querySelector('#show-comments')?.addEventListener('change', paintDoc);
     wireSignerPick(root, 'signer-pick', business, (name) => { printedName = name; paintDoc(); });
     root.querySelector('#print-contract').addEventListener('click', () => window.print());
   });

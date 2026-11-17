@@ -18,28 +18,28 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=338';
-import { setBrandLogo } from './brand.js?v=338';
+import { hydrate } from './hydrate.js?v=339';
+import { setBrandLogo } from './brand.js?v=339';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=338';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=338';
-import { isLegacyDirty } from './dirty.js?v=338';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=338';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=338';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=338';
-import { settleLegs, dedupeLegs } from './legs.js?v=338';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=338';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=338';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=338';
-import { setCommodityOrder } from './commodityorder.js?v=338';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=338';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=338';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=338';
-import { schedulePush, pushOnReconnect } from './sync.js?v=338';
-import { hasParts as hasAddressParts } from './address.js?v=338';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=338';
+} from './local.js?v=339';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=339';
+import { isLegacyDirty } from './dirty.js?v=339';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=339';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=339';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=339';
+import { settleLegs, dedupeLegs } from './legs.js?v=339';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=339';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=339';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=339';
+import { setCommodityOrder } from './commodityorder.js?v=339';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=339';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=339';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=339';
+import { schedulePush, pushOnReconnect } from './sync.js?v=339';
+import { hasParts as hasAddressParts } from './address.js?v=339';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=339';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.

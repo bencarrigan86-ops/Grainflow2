@@ -139,7 +139,7 @@ check('it has the green band with the logo, the contact lines, the delivery opti
 });
 check('the freight tickbox is on the print sheet, and the sheet prints once', () => {
   const c = read('docs/js/views/contract.js');
-  assert.ok(c.includes('id="show-freight"') && c.includes('{ showFreight, printedName }'));
+  assert.ok(c.includes('id="show-freight"') && c.includes('{ showFreight, showComments, printedName }'));
   const css = read('docs/css/styles.css');
   assert.ok(/@media print[\s\S]*\.sheet-backdrop \{ position: static/.test(css), 'the fixed overlay is made ordinary for printing, or every page repeats it');
   assert.ok(/@media print[\s\S]*body > \*:not\(\.sheet-backdrop\) \{ display: none/.test(css), 'the app underneath takes no room');
