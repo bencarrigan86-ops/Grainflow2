@@ -18,16 +18,16 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=339';
-import { openSheet } from '../ui.js?v=339';
-import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=339';
-import { addressLinesOf } from '../address.js?v=339';
-import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=339';
-import { PATTERN_ON_CONTRACT } from '../deliveryplan.js?v=339';
-import { INVOICING_ON_CONTRACT } from '../invoicing.js?v=339';
-import { contactLines } from '../buyercontact.js?v=339';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=339';
-import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=339';
+import { db } from '../storage.js?v=340';
+import { openSheet } from '../ui.js?v=340';
+import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=340';
+import { addressLinesOf } from '../address.js?v=340';
+import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=340';
+import { PATTERN_ON_CONTRACT } from '../deliveryplan.js?v=340';
+import { INVOICING_ON_CONTRACT } from '../invoicing.js?v=340';
+import { contactLines } from '../buyercontact.js?v=340';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=340';
+import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=340';
 
 const DASH = '—';
 
@@ -218,10 +218,10 @@ export function openContractDocSheet(sale) {
         </div>` : ''}
       <div class="doc-actions">${signToggleHtml('sign-doc', 'Sign it as the seller with my signature')}
         ${signerPickHtml('signer-pick')}
-        ${Number(sale.freight) > 0 ? `<label class="row" style="gap:10px;align-items:center;cursor:pointer;margin:6px 0">
+        ${Number(sale.freight) > 0 ? `<label class="row" style="gap:10px;align-items:center;justify-content:flex-start;cursor:pointer;margin:6px 0">
           <input type="checkbox" id="show-freight" checked style="width:18px;height:18px" />
           <span>Include the freight rate (${esc(money(sale.freight, 2))} per ${commodity?.unit === 'bale' ? 'bale' : 'tonne'})</span></label>` : ''}
-        ${String(sale.notes || '').trim() ? `<label class="row" style="gap:10px;align-items:center;cursor:pointer;margin:6px 0">
+        ${String(sale.notes || '').trim() ? `<label class="row" style="gap:10px;align-items:center;justify-content:flex-start;cursor:pointer;margin:6px 0">
           <input type="checkbox" id="show-comments" checked style="width:18px;height:18px" />
           <span>Include the comments</span></label>` : ''}
       </div>

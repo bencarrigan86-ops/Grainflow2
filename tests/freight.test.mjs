@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  perTonne, rateText, loadedOn, freightState, billedOn, freightOwed, estimatedTotal, nextFreightNo,
+  perTonne, rateText, loadedOn, freightState, billedOn, freightOwed, estimatedTotal, nextFreightNo, contractFreightNo,
   freightOrdersForLoad, freightTitle, freightDefaults, freightProblems, windowText, freightOrderPdf,
 } from '../docs/js/freight.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
@@ -88,6 +88,16 @@ check('the next number is one more than the highest in use', () => {
   assert.equal(nextFreightNo([]), 'FO-001');
   assert.equal(nextFreightNo([{ freightNo: 'FO-007' }, { freightNo: 'FO-003' }, { freightNo: 'misc' }]), 'FO-008');
 });
+check('a new freight order is numbered from its contract: the number, then -01, -02, one more than the highest on that contract', () => {
+  assert.equal(contractFreightNo({ id: 's1', contractNo: 'CF-1094' }, []), 'CF-1094-01');
+  const list = [{ saleId: 's1', freightNo: 'CF-1094-01' }, { saleId: 's1', freightNo: 'CF-1094-02' }, { saleId: 's2', freightNo: 'XX-7-01' }, { saleId: 's1', freightNo: 'FO-009' }];
+  assert.equal(contractFreightNo({ id: 's1', contractNo: 'CF-1094' }, list), 'CF-1094-03');
+  assert.equal(contractFreightNo({ id: 's2', contractNo: 'XX-7' }, list), 'XX-7-02');
+});
+check('with no contract number it uses our reference, and with neither it carries on the FO- numbers', () => {
+  assert.equal(contractFreightNo({ id: 's1', ourRef: 'C-26-014' }, []), 'C-26-014-01');
+  assert.equal(contractFreightNo({ id: 's1' }, [{ freightNo: 'FO-007' }]), 'FO-008');
+});
 check('a load is offered the open freight orders for its contract, its own order first', () => {
   const list = [
     fo({ id: 'a', orderId: 'o2', loadBy: '2026-12-01' }),
@@ -111,7 +121,7 @@ const ORDER = { id: 'o1', saleId: 's1', orderNo: 'B-77', tons: 300, deliverFrom:
 
 check('the order gives the tonnes, window, carrier and notes; the contract the destination and a starting rate', () => {
   const d = freightDefaults({ sale: SALE, order: ORDER, freightOrders: [{ freightNo: 'FO-004' }], carrierEmails: { 'ace haulage': 'dispatch@ace.example.com' } });
-  assert.deepEqual([d.saleId, d.orderId, d.freightNo, d.carrier, d.carrierEmail], ['s1', 'o1', 'FO-005', 'Ace Haulage', 'dispatch@ace.example.com']);
+  assert.deepEqual([d.saleId, d.orderId, d.freightNo, d.carrier, d.carrierEmail], ['s1', 'o1', 'RGT-4471-01', 'Ace Haulage', 'dispatch@ace.example.com']);
   assert.deepEqual([d.tons, d.loadFrom, d.loadBy, d.deliverTo, d.rate, d.rateBasis, d.notes], [300, '2026-11-10', '2026-11-30', 'Newbridge Receival Site', 22, 'per_t', 'Gate 3, 7am to 4pm']);
 });
 check('with no buyer order it falls back to the contract\'s tonnes and dates', () => {
@@ -138,7 +148,7 @@ check('it is one PDF page with the job and the rate, and nothing about the grain
   const s = latin1(bytes);
   assert.ok(s.startsWith('%PDF'));
   assert.match(s, /\/Count 1/);
-  for (const text of ['FREIGHT ORDER', 'FO-001', 'Ace Haulage', 'dispatch', 'Wheat', 'Silo 3, home farm', 'Newbridge Receival Site', '10-11-2026 to 30-11-2026', 'B-77', 'RGT-4471', 'per tonne per km', '240 km', 'Gate 3', 'Issued by Ben Carrigan', '14-11-2026']) {
+  for (const text of ['FREIGHT ORDER', 'RGT-4471-01', 'Ace Haulage', 'dispatch', 'Wheat', 'Silo 3, home farm', 'Newbridge Receival Site', '10-11-2026 to 30-11-2026', 'B-77', 'RGT-4471', 'per tonne per km', '240 km', 'Gate 3', 'Issued by Ben Carrigan', '14-11-2026']) {
     if (text === 'dispatch') continue;      // no email on this one
     assert.ok(s.includes(text), text);
   }

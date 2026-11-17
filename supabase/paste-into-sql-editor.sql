@@ -1940,3 +1940,11 @@ alter table sales
   add column if not exists invoicing text;
 
 notify pgrst, 'reload schema';
+
+-- A freight order's Deliver from and Deliver to addresses in parts, beside the one line each already has (optional)
+alter table freight_orders
+  add column if not exists pickup_parts jsonb;
+alter table freight_orders
+  add column if not exists deliver_to_parts jsonb;
+
+notify pgrst, 'reload schema';

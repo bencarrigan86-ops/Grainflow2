@@ -27,9 +27,9 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=339';
-import { cleanOffFarm } from './offfarm.js?v=339';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=339';
+import { cleanGradeOptions } from './gradeprice.js?v=340';
+import { cleanOffFarm } from './offfarm.js?v=340';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=340';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -605,6 +605,8 @@ export function stateToRows(state, farmId) {
         ...(f.rateBasis === 'flat_tkm' || Number(f.flatRate) > 0 ? { flat_rate: f.flatRate === '' || f.flatRate == null ? null : n(f.flatRate) } : {}),
         distance_km: f.distanceKm === '' || f.distanceKm == null ? null : n(f.distanceKm),
         pickup: orNull(f.pickup), deliver_to: orNull(f.deliverTo),
+        ...(partsOut(f.pickupParts, f.__hasPickupParts) ? { pickup_parts: partsOut(f.pickupParts, f.__hasPickupParts).v } : {}),
+        ...(partsOut(f.deliverToParts, f.__hasDeliverToParts) ? { deliver_to_parts: partsOut(f.deliverToParts, f.__hasDeliverToParts).v } : {}),
         load_from: orNull(f.loadFrom), load_by: orNull(f.loadBy),
         status: f.status || 'open',
         notes: orNull(f.notes),
@@ -879,6 +881,8 @@ export function rowsToState(rows) {
         flatRate: f.flat_rate == null ? '' : n(f.flat_rate),
         distanceKm: f.distance_km == null ? '' : n(f.distance_km),
         pickup: f.pickup ?? '', deliverTo: f.deliver_to ?? '',
+        ...(f.pickup_parts != null ? { __hasPickupParts: true, ...(partsIn(f.pickup_parts, f.pickup) ? { pickupParts: partsIn(f.pickup_parts, f.pickup) } : {}) } : {}),
+        ...(f.deliver_to_parts != null ? { __hasDeliverToParts: true, ...(partsIn(f.deliver_to_parts, f.deliver_to) ? { deliverToParts: partsIn(f.deliver_to_parts, f.deliver_to) } : {}) } : {}),
         loadFrom: f.load_from ?? '', loadBy: f.load_by ?? '',
         status: f.status || 'open', notes: f.notes ?? '',
       })),

@@ -5,21 +5,22 @@
 // It goes to the carrier as a PDF (shared or emailed) and a copy is filed with the contract. Loads then name the
 // freight order they travel on, and the carrier's bill is recorded against it. The arithmetic is in freight.js.
 
-import { db } from '../storage.js?v=339';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=339';
-import { signerName } from '../signdoc.js?v=339';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=339';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=339';
-import { orderTitle } from '../orders.js?v=339';
-import { activeSales } from '../paidsales.js?v=339';
+import { db } from '../storage.js?v=340';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=340';
+import { signerName } from '../signdoc.js?v=340';
+import { addressFields, readAddress, partsOf, joinAddress } from '../address.js?v=340';
+import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=340';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=340';
+import { orderTitle } from '../orders.js?v=340';
+import { activeSales } from '../paidsales.js?v=340';
 import {
   BASES, STATE_LABEL, freightState, freightOwed, freightTitle, freightDefaults, freightProblems,
   perTonne, rateText, estimatedTotal, windowText, freightOrderPdf,
-} from '../freight.js?v=339';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=339';
-import { fileSentCopy } from '../sentcopy.js?v=339';
-import { movementRow, openMovementSheet } from './movements.js?v=339';
-import { openBillSheet, returnToAfterBill } from './payables.js?v=339';
+} from '../freight.js?v=340';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=340';
+import { fileSentCopy } from '../sentcopy.js?v=340';
+import { movementRow, openMovementSheet } from './movements.js?v=340';
+import { openBillSheet, returnToAfterBill } from './payables.js?v=340';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | closed | all
@@ -117,6 +118,7 @@ export function openFreightOrderSheet(existing, start = {}) {
   for (const f of all) if (f.carrier && f.carrierEmail) carrierEmails[f.carrier.trim().toLowerCase()] = f.carrierEmail;
   const make = (sale, order) => freightDefaults({ sale, order, freightOrders: all, carrierEmails });
   let d = existing ? { ...existing } : make(startSale, startOrder && startOrder.saleId === startSale.id ? startOrder : null);
+  let autoNo = existing ? '' : d.freightNo;   // the number offered, so changing the contract can offer that contract's own, unless it was typed over
   const carriers = [...new Set([
     ...all.map((f) => f.carrier),
     ...orders.map((o) => o.freightCompany),
@@ -132,6 +134,8 @@ export function openFreightOrderSheet(existing, start = {}) {
         <datalist id="dl-carriers">${carriers.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
         ${field({ label: 'Contract', id: 'fo-sale', type: 'select', value: d.saleId,
           options: activeSales(sales, [d.saleId]).map((s) => ({ value: s.id, label: contractLabel(s, commodities) })) })}
+        <div class="row" style="margin:-4px 0 10px"><span class="label">Contract no.</span><span class="value">${esc([sale.contractNo, sale.ourRef].filter(Boolean).join(' / ') || 'none on this contract')}</span></div>
+        <div class="row" style="margin:-4px 0 10px"><span class="label">Buyer's order no.</span><span class="value">${esc(orders.find((o) => o.id === d.orderId)?.orderNo || 'none: pick the grain order below')}</span></div>
         ${field({ label: 'Grain order (optional)', id: 'fo-order', type: 'select', value: d.orderId || '',
           options: [{ value: '', label: 'Not for one grain order' }, ...saleOrders.map((o) => ({ value: o.id, label: [orderTitle(o), o.freightCompany].filter(Boolean).join(' · ') }))],
           hint: 'Choosing one fills in its tonnes, window, carrier and where it is going.' })}
@@ -155,8 +159,10 @@ export function openFreightOrderSheet(existing, start = {}) {
         <div class="row"><span class="label">Works out at</span><span class="value" id="fo-calc">-</span></div>
 
         <div class="subhead">The job</div>
-        ${field({ label: 'Pick up from', id: 'fo-pickup', value: d.pickup, placeholder: 'e.g. the farm, gate 2, silo 3' })}
-        ${field({ label: 'Deliver to', id: 'fo-deliver', value: d.deliverTo, placeholder: "The buyer's receival site" })}
+        <div class="subhead">Deliver from</div>
+        ${addressFields('fo-pick', partsOf(d.pickup, d.pickupParts), { label: 'Deliver from' })}
+        <div class="subhead">Deliver to</div>
+        ${addressFields('fo-drop', partsOf(d.deliverTo, d.deliverToParts), { label: 'Deliver to' })}
         <div class="grid-2">
           ${field({ label: 'Load from', id: 'fo-from', type: 'date', value: d.loadFrom })}
           ${field({ label: 'Load by', id: 'fo-by', type: 'date', value: d.loadBy })}
@@ -216,8 +222,10 @@ export function openFreightOrderSheet(existing, start = {}) {
         rate: val('fo-rate') === '' ? '' : getNum(root, 'fo-rate'),
         flatRate: root.querySelector('#fo-flat') ? (val('fo-flat') === '' ? '' : getNum(root, 'fo-flat')) : d.flatRate,
         distanceKm: root.querySelector('#fo-km') ? (val('fo-km') === '' ? '' : getNum(root, 'fo-km')) : d.distanceKm,
-        pickup: val('fo-pickup').trim(),
-        deliverTo: val('fo-deliver').trim(),
+        pickup: joinAddress(readAddress(root, 'fo-pick')),
+        pickupParts: readAddress(root, 'fo-pick'),
+        deliverTo: joinAddress(readAddress(root, 'fo-drop')),
+        deliverToParts: readAddress(root, 'fo-drop'),
         loadFrom: val('fo-from'),
         loadBy: val('fo-by'),
         notes: val('fo-notes').trim(),
@@ -235,7 +243,7 @@ export function openFreightOrderSheet(existing, start = {}) {
       root.querySelector('#fo-sale').addEventListener('change', () => {
         collect();
         const sale = sales.find((s) => s.id === getVal(root, 'fo-sale'));
-        if (!existing) { const fresh = make(sale, null); d = { ...fresh, freightNo: d.freightNo || fresh.freightNo, carrier: d.carrier || fresh.carrier, carrierEmail: d.carrierEmail || fresh.carrierEmail, rateBasis: d.rateBasis, rate: d.rate || fresh.rate, flatRate: d.flatRate, distanceKm: d.distanceKm, pickup: d.pickup, notes: d.notes }; }
+        if (!existing) { const fresh = make(sale, null); const typedNo = d.freightNo && d.freightNo !== autoNo ? d.freightNo : ''; autoNo = fresh.freightNo; d = { ...fresh, freightNo: typedNo || fresh.freightNo, carrier: d.carrier || fresh.carrier, carrierEmail: d.carrierEmail || fresh.carrierEmail, rateBasis: d.rateBasis, rate: d.rate || fresh.rate, flatRate: d.flatRate, distanceKm: d.distanceKm, pickup: d.pickup, pickupParts: d.pickupParts, notes: d.notes }; }
         else { d.saleId = sale.id; d.orderId = ''; }
         paint();
       });
@@ -247,7 +255,7 @@ export function openFreightOrderSheet(existing, start = {}) {
         if (order) {
           const fresh = make(sale, order);
           // the buyer's order fills in what it knows, over what was there; the rate and the pick up stay as typed
-          d = { ...d, tons: fresh.tons, loadFrom: fresh.loadFrom, loadBy: fresh.loadBy, carrier: fresh.carrier || d.carrier, carrierEmail: fresh.carrierEmail || d.carrierEmail, deliverTo: d.deliverTo || fresh.deliverTo, notes: d.notes || fresh.notes };
+          d = { ...d, tons: fresh.tons, loadFrom: fresh.loadFrom, loadBy: fresh.loadBy, carrier: fresh.carrier || d.carrier, carrierEmail: fresh.carrierEmail || d.carrierEmail, deliverTo: d.deliverTo || fresh.deliverTo, deliverToParts: d.deliverTo ? d.deliverToParts : undefined, notes: d.notes || fresh.notes };
         }
         paint();
       });

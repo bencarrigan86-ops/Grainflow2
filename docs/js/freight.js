@@ -10,11 +10,11 @@
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { Pdf, wrapText } from './pdf.js?v=339';
-import { drawBrandLogo } from './brand.js?v=339';
-import { dmy } from './fmt.js?v=339';
-import { movementTonsToSale } from './derived.js?v=339';
-import { hasSignature, strokesInBox } from './signature.js?v=339';
+import { Pdf, wrapText } from './pdf.js?v=340';
+import { drawBrandLogo } from './brand.js?v=340';
+import { dmy } from './fmt.js?v=340';
+import { movementTonsToSale } from './derived.js?v=340';
+import { hasSignature, strokesInBox } from './signature.js?v=340';
 
 export const BASES = [
   { key: 'per_t', label: '$ per tonne' },
@@ -95,6 +95,23 @@ export function nextFreightNo(list) {
 }
 
 /**
+ * The number to offer for a new freight order on a contract: the contract's number with -01, -02 ... after it
+ * (CF-1094-01), one more than the highest already used on that contract. The buyer's contract number is used, or our
+ * own reference when there is none; a contract with neither falls back to FO-001, FO-002 ...
+ */
+export function contractFreightNo(sale, list) {
+  const base = clean(sale?.contractNo) || clean(sale?.ourRef);
+  if (!base) return nextFreightNo(list);
+  const prefix = `${base}-`;
+  let max = 0;
+  for (const f of list || []) {
+    const no = clean(f.freightNo);
+    if (no.startsWith(prefix) && /^\d+$/.test(no.slice(prefix.length))) max = Math.max(max, Number(no.slice(prefix.length)));
+  }
+  return `${prefix}${String(max + 1).padStart(2, '0')}`;
+}
+
+/**
  * The freight orders a load into a contract can be carted on: those still open for that contract, the ones for the
  * load's buyer order first. `keepId` stays on the list even once filled or closed, so editing an old load never loses it.
  */
@@ -117,7 +134,7 @@ export function freightDefaults({ sale, order = null, freightOrders = [], carrie
   return {
     saleId: sale?.id || '',
     orderId: order?.id || '',
-    freightNo: nextFreightNo(freightOrders),
+    freightNo: contractFreightNo(sale, freightOrders),
     carrier,
     carrierEmail: carrierEmails[carrier.toLowerCase()] || '',
     tons: order ? num(order.tons) : num(sale?.tons),
@@ -209,20 +226,20 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
 
   // the job
   const jy = top + 124;
-  box(pdf, M, jy, W, 196, 'THE JOB');
+  box(pdf, M, jy, W, 212, 'THE JOB');
   let y = jy + 24;
   const half = (W - 24) / 2;
   y = labelled(pdf, M + 8, y, 60, W - 76, 'Commodity:', [commodityName, sale?.grade ? `(${sale.grade})` : ''].filter(Boolean).join(' '));
+  y = labelled(pdf, M + 8, y, 60, W - 76, 'Contract no:', [sale?.contractNo, sale?.ourRef].filter(Boolean).join(' / '));
+  y = labelled(pdf, M + 8, y, 60, W - 76, "Buyer's order:", order?.orderNo ? `${order.orderNo}` : '');
   labelled(pdf, M + 8, y, 60, half - 52, 'Tonnes:', num(fo.tons) ? `${num(fo.tons)} t` : '');
   y = labelled(pdf, M + 20 + half, y, 56, half - 52 + 12, 'Load window:', windowText(fo));
-  y = labelled(pdf, M + 8, y, 60, W - 76, 'Pick up:', fo.pickup, 2);
+  y = labelled(pdf, M + 8, y, 60, W - 76, 'Deliver from:', fo.pickup, 2);
   y = labelled(pdf, M + 8, y, 60, W - 76, 'Deliver to:', fo.deliverTo, 2);
   y = labelled(pdf, M + 8, y, 60, W - 76, 'Receiver:', [sale?.buyer, sale?.buyerContact].filter(Boolean).join(' - '), 2);
-  labelled(pdf, M + 8, y, 60, half - 52, "Buyer's order:", order?.orderNo ? `${order.orderNo}` : '');
-  labelled(pdf, M + 20 + half, y, 56, half - 52 + 12, 'Contract no:', [sale?.contractNo, sale?.ourRef].filter(Boolean).join(' / '));
 
   // the rate
-  const ry = jy + 208;
+  const ry = jy + 224;
   box(pdf, M, ry, W, 62, 'RATE');
   pdf.text(M + 8, ry + 24, rateText(fo), { size: 11, bold: true });
   const est = estimatedTotal(fo);
