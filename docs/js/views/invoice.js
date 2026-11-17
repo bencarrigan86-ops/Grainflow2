@@ -1,14 +1,15 @@
-import { db } from '../storage.js?v=356';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=356';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=356';
-import { addressLinesOf } from '../address.js?v=356';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=356';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=356';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=356';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=356';
-import { docBandHTML } from '../docband.js?v=356';
-import { openMovementSheet } from './movements.js?v=356';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=356';
+import { db } from '../storage.js?v=357';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=357';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=357';
+import { addressLinesOf } from '../address.js?v=357';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=357';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=357';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=357';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=357';
+import { docBandHTML } from '../docband.js?v=357';
+import { deductionNotes } from '../deductions.js?v=357';
+import { openMovementSheet } from './movements.js?v=357';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=357';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -341,7 +342,8 @@ function invoiceDocHTML(sale, invoice, business, commodity, signed = null) {
                 <td>${l.adjust != null ? `${l.adjust > 0 ? '+' : ''}${money(l.adjust, 2)}` : '—'}</td>
                 <td>${l.rate != null ? money(l.rate, 2) : '—'}</td>
                 <td>${money(l.subtotal, 2)}</td>
-              </tr>`).join('')}
+              </tr>${deductionNotes(l.deductions, l.tons).map((note) => `
+              <tr class="ded-note"><td colspan="9"><div class="ded-note-text">${esc(note)}</div></td></tr>`).join('')}`).join('')}
           </tbody>
           <tfoot><tr>
             <td colspan="4">Total</td>

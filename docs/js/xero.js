@@ -7,12 +7,13 @@
 //
 // Pure: the sheet (views/xero.js) supplies the data and downloads the files.
 
-import { invoiceTotals } from './derived.js?v=356';
-import { kindLabel } from './payables.js?v=356';
-import { emailIn } from './vendordec.js?v=356';
-import { toCSV } from './csv.js?v=356';
-import { partsOf, hasParts } from './address.js?v=356';
-import { isAdjustment, noteLabel } from './adjustment.js?v=356';
+import { invoiceTotals } from './derived.js?v=357';
+import { kindLabel } from './payables.js?v=357';
+import { emailIn } from './vendordec.js?v=357';
+import { toCSV } from './csv.js?v=357';
+import { partsOf, hasParts } from './address.js?v=357';
+import { isAdjustment, noteLabel } from './adjustment.js?v=357';
+import { deductionNotes } from './deductions.js?v=357';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -87,7 +88,7 @@ export function xeroInvoices({ invoices = [], sales = [], commodities = [], from
     for (const l of lines) {
       const tons = num(l.tons);
       if (tons > 0 && l.rate !== null && l.rate !== undefined) {
-        const bits = [commodity || 'Grain', l.ticketNo ? `ticket ${l.ticketNo}` : (l.rego && l.rego !== '—' ? l.rego : ''), l.date ? xeroDate(l.date) : '', clean(l.grade)].filter(Boolean);
+        const bits = [commodity || 'Grain', l.ticketNo ? `ticket ${l.ticketNo}` : (l.rego && l.rego !== '—' ? l.rego : ''), l.date ? xeroDate(l.date) : '', clean(l.grade), ...deductionNotes(l.deductions).map(clean)].filter(Boolean);
         add(bits.join(' '), round4(tons), round4(num(l.rate)), codes.sales, TAX.income);
       } else if (num(l.subtotal) !== 0) {
         // an adjustment note applied to the invoice is a line of its own; one with no GST is BAS Excluded

@@ -118,6 +118,7 @@ function markerFor(key, ids) {
   if (key === 'fumigations') return [{ id: 'f1', date: '2026-11-10', product: 'Phosphine', days: 14, endsOn: '2026-11-24' }];
   if (key === 'gradeBands') return [{ tons: 500, grade: 'APH1' }, { tons: 250, grade: 'AUH2', proteinPct: 11.5, moisturePct: 11, fallingNumber: 400 }];
   if (key === 'ticketNo' || key === 'invoiceNo') return 41;
+  if (key === 'deductions') return [{ reason: 'Screenings 6% vs contract 5%', perTon: 10 }];
   if (key === 'manualDocketNo') return 'D-1042';                // text too
   if (key === 'buyerOrderNo') return 'BO-77';                   // text, though it ends in No
   // A few the suffix rule below cannot see: the quantity word is in the middle

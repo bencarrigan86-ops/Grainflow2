@@ -1246,3 +1246,9 @@ details.inner-fold .hint, details.inner-fold .field.hint { font-size: 11.5px; co
 /* The terms on a confirmation of sale read as a label and its words, the words starting just right of the labels (as on the PDF), not pushed to the edge. */
 .invoice-doc .contract-terms .row { display: grid; grid-template-columns: 38% 1fr; gap: 10px; align-items: baseline; }
 .invoice-doc .contract-terms .row .value { text-align: left; }
+
+/* Deductions on a ticket: a reason and a $/t on a line, and the note under the load on an invoice. */
+.ded-row { display: grid; grid-template-columns: 1fr 78px auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.ded-row input { margin: 0; min-width: 0; }
+.invoice-doc tr.ded-note td { font-size: 11.5px; font-style: italic; color: #8a3b12; border-top: none; padding-top: 0; text-align: left; }
+.invoice-doc .ded-note-text { white-space: normal; width: min(36em, calc(100vw - 90px)); }

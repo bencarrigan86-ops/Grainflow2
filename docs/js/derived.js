@@ -1,8 +1,9 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=356';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=356';
-import { commoditySort } from './commodityorder.js?v=356';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=357';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=357';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=357';
+import { commoditySort } from './commodityorder.js?v=357';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -85,7 +86,9 @@ export function saleEconomics(sale, movements = []) {
   const grades = gradeAdjustment(sale, movements);
   // Canola is also paid for its oil: each delivered load moves the price by its own oil against the base.
   const oil = oilAdjustment(sale, movements);
-  const totalValue = tons * priceExFarm - ginning + grades.total + oil.total;
+  // and a load can carry deductions of its own for faults the contract does not price
+  const deductions = deductionAdjustment(sale, movements);
+  const totalValue = tons * priceExFarm - ginning + grades.total + oil.total + deductions.total;
   const tonsDue = tons - tonsDelivered;
 
   const { toleranceTons, minTons, maxTons } = contractTolerance(tons, sale.tolerancePct, sale.toleranceCapTons);
@@ -97,7 +100,7 @@ export function saleEconomics(sale, movements = []) {
   return {
     netOfFreight, levies, priceExFarm, ginning, totalValue, tonsDue,
     gradeAdjustment: grades.total, gradeLines: grades.lines, gradeOtherTons: grades.otherTons,
-    oilAdjustment: oil.total, oilSummary: oil,
+    oilAdjustment: oil.total, oilSummary: oil, deductionAdjustment: deductions.total, deductionLoads: deductions.loads,
     manualDelivered, movementDelivered, tonsDelivered,
     toleranceTons, minTons, maxTons, isFull, isOverDelivered, tonsToFill, tonsRemainingMax,
   };
@@ -124,7 +127,7 @@ export function invoiceLineItems(sale, movements, freightRates = {}) {
     .map((m) => {
       const t = toTonsForEndpoint(m, 'sale', sale.id);
       // each load at its own grade's rate, when the contract lists several
-      const loadRate = rate + gradeRateFor(sale, m) + oilRateFor(sale, m);
+      const loadRate = rate + gradeRateFor(sale, m) + oilRateFor(sale, m) + deductionRateFor(m);
       const own = freightRates[m.id];
       const freightRate = !freightOnInvoice(sale) ? 0
         : own === undefined || own === null || own === '' || !Number.isFinite(Number(own)) ? contractFreight : Number(own);
@@ -132,6 +135,8 @@ export function invoiceLineItems(sale, movements, freightRates = {}) {
         date: m.date, rego: m.truckRego || '—', tons: t, movementId: m.id,
         grade: m.grade || '',
         ticketNo: m.ticketNo ? String(m.ticketNo) : '',
+        // what was taken off this load's price and why, kept as written on the ticket when the invoice was made
+        ...(cleanDeductions(m.deductions).length ? { deductions: cleanDeductions(m.deductions) } : {}),
         // the contract price, and what the contract premium and this load's grade or oil adjust it by
         basePrice: price, adjust: loadRate - price,
         rate: loadRate, subtotal: t * loadRate,

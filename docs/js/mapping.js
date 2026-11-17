@@ -27,9 +27,10 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=356';
-import { cleanOffFarm } from './offfarm.js?v=356';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=356';
+import { cleanGradeOptions } from './gradeprice.js?v=357';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=357';
+import { cleanOffFarm } from './offfarm.js?v=357';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=357';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -133,6 +134,7 @@ export function movementFromRow(m, legs = [], photo = null) {
     ...(m.external_ticket_no != null ? { externalTicketNo: m.external_ticket_no, __hasExtTicket: true } : {}),
     ...(m.outload_no != null ? { outloadNo: m.outload_no, __hasOutloadNo: true } : {}),
     ...(m.manual_docket_no != null ? { manualDocketNo: m.manual_docket_no, __hasManualDocket: true } : {}),
+    ...(Array.isArray(m.deductions) && cleanDeductions(m.deductions).length ? { deductions: cleanDeductions(m.deductions), __hasDeductions: true } : {}),
     ...(m.load_time ? { loadTime: m.load_time, __hasLoadTime: true } : {}),
     ...(m.load_destination ? { destination: m.load_destination, __hasDestination: true } : {}),
     ...(m.order_id ? { orderId: m.order_id, __hasOrderId: true } : {}),
@@ -514,6 +516,8 @@ export function stateToRows(state, farmId) {
         ...((m.outloadNo || m.__hasOutloadNo) ? { outload_no: orNull(m.outloadNo) } : {}),
         // Our own paper docket number, written by hand when the load is dispatched. Optional in the same way.
         ...((m.manualDocketNo || m.__hasManualDocket) ? { manual_docket_no: orNull(m.manualDocketNo) } : {}),
+        // Deductions taken off this load's price (reason and $/t), one json column; sent once there is one, kept after that.
+        ...((hasDeductions(m) || m.__hasDeductions) ? { deductions: hasDeductions(m) ? cleanDeductions(m.deductions) : null } : {}),
         // The time of day it was loaded, optional in the same way.
         ...((m.loadTime || m.__hasLoadTime) ? { load_time: orNull(m.loadTime) } : {}),
         // Where it is going, typed on the load; optional in the same way.

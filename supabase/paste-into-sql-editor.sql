@@ -1975,3 +1975,8 @@ alter table sale_documents
   check (kind in ('contract', 'broker_note', 'vendor_dec', 'freight_order', 'confirmation', 'other'));
 
 notify pgrst, 'reload schema';
+
+-- Deductions taken off a load's price, with the reason
+alter table movements add column if not exists deductions jsonb;
+
+notify pgrst, 'reload schema';
