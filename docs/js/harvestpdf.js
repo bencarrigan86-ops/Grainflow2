@@ -3,7 +3,7 @@
 // room in the silos, as on the screen. The report's own figures (harvest.js) go in; nothing is worked out again here.
 // Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=320';
+import { createReport, fixed } from './reportpdf.js?v=321';
 
 const pct = (p) => `${Math.round((Number(p) || 0) * 100)}%`;
 const haPct = (done, area) => (area > 0 ? `${Math.round((done / area) * 100)}%` : '-');
@@ -77,7 +77,7 @@ export function harvestPdf({ groups = [], farm = {}, seasons = [], scopeLabel = 
       { head: 'Silos', w: 0.1, cell: (r) => String(r.silos) },
       { head: 'Room t', w: 0.16, cell: (r) => t0(r.room) },
       { head: showYield ? 'To come t' : 'To cut ha', w: 0.18, cell: (r) => (r.finished ? 'All cut' : t0(showYield ? r.toComeT : r.toGoHa)) },
-      { head: showYield ? 'Short t' : '', w: 0.28, cell: (r) => (showYield && r.short > 0.5 ? t0(r.short) : (r.finished && r.room > 0.5 ? 'No use now' : '')) },
+      { head: showYield ? 'Space t' : '', w: 0.28, cell: (r) => (showYield ? `${r.space > 0.5 ? '+' : (r.space < -0.5 ? '-' : '')}${t0(Math.abs(r.space))}${r.nothingToCome && r.room > 0.5 ? ' (none to come)' : ''}` : (r.finished && r.room > 0.5 ? 'No use now' : '')) },
     ], split.rows, { name: 'By crop' });
   }
   report.pair('In silos already holding a commodity', `${t0((space.totalRoom || 0) - (space.emptyRoom || 0))} t`);

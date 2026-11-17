@@ -10,10 +10,10 @@
 //
 // Pure apart from the two sums it borrows from derived.js.
 
-import { estimateFieldTons, movementTonsFromField, storageLedgerStock, bigFirst } from './derived.js?v=320';
-import { isTransit } from './transit.js?v=320';
-import { capacityInfo, commodityOf } from './storagecapacity.js?v=320';
-import { harvestSeasonOf, HARVEST_SEASONS } from './harvestseason.js?v=320';
+import { estimateFieldTons, movementTonsFromField, storageLedgerStock, bigFirst } from './derived.js?v=321';
+import { isTransit } from './transit.js?v=321';
+import { capacityInfo, commodityOf } from './storagecapacity.js?v=321';
+import { harvestSeasonOf, HARVEST_SEASONS } from './harvestseason.js?v=321';
 
 /**
  * One field.
@@ -100,7 +100,7 @@ const EMPTY_T = 0.05;
  *
  * Each row is a commodity with room in its silos, or with something still to come: `room` and `silos` (from siloSpace), `toComeT` and
  * `toGoHa` (from the harvest groups), `finished` (no hectares left to cut, so nothing more to come, whatever the estimate says),
- * `short` (what is still to come beyond the room it has, 0 if none) and `unusable` (room beyond what is still to come, which only that
+ * `space` (its room less what is still to come, negative when short), `short` (what is still to come beyond the room it has, 0 if none) and `unusable` (room beyond what is still to come, which only that
  * commodity could take). Empty silos take any grain, so they are what covers a `short`.
  *
  *   shortfall = what the empty silos have to cover, `unusable` = room that cannot help, `margin` = empty room less shortfall
@@ -128,7 +128,7 @@ export function roomSplit(space, groups, nameOf = () => '') {
     rows.push({
       id, name: g ? g.name : nameOf(id), room, silos: own ? own.silos : 0,
       list: (space?.silos || []).filter((s) => !s.empty && s.commodityId === id), toComeT, toGoHa, finished, nothingToCome,
-      short: Math.max(0, toComeT - room), unusable: Math.max(0, room - toComeT),
+      short: Math.max(0, toComeT - room), unusable: Math.max(0, room - toComeT), space: room - toComeT,
     });
     seen.add(id);
   };

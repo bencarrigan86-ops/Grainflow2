@@ -1071,3 +1071,12 @@ details.fold.feature > *:last-child { margin-bottom: 14px; }
 .card.report table.harvest-cols td:first-child { max-width: none; padding-left: 0; overflow-wrap: anywhere; }
 /* A long field name wraps to two lines and then is trimmed, so every column stays on the phone screen. */
 .card.report table.harvest-cols .fname { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* The crop headings in the room section: the commodity large, with its space (room less what is still to come) beside it. */
+.crop-head { margin-top: 14px; padding: 9px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
+.crop-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.crop-name { font-size: 18px; font-weight: 800; color: var(--text); }
+.crop-space { font-size: 15px; font-weight: 800; color: var(--text); white-space: nowrap; }
+.crop-space.pos { color: var(--accent-summary); }
+.crop-space.neg { color: var(--danger); }
+.crop-sub { font-size: 12px; color: var(--text-dim); margin-top: 3px; }

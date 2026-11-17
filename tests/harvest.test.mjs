@@ -361,5 +361,17 @@ check('the report shows only the paddocks still being harvested unless asked, ke
   assert.ok(sf.includes('export function loadShowDone') && sf.includes('export function saveShowDone'));
 });
 
+check('each crop heading carries its space: room less what is still to come, negative when short', () => {
+  const split = roomSplit(
+    sp([['w', { room: 250, silos: 3 }], ['b', { room: 100, silos: 1 }]], 0),
+    [grp('w', 'Wheat', 270, 80), grp('b', 'Barley', 0, 0)],
+  );
+  const by = Object.fromEntries(split.rows.map((r) => [r.name, r]));
+  assert.equal(by.Wheat.space, -20);
+  assert.equal(by.Barley.space, 100, 'nothing to come: all of its room is space (and flagged as not needed on screen)');
+  const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../docs/js/views/reports.js'), 'utf8');
+  assert.ok(src.includes('Space ${signedT(c.space, t1)}') && src.includes('Room ${t1(c.room)} t − to come ${t1(c.toComeT)} t'));
+});
+
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
 console.log('\nall passed');

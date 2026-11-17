@@ -5,7 +5,8 @@
 //   node tests/boot.test.mjs
 
 import assert from 'node:assert';
-import { chooseBootState } from '../docs/js/boot.js';
+import { readFileSync } from 'node:fs';
+import { chooseBootState, canOpenFromDevice } from '../docs/js/boot.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -182,6 +183,36 @@ check('unsent work is never silently discarded', () => {
         `pending work dropped for localFarm=${localFarm}`);
     }
   }
+});
+
+console.log('\n=== opening at once from this device ===');
+
+const seasoned = { years: { 2026: { __seasonId: 's1', fields: [] }, 2025: { __seasonId: 's0', fields: [] } } };
+const open = (o = {}) => canOpenFromDevice({ farmId: FARM, localState: seasoned, localFarm: FARM, pending: 0, legacy: 0, online: true, ...o });
+
+check('a device holding this farm and owing nothing opens from its own copy', () => {
+  assert.equal(open(), true);
+});
+
+check('anything that needs the server first still waits for it', () => {
+  assert.equal(open({ pending: 1 }), false, 'unsent changes: the existing rules decide');
+  assert.equal(open({ legacy: 2 }), false, 'old whole-farm markers settle against the server copy');
+  assert.equal(open({ online: false }), false, 'offline already opens from the device by the existing rule');
+  assert.equal(open({ localState: null }), false);
+  assert.equal(open({ localFarm: OTHER }), false, 'a copy of a different farm is never used');
+  assert.equal(open({ localFarm: null }), false, "an unstamped copy could be anyone's");
+  assert.equal(open({ localState: { years: {} } }), false, 'no seasons yet');
+  assert.equal(open({ localState: { years: { 2026: { fields: [] } } } }), false, 'a season with no server id needs the server to give it one');
+});
+
+check('startup uses it, and reads the server straight after', () => {
+  const st = readFileSync(new URL('../docs/js/storage.js', import.meta.url), 'utf8');
+  assert.ok(st.includes('const fromDevice = canOpenFromDevice('));
+  assert.ok(st.includes('if (navigator.onLine && !fromDevice) {'), 'the blocking download is skipped only then');
+  const main = readFileSync(new URL('../docs/js/main.js', import.meta.url), 'utf8');
+  assert.ok(/renderYearPill\(\);\s*\/\/ The farm opened from this device/.test(main), 'main reads the server right after the first paint');
+  assert.ok(/if \(db\.openedFromDevice\(\)\) refreshIfQuiet\(\{ force: true \}\);\s*\}\s*\/\*\*\s*\* Support looking at a farm/.test(main));
+  assert.ok(main.includes('setTimeout(() => refreshIfQuiet(), 5000);'), 'the later look is skipped when that one has just run');
 });
 
 console.log('');

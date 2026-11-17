@@ -1,33 +1,33 @@
-import { db } from './storage.js?v=320';
-import { supabase, ENV } from './supabase.js?v=320';
-import { installErrorLog } from './supportinfo.js?v=320';
-import { loadMySeries, rememberedSeries } from './outloadseries.js?v=320';
-import { initTheme } from './theme.js?v=320';
+import { db } from './storage.js?v=321';
+import { supabase, ENV } from './supabase.js?v=321';
+import { installErrorLog } from './supportinfo.js?v=321';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=321';
+import { initTheme } from './theme.js?v=321';
 initTheme();
-import { renderPosition } from './views/position.js?v=320';
-import { renderProduction } from './views/production.js?v=320';
-import { renderReports } from './views/reports.js?v=320';
-import { renderSales } from './views/sales.js?v=320';
-import { renderMovements } from './views/movements.js?v=320';
-import { renderStorage } from './views/storage.js?v=320';
-import { renderSettings } from './views/settings.js?v=320';
-import { renderLogin } from './views/login.js?v=320';
-import { renderAccount } from './views/account.js?v=320';
-import { renderHelp } from './views/help.js?v=320';
+import { renderPosition } from './views/position.js?v=321';
+import { renderProduction } from './views/production.js?v=321';
+import { renderReports } from './views/reports.js?v=321';
+import { renderSales } from './views/sales.js?v=321';
+import { renderMovements } from './views/movements.js?v=321';
+import { renderStorage } from './views/storage.js?v=321';
+import { renderSettings } from './views/settings.js?v=321';
+import { renderLogin } from './views/login.js?v=321';
+import { renderAccount } from './views/account.js?v=321';
+import { renderHelp } from './views/help.js?v=321';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=320';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=320';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=320';
-import { esc } from './fmt.js?v=320';
-import { isSheetOpen, notify } from './ui.js?v=320';
-import { describeMerges } from './ticketmerge.js?v=320';
-import { watchLists } from './band.js?v=320';
-import { APP_VERSION } from './version.js?v=320';
-import { startUpdateCheck } from './updatecheck.js?v=320';
-import { emailFromTrialHash } from './trialtext.js?v=320';
-import { installWatch, requestPersistence } from './pwa.js?v=320';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=320';
+} from './auth.js?v=321';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=321';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=321';
+import { esc } from './fmt.js?v=321';
+import { isSheetOpen, notify } from './ui.js?v=321';
+import { describeMerges } from './ticketmerge.js?v=321';
+import { watchLists } from './band.js?v=321';
+import { APP_VERSION } from './version.js?v=321';
+import { startUpdateCheck } from './updatecheck.js?v=321';
+import { emailFromTrialHash } from './trialtext.js?v=321';
+import { installWatch, requestPersistence } from './pwa.js?v=321';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=321';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -167,7 +167,8 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) refr
 window.addEventListener('online', () => refreshIfQuiet({ force: true }));
 // Once shortly after start: a device that opened with old unsent markers or a
 // queue to send settles them first, then looks.
-setTimeout(() => refreshIfQuiet({ force: true }), 5000);
+// (Not forced: when startup has just read the server in the background, this one is skipped.)
+setTimeout(() => refreshIfQuiet(), 5000);
 
 window.addEventListener('online', renderYearPill);
 window.addEventListener('offline', renderYearPill);
@@ -468,6 +469,8 @@ async function boot() {
   }
   renderActiveView();
   renderYearPill();
+  // The farm opened from this device's own copy when it could; read the server now so what is shown catches up with other devices.
+  if (db.openedFromDevice()) refreshIfQuiet({ force: true });
 }
 
 /**

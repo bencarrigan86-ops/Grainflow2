@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=320';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures } from '../fertfigures.js?v=320';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=320';
-import { fertPdf } from '../fertpdf.js?v=320';
-import { seedPdf } from '../seedpdf.js?v=320';
-import { yieldPdf } from '../yieldpdf.js?v=320';
-import { harvestPdf } from '../harvestpdf.js?v=320';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=320';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=320';
-import { field, getVal, getNum } from '../ui.js?v=320';
-import { canSeeYield } from '../nav.js?v=320';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=320';
-import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=320';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=320';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=320';
+import { db } from '../storage.js?v=321';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures } from '../fertfigures.js?v=321';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=321';
+import { fertPdf } from '../fertpdf.js?v=321';
+import { seedPdf } from '../seedpdf.js?v=321';
+import { yieldPdf } from '../yieldpdf.js?v=321';
+import { harvestPdf } from '../harvestpdf.js?v=321';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=321';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=321';
+import { field, getVal, getNum } from '../ui.js?v=321';
+import { canSeeYield } from '../nav.js?v=321';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=321';
+import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=321';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=321';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=321';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -642,24 +642,36 @@ function siloItem(s, t1, note = '') {
  */
 function roomBySilo(split, space, { t1, showYield }) {
   if (!split.rows.length && !split.empty.length) return '';
-  const head = (title, right, meta) => `<div class="subhead" style="margin-top:12px;display:flex;justify-content:space-between;gap:8px"><span>${title}</span><span>${right}</span></div>${meta ? `<div class="meta" style="margin-bottom:4px">${meta}</div>` : ''}`;
+  const head = (title, right, meta) => `<div class="crop-head"><div class="crop-top"><span class="crop-name">${title}</span>${right}</div>${meta ? `<div class="crop-sub">${meta}</div>` : ''}</div>`;
   const crops = split.rows.map((c) => {
     const left = c.finished ? 'all cut' : (showYield && c.nothingToCome ? 'all in' : (showYield ? `${t1(c.toComeT)} t still to come` : `${t1(c.toGoHa)} ha to cut`));
     let badge = '';
     if (showYield && c.short > 0.5) badge = `<span class="badge neg">short ${t1(c.short)} t</span>`;
     else if (c.room > 0.5 && (showYield ? c.nothingToCome : c.finished)) badge = '<span class="badge muted">room not needed</span>';
     else if (showYield && c.unusable > 0.5) badge = `<span class="badge muted">${t1(c.unusable)} t more than needed</span>`;
-    return head(esc(c.name), `${t1(c.room)} t room`, `${c.silos ? `${c.silos} silo${c.silos === 1 ? '' : 's'}` : 'no silo holding it'} · ${left} ${badge}`) + c.list.map((s) => siloItem(s, t1)).join('');
+    const silosText = c.silos ? `${c.silos} silo${c.silos === 1 ? '' : 's'}` : 'no silo holding it';
+    // with yields: the space left once what is still to come is in (room less to come); without them, just the room
+    const right = showYield
+      ? `<span class="crop-space ${c.space >= 0 ? 'pos' : 'neg'}">Space ${signedT(c.space, t1)}</span>`
+      : `<span class="crop-space">${t1(c.room)} t room</span>`;
+    const meta = showYield ? `Room ${t1(c.room)} t − to come ${t1(c.toComeT)} t · ${silosText} ${badge}` : `${silosText} · ${left} ${badge}`;
+    return head(esc(c.name), right, meta) + c.list.map((s) => siloItem(s, t1)).join('');
   }).join('');
   const emptyRoom = split.empty.reduce((a, s) => a + s.room, 0);
   const empties = split.empty.length
-    ? head('Empty silos', `${t1(emptyRoom)} t room`, `${split.empty.length} silo${split.empty.length === 1 ? '' : 's'} · take any grain`) + split.empty.map((s) => siloItem(s, t1, s.assumed ? `Worked out as ${esc(space.assumeName)} · ` : '')).join('')
+    ? head('Empty silos', `<span class="crop-space">${t1(emptyRoom)} t room</span>`, `${split.empty.length} silo${split.empty.length === 1 ? '' : 's'} · take any grain`) + split.empty.map((s) => siloItem(s, t1, s.assumed ? `Worked out as ${esc(space.assumeName)} · ` : '')).join('')
     : '';
   const count = split.rows.reduce((a, c) => a + c.list.length, 0) + split.empty.length;
   return `<details class="fold" data-fold="silos" style="border-top:none;margin-top:8px" ${harvestOpen.get('silos') !== false ? 'open' : ''}>
     <summary><div><h2>Silos by crop</h2><div class="sub">${count} silo${count === 1 ? '' : 's'}, a heading for each crop</div></div></summary>
     ${crops}${empties}
   </details>`;
+}
+
+/** A tonnage with its sign: "+20 t" or "−20 t" (a true minus sign), "0 t" for none. */
+function signedT(v, t1) {
+  const n = Math.round(Number(v) || 0);
+  return n === 0 ? '0 t' : `${n > 0 ? '+' : '−'}${t1(Math.abs(n))} t`;
 }
 
 /** The minimum-room box and the folds, for either version of the harvest report. */

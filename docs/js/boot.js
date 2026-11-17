@@ -111,6 +111,20 @@ export function chooseBootState({
 }
 
 /**
+ * Whether the app can open at once from the copy on this device, and read the server in the background, instead of waiting for the whole
+ * farm to come down first. Only when that is safe to do: this device holds this farm's own copy, every season in it has the server's id,
+ * nothing is owed to the server and there are no old whole-farm markers to settle (those need the server's copy to settle against). The
+ * server's copy is still read straight afterwards and taken the way a refresh takes it (only if this device owes nothing and nothing was
+ * edited in the meantime), so what is on screen catches up with other devices a moment later.
+ */
+export function canOpenFromDevice({ farmId, localState = null, localFarm = null, pending = 0, legacy = 0, online = true } = {}) {
+  if (!online || !farmId || !localState || localFarm !== farmId) return false;
+  if (pending > 0 || legacy > 0) return false;
+  const years = Object.values(localState.years || {});
+  return years.length > 0 && years.every((y) => !!y?.__seasonId);
+}
+
+/**
  * What to do with changes recorded before they were tracked row by row.
  *
  * Those entries say "something on this device is unsent" and nothing about

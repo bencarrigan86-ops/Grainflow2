@@ -18,27 +18,27 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=320';
+import { hydrate } from './hydrate.js?v=321';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=320';
-import { chooseBootState, resolveLegacy } from './boot.js?v=320';
-import { isLegacyDirty } from './dirty.js?v=320';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=320';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=320';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=320';
-import { settleLegs, dedupeLegs } from './legs.js?v=320';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=320';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=320';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=320';
-import { setCommodityOrder } from './commodityorder.js?v=320';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=320';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=320';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=320';
-import { schedulePush, pushOnReconnect } from './sync.js?v=320';
-import { hasParts as hasAddressParts } from './address.js?v=320';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=320';
+} from './local.js?v=321';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=321';
+import { isLegacyDirty } from './dirty.js?v=321';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=321';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=321';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands } from './mapping.js?v=321';
+import { settleLegs, dedupeLegs } from './legs.js?v=321';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=321';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=321';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=321';
+import { setCommodityOrder } from './commodityorder.js?v=321';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=321';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=321';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=321';
+import { schedulePush, pushOnReconnect } from './sync.js?v=321';
+import { hasParts as hasAddressParts } from './address.js?v=321';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=321';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -149,6 +149,8 @@ let touched = [];
 // after its network call: if it moved, somebody edited while it was away, and
 // what it fetched is already out of date.
 let localEdits = 0;
+// Whether startup opened from this device's own copy without waiting for the server (so the server is still to be read).
+let openedFromDevice = false;
 let refreshing = false;
 function touch(kind, id) { touched.push(id === undefined ? { kind } : { kind, id }); }
 
@@ -297,7 +299,11 @@ export const db = {
     // how an old farm gets poured into a new account.
     let serverState = null;
     let serverReachable = false;
-    if (navigator.onLine) {
+    // Opening waited for the whole farm to come down from the server every time, which gets slower as the farm grows. A device that
+    // holds this farm and owes nothing opens from its own copy at once; main.js reads the server straight after and the screen catches up.
+    const fromDevice = canOpenFromDevice({ farmId, localState, localFarm, pending, legacy: legacyCount, online: navigator.onLine });
+    openedFromDevice = fromDevice;
+    if (navigator.onLine && !fromDevice) {
       try {
         const { state } = await hydrate(farmId, role);
         serverState = state;
@@ -307,9 +313,9 @@ export const db = {
       }
     }
 
-    const decision = chooseBootState({
-      farmId, localState, localFarm, pending, serverState, serverReachable,
-    });
+    const decision = fromDevice
+      ? { use: 'local', pushLocal: false, orphan: false, reason: 'this device holds this farm and owes nothing, so it opens at once and the server is read in the background' }
+      : chooseBootState({ farmId, localState, localFarm, pending, serverState, serverReachable });
     console.info(`Grainflow start: using the ${decision.use} copy — ${decision.reason}.`);
 
     // Changes recorded before they were tracked row by row say only that
@@ -401,6 +407,9 @@ export const db = {
   },
 
   isReady() { return ready; },
+
+  /** True when startup opened from this device's own copy and has not yet read the server. */
+  openedFromDevice() { return openedFromDevice; },
 
   /**
    * Give up this device's own copy and the changes it has not sent, and start again
