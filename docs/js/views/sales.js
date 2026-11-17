@@ -1,31 +1,32 @@
-import { db } from '../storage.js?v=358';
+import { db } from '../storage.js?v=359';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=358';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=358';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=358';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=358';
-import { PATTERNS } from '../deliveryplan.js?v=358';
-import { INVOICING } from '../invoicing.js?v=358';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=358';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=358';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=358';
-import { renderRelatedMovements } from './movements.js?v=358';
-import { openInvoiceListSheet } from './invoice.js?v=358';
-import { openContractDocSheet } from './contract.js?v=358';
-import { wireJumps } from '../jump.js?v=358';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=358';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=358';
-import { freightState } from '../freight.js?v=358';
-import { activeSales, paidSales } from '../paidsales.js?v=358';
-import { openVendorDecSheet } from './vendordec.js?v=358';
-import { summarise as summariseOrders } from '../orders.js?v=358';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=358';
-import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=358';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=358';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=358';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=358';
-import { standardFor } from '../grades.js?v=358';
+} from '../documents.js?v=359';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=359';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=359';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=359';
+import { PATTERNS } from '../deliveryplan.js?v=359';
+import { INVOICING } from '../invoicing.js?v=359';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=359';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=359';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=359';
+import { renderRelatedMovements } from './movements.js?v=359';
+import { openInvoiceListSheet } from './invoice.js?v=359';
+import { openContractDocSheet } from './contract.js?v=359';
+import { wireJumps } from '../jump.js?v=359';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=359';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=359';
+import { freightState } from '../freight.js?v=359';
+import { activeSales, paidSales } from '../paidsales.js?v=359';
+import { openVendorDecSheet } from './vendordec.js?v=359';
+import { summarise as summariseOrders } from '../orders.js?v=359';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=359';
+import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=359';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=359';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=359';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=359';
+import { standardFor } from '../grades.js?v=359';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=359';
 
 let unsub = null;
 
@@ -38,7 +39,8 @@ export function renderSales(root) {
 function paint(root) {
   const { commodities, sales, movements } = db.get();
   const rollup = salesByCommodity(commodities, sales, movements).filter((r) => r.contractCount > 0).sort(bigFirst((r) => r.tons, (r) => r.commodity.name));   // most tonnes contracted first
-  const groups = groupSalesByCommodity(commodities, activeSales(sales), movements);
+  const saleSort = readSaleSort();
+  const groups = groupSalesByCommodity(commodities, activeSales(sales), movements, saleSort);
   const paidList = paidSales(sales);
   // what is owed, for the Payables button
   // and what buyers are waiting on, for the Orders button
@@ -113,6 +115,7 @@ function paint(root) {
         <h2><span class="dot input"></span>Contracts</h2>
         ${carryList.length ? `<button type="button" class="btn secondary small" id="carry-contracts" style="margin-bottom:10px">Bring in ${esc(prevLabel)} contracts&hellip; (${carryList.length})</button>` : ''}
         ${paidList.length ? `<button type="button" class="btn secondary small" id="open-paid" style="margin-bottom:10px">Paid contracts (${paidList.length})</button>` : ''}
+        ${activeSales(sales).length > 1 ? `<div class="field" style="margin-bottom:10px"><label for="sale-sort">Sort contracts by</label><select id="sale-sort">${SALE_SORTS.map((o) => `<option value="${o.value}" ${o.value === saleSort ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></div>` : ''}
         ${groups.length === 0 ? (sales.length ? `<div class="empty">Every contract is marked paid.</div>` : `<div class="empty">No contracts yet.<br/><button class="btn" id="empty-add">Add your first sale</button></div>`) : groups.map((g) => `
           <div class="group-label" id="grp-${esc(g.id ?? 'none')}"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
           ${g.sales.map((s, i) => saleRow(s, movements, commodities, i)).join('')}
@@ -135,6 +138,7 @@ function paint(root) {
   root.querySelector('#open-freight')?.addEventListener('click', () => openFreightOrdersSheet());
   root.querySelector('#empty-add')?.addEventListener('click', () => openSaleSheet(null));
   root.querySelector('#open-paid')?.addEventListener('click', () => openPaidSheet());
+  root.querySelector('#sale-sort')?.addEventListener('change', (e) => { if (isSaleSort(e.target.value)) { saveSaleSort(e.target.value); paint(root); } });
   root.querySelector('#carry-contracts')?.addEventListener('click', () => openCarrySheet(prevLabel));
 }
 
@@ -145,7 +149,7 @@ function openPaidSheet() {
     const list = paidSales(sales);
     root.innerHTML = `
       <div class="field hint" style="margin-bottom:10px">Contracts marked paid. They are left off the main list and the pick lists, and still count in the position. Open one and untick Paid to bring it back.</div>
-      ${list.length === 0 ? '<div class="empty">No paid contracts.</div>' : list.map((s, i) => saleRow(s, movements, commodities, i)).join('')}`;
+      ${list.length === 0 ? '<div class="empty">No paid contracts.</div>' : sortSales(list, readSaleSort(), movements).map((s, i) => saleRow(s, movements, commodities, i)).join('')}`;
     root.querySelectorAll('[data-edit-sale]').forEach((el) => el.addEventListener('click', () => openSaleSheet(sales.find((s) => s.id === el.dataset.editSale))));
   });
 }
@@ -270,17 +274,16 @@ function openCarrySheet(prevLabel) {
   });
 }
 
-function groupSalesByCommodity(commodities, sales, movements) {
+function groupSalesByCommodity(commodities, sales, movements, sort = 'newest') {
   const groups = commodities
     .map((c) => {
-      const rows = sales.filter((s) => s.commodityId === c.id).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      const rows = sortSales(sales.filter((s) => s.commodityId === c.id), sort, movements);
       return { id: c.id, name: c.name, sales: rows, tons: rows.reduce((sum, s) => sum + (Number(s.tons) || 0), 0), totalValue: rows.reduce((sum, s) => sum + saleEconomics(s, movements).totalValue, 0) };
     })
     .filter((g) => g.sales.length > 0)
     .sort(bigFirst((g) => g.tons));   // the commodity with the most tonnes contracted first
 
-  const noCommodity = sales.filter((s) => !commodities.some((c) => c.id === s.commodityId))
-    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const noCommodity = sortSales(sales.filter((s) => !commodities.some((c) => c.id === s.commodityId)), sort, movements);
   if (noCommodity.length > 0) {
     groups.push({ id: null, name: 'No commodity', sales: noCommodity, totalValue: noCommodity.reduce((sum, s) => sum + saleEconomics(s, movements).totalValue, 0) });
   }

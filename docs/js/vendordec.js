@@ -9,10 +9,10 @@
 //
 // Pure: it builds the declaration's data and its PDF; the screen and the sharing are elsewhere.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=358';
-import { drawBrandLogo } from './brand.js?v=358';
-import { dmy } from './fmt.js?v=358';
-import { hasSignature, strokesInBox } from './signature.js?v=358';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=359';
+import { drawBrandLogo } from './brand.js?v=359';
+import { dmy } from './fmt.js?v=359';
+import { hasSignature, strokesInBox } from './signature.js?v=359';
 
 export const MAX_VARIETIES = 4;
 
