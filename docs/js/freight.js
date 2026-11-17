@@ -10,10 +10,10 @@
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { Pdf, wrapText } from './pdf.js?v=331';
-import { dmy } from './fmt.js?v=331';
-import { movementTonsToSale } from './derived.js?v=331';
-import { hasSignature, strokesInBox } from './signature.js?v=331';
+import { Pdf, wrapText } from './pdf.js?v=332';
+import { dmy } from './fmt.js?v=332';
+import { movementTonsToSale } from './derived.js?v=332';
+import { hasSignature, strokesInBox } from './signature.js?v=332';
 
 export const BASES = [
   { key: 'per_t', label: '$ per tonne' },

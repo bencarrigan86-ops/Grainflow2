@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=331';
+import { ROLES, canOpen } from './nav.js?v=332';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -236,7 +236,7 @@ export const GUIDES = [
       'Grain orders: the buyer\'s orders against a contract, with a date to deliver by and what is left.',
       'Delivery timeline: contracts with tonnes still to deliver and how close their delivery period is to ending.',
       'Receivables and payables: invoices you are owed and the bills you owe. Bills (brokerage, freight, storage) are entered by the owner, manager or bookkeeper.',
-      'On Receivables and payables, By month shows when the money lands: what is invoiced, what is expected from grain not yet invoiced (a forecast, in italics), and the bills going out, with a running balance. By buyer lists what each buyer owes, with a Send statement button that makes a PDF statement.',
+      'On Receivables and payables, By month shows when the money lands: what is invoiced, what is expected from grain not yet invoiced (a forecast, in italics), and the bills going out, with a running balance. MTM lists each buyer: what they owe now (with anything overdue), invoices due by week, grain delivered but not invoiced, the grain still to go and how the contracts sit against your MTM prices, with a PDF of it and a Send statement button for each buyer.',
       'Freight orders: the trucks booked to move a contract\'s grain. A freight order can be signed with your own signature before it is sent to the carrier.',
     ],
     tips: [

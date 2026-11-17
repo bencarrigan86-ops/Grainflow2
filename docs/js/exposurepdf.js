@@ -2,7 +2,7 @@
 // contracts sit from MTM. Landscape A4 in the same style as the Fert page. The figures come from exposure.js (buyerExposure), the same ones
 // the screen uses. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=331';
+import { Pdf, wrapText } from './pdf.js?v=332';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;

@@ -2,18 +2,23 @@
 // underneath. Built from the seasons the farm already holds; nothing is entered here. Owner, manager and bookkeeper only
 // (it is yields and prices, the same line as Position).
 
-import { db } from '../storage.js?v=331';
-import { num, esc, money, todayLocal, dmy } from '../fmt.js?v=331';
-import { openSheet, toast } from '../ui.js?v=331';
-import { canSeeYield } from '../nav.js?v=331';
-import { exportRowsAsCSV } from '../csv.js?v=331';
-import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=331';
-import { averagesPdf } from '../averagespdf.js?v=331';
-import { seasonAverages, finishedSeasons, averagesRows, AVERAGES_COLUMNS } from '../seasonaverages.js?v=331';
+import { db } from '../storage.js?v=332';
+import { num, esc, money, todayLocal, dmy } from '../fmt.js?v=332';
+import { openSheet, toast } from '../ui.js?v=332';
+import { canSeeYield } from '../nav.js?v=332';
+import { exportRowsAsCSV } from '../csv.js?v=332';
+import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=332';
+import { averagesPdf } from '../averagespdf.js?v=332';
+import { seasonAverages, finishedSeasons, averagesRows, AVERAGES_COLUMNS } from '../seasonaverages.js?v=332';
 
 const KEY = 'grainflow.averages.seasons';
 const readPicked = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return Array.isArray(v) ? v : null; } catch { return null; } };
 const savePicked = (list) => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch { /* not remembered; it still works */ } };
+
+// the season list folds away, and stays folded on this device
+const OPEN_KEY = 'grainflow.averages.seasonsopen';
+const readOpen = () => { try { return localStorage.getItem(OPEN_KEY) !== '0'; } catch { return true; } };
+const saveOpen = (open) => { try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch { /* not remembered */ } };
 
 export function openAveragesSheet() {
   const allowed = canSeeYield(db.getRole());
@@ -55,16 +60,17 @@ export function openAveragesSheet() {
     };
 
     root.innerHTML = `
-      <div class="card" style="margin-bottom:10px">
-        <h2>Seasons</h2><div class="sub" id="av-sub"></div>
+      <div class="card" style="margin-bottom:10px"><details class="fold" id="av-seasons" style="margin-top:0;border-top:none" ${readOpen() ? 'open' : ''}>
+        <summary><div><h2>Seasons</h2><div class="sub" id="av-sub"></div></div></summary>
         <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0">${labels.map((l) => `<label style="cursor:pointer"><input type="checkbox" class="av-season" value="${esc(l)}" ${picked.has(l) ? 'checked' : ''} style="width:18px;height:18px;vertical-align:middle;margin-right:5px" />${esc(l)}</label>`).join('')}</div>
         <div style="display:flex;gap:8px"><button type="button" class="btn secondary" id="av-all">Select all</button><button type="button" class="btn secondary" id="av-done">Finished seasons</button></div>
-      </div>
+      </details></div>
       <div id="av-body"></div>
       <div class="save-bar"><button type="button" class="btn secondary" id="av-csv" style="flex:1;padding-left:12px;padding-right:12px">Excel (CSV)</button><button type="button" class="btn" id="av-pdf" style="flex:1;padding-left:12px;padding-right:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button></div>`;
 
     const set = (list) => { picked.clear(); list.forEach((l) => picked.add(l)); root.querySelectorAll('.av-season').forEach((b) => { b.checked = picked.has(b.value); }); savePicked([...picked]); paint(); };
     root.querySelectorAll('.av-season').forEach((b) => b.addEventListener('change', () => { if (b.checked) picked.add(b.value); else picked.delete(b.value); savePicked([...picked]); paint(); }));
+    root.querySelector('#av-seasons').addEventListener('toggle', (e) => saveOpen(e.currentTarget.open));
     root.querySelector('#av-all').addEventListener('click', () => set(labels));
     root.querySelector('#av-done').addEventListener('click', () => set(defaults));
     root.querySelector('#av-csv').addEventListener('click', () => {
