@@ -5,8 +5,10 @@
 // I053/23 (90,273 kg of lint, 393 bales pressed): $65.00 a bale to gin, $2.25 research levy, GST on the ginning only.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems, cleanCotton, hasCotton, cottonComponents, cottonRunTotals, SEED_FACTOR_DEFAULT } from '../docs/js/ginning.js';
-import { saleEconomics, position, positionAtYield } from '../docs/js/derived.js';
+import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems, cleanCotton, hasCotton, cottonComponents, cottonRunTotals, SEED_FACTOR_DEFAULT, ginPrepaid, lotsForSale } from '../docs/js/ginning.js';
+import { saleEconomics, position, positionAtYield, invoiceLineItems, invoiceTotals } from '../docs/js/derived.js';
+import { cottonInvoiceModel, mergeBaleRanges } from '../docs/js/cottoninvoice.js';
+import { xeroInvoices } from '../docs/js/xero.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
 let failures = 0;
@@ -262,6 +264,96 @@ check('the cotton settings go to the server and back, are only sent once set, an
   assert.ok(p.includes('Cotton (lint)') && p.includes("row('Seed'") && p.includes('Less ginning'));
   assert.ok(read('supabase/migrations/20261128000000_commodity_cotton.sql').includes('add column if not exists cotton jsonb'));
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('alter table commodities add column if not exists cotton jsonb'));
+});
+
+// The Brighann RCTI P23-131: 1,116 bales BG026511 to BG027626, 1,126.95 standard bales at $630.00, GST, then three gin invoices
+// prepaid by the buyer (I051/23 $8,318.80, I052/23 $45,463.14, I053/23 $29,328.79) taken off the total due.
+const rctiSale = { id: 's131', contractNo: 'P23-131', commodityId: 'cot', buyer: 'Brighann Cotton Marketing', price: 630, tons: 1126.95 };
+const ginLine = (no, amount, gst) => ({ date: '2023-05-20', rego: '—', tons: null, movementId: null, rate: null, subtotal: 0, isGinPrepaid: true, ginRunId: no, description: 'Brighann Ginning Invoice ' + no, ginning: Math.round((amount - gst) * 100) / 100, levies: 0, gst, amount });
+const rctiLines = [
+  { date: '2023-05-10', rego: '—', tons: 729.272, movementId: 'm1', rate: 630, subtotal: 729.272 * 630, bales: 723, baleRanges: [{ from: 'BG026511', to: 'BG027233', bales: 723 }] },
+  { date: '2023-05-18', rego: '—', tons: 397.678, movementId: 'm2', rate: 630, subtotal: 397.678 * 630, bales: 393, baleRanges: [{ from: 'BG027234', to: 'BG027626', bales: 393 }] },
+  ginLine('I051/23', 8318.80, 0), ginLine('I052/23', 45463.14, 0), ginLine('I053/23', 29328.79, 2584.91),
+];
+const r2 = (n) => Math.round(n * 100) / 100;
+
+check('the bale range joins the loads that run on from each other and counts the bales', () => {
+  assert.deepEqual(mergeBaleRanges([{ from: 'BG027234', to: 'BG027626', bales: 393 }, { from: 'BG026511', to: 'BG027233', bales: 723 }]), [{ from: 'BG026511', to: 'BG027626', bales: 1116 }]);
+  assert.equal(mergeBaleRanges([{ from: 'BG1', to: 'BG5', bales: 5 }, { from: 'BG9', to: 'BG10', bales: 2 }]).length, 2, 'a gap is two ranges');
+});
+
+check('gin invoices prepaid by the buyer come off the total due, GST included, after the GST on the cotton', () => {
+  const totals = invoiceTotals(rctiSale, rctiLines);
+  assert.equal(r2(totals.subtotalExGST), 709978.50, '1,126.95 bales at $630.00');
+  assert.equal(totals.ginTotal, 83110.73, 'the three gin invoices');
+  assert.equal(r2(totals.gst), 70997.85, 'GST on the cotton only');
+  assert.equal(r2(totals.totalPayable), 697865.62, 'the RCTI total due');
+});
+
+check('the invoice reads like the RCTI: bale range, price per bale, GST, total due including tax, gin prepaid, total due', () => {
+  const t = invoiceTotals(rctiSale, rctiLines);
+  const inv = { lines: rctiLines, subtotalExGST: r2(t.subtotalExGST), gst: r2(t.gst), levies: 0, freightTotal: 0, totalPayable: r2(t.totalPayable) };
+  const m = cottonInvoiceModel(inv);
+  assert.deepEqual(m.ranges, [{ from: 'BG026511', to: 'BG027626', bales: 1116 }]);
+  assert.equal(m.physicalBales, 1116);
+  assert.equal(m.rows.length, 1, 'one price, one row');
+  assert.equal(m.stdBales, 1126.95);
+  assert.equal(m.rows[0].rate, 630);
+  assert.equal(m.valueNett, 709978.50);
+  assert.equal(m.gst, 70997.85);
+  assert.equal(m.dueIncludingTax, 780976.35);
+  assert.deepEqual(m.gin.map((g) => g.amount), [8318.80, 45463.14, 29328.79]);
+  assert.equal(m.ginTotal, 83110.73);
+  assert.equal(m.totalDue, 697865.62);
+});
+
+check('premiums and discounts show apart from the gross and count in the value nett', () => {
+  const lines = [...rctiLines, { date: '2023-05-27', rego: 'Colour premium', description: 'Colour premium', tons: null, movementId: null, rate: null, subtotal: -1000, isCustom: true }];
+  const t = invoiceTotals(rctiSale, lines);
+  const m = cottonInvoiceModel({ lines, subtotalExGST: r2(t.subtotalExGST), gst: t.gst, levies: 0, freightTotal: 0, totalPayable: t.totalPayable });
+  assert.equal(m.premiumTotal, -1000);
+  assert.equal(m.gross, 709978.50);
+  assert.equal(m.valueNett, 708978.50);
+});
+
+check('a run delivered to a contract puts its bale numbers on the invoice line, and a buyer-paid gin invoice is a prepayment with GST', () => {
+  const g = { ...run, voluntaryLevy: 1.5, paidBy: 'buyer', baleFrom: 'BG027234', baleTo: 'BG027626', allocations: [lot('sale:s1', 'BG027234', 'BG027400'), lot('sale:s2', 'BG027401', 'BG027626')] };
+  const lots = allocateLint(g);
+  const mv = { id: 'm1', date: '2026-05-18', commodityId: 'cot', tons: 397.678, froms: [], tos: lots.map((a) => ({ type: 'sale', id: a.to.slice(5), tons: Math.round(a.std * 1000) / 1000 })), gin: g };
+  assert.deepEqual(lotsForSale(mv, 's1').map((a) => a.bales), [167]);
+  const line = invoiceLineItems({ id: 's1', price: 600 }, [mv])[0];
+  assert.equal(line.bales, 167);
+  assert.deepEqual(line.baleRanges, [{ from: 'BG027234', to: 'BG027400', bales: 167 }]);
+  const p = ginPrepaid({ id: 's1' }, [mv]);
+  assert.equal(p.length, 1);
+  assert.equal(p[0].invoiceNo, 'I053/23');
+  const whole = { ...mv, tos: [{ type: 'sale', id: 'x', tons: 397.678 }], gin: { ...g, allocations: [lot('sale:x', 'BG027234', 'BG027626')] } };
+  assert.equal(ginPrepaid({ id: 'x' }, [whole])[0].total, 29925.31, 'the whole invoice, GST on the ginning only');
+  assert.equal(ginPrepaid({ id: 'x' }, [whole])[0].gst, 2584.91);
+  assert.equal(ginDeduction({ id: 'x' }, [whole]).totalInclGst, 29925.31);
+  assert.equal(ginPrepaid({ id: 's1' }, [{ ...mv, gin: { ...g, paidBy: 'us' } }]).length, 0, 'a gin invoice we pay is a bill');
+});
+
+check('the Xero file takes each gin prepayment off as the gin charged it: ginning with GST, levies without', () => {
+  const t = invoiceTotals(rctiSale, rctiLines);
+  const inv = { id: 'i1', saleId: 's131', invoiceNo: 7, issueDate: '2023-05-27', dueDate: '2023-06-27', lines: rctiLines, subtotalExGST: t.subtotalExGST, gst: t.gst, levies: 0, freightTotal: 0, totalPayable: t.totalPayable };
+  const { rows } = xeroInvoices({ invoices: [inv], sales: [rctiSale], commodities: [{ id: 'cot', name: 'Cotton' }] });
+  const gin = rows.filter((r) => /prepaid by buyer/.test(r['*Description']));
+  assert.equal(gin.length, 3, 'one ginning line each; none of these has levies');
+  assert.ok(gin.every((r) => r['*UnitAmount'] < 0));
+});
+
+check('the builder adds a prepaid gin line for each selected run, the document is the cotton layout, and the total has the gin taken off', () => {
+  const v = read('docs/js/views/invoice.js');
+  assert.ok(v.includes('ginPrepaid(sale, selectedMovements)') && v.includes('isGinPrepaid: true'));
+  assert.ok(v.includes("commodity?.unit === 'bale') return cottonInvoiceDocHTML"));
+  assert.ok(v.includes('Ginning invoices prepaid') && v.includes('Total gin prepayments on this invoice') && v.includes('Total amount due including tax') && v.includes('Bale range:'));
+  assert.ok(v.includes('- ginTotal'));
+});
+
+check('the Position card counts cotton in bales, not tonnes', () => {
+  const p = read('docs/js/views/position.js');
+  assert.ok(p.includes("const bales = r.commodity.unit === 'bale'") && p.includes("'bales' : 't'}/ha"));
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

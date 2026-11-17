@@ -111,33 +111,59 @@ export function describeGin(gin) {
 }
 
 /**
- * What the buyer of the lint takes off a contract for ginning: for each run whose gin invoice the buyer pays, the ginning and
- * the levies (ex GST) in proportion to the bales of that run delivered to the contract. A run the farm pays is a bill, not
- * a deduction, and is left out. The lint leg is the run's first destination.
- *
- * @returns {{total: number, bales: number, runs: number}}
+ * The lint of a run that went to a contract: its lots there, with their bale numbers. An older run (saved before lots) has
+ * its lint leg first, so that is the whole run.
  */
-export function ginDeduction(sale, movements) {
-  let total = 0;
-  let bales = 0;
-  let runs = 0;
+export function lotsForSale(m, saleId) {
+  const g = hasGin(m) ? cleanGin(m.gin) : null;
+  if (!g) return [];
+  if (g.allocations.length) return allocateLint(g).filter((a) => a.to === `sale:${saleId}`);
+  const leg = (m.tos || [])[0];
+  if (leg && leg.type === 'sale' && leg.id === saleId) return [{ to: `sale:${saleId}`, bales: g.physicalBales, baleFrom: g.baleFrom, baleTo: g.baleTo, std: num(leg.tons) }];
+  return [];
+}
+
+/**
+ * The gin invoices the buyer of the lint has paid for a contract, one per run whose invoice the buyer pays: the buyer takes
+ * them off the payment at the foot of its invoice, GST included. A run delivered in part to this contract counts that share
+ * of the gin invoice. A run the farm pays is a bill, not a prepayment, and is left out.
+ *
+ * @returns {{movementId: string, date: string, ginName: string, invoiceNo: string, std: number, share: number,
+ *            ginning: number, levies: number, gst: number, exGst: number, total: number}[]}
+ */
+export function ginPrepaid(sale, movements) {
+  const out = [];
   for (const m of movements || []) {
     const g = hasGin(m) ? cleanGin(m.gin) : null;
     if (!g || g.paidBy !== 'buyer') continue;
     const all = stdBales(g.lintKg, g.stdBaleKg);
-    // what went to this contract: the allocations that name it, or (a run saved before there were any) the first leg
-    const legs = g.allocations.length
-      ? allocateLint(g).filter((a) => a.to === `sale:${sale?.id}`).map((a) => a.std)
-      : [(m.tos || [])[0]].filter((l) => l && l.type === 'sale' && l.id === sale?.id).map((l) => num(l.tons));
-    const std = legs.reduce((s, x) => s + x, 0);
+    const std = lotsForSale(m, sale?.id).reduce((s, a) => s + a.std, 0);
     // legs are saved to three decimals, so compare at three decimals: a whole run delivered is a whole share
     const share = all > 0 ? Math.min(1, Math.round(std * 1000) / Math.round(all * 1000)) : 0;
     if (!(share > 0)) continue;
-    total += ginInvoice(g).exGst * share;
-    bales += std;
-    runs += 1;
+    const inv = ginInvoice(g);
+    const ginning = round2(inv.ginning * share);
+    const levies = round2(inv.levies * share);
+    const gst = round2(inv.gst * share);
+    out.push({ movementId: m.id, date: m.date || '', ginName: g.ginName, invoiceNo: g.invoiceNo, std, share, ginning, levies, gst, exGst: round2(ginning + levies), total: round2(ginning + levies + gst) });
   }
-  return { total: round2(total), bales, runs };
+  return out;
+}
+
+/**
+ * What the buyer of the lint takes off a contract for ginning, in total: ex GST (what comes off the value) and with GST
+ * (what comes off the amount paid).
+ *
+ * @returns {{total: number, totalInclGst: number, bales: number, runs: number}}
+ */
+export function ginDeduction(sale, movements) {
+  const list = ginPrepaid(sale, movements);
+  return {
+    total: round2(list.reduce((s, p) => s + p.exGst, 0)),
+    totalInclGst: round2(list.reduce((s, p) => s + p.total, 0)),
+    bales: list.reduce((s, p) => s + p.std, 0),
+    runs: list.length,
+  };
 }
 
 /** The bales in an allocation: what the range says when it is a range, else the count typed. */

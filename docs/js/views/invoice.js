@@ -1,15 +1,17 @@
-import { db } from '../storage.js?v=363';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=363';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=363';
-import { addressLinesOf } from '../address.js?v=363';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=363';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=363';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=363';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=363';
-import { docBandHTML } from '../docband.js?v=363';
-import { deductionNotes } from '../deductions.js?v=363';
-import { openMovementSheet } from './movements.js?v=363';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=363';
+import { db } from '../storage.js?v=364';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=364';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=364';
+import { addressLinesOf } from '../address.js?v=364';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=364';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=364';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=364';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=364';
+import { docBandHTML } from '../docband.js?v=364';
+import { deductionNotes } from '../deductions.js?v=364';
+import { ginPrepaid } from '../ginning.js?v=364';
+import { cottonInvoiceModel } from '../cottoninvoice.js?v=364';
+import { openMovementSheet } from './movements.js?v=364';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=364';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -114,6 +116,7 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
       ${field({ label: 'Freight', id: 't-freight', type: 'number', step: '0.01', allowNegative: true })}
       ${field({ label: 'Grain levies', id: 't-levies', type: 'number', step: '0.01', allowNegative: true })}
       ${field({ label: 'GST', id: 't-gst', type: 'number', step: '0.01', allowNegative: true })}
+      <div class="row" id="t-gin-row" style="display:none"><span class="label">Ginning invoices prepaid<small style="display:block;font-size:11.5px;color:var(--text-dim)">By the buyer, GST included</small></span><span class="value" id="t-gin"></span></div>
       <div class="row"><span class="label"><strong>Total amount payable</strong></span><span class="value" id="t-total" style="font-size:18px">$0.00</span></div>
       <button class="btn" id="save-invoice" style="margin-top:12px">${existingInvoice ? 'Save changes' : 'Create invoice'}</button>
     `;
@@ -188,6 +191,11 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
         if (item.amount === 0) return;
         lines.push({ date: sale.date, rego: item.description || 'Adjustment', tons: null, movementId: null, rate: null, subtotal: item.amount, description: item.description, isCustom: true });
       });
+      // a cotton buyer that pays the gin takes each prepaid gin invoice off the total due: one line for each run on this invoice
+      ginPrepaid(sale, selectedMovements).forEach((p) => {
+        lines.push({ date: p.date || sale.date, rego: '—', tons: null, movementId: null, rate: null, subtotal: 0, isGinPrepaid: true, ginRunId: p.movementId,
+          description: `${p.ginName || 'Ginning'} invoice ${p.invoiceNo || ''}`.trim(), ginning: p.ginning, levies: p.levies, gst: p.gst, amount: p.total });
+      });
       lines.push(...adjustmentLines);
       lines.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
       return lines;
@@ -203,11 +211,16 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
       root.querySelector('#t-freight').value = totals.freightTotal.toFixed(2);
       root.querySelector('#t-levies').value = totals.levies.toFixed(2);
       root.querySelector('#t-gst').value = totals.gst.toFixed(2);
+      ginTotal = totals.ginTotal || 0;
       recomputeFinalTotal();
     }
 
+    // the gin invoices the buyer prepaid, taken off the total (kept with the lines, so editing the others leaves it alone)
+    let ginTotal = existingInvoice ? Math.round((existingInvoice.lines || []).filter((l) => l.isGinPrepaid).reduce((s, l) => s + (Number(l.amount) || 0), 0) * 100) / 100 : 0;
     function recomputeFinalTotal() {
-      const total = getNum(root, 't-subtotal') + getNum(root, 't-gst') - getNum(root, 't-levies') - getNum(root, 't-freight');
+      root.querySelector('#t-gin-row').style.display = ginTotal > 0 ? '' : 'none';
+      root.querySelector('#t-gin').textContent = `-${money(ginTotal, 2)}`;
+      const total = getNum(root, 't-subtotal') + getNum(root, 't-gst') - getNum(root, 't-levies') - getNum(root, 't-freight') - ginTotal;
       root.querySelector('#t-total').textContent = money(total, 2);
     }
 
@@ -232,7 +245,7 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
       const freightTotal = getNum(root, 't-freight');
       const levies = getNum(root, 't-levies');
       const gst = getNum(root, 't-gst');
-      const totalPayable = subtotalExGST + gst - levies - freightTotal;
+      const totalPayable = subtotalExGST + gst - levies - freightTotal - ginTotal;
 
       const business = db.getBusinessDetails();
       const today = new Date().toISOString().slice(0, 10);
@@ -312,7 +325,64 @@ export function bankDetailsHTML(business) {
       </div>`;
 }
 
+/**
+ * A cotton invoice, in the order a cotton merchant's recipient created tax invoice reads: the contract, the bale range and
+ * count, the payment worked out per 227 kg bale, premiums and discounts, GST, the total due including tax, then the gin
+ * invoices the buyer prepaid taken off (GST included), and the total due.
+ */
+function cottonInvoiceDocHTML(sale, invoice, business, commodity, signed = null) {
+  const m = cottonInvoiceModel(invoice);
+  const row = (label, value, cls = '') => `<div class="row ${cls}"><span class="label">${label}</span><span class="value">${value}</span></div>`;
+  const rangeText = m.ranges.map((r) => `${esc(r.from)} &ndash; ${esc(r.to)}`).join(', ');
+  return `
+    <div class="invoice-doc branded">
+      ${docBandHTML(business, { title: 'TAX INVOICE', meta: [
+        `<span>Invoice #${invoice.invoiceNo}</span>`,
+        `<span>Invoice date: <strong>${esc(dmy(invoice.issueDate))}</strong></span>`,
+        `<span>Payment due: <strong>${esc(dmy(invoice.dueDate))}</strong></span>`,
+        sale.contractNo ? `<span>Contract: <strong>${esc(sale.contractNo)}</strong></span>` : '',
+      ] })}
+      ${partiesHTML(sale, business)}
+      <div class="line"><strong>Contract:</strong> ${esc(commodity?.name || 'Cotton')} Sales Contract${sale.contractNo ? ` ${esc(sale.contractNo)}` : ''}</div>
+      ${rangeText ? `<div class="line" style="margin-bottom:10px"><strong>Bale range:</strong> ${rangeText} &middot; ${num(m.physicalBales, 0)} bales</div>` : '<div style="margin-bottom:10px"></div>'}
+      <div class="line"><strong>Payment is calculated as follows:</strong></div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Contract</th><th>Per bale</th><th>227 kg bales</th><th>Gross</th></tr></thead>
+          <tbody>
+            ${m.rows.map((r) => `<tr><td>${esc(sale.contractNo || 'Contract')}</td><td>${money(r.rate, 2)}</td><td>${num(r.bales, 2)}</td><td>${money(r.amount, 2)}</td></tr>`).join('')}
+          </tbody>
+          ${m.rows.length > 1 ? `<tfoot><tr><td colspan="2">Total</td><td>${num(m.stdBales, 2)}</td><td>${money(m.gross, 2)}</td></tr></tfoot>` : ''}
+        </table>
+      </div>
+      ${m.premiums.length || m.adjustments.length ? `
+      <h3 style="margin:14px 0 6px">Premiums and discounts</h3>
+      <div class="table-scroll"><table>
+        <tbody>${[...m.premiums, ...m.adjustments].map((l) => `<tr><td>${esc(l.description || l.rego || 'Premium / discount')}</td><td>${money(l.subtotal, 2)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr><td>Total premiums and discounts</td><td>${money(m.premiumTotal + m.adjustmentTotal, 2)}</td></tr></tfoot>
+      </table></div>` : ''}
+      <div class="invoice-totals">
+        ${row('Value nett of premiums and discounts', money(m.valueNett, 2))}
+        ${m.levies > 0 ? row('Levies', `-${money(m.levies, 2)}`) : ''}
+        ${m.freight > 0 ? row('Freight', `-${money(m.freight, 2)}`) : ''}
+        ${row('GST amount', money(m.gst, 2))}
+        ${row('Total amount due including tax', money(m.dueIncludingTax, 2), m.gin.length ? '' : 'total')}
+      </div>
+      ${m.gin.length ? `
+      <h3 style="margin:14px 0 6px">Ginning invoices prepaid</h3>
+      <div class="invoice-totals">
+        ${m.gin.map((g) => row(esc(g.description), money(g.amount, 2))).join('')}
+        ${row('Total gin prepayments on this invoice', `-${money(m.ginTotal, 2)}`)}
+        ${row('Total due', money(m.totalDue, 2), 'total')}
+      </div>` : ''}
+      ${bankDetailsHTML(business)}
+      ${signed && canSign(signed.sig) ? `<div class="invoice-bank">${signedBlockHTML({ ...signed.sig, name: String(signed.name || signed.sig.name || business.contactName || '').trim() }, { date: signed.date })}</div>` : ''}
+    </div>
+  `;
+}
+
 function invoiceDocHTML(sale, invoice, business, commodity, signed = null) {
+  if (commodity?.unit === 'bale') return cottonInvoiceDocHTML(sale, invoice, business, commodity, signed);
   // loads with freight taken off go in a section of their own below the grain, not in the grain table
   const freightLines = invoice.lines.filter((l) => l.movementId && Number(l.freight) > 0);
   return `

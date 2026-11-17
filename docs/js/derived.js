@@ -1,10 +1,10 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=363';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=363';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=363';
-import { ginDeduction, cottonComponents, cottonRunTotals } from './ginning.js?v=363';
-import { commoditySort } from './commodityorder.js?v=363';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=364';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=364';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=364';
+import { ginDeduction, cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=364';
+import { commoditySort } from './commodityorder.js?v=364';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -123,6 +123,13 @@ export const freightOnInvoice = (sale) => sale?.freightPaidBy === 'buyer';
  * all at the sale's contract rate. Each line also carries its freight: the contract's $/t unless `freightRates`
  * (movement id -> $/t) gives that load its own.
  */
+/** The bale count and bale numbers of the lint a ginning run delivered to a contract, kept on its invoice line. */
+function gotLots(m, saleId) {
+  const lots = lotsForSale(m, saleId);
+  if (!lots.length) return {};
+  return { bales: lots.reduce((s, l) => s + (Number(l.bales) || 0), 0), baleRanges: lots.filter((l) => l.baleFrom && l.baleTo).map((l) => ({ from: l.baleFrom, to: l.baleTo, bales: l.bales })) };
+}
+
 export function invoiceLineItems(sale, movements, freightRates = {}) {
   const price = Number(sale.price) || 0;
   // freight comes off the grain invoice only when the buyer deducts it; if we pay the carrier it is a bill instead
@@ -143,6 +150,8 @@ export function invoiceLineItems(sale, movements, freightRates = {}) {
         ticketNo: m.ticketNo ? String(m.ticketNo) : '',
         // what was taken off this load's price and why, kept as written on the ticket when the invoice was made
         ...(cleanDeductions(m.deductions).length ? { deductions: cleanDeductions(m.deductions) } : {}),
+        // a ginning run's lint on a bale contract: the bales as pressed and their numbers, for the bale range on the invoice
+        ...gotLots(m, sale.id),
         // the contract price, and what the contract premium and this load's grade or oil adjust it by
         basePrice: price, adjust: loadRate - price,
         rate: loadRate, subtotal: t * loadRate,
@@ -160,14 +169,16 @@ export function invoiceLineItems(sale, movements, freightRates = {}) {
 export function invoiceTotals(sale, lines) {
   const freight = freightOnInvoice(sale) ? Number(sale.freight) || 0 : 0;
   const totalTons = lines.reduce((s, l) => s + l.tons, 0);
-  const subtotalExGST = lines.reduce((s, l) => s + l.subtotal, 0);
+  // the gin invoices a cotton buyer prepaid are not part of the price: they come off the total due, GST included
+  const ginTotal = Math.round(lines.filter((l) => l.isGinPrepaid).reduce((s, l) => s + (Number(l.amount) || 0), 0) * 100) / 100;
+  const subtotalExGST = lines.filter((l) => !l.isGinPrepaid).reduce((s, l) => s + l.subtotal, 0);
   const leviesPct = Number(sale.leviesPct) || 0;
   const levies = subtotalExGST * leviesPct;
   // each load carries its own freight rate; a line without one (an older invoice, a manual line) takes the contract's
   const freightTotal = lines.reduce((s, l) => s + (l.freight != null ? Number(l.freight) || 0 : freight * (Number(l.tons) || 0)), 0);
   const gst = subtotalExGST * GST_RATE;
-  const totalPayable = subtotalExGST + gst - levies - freightTotal;
-  return { totalTons, subtotalExGST, levies, freightTotal, gst, totalPayable };
+  const totalPayable = subtotalExGST + gst - levies - freightTotal - ginTotal;
+  return { totalTons, subtotalExGST, levies, freightTotal, gst, ginTotal, totalPayable };
 }
 
 /**

@@ -124,7 +124,7 @@ await check('an invoice can open a load to correct it, and comes back with the l
 
 await check('the invoice and the adjustment note carry the farm letterhead on the green band, with the green carried through the tables', () => {
   const inv = read('docs/js/views/invoice.js');
-  assert.equal((inv.match(/<div class="invoice-doc branded">/g) || []).length, 2);
+  assert.equal((inv.match(/<div class="invoice-doc branded">/g) || []).length, 3, 'the grain invoice, the cotton invoice and the adjustment note');
   assert.ok(inv.includes("title: 'TAX INVOICE'") && inv.includes("title: 'ADJUSTMENT NOTE'"));
   const css = read('docs/css/styles.css');
   assert.ok(css.includes('.invoice-doc.branded .table-scroll table th { background: #2e7d32'));

@@ -1,16 +1,16 @@
-import { db } from '../storage.js?v=363';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=363';
-import { num, tons, money, pct, esc } from '../fmt.js?v=363';
-import { payablesCost } from '../payables.js?v=363';
-import { openEofySheet } from './eofy.js?v=363';
-import { startProgress } from '../helpcontent.js?v=363';
-import { attentionItems } from '../attention.js?v=363';
-import { lastBackup } from '../backup.js?v=363';
-import { todayLocal, dmy } from '../fmt.js?v=363';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=363';
-import { openSheet, closeSheet } from '../ui.js?v=363';
-import { positionPdf } from '../positionpdf.js?v=363';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=363';
+import { db } from '../storage.js?v=364';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=364';
+import { num, tons, money, pct, esc } from '../fmt.js?v=364';
+import { payablesCost } from '../payables.js?v=364';
+import { openEofySheet } from './eofy.js?v=364';
+import { startProgress } from '../helpcontent.js?v=364';
+import { attentionItems } from '../attention.js?v=364';
+import { lastBackup } from '../backup.js?v=364';
+import { todayLocal, dmy } from '../fmt.js?v=364';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=364';
+import { openSheet, closeSheet } from '../ui.js?v=364';
+import { positionPdf } from '../positionpdf.js?v=364';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=364';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -203,6 +203,10 @@ function cottonLines(r) {
 }
 
 function commodityCard(r) {
+  // cotton is counted in bales, everything else in tonnes
+  const bales = r.commodity.unit === 'bale';
+  const qty = (v) => (bales ? `${num(v, 0)} bales` : tons(v, 0));
+  const per = bales ? 'bale' : 't';
   const sold = Math.min(1, Math.max(0, r.pctSold));
   const pctSoldBadge = r.pctSold >= 1
     ? `<span class="badge pos">Sold out</span>`
@@ -212,15 +216,15 @@ function commodityCard(r) {
     <div class="card summary">
       <h2><span class="dot summary"></span>${esc(r.commodity.name)} ${pctSoldBadge}</h2>
       <div class="trio">
-        <div class="kv"><div class="l">Produced</div><div class="v">${tons(r.productionTons, 0)}</div></div>
-        <div class="kv"><div class="l">Sold</div><div class="v">${tons(r.soldTons, 0)}</div></div>
-        <div class="kv"><div class="l">Unsold</div><div class="v">${tons(r.unsoldTons, 0)}</div></div>
+        <div class="kv"><div class="l">Produced</div><div class="v">${qty(r.productionTons)}</div></div>
+        <div class="kv"><div class="l">Sold</div><div class="v">${qty(r.soldTons)}</div></div>
+        <div class="kv"><div class="l">Unsold</div><div class="v">${qty(r.unsoldTons)}</div></div>
       </div>
       <div class="trio quad">
         <div class="kv sm"><div class="l">Area</div><div class="v">${num(r.area, 0)} ha</div></div>
-        <div class="kv sm"><div class="l">Yield</div><div class="v">${num(r.yieldTHa, 2)} t/ha</div></div>
-        <div class="kv sm"><div class="l">Avg sold</div><div class="v">${money(r.avgSoldPrice, 0)}/t</div></div>
-        <div class="kv sm"><div class="l">MTM</div><div class="v">${money(r.mtmPrice, 0)}/${r.commodity.unit === 'bale' ? 'bale' : 't'}</div></div>
+        <div class="kv sm"><div class="l">Yield</div><div class="v">${num(r.yieldTHa, 2)} ${bales ? 'bales' : 't'}/ha</div></div>
+        <div class="kv sm"><div class="l">Avg sold</div><div class="v">${money(r.avgSoldPrice, 0)}/${per}</div></div>
+        <div class="kv sm"><div class="l">MTM</div><div class="v">${money(r.mtmPrice, 0)}/${per}</div></div>
       </div>
       <div class="gauge" role="img" aria-label="${Math.round(sold * 100)} percent sold"><i style="width:${sold * 100}%"></i></div>
       ${cottonLines(r)}
@@ -234,14 +238,14 @@ function commodityCard(r) {
       <div class="row"><span class="label">Gross margin</span><span class="value">${money(r.grossMargin, 0)} <span class="badge ${r.grossMargin >= 0 ? 'pos' : 'neg'}">${pct(r.grossMarginPct)}</span></span></div>
       <details class="fold">
         <summary><div><h2>Full breakdown</h2><div class="sub">Values, stock and costs</div></div></summary>
-        <div class="row"><span class="label">Avg sold price</span><span class="value">${money(r.avgSoldPrice, 2)}/t</span></div>
+        <div class="row"><span class="label">Avg sold price</span><span class="value">${money(r.avgSoldPrice, 2)}/${per}</span></div>
         <div class="row"><span class="label">Sold value</span><span class="value">${money(r.soldValue, 0)}</span></div>
         ${r.opening || r.retainedSeed ? `
-        <div class="row"><span class="label">Opening stock</span><span class="value">${tons(r.opening, 0)}</span></div>
-        ${r.openingValue && r.opening > 0 ? `<div class="row"><span class="label">Opening stock value ($/t)</span><span class="value">${money(r.openingValue / r.opening, 2)}/t</span></div>` : ''}
-        <div class="row"><span class="label">Retained seed</span><span class="value">${tons(r.retainedSeed, 0)}</span></div>
+        <div class="row"><span class="label">Opening stock</span><span class="value">${qty(r.opening)}</span></div>
+        ${r.openingValue && r.opening > 0 ? `<div class="row"><span class="label">Opening stock value ($/${per})</span><span class="value">${money(r.openingValue / r.opening, 2)}/${per}</span></div>` : ''}
+        <div class="row"><span class="label">Retained seed</span><span class="value">${qty(r.retainedSeed)}</span></div>
         ` : ''}
-        <div class="row"><span class="label">MTM price</span><span class="value">${money(r.mtmPrice, 2)}/t</span></div>
+        <div class="row"><span class="label">MTM price</span><span class="value">${money(r.mtmPrice, 2)}/${per}</span></div>
         <div class="row"><span class="label">Unsold value</span><span class="value">${money(r.unsoldValue, 0)}</span></div>
         ${r.openingValue ? `<div class="row"><span class="label">Less opening stock</span><span class="value">&minus;${money(r.openingValue, 0)}</span></div>` : ''}
         <div class="row"><span class="label">Gross margin cost</span><span class="value">${money(r.grossMarginCost, 0)}</span></div>

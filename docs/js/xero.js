@@ -7,13 +7,13 @@
 //
 // Pure: the sheet (views/xero.js) supplies the data and downloads the files.
 
-import { invoiceTotals } from './derived.js?v=363';
-import { kindLabel } from './payables.js?v=363';
-import { emailIn } from './vendordec.js?v=363';
-import { toCSV } from './csv.js?v=363';
-import { partsOf, hasParts } from './address.js?v=363';
-import { isAdjustment, noteLabel } from './adjustment.js?v=363';
-import { deductionNotes } from './deductions.js?v=363';
+import { invoiceTotals } from './derived.js?v=364';
+import { kindLabel } from './payables.js?v=364';
+import { emailIn } from './vendordec.js?v=364';
+import { toCSV } from './csv.js?v=364';
+import { partsOf, hasParts } from './address.js?v=364';
+import { isAdjustment, noteLabel } from './adjustment.js?v=364';
+import { deductionNotes } from './deductions.js?v=364';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -86,6 +86,13 @@ export function xeroInvoices({ invoices = [], sales = [], commodities = [], from
     const add = (description, qty, unit, account, tax) => rows.push({ ...blankRow(), ...head, '*Description': description, '*Quantity': qty, '*UnitAmount': unit, '*AccountCode': account, '*TaxType': tax });
 
     for (const l of lines) {
+      // gin invoices the buyer prepaid: taken off as they were charged, the ginning with its GST and the levies without
+      if (l.isGinPrepaid) {
+        const label = clean(l.description) || 'Ginning invoice';
+        if (num(l.ginning) !== 0) add(`${label} (ginning, prepaid by buyer)`, 1, -round2(num(l.ginning)), codes.sales, num(l.gst) !== 0 ? TAX.income : TAX.free);
+        if (num(l.levies) !== 0) add(`${label} (levies, prepaid by buyer)`, 1, -round2(num(l.levies)), codes.sales, TAX.free);
+        continue;
+      }
       const tons = num(l.tons);
       if (tons > 0 && l.rate !== null && l.rate !== undefined) {
         const bits = [commodity || 'Grain', l.ticketNo ? `ticket ${l.ticketNo}` : (l.rego && l.rego !== '—' ? l.rego : ''), l.date ? xeroDate(l.date) : '', clean(l.grade), ...deductionNotes(l.deductions).map(clean)].filter(Boolean);
