@@ -1966,3 +1966,12 @@ alter table movements
   add column if not exists manual_docket_no text;
 
 notify pgrst, 'reload schema';
+
+-- A sent confirmation of sale can be filed with its contract
+alter table sale_documents
+  drop constraint if exists sale_documents_kind_check;
+alter table sale_documents
+  add constraint sale_documents_kind_check
+  check (kind in ('contract', 'broker_note', 'vendor_dec', 'freight_order', 'confirmation', 'other'));
+
+notify pgrst, 'reload schema';

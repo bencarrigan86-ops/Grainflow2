@@ -134,8 +134,10 @@ check('it has the green band with the logo, the contact lines, the delivery opti
   assert.ok(band.includes('class="doc-band"') && band.includes('class="doc-band-logo"') && band.includes('business.logo') && band.includes('doc-band-from'));
   assert.ok(c.includes('docBandHTML(business') && read('docs/js/views/invoice.js').includes('docBandHTML(business'));
   assert.ok(c.includes('contactLines(sale.buyerContact)'));
-  assert.ok(c.includes("term('Delivery option', PATTERN_ON_CONTRACT[sale.deliveryPattern])"));
-  assert.ok(c.includes('showFreight && sale.freight'), 'the freight rate follows the tickbox');
+  const terms = read('docs/js/contractpdf.js');   // the rows are one list, used by the page and by the PDF
+  assert.ok(terms.includes("['Delivery option', PATTERN_ON_CONTRACT[sale.deliveryPattern]]"));
+  assert.ok(terms.includes('showFreight && sale.freight'), 'the freight rate follows the tickbox');
+  assert.ok(c.includes('termRows(sale, commodity, { showFreight, showComments })'), 'the page reads them from there');
   assert.ok(c.includes('signerName(signed?.sig, business)') && c.includes('<strong>${esc(sellerName)}</strong>'), "the seller's name is printed on the Name line");
   assert.ok(c.includes('signedBlockHTML({ ...signed.sig, name: sellerName }'), 'and under a signature');
 });

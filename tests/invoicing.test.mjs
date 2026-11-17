@@ -46,7 +46,7 @@ check('clearing it after it was set reaches the server as null, and a stray valu
 check('the form has the choice and saves it, the confirmation prints it, and the SQL adds the column', () => {
   const s = read('docs/js/views/sales.js');
   assert.ok(s.includes("id: 'invoicing'") && s.includes("invoicing: getVal(root, 'invoicing') || ''") && s.includes('options: INVOICING'));
-  assert.ok(read('docs/js/views/contract.js').includes("term('Invoicing', INVOICING_ON_CONTRACT[sale.invoicing])"));
+  assert.ok(read('docs/js/contractpdf.js').includes("['Invoicing', INVOICING_ON_CONTRACT[sale.invoicing]]"));
   const st = read('docs/js/storage.js');
   assert.ok(st.includes('merged.__hasInvoicing = true') && st.includes('__hasInvoicing: true'));
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists invoicing text'));

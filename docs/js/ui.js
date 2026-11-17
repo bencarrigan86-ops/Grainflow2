@@ -15,6 +15,7 @@ export function closeSheet() {
   const back = held.pop();
   if (!back) return;
   back.backdrop.style.display = '';
+  back.backdrop.classList.remove('held');
   backdrop = back.backdrop;
   // the sheet beneath may be showing something that changed while it was out of sight
   try { back.onResume?.(); } catch (e) { console.error(e); }
@@ -28,6 +29,7 @@ export function closeSheet() {
 export function holdSheet(onResume) {
   if (!backdrop) return false;
   backdrop.style.display = 'none';
+  backdrop.classList.add('held');
   held.push({ backdrop, onResume });
   backdrop = null;
   return true;

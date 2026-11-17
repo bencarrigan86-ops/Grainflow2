@@ -20,6 +20,7 @@ const el = () => {
     remove() { this.removed = true; if (this.parent) this.parent.children = this.parent.children.filter((x) => x !== this); },
     addEventListener(t, f) { (this.listeners[t] ||= []).push(f); },
     setAttribute() {},
+    classList: { add() {}, remove() {} },
     querySelector() { return el(); },
     set innerHTML(v) { this._html = v; },
     get innerHTML() { return this._html; },

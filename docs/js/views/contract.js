@@ -18,58 +18,17 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=354';
-import { openSheet } from '../ui.js?v=354';
-import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=354';
-import { addressLinesOf } from '../address.js?v=354';
-import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=354';
-import { PATTERN_ON_CONTRACT } from '../deliveryplan.js?v=354';
-import { INVOICING_ON_CONTRACT } from '../invoicing.js?v=354';
-import { contactLines } from '../buyercontact.js?v=354';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=354';
-import { toleranceText, gradeTermsLines, gradeNamesText } from '../contractterms.js?v=354';
-import { docBandHTML } from '../docband.js?v=354';
-
-const DASH = '—';
-
-/** A date as a document should write it: 01-08-2026, not 2026-08-01. */
-function longDate(iso) {
-  if (!iso) return '';
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : String(iso);
-}
-
-function paymentText(sale) {
-  const days = Number(sale.paymentTermsDays) || 0;
-  if (!days) return '';
-  return sale.paymentTermsBasis
-    ? `${days} days from ${sale.paymentTermsBasis}`
-    : `${days} days`;
-}
-
-function deliveryPeriodText(sale) {
-  const a = longDate(sale.deliveryStart);
-  const b = longDate(sale.deliveryEnd);
-  if (a && b) return `${a} to ${b}`;
-  return a || b || '';
-}
-
-function brokerText(sale) {
-  if (!sale.broker) return '';
-  const bits = [sale.broker];
-  if (sale.brokerRef) bits.push(`ref ${sale.brokerRef}`);
-  if (sale.brokeragePaidBy) bits.push(`brokerage paid by ${sale.brokeragePaidBy}`);
-  return bits.join(', ');
-}
-
-function carryText(sale) {
-  const rate = Number(sale.carryRate) || 0;
-  if (!rate) return '';
-  const from = longDate(sale.carryFrom);
-  return from
-    ? `${money(rate, 2)} per tonne per month for grain held from ${from}`
-    : `${money(rate, 2)} per tonne per month`;
-}
+import { db } from '../storage.js?v=355';
+import { openSheet, toast, notify, askConfirm } from '../ui.js?v=355';
+import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=355';
+import { addressLinesOf } from '../address.js?v=355';
+import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=355';
+import { contactLines, splitContact } from '../buyercontact.js?v=355';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=355';
+import { DASH, longDate, termRows, confirmationPdf, CONFIRMATION_FOOTING } from '../contractpdf.js?v=355';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=355';
+import { fileSentCopy } from '../sentcopy.js?v=355';
+import { docBandHTML } from '../docband.js?v=355';
 
 /** One term, its value on one line or on several (an array). Omitted entirely when empty — a blank line invites a pen. */
 const term = (label, value) => {
@@ -89,15 +48,7 @@ const term = (label, value) => {
  *   printedName: the person's name printed under the seller's signature (default: the signed-in person's)
  */
 export function contractDocHTML(sale, business, commodity, signed = null, { showFreight = true, showComments = true, printedName = '' } = {}) {
-  const unit = commodity?.unit === 'bale' ? 'bales' : 't';
-  const perUnit = commodity?.unit === 'bale' ? 'bale' : 'tonne';
   const sellerName = String(printedName || signerName(signed?.sig, business)).trim();   // the person signing for the seller, printed under the signature
-
-  const quantity = `${num(sale.tons, 0)} ${unit}`;
-  const tol = toleranceText(sale, unit);
-  // a multigrade contract lists each grade it takes with its premium or discount
-  const gradeLines = gradeTermsLines(sale, perUnit);
-  const gradeNames = gradeNamesText(sale);
 
   return `
     <div class="invoice-doc branded">
@@ -134,35 +85,10 @@ export function contractDocHTML(sale, business, commodity, signed = null, { show
         purchase the following commodity on the terms set out below.</div>
 
       <div class="invoice-totals">
-        ${term('Commodity', commodity?.name || DASH)}
-        ${term(gradeLines.length ? 'Grades' : 'Grade', gradeLines.length ? gradeNames : sale.grade)}
-        ${term('Quality', 'As per Grain Trade Australia standards')}
-        ${term('Quantity', [quantity, tol])}
-        ${term('Price', sale.price ? `${money(sale.price, 2)} per ${perUnit}, exclusive of GST` : '')}
-        ${term('Freight', showFreight && sale.freight ? `${money(sale.freight, 2)} per ${perUnit}` : '')}
-        ${term('Premium / discount', sale.premiumDiscount ? `${money(sale.premiumDiscount, 2)} per ${perUnit}` : '')}
-        ${term('Premium / discount by grade', gradeLines.length ? [...gradeLines, 'A grade not listed is paid the price as above'] : '')}
-        ${term('Levies', sale.leviesPct ? `${num(sale.leviesPct * 100, 3)}%` : '')}
-        ${term('Pricing point', sale.pricingPoint)}
-        ${term('Location', sale.location)}
-        ${term('Delivery period', deliveryPeriodText(sale))}
-        ${term('Delivery option', PATTERN_ON_CONTRACT[sale.deliveryPattern])}
-        ${term('Invoicing', INVOICING_ON_CONTRACT[sale.invoicing])}
-        ${term('Delivery terms', sale.deliveryTerms)}
-        ${term('Weights and quality to govern', sale.weightsToGovern
-          ? sale.weightsToGovern.charAt(0).toUpperCase() + sale.weightsToGovern.slice(1) : '')}
-        ${term('Payment terms', paymentText(sale))}
-        ${term('Carry', carryText(sale))}
-        ${term('Broker', brokerText(sale))}
-        ${term('Trade rules', sale.tradeRules || 'Grain Trade Australia Trade Rules apply')}
-        ${term('Comments', showComments ? sale.notes : '')}
+        ${termRows(sale, commodity, { showFreight, showComments }).map(([label, lines]) => term(label, lines)).join('')}
       </div>
 
-      <div class="line" style="margin:14px 0 0;font-size:12px;color:#555">
-        This confirmation records the agreement between the parties named above. Unless stated
-        otherwise, the Grain Trade Australia Trade Rules in force at the date of this contract
-        apply. Failure to sign and return this confirmation does not affect its validity.
-      </div>
+      <div class="line" style="margin:14px 0 0;font-size:12px;color:#555">${esc(CONFIRMATION_FOOTING)}</div>
 
       <div class="invoice-parties" style="margin-top:18px">
         <div class="invoice-block">
@@ -222,7 +148,12 @@ export function openContractDocSheet(sale) {
       </div>
       <div id="doc-holder">${contractDocHTML(sale, business, commodity)}</div>
       <div class="doc-actions">
-        <button class="btn" id="print-contract" style="margin-top:14px">Print / Save as PDF</button>
+        <button class="btn" id="send-contract" style="margin-top:14px">${canShareFiles() ? 'Share PDF' : 'Download PDF and email'}</button>
+        <button class="btn secondary" id="download-contract" style="margin-top:8px">Download PDF</button>
+        <button class="btn secondary" id="print-contract" style="margin-top:8px">Print</button>
+        <div class="hint" style="margin-top:8px">${canShareFiles()
+          ? "Share opens your phone's share sheet with the PDF attached: choose Mail or another app. A copy is filed with the contract."
+          : 'This device cannot attach the file for you: it is downloaded, and an email to the buyer is opened to attach it to.'}</div>
       </div>
     `;
     // what is on the page follows the tickboxes: whether it carries the seller's signature, and whether it states the freight rate
@@ -238,5 +169,30 @@ export function openContractDocSheet(sale) {
     root.querySelector('#show-comments')?.addEventListener('change', paintDoc);
     wireSignerPick(root, 'signer-pick', business, (name) => { printedName = name; paintDoc(); });
     root.querySelector('#print-contract').addEventListener('click', () => window.print());
+
+    // the same document as a PDF file: made from what is ticked on this screen, then shared or saved
+    const makePdf = () => {
+      const showFreight = root.querySelector('#show-freight')?.checked !== false;
+      const showComments = root.querySelector('#show-comments')?.checked !== false;
+      return confirmationPdf({ sale, business, commodity, signature: signedWith, printedName, date: todayLocal(), showFreight, showComments });
+    };
+    const fileName = () => safeFileName(`Confirmation of sale ${sale.contractNo || ''} ${dmy(todayLocal())}`);
+    root.querySelector('#download-contract').addEventListener('click', () => { downloadFile(makePdf(), fileName()); toast('Downloaded'); });
+    root.querySelector('#send-contract').addEventListener('click', async () => {
+      if (gaps.length && !(await askConfirm(`Still to fill in: ${gaps.join('; ')}. Send it anyway?`, { confirmLabel: 'Send anyway' }))) return;
+      const bytes = makePdf();
+      const buyerContact = splitContact(sale.buyerContact);
+      const subject = `Confirmation of sale${sale.contractNo ? ` - contract ${sale.contractNo}` : ''}`;
+      const body = `Hi${buyerContact.name ? ` ${buyerContact.name.split(' ')[0]}` : ''},\n\nPlease find the confirmation of sale attached${sale.contractNo ? ` for contract ${sale.contractNo}` : ''}. Please sign and return a copy.\n\nRegards,\n${printedName || business.contactName || business.entityName || ''}`;
+      const result = await sharePdf(bytes, fileName(), { title: subject, text: body, mail: { to: buyerContact.email, subject, body } });
+      if (result === 'cancelled') return;
+      toast(result === 'shared' ? 'Sent' : 'Downloaded. Attach it to the email that opened.');
+      try {
+        await fileSentCopy({ saleId: sale.id, bytes, fileName: fileName(), kind: 'confirmation' });
+        toast('Copy filed with the contract');
+      } catch (e) {
+        notify(`It went, but a copy was not filed with the contract: ${e.message}`);
+      }
+    });
   });
 }

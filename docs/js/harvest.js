@@ -10,10 +10,10 @@
 //
 // Pure apart from the two sums it borrows from derived.js.
 
-import { estimateFieldTons, movementTonsFromField, storageLedgerStock, bigFirst } from './derived.js?v=354';
-import { isTransit } from './transit.js?v=354';
-import { capacityInfo, commodityOf } from './storagecapacity.js?v=354';
-import { harvestSeasonOf, HARVEST_SEASONS } from './harvestseason.js?v=354';
+import { estimateFieldTons, movementTonsFromField, storageLedgerStock, bigFirst } from './derived.js?v=355';
+import { isTransit } from './transit.js?v=355';
+import { capacityInfo, commodityOf } from './storagecapacity.js?v=355';
+import { harvestSeasonOf, HARVEST_SEASONS } from './harvestseason.js?v=355';
 
 /**
  * One field.

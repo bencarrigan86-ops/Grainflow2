@@ -2,8 +2,8 @@
 // figures under it. Same numbers as the screen (seasonAverages() is passed in), laid out portrait, one block per crop in the
 // same green as the Position page. Pure: it builds bytes and touches nothing else.
 
-import { Pdf } from './pdf.js?v=354';
-import { drawBrandLogo } from './brand.js?v=354';
+import { Pdf } from './pdf.js?v=355';
+import { drawBrandLogo } from './brand.js?v=355';
 
 const PAGE = { width: 595.28, height: 841.89 };
 const M = 36;
