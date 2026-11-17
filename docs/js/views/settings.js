@@ -1,47 +1,48 @@
-import { db } from '../storage.js?v=345';
-import { getTheme, setTheme } from '../theme.js?v=345';
-import { num, money, esc, todayLocal } from '../fmt.js?v=345';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=345';
-import { openLoadImportSheet } from './importloads.js?v=345';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=345';
-import { openPastSeasonsSheet } from './pastseasons.js?v=345';
-import { openPastSalesSheet } from './pastsales.js?v=345';
-import { openLineupSheet } from './lineup.js?v=345';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=345';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=345';
-import { openDangerSheet } from './dangerconfirm.js?v=345';
-import { sampleHistoryFrom, sampleHistoryOffered, sampleOrdersFrom, sampleOrdersOffered } from '../demo.js?v=345';
-import { seasonContents, contentsText } from '../seasondelete.js?v=345';
-import { openDeletedSheet } from './deleted.js?v=345';
-import { APP_VERSION } from '../version.js?v=345';
-import { logoFromFile } from '../logo.js?v=345';
-import { exportRowsAsCSV } from '../csv.js?v=345';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=345';
-import { orderedNames, moveName } from '../commodityorder.js?v=345';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=345';
-import { endpointLabel } from './movements.js?v=345';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=345';
-import { layersForStorage } from '../outload.js?v=345';
-import { traceLoads, traceText } from '../trace.js?v=345';
-import { holdings, totalHeld } from '../offfarm.js?v=345';
-import { kindLabel, billTotal } from '../payables.js?v=345';
-import { orderState, STATE_LABEL } from '../orders.js?v=345';
-import { fieldHarvest } from '../harvest.js?v=345';
-import { capacityFor } from '../storagecapacity.js?v=345';
-import { autoSeasonText } from '../harvestseason.js?v=345';
-import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=345';
-import { openMySignatureSheet } from './signaturepad.js?v=345';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=345';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=345';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=345';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=345';
+import { db } from '../storage.js?v=346';
+import { getTheme, setTheme } from '../theme.js?v=346';
+import { num, money, esc, todayLocal } from '../fmt.js?v=346';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=346';
+import { openLoadImportSheet } from './importloads.js?v=346';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=346';
+import { openPastSeasonsSheet } from './pastseasons.js?v=346';
+import { openPastSalesSheet } from './pastsales.js?v=346';
+import { openLineupSheet } from './lineup.js?v=346';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=346';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=346';
+import { openDangerSheet } from './dangerconfirm.js?v=346';
+import { sampleHistoryFrom, sampleHistoryOffered, sampleOrdersFrom, sampleOrdersOffered } from '../demo.js?v=346';
+import { seasonContents, contentsText } from '../seasondelete.js?v=346';
+import { openDeletedSheet } from './deleted.js?v=346';
+import { APP_VERSION } from '../version.js?v=346';
+import { checkNow } from '../updatecheck.js?v=346';
+import { logoFromFile } from '../logo.js?v=346';
+import { exportRowsAsCSV } from '../csv.js?v=346';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=346';
+import { orderedNames, moveName } from '../commodityorder.js?v=346';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=346';
+import { endpointLabel } from './movements.js?v=346';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=346';
+import { layersForStorage } from '../outload.js?v=346';
+import { traceLoads, traceText } from '../trace.js?v=346';
+import { holdings, totalHeld } from '../offfarm.js?v=346';
+import { kindLabel, billTotal } from '../payables.js?v=346';
+import { orderState, STATE_LABEL } from '../orders.js?v=346';
+import { fieldHarvest } from '../harvest.js?v=346';
+import { capacityFor } from '../storagecapacity.js?v=346';
+import { autoSeasonText } from '../harvestseason.js?v=346';
+import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=346';
+import { openMySignatureSheet } from './signaturepad.js?v=346';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=346';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=346';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=346';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=346';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=345';
+} from '../invites.js?v=346';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=345';
+} from '../auth.js?v=346';
 
 let unsub = null;
 
@@ -278,7 +279,8 @@ function paint(root) {
       ${group('app', db.getRole() === 'owner' ? 'App and support' : 'App', `Version ${esc(APP_VERSION)}${db.getRole() === 'owner' ? ' &middot; support access' : ''}`, `
       <div class="card">
         <div class="row"><span class="label">Version</span><span class="value">${esc(APP_VERSION)}</span></div>
-        <div class="field hint" style="margin-top:6px">If something looks out of date after an update, tap this to force the app to fetch the latest version.</div>
+        <button class="btn secondary small" id="check-update" style="margin-top:8px">Check for a new version</button>
+        <div class="field hint" style="margin-top:10px">If something looks out of date after an update, force the app to fetch the latest version.</div>
         <button class="btn secondary small" id="force-refresh" style="margin-top:6px">Force refresh app</button>
         <hr class="sep" />
         <div class="field hint" style="margin-bottom:6px">What this device has stored, and
@@ -507,6 +509,15 @@ function paint(root) {
       done: 'Everything was reset',
       onConfirm: () => db.resetAll(),
     });
+  });
+
+  root.querySelector('#check-update').addEventListener('click', async (e) => {
+    const btn = e.currentTarget; btn.disabled = true; btn.textContent = 'Checking…';
+    const res = await checkNow(APP_VERSION);
+    btn.disabled = false; btn.textContent = 'Check for a new version';
+    if (res.state === 'newer') toast('A new version is ready. Use the bar at the bottom.');
+    else if (res.state === 'current') toast('You are on the latest version');
+    else notify('Could not reach the server to check. Try again when you have signal.');
   });
 
   root.querySelector('#force-refresh').addEventListener('click', async () => {

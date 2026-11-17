@@ -1,25 +1,25 @@
-import { db } from '../storage.js?v=345';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=345';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=345';
-import { isTransit } from '../transit.js?v=345';
-import { isOffFarm } from '../offfarm.js?v=345';
-import { paintOffFarmCard } from './offfarm.js?v=345';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=345';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=345';
-import { hasStorageQuality } from '../mapping.js?v=345';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=345';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=345';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=345';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=345';
-import { renderRelatedMovements } from './movements.js?v=345';
-import { openSiloSetupSheet } from './silosetup.js?v=345';
-import { commodityFills } from '../commodityfill.js?v=345';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=345';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=345';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=345';
+import { db } from '../storage.js?v=346';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=346';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=346';
+import { isTransit } from '../transit.js?v=346';
+import { isOffFarm } from '../offfarm.js?v=346';
+import { paintOffFarmCard } from './offfarm.js?v=346';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=346';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=346';
+import { hasStorageQuality } from '../mapping.js?v=346';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=346';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=346';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=346';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=346';
+import { renderRelatedMovements } from './movements.js?v=346';
+import { openSiloSetupSheet } from './silosetup.js?v=346';
+import { commodityFills } from '../commodityfill.js?v=346';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=346';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=346';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=346';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=345';
+} from '../silolayers.js?v=346';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -983,9 +983,7 @@ function buildContents(root, existing, kind = existing?.kind) {
 
     // the grain that comes out first is listed first
     const top = outEnd === 'first' ? [...layers] : [...layers].reverse();
-    root.querySelector('#lay-stack-head').innerHTML = `<span>${isBunker
-      ? `In it now, ${outEnd === 'first' ? 'back' : 'front'} (start of outload) first`
-      : 'In it now, top first'} <span class="meta">· ${layers.length} load${layers.length === 1 ? '' : 's'}</span></span>`;
+    root.querySelector('#lay-stack-head').innerHTML = `<span>Outload order - quality <span class="meta">· ${isBunker ? `${outEnd === 'first' ? 'back' : 'front'} first` : 'top first'} · ${layers.length} load${layers.length === 1 ? '' : 's'}</span></span>`;
     stackEl.innerHTML = top.length
       ? top.slice(0, 14).map((l) => `<div class="row" style="align-items:flex-start"><span class="label"><i class="sw" style="background:${gradeMix([l])[0].color}"></i>${layerLabel(l)}
           <div class="meta">${esc(specText(l.spec)) || 'no grade or quality recorded'}</div></span><span class="value">${num(l.tons, 1)} t${l.source === 'load' && l.id && !l.banded ? `<div><button type="button" class="btn secondary small le-open" data-load="${esc(l.id)}" style="min-height:30px;padding:4px 12px;margin-top:4px">Grade</button></div>` : ''}</span></div>`).join('')

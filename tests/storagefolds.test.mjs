@@ -34,7 +34,7 @@ check('the time box takes the same iPhone fix as the date box', () => {
 
 check('default grade, the loads in it now, and related movements all start closed; the samples are sections', () => {
   assert.ok(v.includes('<details class="fold">\n      <summary><div><h2>Default grade</h2>'));
-  assert.ok(v.includes('id="stack-fold"') && v.includes('Sampled sections') && v.includes('Change the grade of set blocks of tonnes'));
+  assert.ok(v.includes('id="stack-fold"') && v.includes('Outload order - quality') && !v.includes('In it now') && v.includes('Sampled sections') && v.includes('Change the grade of set blocks of tonnes'));
   assert.ok(!v.includes('Sampled it?'));
   assert.ok((v.match(/\{ collapsed: true \}/g) || []).length >= 2);
   assert.ok(read('docs/js/views/movements.js').includes('id="related-fold"'));

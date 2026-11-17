@@ -28,7 +28,7 @@ export function isNewer(current, newest) {
  */
 export async function checkForNewBuild(appVersion, fetchFn = (...a) => fetch(...a)) {
   try {
-    const res = await fetchFn('./index.html', { cache: 'no-store' });
+    const res = await fetchFn('./', { cache: 'no-store' });
     if (!res || !res.ok) return null;
     const newest = newestBuild(await res.text());
     return isNewer(currentBuild(appVersion), newest) ? newest : null;
@@ -55,22 +55,40 @@ export function showUpdateBar(doc = document, reload = () => location.reload()) 
 export function hideUpdateBar(doc = document) { doc.getElementById(BAR_ID)?.remove(); }
 
 /**
- * Starts looking: shortly after the app opens, whenever it is picked up again (at most every few minutes), when signal comes back, and
- * every half hour while it stays in front. Once a newer build is found the bar stays up; "Later" brings it back on the next pick-up.
+ * Asks now, for the Settings button: 'newer' (and the bar is shown), 'current', or 'unknown' when the server could not be reached.
  */
-export function startUpdateCheck(appVersion, { minGapMs = 5 * 60 * 1000, everyMs = 30 * 60 * 1000, firstMs = 60 * 1000 } = {}) {
+export async function checkNow(appVersion, { show = showUpdateBar, fetchFn } = {}) {
+  let reached = false;
+  const probe = (...a) => (fetchFn || ((...b) => fetch(...b)))(...a).then((r) => { if (r && r.ok) reached = true; return r; });
+  const found = await checkForNewBuild(appVersion, probe);
+  if (found) { show(); return { state: 'newer', build: found }; }
+  return { state: reached ? 'current' : 'unknown', build: null };
+}
+
+/**
+ * Starts looking. A new build takes a minute or two to appear after it is pushed, so a check that says "nothing yet" is not the end of it:
+ * it looks shortly after the app opens, again two and five minutes in, then every five minutes while the app is in front, and whenever the
+ * app is picked up, comes back into view or regains signal (at most once a minute). A look that falls while the screen is off is made up
+ * for the moment it is back. Once a newer build is found the bar stays up; "Later" hides it until the next pick-up.
+ */
+export function startUpdateCheck(appVersion, { minGapMs = 60 * 1000, everyMs = 5 * 60 * 1000, followUpsMs = [15 * 1000, 2 * 60 * 1000, 5 * 60 * 1000] } = {}) {
   let last = 0;
   let found = null;
+  let missed = false;
   const look = async (force = false) => {
-    if (document.hidden) return;
+    if (document.hidden) { missed = true; return; }
     if (found) { showUpdateBar(); return; }
     if (!force && Date.now() - last < minGapMs) return;
     last = Date.now();
+    missed = false;
     found = await checkForNewBuild(appVersion);
     if (found) showUpdateBar();
   };
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) look(); });
+  const back = () => { if (!document.hidden) look(missed); };
+  document.addEventListener('visibilitychange', back);
+  window.addEventListener('focus', back);
+  window.addEventListener('pageshow', back);
   window.addEventListener('online', () => look(true));
-  setTimeout(() => look(true), firstMs);
+  followUpsMs.forEach((ms) => setTimeout(() => look(true), ms));
   setInterval(() => look(), everyMs);
 }
