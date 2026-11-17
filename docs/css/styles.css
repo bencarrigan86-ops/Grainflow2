@@ -418,9 +418,9 @@ details.fold.fold-band.fold-alt {
   font-family: inherit;
 }
 .field .hint { font-size: 11.5px; color: var(--text-dim); margin-top: 4px; }
-/* A date box on iPhone draws itself, ignoring the height and width the others are given, so it is taken back
+/* A date or time box on iPhone draws itself, ignoring the height and width the others are given, so it is taken back
    from the browser's own look and made the same as the rest. */
-.field input[type="date"] {
+.field input[type="date"], .field input[type="time"] {
   -webkit-appearance: none;
   appearance: none;
   display: block;
@@ -428,7 +428,7 @@ details.fold.fold-band.fold-alt {
   max-width: 100%;
   line-height: 1.2;
 }
-.field input[type="date"]::-webkit-date-and-time-value { text-align: left; min-height: 1.2em; margin: 0; }
+.field input[type="date"]::-webkit-date-and-time-value, .field input[type="time"]::-webkit-date-and-time-value { text-align: left; min-height: 1.2em; margin: 0; }
 /* One height for every single-line box and dropdown. A date or a dropdown is two pixels taller than a text or
    number box on its own, which showed as one box sitting out of line whenever two were side by side. */
 .field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), .field select {
@@ -1160,3 +1160,11 @@ details.fold-band .field textarea { background: var(--surface); }
 .form-section .readout { background: var(--surface); border-style: solid; }
 
 .fab[hidden] { display: none; }
+
+/* A small optional step inside a fold: a line to tap, not another banded panel */
+details.inner-fold { margin: 12px 0 4px; border-top: 1px solid var(--border); padding-top: 10px; }
+details.inner-fold > summary { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--text); list-style: none; }
+details.inner-fold > summary::-webkit-details-marker { display: none; }
+details.inner-fold > summary::before { content: "\25B8"; display: inline-block; width: 1.1em; color: var(--text-dim); }
+details.inner-fold[open] > summary::before { content: "\25BE"; }
+details.inner-fold .hint, details.inner-fold .field.hint { font-size: 11.5px; color: var(--text-dim); }

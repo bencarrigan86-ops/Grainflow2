@@ -1,47 +1,47 @@
-import { db } from '../storage.js?v=342';
-import { getTheme, setTheme } from '../theme.js?v=342';
-import { num, money, esc, todayLocal } from '../fmt.js?v=342';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=342';
-import { openLoadImportSheet } from './importloads.js?v=342';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=342';
-import { openPastSeasonsSheet } from './pastseasons.js?v=342';
-import { openPastSalesSheet } from './pastsales.js?v=342';
-import { openLineupSheet } from './lineup.js?v=342';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=342';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=342';
-import { openDangerSheet } from './dangerconfirm.js?v=342';
-import { sampleHistoryFrom, sampleHistoryOffered, sampleOrdersFrom, sampleOrdersOffered } from '../demo.js?v=342';
-import { seasonContents, contentsText } from '../seasondelete.js?v=342';
-import { openDeletedSheet } from './deleted.js?v=342';
-import { APP_VERSION } from '../version.js?v=342';
-import { logoFromFile } from '../logo.js?v=342';
-import { exportRowsAsCSV } from '../csv.js?v=342';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=342';
-import { orderedNames, moveName } from '../commodityorder.js?v=342';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=342';
-import { endpointLabel } from './movements.js?v=342';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=342';
-import { layersForStorage } from '../outload.js?v=342';
-import { traceLoads, traceText } from '../trace.js?v=342';
-import { holdings, totalHeld } from '../offfarm.js?v=342';
-import { kindLabel, billTotal } from '../payables.js?v=342';
-import { orderState, STATE_LABEL } from '../orders.js?v=342';
-import { fieldHarvest } from '../harvest.js?v=342';
-import { capacityFor } from '../storagecapacity.js?v=342';
-import { autoSeasonText } from '../harvestseason.js?v=342';
-import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=342';
-import { openMySignatureSheet } from './signaturepad.js?v=342';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=342';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=342';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=342';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=342';
+import { db } from '../storage.js?v=343';
+import { getTheme, setTheme } from '../theme.js?v=343';
+import { num, money, esc, todayLocal } from '../fmt.js?v=343';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=343';
+import { openLoadImportSheet } from './importloads.js?v=343';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=343';
+import { openPastSeasonsSheet } from './pastseasons.js?v=343';
+import { openPastSalesSheet } from './pastsales.js?v=343';
+import { openLineupSheet } from './lineup.js?v=343';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=343';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=343';
+import { openDangerSheet } from './dangerconfirm.js?v=343';
+import { sampleHistoryFrom, sampleHistoryOffered, sampleOrdersFrom, sampleOrdersOffered } from '../demo.js?v=343';
+import { seasonContents, contentsText } from '../seasondelete.js?v=343';
+import { openDeletedSheet } from './deleted.js?v=343';
+import { APP_VERSION } from '../version.js?v=343';
+import { logoFromFile } from '../logo.js?v=343';
+import { exportRowsAsCSV } from '../csv.js?v=343';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=343';
+import { orderedNames, moveName } from '../commodityorder.js?v=343';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=343';
+import { endpointLabel } from './movements.js?v=343';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=343';
+import { layersForStorage } from '../outload.js?v=343';
+import { traceLoads, traceText } from '../trace.js?v=343';
+import { holdings, totalHeld } from '../offfarm.js?v=343';
+import { kindLabel, billTotal } from '../payables.js?v=343';
+import { orderState, STATE_LABEL } from '../orders.js?v=343';
+import { fieldHarvest } from '../harvest.js?v=343';
+import { capacityFor } from '../storagecapacity.js?v=343';
+import { autoSeasonText } from '../harvestseason.js?v=343';
+import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=343';
+import { openMySignatureSheet } from './signaturepad.js?v=343';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=343';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=343';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=343';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=343';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=342';
+} from '../invites.js?v=343';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=342';
+} from '../auth.js?v=343';
 
 let unsub = null;
 

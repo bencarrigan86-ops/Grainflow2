@@ -1,24 +1,24 @@
-import { db } from '../storage.js?v=342';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=342';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=342';
-import { isTransit } from '../transit.js?v=342';
-import { isOffFarm } from '../offfarm.js?v=342';
-import { paintOffFarmCard } from './offfarm.js?v=342';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=342';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=342';
-import { hasStorageQuality } from '../mapping.js?v=342';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=342';
-import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=342';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=342';
-import { renderRelatedMovements } from './movements.js?v=342';
-import { openSiloSetupSheet } from './silosetup.js?v=342';
-import { commodityFills } from '../commodityfill.js?v=342';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=342';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=342';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=342';
+import { db } from '../storage.js?v=343';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=343';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=343';
+import { isTransit } from '../transit.js?v=343';
+import { isOffFarm } from '../offfarm.js?v=343';
+import { paintOffFarmCard } from './offfarm.js?v=343';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=343';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=343';
+import { hasStorageQuality } from '../mapping.js?v=343';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=343';
+import { num, tons, esc, shortDate, todayLocal } from '../fmt.js?v=343';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=343';
+import { renderRelatedMovements } from './movements.js?v=343';
+import { openSiloSetupSheet } from './silosetup.js?v=343';
+import { commodityFills } from '../commodityfill.js?v=343';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=343';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=343';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=343';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=342';
+} from '../silolayers.js?v=343';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -586,8 +586,8 @@ function qualityFold(existing, commodity) {
   const has = hasStorageQuality(existing || {});
   return `
     <details class="fold" ${has ? 'open' : ''}>
-      <summary><div><h2>Grain quality</h2>
-        <div class="sub">The silo's own crop year, grade and specs &mdash; used when loads or samples don't say</div></div></summary>
+      <summary><div><h2>Default grade</h2>
+        <div class="sub">Used only when a load or a sample doesn't record its own</div></div></summary>
       <div class="grid-2">
         ${field({ label: 'Crop year', id: 'q-year', value: existing?.cropYear, placeholder: 'e.g. 2026/27' })}
         ${gradeFieldHtml({ id: 'q-grade', commodity, value: existing?.grade })}
@@ -797,7 +797,7 @@ function contentsFold(existing, grades, kind = existing?.kind) {
     : '';
   return `
     <details class="fold feature" id="contents-fold" ${rows.length ? 'open' : ''}>
-      <summary><div class="feature-head"><h2>Grade summary &amp; Outload predictor</h2>
+      <summary><div class="feature-head"><h2>Grade summary</h2>
         <div class="sub">${heldLine}</div>${heldBar}</div></summary>
       ${isBunker ? `
       <div class="field" style="margin:8px 0 0">
@@ -806,23 +806,34 @@ function contentsFold(existing, grades, kind = existing?.kind) {
           <button type="button" data-end="last" class="${outloadEndOf(existing) === 'last' ? 'active' : ''}">Front (last in, first out)</button>
           <button type="button" data-end="first" class="${outloadEndOf(existing) === 'first' ? 'active' : ''}">Back (first in, first out)</button>
         </div>
-        <div class="hint">Switch it if this bunker is emptied from the back, or opened at both ends. The picture and the predictor follow it.</div>
+        <div class="hint">Switch it if this bunker is emptied from the back, or opened at both ends. The picture and the outload plan follow it.</div>
       </div>` : ''}
       <div id="lay-picture"></div>
       <div id="lay-bulk" class="lay-bulk"></div>
       <div class="subhead" style="margin-top:10px" id="lay-stack-head"></div>
       <div id="op-stack"></div>
-      <div class="subhead">Grade and specs by tonnes <span class="meta">(from the ${isBunker ? 'back' : 'bottom'})</span></div>
-      <div class="field hint" style="margin-bottom:8px">Sampled the silo? Say what each sample covers &mdash; the first 800 t is APH1 at 11.5% protein, the next
-        600 t is AUH2 &mdash; whichever loads it came from. This replaces what the individual loads say for that grain. Grain that arrives after the date
-        below, or beyond the last sample, keeps its own grade. Trucks take from the top, so lower samples stay as they are.</div>
-      <div class="field" style="margin-bottom:8px"><label for="lay-asof">Sampled on</label>
-        <input type="date" id="lay-asof" value="${esc(existing?.gradeBandsDate || todayLocal())}" /></div>
-      <div id="lay-rows">${rows.map((r) => bandRowHtml(r, grades)).join('')}</div>
-      <datalist id="lay-grades">${grades.map((g) => `<option value="${esc(g)}"></option>`).join('')}</datalist>
-      <button type="button" class="btn secondary small" id="lay-add">+ Add the next sample</button>
-      <div class="field hint" id="lay-total"></div>
-      <div class="subhead">Plan an outload</div>
+      <details class="inner-fold" id="sample-fold" ${rows.length ? 'open' : ''}>
+        <summary>Sampled it? Enter the results <span class="meta">(optional, from the ${isBunker ? 'back' : 'bottom'})</span></summary>
+        <div class="field hint" style="margin:8px 0">Say what each sample covers by tonnes, whichever loads it came from: the first 800 t is APH1 at 11.5% protein, the next
+          600 t is AUH2. A sample replaces what the loads say for that grain. Grain that arrives after the date below, or beyond the last sample,
+          keeps its own grade.</div>
+        <div class="field" style="margin-bottom:8px"><label for="lay-asof">Sampled on</label>
+          <input type="date" id="lay-asof" value="${esc(existing?.gradeBandsDate || todayLocal())}" /></div>
+        <div id="lay-rows">${rows.map((r) => bandRowHtml(r, grades)).join('')}</div>
+        <datalist id="lay-grades">${grades.map((g) => `<option value="${esc(g)}"></option>`).join('')}</datalist>
+        <button type="button" class="btn secondary small" id="lay-add">+ Add the next sample</button>
+        <div class="field hint" id="lay-total"></div>
+      </details>
+    </details>
+    ${planFold()}`;
+}
+
+/** Plan an outload: the tonnes and the truck size in, what each truck will carry out. Reads the grade summary above it. */
+function planFold() {
+  return `
+    <details class="fold" id="plan-fold">
+      <summary><div><h2>Plan an outload</h2>
+        <div class="sub">Tonnes to take out and truck size: what each truck will carry</div></div></summary>
       <div class="grid-2">
         ${field({ label: 'Tonnes to take out', id: 'op-total', type: 'number', step: '1', value: '' })}
         ${field({ label: 'Truck size (t)', id: 'op-truck', type: 'number', step: '1', value: 36 })}
@@ -1086,7 +1097,7 @@ function buildContents(root, existing, kind = existing?.kind) {
 function predictorFold(existing) {
   return `
     <details class="fold">
-      <summary><div><h2>Grade summary &amp; Outload predictor</h2>
+      <summary><div><h2>Plan an outload</h2>
         <div class="sub">Loads in the order they will come out, and what each truck will carry</div></div></summary>
       <div class="field hint" style="margin-bottom:8px">Last in, first out: the most recent load comes out first. Add
         the grade, protein and moisture to each load on the Movement tab and this shows what every truck will take.</div>
