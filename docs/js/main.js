@@ -1,33 +1,35 @@
-import { db } from './storage.js?v=349';
-import { supabase, ENV } from './supabase.js?v=349';
-import { installErrorLog } from './supportinfo.js?v=349';
-import { loadMySeries, rememberedSeries } from './outloadseries.js?v=349';
-import { initTheme } from './theme.js?v=349';
+import { db } from './storage.js?v=352';
+import { supabase, ENV } from './supabase.js?v=352';
+import { installErrorLog } from './supportinfo.js?v=352';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=352';
+import { initTheme } from './theme.js?v=352';
 initTheme();
-import { renderPosition } from './views/position.js?v=349';
-import { renderProduction } from './views/production.js?v=349';
-import { renderReports } from './views/reports.js?v=349';
-import { renderSales } from './views/sales.js?v=349';
-import { renderMovements } from './views/movements.js?v=349';
-import { renderStorage } from './views/storage.js?v=349';
-import { renderSettings } from './views/settings.js?v=349';
-import { renderLogin } from './views/login.js?v=349';
-import { renderAccount } from './views/account.js?v=349';
-import { renderHelp } from './views/help.js?v=349';
+import { renderPosition } from './views/position.js?v=352';
+import { renderProduction } from './views/production.js?v=352';
+import { renderReports } from './views/reports.js?v=352';
+import { renderSales } from './views/sales.js?v=352';
+import { renderMovements } from './views/movements.js?v=352';
+import { renderStorage } from './views/storage.js?v=352';
+import { renderSettings } from './views/settings.js?v=352';
+import { renderLogin } from './views/login.js?v=352';
+import { renderAccount } from './views/account.js?v=352';
+import { renderHelp } from './views/help.js?v=352';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=349';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=349';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=349';
-import { esc } from './fmt.js?v=349';
-import { isSheetOpen, notify } from './ui.js?v=349';
-import { describeMerges } from './ticketmerge.js?v=349';
-import { watchLists } from './band.js?v=349';
-import { APP_VERSION } from './version.js?v=349';
-import { startUpdateCheck } from './updatecheck.js?v=349';
-import { emailFromTrialHash } from './trialtext.js?v=349';
-import { installWatch, requestPersistence } from './pwa.js?v=349';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=349';
+} from './auth.js?v=352';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=352';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=352';
+import { esc, todayLocal } from './fmt.js?v=352';
+import { isSheetOpen, notify } from './ui.js?v=352';
+import { describeMerges } from './ticketmerge.js?v=352';
+import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=352';
+import { addDays } from './fumigation.js?v=352';
+import { watchLists } from './band.js?v=352';
+import { APP_VERSION } from './version.js?v=352';
+import { startUpdateCheck } from './updatecheck.js?v=352';
+import { emailFromTrialHash } from './trialtext.js?v=352';
+import { installWatch, requestPersistence } from './pwa.js?v=352';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=352';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -108,6 +110,7 @@ function renderTabbar() {
       <span>${t.label}</span>
     </button>
   `).join('');
+  paintTabCounts();
   tabbar.querySelectorAll('button').forEach((btn) => {
     btn.addEventListener('click', () => {
       // Tapping the tab already open goes back to its top; the hash does not change, so nothing else would
@@ -116,6 +119,20 @@ function renderTabbar() {
     });
   });
 }
+
+// The number of loads still waiting for a silo, quality or a final weight, on the Movement tab, so it is seen without opening it.
+function paintTabCounts() {
+  const btn = tabbar.querySelector('button[data-tab="movement"]');
+  if (!btn) return;
+  const { movements, storages } = db.get();
+  const n = toFinishOlderThan(movements || [], storages || [], addDays(todayLocal(), -TAB_GRACE_DAYS)).length;
+  let dot = btn.querySelector('.tab-count');
+  if (n === 0) { dot?.remove(); btn.removeAttribute('aria-label'); return; }
+  if (!dot) { dot = document.createElement('span'); dot.className = 'tab-count'; btn.querySelector('.icon').appendChild(dot); }
+  dot.textContent = n > 99 ? '99+' : String(n);
+  btn.setAttribute('aria-label', `Movement, ${n} load${n === 1 ? '' : 's'} to finish`);
+}
+db.subscribe(paintTabCounts);
 
 const settingsBtn = document.getElementById('settings-btn');
 settingsBtn.innerHTML = SETTINGS_ICON;

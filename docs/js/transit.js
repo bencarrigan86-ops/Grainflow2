@@ -58,3 +58,10 @@ export function stageOf(m, storages) {
 
 /** Tickets that are not complete. */
 export const toFinish = (movements, storages) => (movements || []).filter((m) => stageOf(m, storages));
+
+/** How many days a load may wait before the Movement tab counts it as outstanding: a load tipped today or yesterday is not late yet. */
+export const TAB_GRACE_DAYS = 2;
+
+/** Incomplete tickets dated on or before `cutoff` (a ticket with no date is counted, since nothing says it is recent). */
+export const toFinishOlderThan = (movements, storages, cutoff) =>
+  toFinish(movements, storages).filter((m) => !m.date || String(m.date).slice(0, 10) <= cutoff);

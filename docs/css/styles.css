@@ -524,7 +524,14 @@ details.fold.fold-band.fold-alt {
   color: var(--text-dim);
   font-weight: 500;
 }
-.tabbar button .icon { font-size: 21px; line-height: 1; }
+.tabbar button .icon { font-size: 21px; line-height: 1; position: relative; }
+/* A small amber count on a tab: how many things on that screen are waiting. */
+.tabbar .tab-count {
+  position: absolute; top: -5px; left: 100%; margin-left: -6px;
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: var(--warn); color: var(--warn-bg);
+  font-size: 10.5px; font-weight: 700; line-height: 16px; text-align: center; font-variant-numeric: tabular-nums;
+}
 .tabbar button.active { color: var(--accent-summary); }
 
 .badge {
@@ -1210,3 +1217,8 @@ details.inner-fold .hint, details.inner-fold .field.hint { font-size: 11.5px; co
 #lay-rows .lay-row:nth-child(4n+3) { --band: #8a4fb8; }
 #lay-rows .lay-row:nth-child(4n+4) { --band: #c0483c; }
 #lay-rows .lay-row input, #lay-rows .lay-row select { background: var(--surface); }
+/* Need, Average and Worst truck sit centred under their headings; the measurement name stays on the left. */
+.opt-table th:not(:first-child), .opt-table td:not(:first-child) { text-align: center; padding-left: 6px; padding-right: 6px; }
+/* "To finish": loads still waiting for a silo, quality or a final weight, in the same amber as their badges so it stands out from the filters. */
+.chip.chip-warn { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); font-weight: 700; }
+.chip.chip-warn.active { background: var(--warn); border-color: var(--warn); color: var(--warn-bg); }

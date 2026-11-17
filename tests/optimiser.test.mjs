@@ -126,5 +126,9 @@ check('the feature is one module, one screen and one button, so it can be taken 
   assert.ok(read('docs/js/views/storage.js').includes('openOptimiserSheet'));
 });
 
+check('the Need, Average and Worst truck columns are centred', () => {
+  assert.ok(/\.opt-table th:not\(:first-child\)[^{]*\{[^}]*text-align:\s*center/.test(read('docs/css/styles.css')));
+});
+
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
 console.log('\nall passed');

@@ -3,6 +3,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { pageOfRows, PAGE_SIZE } from '../docs/js/paging.js';
+import { toFinishOlderThan, TAB_GRACE_DAYS } from '../docs/js/transit.js';
+import { addDays } from '../docs/js/fumigation.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -44,6 +46,30 @@ check('the movement list pages its tickets, searches the whole list, and starts 
   assert.ok(src.includes('id="mv-more"'), 'there is a Show more button');
   assert.ok(src.includes('listFilter.limit = PAGE_SIZE'), 'a new search or chip starts at the first page again');
   assert.ok(/shown\.reduce\(\(s, m\) => s \+ \(Number\(m\.tons\)/.test(src), 'the totals are of the whole list, not the page');
+});
+
+check('the To finish chip is amber so it stands out from the other filters', () => {
+  assert.ok(read('docs/js/views/movements.js').includes('chip chip-warn'));
+  const css = read('docs/css/styles.css');
+  assert.ok(/\.chip\.chip-warn\s*\{[^}]*var\(--warn-bg\)/.test(css));
+  assert.ok(/\.chip\.chip-warn\.active\s*\{[^}]*background:\s*var\(--warn\)/.test(css));
+});
+
+check('the Movement tab counts unfinished loads only once they are more than 2 days old', () => {
+  assert.equal(TAB_GRACE_DAYS, 2);
+  const silo = { id: 's1', kind: 'silo' };
+  const load = (id, date, extra = {}) => ({ id, date, tons: 30, tos: [{ type: 'silo', id: 's1' }], ...extra });
+  const ms = [load('today', '2026-11-17'), load('yday', '2026-11-16'), load('two', '2026-11-15'), load('old', '2026-11-01'),
+    load('done', '2026-11-01', { weightStatus: 'final' }), load('nodest', '2026-11-01', { tos: [] })];
+  const cutoff = addDays('2026-11-17', -TAB_GRACE_DAYS);
+  assert.deepEqual(toFinishOlderThan(ms, [silo], cutoff).map((m) => m.id), ['two', 'old', 'nodest']);
+});
+
+check('the tab bar shows the count on the Movement tab and keeps the chip count whole', () => {
+  const main = read('docs/js/main.js');
+  assert.ok(main.includes('paintTabCounts') && main.includes('db.subscribe(paintTabCounts)'));
+  assert.ok(main.includes('toFinishOlderThan'));
+  assert.ok(read('docs/css/styles.css').includes('.tabbar .tab-count {'));
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

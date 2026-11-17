@@ -2,7 +2,7 @@
 // tonnes, with a total, and the whole farm at the end. The figures come from fertfigures.js (yieldFigures), the same ones the
 // screen uses. Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=349';
+import { createReport, fixed } from './reportpdf.js?v=352';
 
 /** The yield table's columns: heading, share of the width, how a paddock's cell is written, and whether it is left-aligned. */
 export const YIELD_COLUMNS = [

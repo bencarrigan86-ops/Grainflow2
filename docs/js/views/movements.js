@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=349';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=349';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=349';
-import { withholdingClash } from '../fumigation.js?v=349';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=349';
-import { compressAndStampImage } from '../img.js?v=349';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=349';
-import { specText, extraSpecKey } from '../outload.js?v=349';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=349';
-import { pickableSilos } from '../silopick.js?v=349';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=349';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=349';
-import { activeSales } from '../paidsales.js?v=349';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=349';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=349';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=349';
-import { nowTime } from '../loadreport.js?v=349';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=349';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=349';
+import { db } from '../storage.js?v=352';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=352';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=352';
+import { withholdingClash } from '../fumigation.js?v=352';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=352';
+import { compressAndStampImage } from '../img.js?v=352';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=352';
+import { specText, extraSpecKey } from '../outload.js?v=352';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=352';
+import { pickableSilos } from '../silopick.js?v=352';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=352';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=352';
+import { activeSales } from '../paidsales.js?v=352';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=352';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=352';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=352';
+import { nowTime } from '../loadreport.js?v=352';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=352';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=352';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -79,7 +79,7 @@ function paint(root) {
         <input type="search" id="mv-q" placeholder="Search tickets, dates, trucks, drivers, buyers, contracts, grades" value="${esc(listFilter.q)}" aria-label="Search tickets" />
         ${inUse.length > 1 || finishCount > 0 ? `<div class="chips">
           <button type="button" class="chip ${listFilter.commodityId || listFilter.toFinish ? '' : 'active'}" data-chip="">All</button>
-          ${finishCount > 0 ? `<button type="button" class="chip ${listFilter.toFinish ? 'active' : ''}" data-finish="1">To finish ${finishCount}</button>` : ''}
+          ${finishCount > 0 ? `<button type="button" class="chip chip-warn ${listFilter.toFinish ? 'active' : ''}" data-finish="1">To finish ${finishCount}</button>` : ''}
           ${inUse.length > 1 ? inUse.map((c) => `<button type="button" class="chip ${listFilter.commodityId === c.id ? 'active' : ''}" data-chip="${esc(c.id)}">${esc(c.name)}</button>`).join('') : ''}
         </div>` : ''}
       </div>` : ''}

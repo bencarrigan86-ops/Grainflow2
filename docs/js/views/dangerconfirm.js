@@ -3,11 +3,11 @@
 // It lists what will go, asks for a backup to be downloaded first (or one made in the last hour), and asks for the name of
 // the thing to be typed. Only then does the red button work. The rules are in seasondelete.js.
 
-import { db } from '../storage.js?v=349';
-import { openSheet, closeSheet, toast } from '../ui.js?v=349';
-import { esc } from '../fmt.js?v=349';
-import { downloadBackup, lastBackup } from '../backup.js?v=349';
-import { backedUpRecently, mayDelete } from '../seasondelete.js?v=349';
+import { db } from '../storage.js?v=352';
+import { openSheet, closeSheet, toast } from '../ui.js?v=352';
+import { esc } from '../fmt.js?v=352';
+import { downloadBackup, lastBackup } from '../backup.js?v=352';
+import { backedUpRecently, mayDelete } from '../seasondelete.js?v=352';
 
 /**
  * @param {{title: string, warning: string, contents?: string, name: string, confirmLabel: string, done: string, onConfirm: () => void}} o
