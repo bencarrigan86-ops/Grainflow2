@@ -44,6 +44,11 @@ function readPolicies() {
         .map((x) => x[1]))];
       out.set(table, named.length ? named : null);   // null = every member
     }
+    // an advisor is let in beside the others by a policy of its own (the read an advisor always has, without a price on it)
+    for (const m of sql.matchAll(/create policy \w+_advisor_read on (\w+) for select/g)) {
+      const have = out.get(m[1]);
+      if (Array.isArray(have) && !have.includes('advisor')) have.push('advisor');
+    }
   }
   return out;
 }

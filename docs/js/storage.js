@@ -18,36 +18,36 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=410';
-import { setBrandLogo } from './brand.js?v=410';
+import { hydrate } from './hydrate.js?v=411';
+import { setBrandLogo } from './brand.js?v=411';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=410';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=410';
-import { isLegacyDirty } from './dirty.js?v=410';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=410';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=410';
-import { hasDeductions } from './deductions.js?v=410';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=410';
-import { hasHay, hasHayLoad } from './hay.js?v=410';
-import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=410';
-import { todayLocal } from './fmt.js?v=410';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=410';
-import { settleLegs, dedupeLegs } from './legs.js?v=410';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=410';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=410';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=410';
-import { setCommodityOrder } from './commodityorder.js?v=410';
-import { setFarmSwitches } from './nav.js?v=410';
-import { readSwitches } from './farmswitches.js?v=410';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=410';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=410';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=410';
-import { schedulePush, pushOnReconnect } from './sync.js?v=410';
-import { hasParts as hasAddressParts } from './address.js?v=410';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=410';
-import { linePayableId } from './ginoffset.js?v=410';
+} from './local.js?v=411';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=411';
+import { isLegacyDirty } from './dirty.js?v=411';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=411';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=411';
+import { hasDeductions } from './deductions.js?v=411';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=411';
+import { hasHay, hasHayLoad } from './hay.js?v=411';
+import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=411';
+import { todayLocal } from './fmt.js?v=411';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=411';
+import { settleLegs, dedupeLegs } from './legs.js?v=411';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=411';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=411';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=411';
+import { setCommodityOrder } from './commodityorder.js?v=411';
+import { setFarmSwitches } from './nav.js?v=411';
+import { readSwitches } from './farmswitches.js?v=411';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=411';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=411';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=411';
+import { schedulePush, pushOnReconnect } from './sync.js?v=411';
+import { hasParts as hasAddressParts } from './address.js?v=411';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=411';
+import { linePayableId } from './ginoffset.js?v=411';
 
 /**
  * A gin bill the lint buyer pays is settled once lint invoices have taken all of it off: the farm owes the gin nothing, the buyer settles
@@ -279,7 +279,7 @@ function persist() {
   // goes. With no farm yet, the work is still recorded as owed so it leaves on
   // the first push after signing in, rather than being forgotten.
   // Support looks and does not change: nothing a support login does on screen is ever queued for the server.
-  if (role === 'support') { /* read only */ }
+  if (role === 'support' || role === 'advisor') { /* read only */ }
   else if (farmId) schedulePush(() => data, farmId, role, { touches });
   else markDirty(touches).catch((e) => console.error('Could not queue for the server', e));
   // A view that throws while re-rendering must not take the write down with

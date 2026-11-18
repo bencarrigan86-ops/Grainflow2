@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=410';
+import { ROLES, canOpen } from './nav.js?v=411';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -42,6 +42,11 @@ export const ROLE_INFO = [
     summary: 'Loads only: the loads they cart. They can pick the paddock, silo or contract a load comes from or goes to, but see nothing else.',
     only: 'Can add loads and change loads that are still open. Can remove only loads they made themselves.',
   },
+  {
+    role: 'advisor', label: 'Advisor',
+    summary: 'Looks and changes nothing: an agronomist, accountant or bank. Sees paddocks, production, inputs used, storage and spray requests. Loads, contracts, prices and overheads only if the owner switches them on.',
+    only: 'Read only. Invited by an owner, and the owner chooses what they can see under Who sees what in Settings.',
+  },
 ];
 
 /**
@@ -50,41 +55,41 @@ export const ROLE_INFO = [
  */
 export const ACCESS = [
   { area: 'Position', hint: 'Tonnes, unsold grain and profit', tab: 'position',
-    owner: 'view', manager: 'view', bookkeeper: 'view', farm_worker: 'none', driver: 'none',
+    owner: 'view', manager: 'view', bookkeeper: 'view', farm_worker: 'none', driver: 'none', advisor: 'none',
     note: 'A manager sees tonnes and margin per paddock, but not overheads or the whole farm\'s profit.' },
   { area: 'Production', hint: 'Paddocks, yields, urea, seed, farm map', tab: 'production',
-    owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'view', driver: 'none',
+    owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'view', driver: 'none', advisor: 'view',
     note: 'A worker can change paddocks only if the owner has allowed them to record production. Workers do not see yields.' },
   { area: 'Contracts and prices', hint: 'Sales', tab: 'sales',
-    owner: 'full', manager: 'view', bookkeeper: 'full', farm_worker: 'none', driver: 'none',
+    owner: 'full', manager: 'view', bookkeeper: 'full', farm_worker: 'none', driver: 'none', advisor: 'none',
     note: 'A manager sees contracts and tonnes with the prices left out.' },
   { area: 'Invoices', hint: 'Invoices and the buyer\'s RCTI check',
-    owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'none', driver: 'none' },
+    owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'none', driver: 'none', advisor: 'none' },
   { area: 'Bills', hint: 'Brokerage, freight, storage and other bills you owe',
-    owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'none', driver: 'none' },
+    owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'none', driver: 'none', advisor: 'none' },
   { area: 'Overheads', hint: 'Whole-farm costs, set in Settings',
-    owner: 'full', manager: 'none', bookkeeper: 'full', farm_worker: 'none', driver: 'none',
+    owner: 'full', manager: 'none', bookkeeper: 'full', farm_worker: 'none', driver: 'none', advisor: 'none',
     note: 'This is what keeps whole-farm profit from a manager.' },
   { area: 'Grain orders and freight orders', hint: 'Orders and deliveries to go',
-    owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'none', driver: 'none' },
+    owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'none', driver: 'none', advisor: 'none' },
   { area: 'Loads and tickets', hint: 'Movement, load tickets, the load report', tab: 'movement',
-    owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'own', driver: 'own',
+    owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'own', driver: 'own', advisor: 'none',
     note: 'Workers and drivers can change a load until it is closed, and can remove only their own.' },
   { area: 'Storage', hint: 'Silos and bunkers', tab: 'storage',
-    owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'view', driver: 'none',
+    owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'view', driver: 'none', advisor: 'view',
     note: 'Drivers do not have the Storage tab, but can pick a silo when they record a load.' },
   { area: 'Reports', hint: 'Reports and summaries', tab: 'reports',
-    owner: 'view', manager: 'view', bookkeeper: 'view', farm_worker: 'view', driver: 'none' },
+    owner: 'view', manager: 'view', bookkeeper: 'view', farm_worker: 'view', driver: 'none', advisor: 'none' },
   { area: 'Spray requests', hint: 'Spray form and map for a contractor',
-    owner: 'full', manager: 'full', bookkeeper: 'none', farm_worker: 'none', driver: 'none' },
+    owner: 'full', manager: 'full', bookkeeper: 'none', farm_worker: 'none', driver: 'none', advisor: 'view' },
   { area: 'Inputs and spraying', hint: 'Seed, fertiliser, fuel and chemical on hand',
-    owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'used', driver: 'none',
+    owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'used', driver: 'none', advisor: 'used',
     note: 'A worker sees what is on hand and records what is used and counts. Prices are never sent to their phone.' },
   { area: 'Settings', hint: 'Commodities, seasons, grades, business details',
-    owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'none', driver: 'none',
+    owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'none', driver: 'none', advisor: 'none',
     note: 'Commodities are changed by the owner and manager; overheads by the owner and bookkeeper; business and bank details by the owner only (the bookkeeper can see the bank details; a manager cannot). Workers and drivers have Account only, for signing out.' },
   { area: 'People', hint: 'Invite, change and remove people',
-    owner: 'full', manager: 'none', bookkeeper: 'none', farm_worker: 'none', driver: 'none' },
+    owner: 'full', manager: 'none', bookkeeper: 'none', farm_worker: 'none', driver: 'none', advisor: 'none' },
 ];
 
 /** The rows of the access table for one role: what they can do in each area. */

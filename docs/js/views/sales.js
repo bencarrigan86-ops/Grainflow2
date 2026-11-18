@@ -1,33 +1,34 @@
-import { db } from '../storage.js?v=410';
-import { tileIcon } from '../tileicon.js?v=410';
+import { db } from '../storage.js?v=411';
+import { canDelete } from '../nav.js?v=411';
+import { tileIcon } from '../tileicon.js?v=411';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=410';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=410';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=410';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=410';
-import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=410';
-import { patternsFor } from '../deliveryplan.js?v=410';
-import { INVOICING } from '../invoicing.js?v=410';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=410';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=410';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=410';
-import { renderRelatedMovements } from './movements.js?v=410';
-import { openInvoiceListSheet } from './invoice.js?v=410';
-import { openContractDocSheet } from './contract.js?v=410';
-import { wireJumps } from '../jump.js?v=410';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=410';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=410';
-import { freightState } from '../freight.js?v=410';
-import { activeSales, paidSales } from '../paidsales.js?v=410';
-import { openVendorDecSheet } from './vendordec.js?v=410';
-import { summarise as summariseOrders } from '../orders.js?v=410';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=410';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=410';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=410';
-import { standardFor } from '../grades.js?v=410';
-import { commodityClass } from '../commoditycolor.js?v=410';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=410';
+} from '../documents.js?v=411';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=411';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=411';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=411';
+import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=411';
+import { patternsFor } from '../deliveryplan.js?v=411';
+import { INVOICING } from '../invoicing.js?v=411';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=411';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=411';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=411';
+import { renderRelatedMovements } from './movements.js?v=411';
+import { openInvoiceListSheet } from './invoice.js?v=411';
+import { openContractDocSheet } from './contract.js?v=411';
+import { wireJumps } from '../jump.js?v=411';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=411';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=411';
+import { freightState } from '../freight.js?v=411';
+import { activeSales, paidSales } from '../paidsales.js?v=411';
+import { openVendorDecSheet } from './vendordec.js?v=411';
+import { summarise as summariseOrders } from '../orders.js?v=411';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=411';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=411';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=411';
+import { standardFor } from '../grades.js?v=411';
+import { commodityClass } from '../commoditycolor.js?v=411';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=411';
 
 let unsub = null;
 
@@ -581,7 +582,7 @@ function openSaleSheet(existing) {
       ${existing ? `<button class="btn secondary" id="view-invoice" style="margin-top:12px">${invoiceButtonLabel(existing)}</button>` : ''}
       ${existing ? `<button class="btn secondary" id="view-contract" style="margin-top:8px">Confirmation of sale (PDF)&hellip;</button>` : ''}
       ${existing ? `<button class="btn secondary" id="make-vendordec" style="margin-top:8px">Vendor declaration&hellip;</button>` : ''}
-      ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:8px">Delete sale</button>` : ''}
+      ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="del" style="margin-top:8px">Delete sale</button>` : ''}
       <div class="save-bar">
         <div class="total"><div class="l">Contract value</div><div class="v" id="total-preview">—</div></div>
         <button class="btn" id="save">Save</button>

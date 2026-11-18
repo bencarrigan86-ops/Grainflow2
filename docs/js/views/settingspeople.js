@@ -1,10 +1,10 @@
-import { db } from '../storage.js?v=410';
-import { esc } from '../fmt.js?v=410';
-import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=410';
-import { switchGroups, readSwitches, withSwitch } from '../farmswitches.js?v=410';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=410';
-import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=410';
-import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=410';
+import { db } from '../storage.js?v=411';
+import { esc } from '../fmt.js?v=411';
+import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=411';
+import { switchGroups, readSwitches, withSwitch } from '../farmswitches.js?v=411';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=411';
+import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=411';
+import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=411';
 
 // ---------------------------------------------------------------------------
 // People

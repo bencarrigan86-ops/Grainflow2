@@ -1,28 +1,29 @@
-import { db } from '../storage.js?v=410';
-import { commodityClass } from '../commoditycolor.js?v=410';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=410';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=410';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=410';
-import { withholdingClash } from '../fumigation.js?v=410';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=410';
-import { compressAndStampImage } from '../img.js?v=410';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=410';
-import { specText, extraSpecKey } from '../outload.js?v=410';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=410';
-import { pickableSilos } from '../silopick.js?v=410';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=410';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=410';
-import { activeSales } from '../paidsales.js?v=410';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=410';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=410';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=410';
-import { nowTime } from '../loadreport.js?v=410';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=410';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=410';
-import { openGinRunSheet } from './ginrun.js?v=410';
-import { openModuleMoveSheet } from './modulemove.js?v=410';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=410';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=410';
+import { db } from '../storage.js?v=411';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=411';
+import { commodityClass } from '../commoditycolor.js?v=411';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=411';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=411';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=411';
+import { withholdingClash } from '../fumigation.js?v=411';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=411';
+import { compressAndStampImage } from '../img.js?v=411';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=411';
+import { specText, extraSpecKey } from '../outload.js?v=411';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=411';
+import { pickableSilos } from '../silopick.js?v=411';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=411';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=411';
+import { activeSales } from '../paidsales.js?v=411';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=411';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=411';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=411';
+import { nowTime } from '../loadreport.js?v=411';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=411';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=411';
+import { openGinRunSheet } from './ginrun.js?v=411';
+import { openModuleMoveSheet } from './modulemove.js?v=411';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=411';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=411';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -104,13 +105,13 @@ function paint(root) {
         <div id="ticket-list"></div>
       </div>
     </div>
-    ${movements.length > 0 ? `<button class="fab-secondary beside-label" id="repeat-movement">Repeat</button>` : ''}
-    <button class="fab labelled" id="add-movement" aria-label="Add a load">+ Add load</button>
+    ${movements.length > 0 && canEditLoads(db.getRole()) ? `<button class="fab-secondary beside-label" id="repeat-movement">Repeat</button>` : ''}
+    ${canEditLoads(db.getRole()) ? `<button class="fab labelled" id="add-movement" aria-label="Add a load">+ Add load</button>` : ''}
   `;
 
   paintList(root);
 
-  root.querySelector('#add-movement').addEventListener('click', () => openMovementSheet(null));
+  root.querySelector('#add-movement')?.addEventListener('click', () => openMovementSheet(null));
   const toolsMenu = root.querySelector('#mv-tools');
   const toolsBtn = root.querySelector('#mv-tools-btn');
   const setMenu = (open) => { toolsMenu.hidden = !open; toolsBtn.setAttribute('aria-expanded', String(open)); };
@@ -612,7 +613,7 @@ export function openMovementSheet(existing, template) {
           <label>Weight status</label>
           <div class="segmented" id="m-status">
             <button data-status="estimate" class="${(src?.weightStatus || 'estimate') === 'estimate' ? 'active' : ''}">Estimate</button>
-            <button data-status="final" class="${src?.weightStatus === 'final' ? 'active' : ''}">Final</button>
+            <button data-status="final" class="${src?.weightStatus === 'final' ? 'active' : ''}"${canMarkFinal(db.getRole()) ? '' : ' disabled title="An owner or manager marks a weight final"'}>Final</button>
           </div>
         </div>
         ${existing?.sourceRef ? `<div class="hint" style="margin-bottom:8px">Movement number from the freight platform: <strong>${esc(existing.sourceRef)}</strong></div>` : ''}
@@ -671,9 +672,18 @@ export function openMovementSheet(existing, template) {
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-quality" ${readQuality() ? 'checked' : ''} style="width:18px;height:18px" /> Quality results (if the load was tested)</label>
         <button class="btn secondary" id="tk-send" type="button">Send this load as a PDF</button>
         <div class="meta" style="margin-top:6px;font-size:12px">Sends the load as it is on the screen now. Save the ticket to keep any changes.</div></div></details>` : ''}
-${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete movement</button>` : ''}
+${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete movement</button>` : ''}
       <div class="save-bar"><div class="total"><div class="l">Net load</div><div class="v" id="load-preview">—</div></div><button class="btn" id="save">Save</button></div>
     `;
+
+    // A load this login can read but not change: because of its role, or because the weight is final and that is for an owner or manager.
+    const lockedWhy = !existing ? '' : !canEditLoads(db.getRole()) ? 'Your login can read loads but not change them.'
+      : existing.weightStatus === 'final' && !canMarkFinal(db.getRole()) ? 'This weight is final. An owner or manager changes it.' : '';
+    if (lockedWhy) {
+      root.insertAdjacentHTML('afterbegin', `<div class="hint" style="margin:0 0 10px"><strong>${esc(lockedWhy)}</strong> You can still look, and send the ticket as a PDF.</div>`);
+      const bar = root.querySelector('.save-bar'); if (bar) bar.style.display = 'none';
+      root.querySelectorAll('input, select, textarea, button').forEach((el) => { if (!el.closest('#tk-fold')) el.disabled = true; });
+    }
 
     const fromRowsEl = root.querySelector('#from-rows');
     const sourcesTotalEl = root.querySelector('#from-sources-total');

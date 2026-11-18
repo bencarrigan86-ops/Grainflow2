@@ -97,7 +97,7 @@ check('the owner blurb says what it costs', () => {
 });
 
 check('every offered role is one the app knows', () => {
-  const known = ['owner', 'manager', 'bookkeeper', 'farm_worker', 'driver'];
+  const known = ['owner', 'manager', 'bookkeeper', 'farm_worker', 'driver', 'advisor'];
   assert.deepEqual(INVITABLE_ROLES.map((r) => r.value).sort(), [...known].sort());
 });
 
@@ -106,8 +106,9 @@ check('the roles offered match the roles the database will accept', () => {
   // role the check constraint rejects fails at the insert, after the owner has
   // typed an address and picked from a list that looked fine.
   const sql = readFileSync(
-    new URL('../supabase/migrations/20260831120000_initial_schema.sql', import.meta.url), 'utf8');
-  const block = sql.slice(sql.indexOf('create table invitations'));
+    new URL('../supabase/migrations/20261210000000_farm_switches_two.sql', import.meta.url), 'utf8');
+  // the Advisor role widened the list: the last word on it is the constraint added there
+  const block = sql.slice(sql.indexOf('add constraint invitations_role_check'));
   const allowed = block.match(/check \(role in \(([^)]*)\)\)/)[1]
     .split(',').map((s) => s.trim().replace(/'/g, '')).sort();
   assert.deepEqual(INVITABLE_ROLES.map((r) => r.value).sort(), allowed);

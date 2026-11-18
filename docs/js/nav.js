@@ -15,7 +15,7 @@
 // Pulled out of main.js for the same reason as boot.js and reconcile.js: a
 // decision worth testing should not be trapped inside a render function.
 
-export const ROLES = ['owner', 'manager', 'bookkeeper', 'farm_worker', 'driver'];
+export const ROLES = ['owner', 'manager', 'bookkeeper', 'farm_worker', 'driver', 'advisor'];
 
 /**
  * The table each tab is useless without.
@@ -54,6 +54,9 @@ export const TABS_BY_ROLE = {
   driver:      ['movement'],
   // support: the person the owner has let look at the farm, read only. Sees what an owner sees, writes nothing.
   support:     ['position', 'production', 'sales', 'movement', 'storage', 'reports'],
+  // advisor: an agronomist, accountant or bank the owner has let look, read only. Paddocks and storage always; the rest (loads and
+  // contracts, then prices and overheads) only as the owner switches them on: see tabsForRole().
+  advisor:     ['production', 'storage'],
 };
 
 /**
@@ -70,6 +73,7 @@ export const OFF_BAR_BY_ROLE = {
   farm_worker: ['account', 'help'],
   driver:      ['account', 'help'],
   support:     ['settings', 'account', 'help'],
+  advisor:     ['account', 'help'],
 };
 
 // The farm's own switches (see farmswitches.js), handed over by storage.js whenever the farm is loaded or they change.
@@ -85,6 +89,8 @@ export function tabsForRole(role) {
   const bar = [...TABS_BY_ROLE[r]];
   // a farm that has switched it on gives its workers Position as well, first in the bar like everyone else's
   if (r === 'farm_worker' && farmSwitch('workerSeesPosition') && !bar.includes('position')) bar.unshift('position');
+  // an advisor the owner has let see loads and contracts gets the rest of the bar, tonnes without prices unless those are on too
+  if (r === 'advisor' && farmSwitch('advisorSeesLoads')) return ['position', 'production', 'sales', 'movement', 'storage', 'reports'];
   return bar;
 }
 
@@ -144,4 +150,23 @@ export function canOpen(role, routeId) {
 export function canSeeYield(role) {
   // a farm can also let its workers see yields without giving them the Position tab
   return canOpen(role, 'position') || (role === 'farm_worker' && farmSwitch('workerSeesYields'));
+}
+
+/**
+ * May this role add and change loads? Owners, managers, workers and drivers always; a bookkeeper only on a farm that has switched
+ * it on; an advisor or support never. (The database says the same: see 20261210000000_farm_switches_two.sql.)
+ */
+export function canEditLoads(role) {
+  if (role === 'bookkeeper') return farmSwitch('bookkeeperEditsLoads');
+  return ['owner', 'manager', 'farm_worker', 'driver'].includes(role);
+}
+
+/** May this role delete a load or a contract? An owner or manager always; the rest unless the farm has reserved it for them. */
+export function canDelete(role) {
+  return role === 'owner' || role === 'manager' || !farmSwitch('deleteOwnerManagerOnly');
+}
+
+/** May this role mark a weight final (and change a load once it is)? Same shape: an owner or manager always. */
+export function canMarkFinal(role) {
+  return role === 'owner' || role === 'manager' || !farmSwitch('finalWeightsManagersOnly');
 }

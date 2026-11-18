@@ -1,35 +1,35 @@
-import { db } from './storage.js?v=410';
-import { supabase, ENV } from './supabase.js?v=410';
-import { installErrorLog } from './supportinfo.js?v=410';
-import { loadMySeries, rememberedSeries } from './outloadseries.js?v=410';
-import { initTheme } from './theme.js?v=410';
+import { db } from './storage.js?v=411';
+import { supabase, ENV } from './supabase.js?v=411';
+import { installErrorLog } from './supportinfo.js?v=411';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=411';
+import { initTheme } from './theme.js?v=411';
 initTheme();
-import { renderPosition } from './views/position.js?v=410';
-import { renderProduction } from './views/production.js?v=410';
-import { renderReports } from './views/reports.js?v=410';
-import { renderSales } from './views/sales.js?v=410';
-import { renderMovements } from './views/movements.js?v=410';
-import { renderStorage } from './views/storage.js?v=410';
-import { renderSettings } from './views/settings.js?v=410';
-import { renderLogin } from './views/login.js?v=410';
-import { renderAccount } from './views/account.js?v=410';
-import { renderHelp } from './views/help.js?v=410';
+import { renderPosition } from './views/position.js?v=411';
+import { renderProduction } from './views/production.js?v=411';
+import { renderReports } from './views/reports.js?v=411';
+import { renderSales } from './views/sales.js?v=411';
+import { renderMovements } from './views/movements.js?v=411';
+import { renderStorage } from './views/storage.js?v=411';
+import { renderSettings } from './views/settings.js?v=411';
+import { renderLogin } from './views/login.js?v=411';
+import { renderAccount } from './views/account.js?v=411';
+import { renderHelp } from './views/help.js?v=411';
 import {
   getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=410';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=410';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=410';
-import { esc, todayLocal } from './fmt.js?v=410';
-import { isSheetOpen, notify } from './ui.js?v=410';
-import { describeMerges } from './ticketmerge.js?v=410';
-import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=410';
-import { addDays } from './fumigation.js?v=410';
-import { watchLists } from './band.js?v=410';
-import { APP_VERSION } from './version.js?v=410';
-import { startUpdateCheck } from './updatecheck.js?v=410';
-import { emailFromTrialHash } from './trialtext.js?v=410';
-import { installWatch, requestPersistence } from './pwa.js?v=410';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=410';
+} from './auth.js?v=411';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=411';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=411';
+import { esc, todayLocal } from './fmt.js?v=411';
+import { isSheetOpen, notify } from './ui.js?v=411';
+import { describeMerges } from './ticketmerge.js?v=411';
+import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=411';
+import { addDays } from './fumigation.js?v=411';
+import { watchLists } from './band.js?v=411';
+import { APP_VERSION } from './version.js?v=411';
+import { startUpdateCheck } from './updatecheck.js?v=411';
+import { emailFromTrialHash } from './trialtext.js?v=411';
+import { installWatch, requestPersistence } from './pwa.js?v=411';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=411';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -454,6 +454,7 @@ async function boot() {
     // Ask the phone to keep what is saved on it. Best effort, and quiet: the answer is shown on Account.
     requestPersistence().catch(() => {});
     if (currentRole === 'support') noteSupportOpen(membership.farmId, membership.farmName);
+    if (currentRole === 'advisor') noteAdvisorView(membership.farmName);
   } catch (e) {
     app.innerHTML = `<div class="view"><div class="card">
       <h2>Could not load the farm</h2>
@@ -508,6 +509,17 @@ function noteSupportOpen(farmId, farmName = '') {
   sw.textContent = 'Switch farm';
   sw.style.cssText = 'color:inherit;text-decoration:underline';
   bar.appendChild(sw);
+  document.body.prepend(bar);
+}
+
+/** An advisor looking at a farm: the screen says plainly that it is read only. */
+function noteAdvisorView(farmName = '') {
+  if (document.getElementById('support-banner')) return;
+  const bar = document.createElement('div');
+  bar.id = 'support-banner';
+  bar.setAttribute('role', 'status');
+  bar.style.cssText = 'position:sticky;top:0;z-index:50;padding:6px 12px;text-align:center;font-size:12px;font-weight:700;background:var(--warn);color:#14171a';
+  bar.textContent = `Advisor view${farmName ? ` of ${farmName}` : ''}: read only. Nothing you change here is sent.`;
   document.body.prepend(bar);
 }
 

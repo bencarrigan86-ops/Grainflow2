@@ -4,21 +4,24 @@
 // spray marked. What is on the form and where is decided in spray.js; the PDF is drawn in spraypdf.js. The job is saved
 // as it is filled in, so a request can be started in the paddock and finished at the desk.
 
-import { db } from '../storage.js?v=410';
-import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=410';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=410';
-import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=410';
+import { db } from '../storage.js?v=411';
+import { farmSwitch } from '../nav.js?v=411';
+import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=411';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=411';
+import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=411';
 import {
   FORMS, RATE_UNITS, MAX_CHEMICALS, CHECKLIST, sprayDefaults, sprayProblems, sprayTotals, sprayTitle, usedChemicals, plain,
-} from '../spray.js?v=410';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=410';
-import { loadMySignature } from '../mysignature.js?v=410';
-import { signerNamesFor } from './signtoggle.js?v=410';
-import { signatureSvg } from './signaturepad.js?v=410';
-import { openMapSheet } from './farmmap.js?v=410';
-import { buildSprayPdf } from '../spraypdf.js?v=410';
+} from '../spray.js?v=411';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=411';
+import { loadMySignature } from '../mysignature.js?v=411';
+import { signerNamesFor } from './signtoggle.js?v=411';
+import { signatureSvg } from './signaturepad.js?v=411';
+import { openMapSheet } from './farmmap.js?v=411';
+import { buildSprayPdf } from '../spraypdf.js?v=411';
 
-export const canSpray = (role) => ['owner', 'manager'].includes(role);
+// A farm worker can write spray requests on a farm that has switched it on (see farmswitches.js); sending one on is for an owner or manager.
+export const canSpray = (role) => ['owner', 'manager'].includes(role) || (role === 'farm_worker' && farmSwitch('workersRaiseSprays'));
+export const canSendSpray = (role) => ['owner', 'manager'].includes(role);
 
 const STATUS = { draft: ['Draft', ''], sent: ['Sent', 'pos'], done: ['Done', 'pos'] };
 
@@ -38,7 +41,12 @@ export function openSprayJobsSheet() {
           </div>`;
         }).join('')}
         <button type="button" class="btn" id="sp-new" style="margin-top:10px">+ New spray request</button>`;
-      root.querySelectorAll('[data-job]').forEach((el) => el.addEventListener('click', () => openSprayFormSheet(jobs.find((j) => j.id === el.dataset.job))));
+      root.querySelectorAll('[data-job]').forEach((el) => el.addEventListener('click', () => {
+        const job = jobs.find((j) => j.id === el.dataset.job);
+        // once it is sent it is a manager's: a worker's change would only be refused
+        if (!canSendSpray(db.getRole()) && job.status && job.status !== 'draft') { toast('Sent to the contractor. A manager looks after it.'); return; }
+        openSprayFormSheet(job);
+      }));
       root.querySelector('#sp-new').addEventListener('click', () => openSprayFormSheet(null));
     };
     draw();
@@ -239,10 +247,10 @@ export async function openSprayFormSheet(existing, start = {}) {
         ${d.form === 'aircair' ? aircairCard() : ''}
         ${checklistCard()}
         <div id="sp-problems" class="hint" style="color:var(--danger);margin:8px 0"></div>
-        <button class="btn" id="sp-send">${share ? 'Save and send' : 'Save, download and email'}</button>
-        <button class="btn secondary" id="sp-download" style="margin-top:8px">Save and download the PDF</button>
-        <button class="btn secondary" id="sp-save" style="margin-top:8px">Save as a draft</button>
-        ${savedId ? `<button class="btn secondary" id="sp-done" style="margin-top:8px">${d.status === 'done' ? 'Mark as not done' : 'Mark as done'}</button><button class="btn ghost-danger" id="sp-delete" style="margin-top:8px">Delete this request</button>` : ''}`;
+        ${canSendSpray(db.getRole()) ? `<button class="btn" id="sp-send">${share ? 'Save and send' : 'Save, download and email'}</button>
+        <button class="btn secondary" id="sp-download" style="margin-top:8px">Save and download the PDF</button>` : '<div class="hint">A manager checks it and sends it to the contractor.</div>'}
+        <button class="btn${canSendSpray(db.getRole()) ? ' secondary' : ''}" id="sp-save" style="margin-top:8px">Save as a draft</button>
+        ${savedId && canSendSpray(db.getRole()) ? `<button class="btn secondary" id="sp-done" style="margin-top:8px">${d.status === 'done' ? 'Mark as not done' : 'Mark as done'}</button><button class="btn ghost-danger" id="sp-delete" style="margin-top:8px">Delete this request</button>` : ''}`;
       wire(); overrides(); totals();
     }
 
@@ -336,8 +344,8 @@ export async function openSprayFormSheet(existing, start = {}) {
         });
       });
       root.querySelector('#sp-save').addEventListener('click', () => { if (persist()) { toast('Saved'); } });
-      root.querySelector('#sp-send').addEventListener('click', () => send(false));
-      root.querySelector('#sp-download').addEventListener('click', () => send(true));
+      root.querySelector('#sp-send')?.addEventListener('click', () => send(false));
+      root.querySelector('#sp-download')?.addEventListener('click', () => send(true));
       root.querySelector('#sp-done')?.addEventListener('click', () => { collect(); d.status = d.status === 'done' ? 'sent' : 'done'; if (persist()) toast(d.status === 'done' ? 'Marked as done' : 'Back to sent'); paint(); });
       root.querySelector('#sp-delete')?.addEventListener('click', () => confirmDelete('Delete this spray request?', () => { db.deleteSprayJob(savedId); toast('Deleted'); openSprayJobsSheet(); }));
     }

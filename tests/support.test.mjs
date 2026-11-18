@@ -58,7 +58,7 @@ console.log('\n=== the app ===');
 check('support sees the whole bar but nothing it does is queued to send', () => {
   assert.deepEqual(tabsForRole('support'), tabsForRole('owner'));
   assert.ok(canOpen('support', 'settings'));
-  assert.match(read('docs/js/storage.js'), /if \(role === 'support'\) \{ \/\* read only \*\/ \}/);
+  assert.match(read('docs/js/storage.js'), /if \(role === 'support' \|\| role === 'advisor'\) \{ \/\* read only \*\/ \}/);
 });
 check('support does not see the bank section, and the owner is the one who can give access', () => {
   const s = read('docs/js/views/settings.js');

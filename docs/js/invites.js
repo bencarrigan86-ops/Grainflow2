@@ -42,6 +42,8 @@ export const INVITABLE_ROLES = [
     blurb: 'Paddocks, storage and movements. No contract pricing, no position.' },
   { value: 'driver',      label: 'Driver',
     blurb: 'Movements only — the loads they cart and nothing else.' },
+  { value: 'advisor',     label: 'Advisor',
+    blurb: 'Looks and changes nothing: an agronomist, accountant or bank. Sees paddocks, production, inputs and sprays. Loads, prices and overheads only if you switch them on in Settings.' },
 ];
 
 export const DEFAULT_EXPIRY_DAYS = 14;

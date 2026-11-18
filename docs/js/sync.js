@@ -15,13 +15,14 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=410';
-import { stateToRows } from './mapping.js?v=410';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=410';
-import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=410';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=410';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=410';
-import { readAllIn } from './pages.js?v=410';
+import { supabase } from './supabase.js?v=411';
+import { stateToRows } from './mapping.js?v=411';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=411';
+import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=411';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=411';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=411';
+import { readAllIn } from './pages.js?v=411';
+import { farmSwitch } from './nav.js?v=411';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -58,6 +59,15 @@ const WRITABLE = {
   // a worker records what is used and counts, never a delivery (which carries the price): see pushRowsFor()
   farm_worker: ['fields', 'field_agronomy', 'movements', 'movement_legs', 'movement_photos', 'input_stock'],
   driver: ['movements', 'movement_legs', 'movement_photos'],
+  advisor: [],   // looks, writes nothing
+};
+
+// The tables a role may send: the list above, and what the farm's switches add (see farmswitches.js). The database says the same.
+const writableTables = (role) => {
+  const list = [...(WRITABLE[role] || [])];
+  if (role === 'bookkeeper' && farmSwitch('bookkeeperEditsLoads')) list.push('movements', 'movement_legs');
+  if (role === 'farm_worker' && farmSwitch('workersRaiseSprays')) list.push('spray_jobs');
+  return list;
 };
 
 /**
@@ -161,7 +171,7 @@ export async function push(state, farmId, role = 'owner') {
     for (const year of Object.values(state?.years || {})) {
       for (const m of year.movements || []) if (ticketIds.includes(m.id)) sentAs.set(m.id, plainOf(m));
     }
-    const tables = WRITABLE[role] || [];
+    const tables = writableTables(role);
     const result = { tables: {}, deleted: 0, errors: [], role, skippedTables: [], merged: notices };
 
     // Business details: an update, never an upsert. Owners only — for everyone
@@ -335,4 +345,4 @@ export function pushOnReconnect(getState, farmId, role) {
   return () => window.removeEventListener('online', attempt);
 }
 
-export { ORDER as PUSH_ORDER, WRITABLE, CONFLICT_KEY, chunk };
+export { ORDER as PUSH_ORDER, WRITABLE, writableTables, CONFLICT_KEY, chunk };

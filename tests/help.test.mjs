@@ -27,6 +27,7 @@ function policies(kind) {
   for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) {
     const sql = read(`supabase/migrations/${f}`);
     for (const m of sql.matchAll(new RegExp(`create policy \\w+_${kind} on (\\w+) for ${kind}\\s*([\\s\\S]*?);`, 'g'))) {
+      if (m[2].includes('app_switch(')) continue;   // a policy a farm's switch turns on is on top of the standard rules this guide states
       const named = [...new Set([...m[2].matchAll(/'(owner|manager|bookkeeper|farm_worker|driver)'/g)].map((x) => x[1]))];
       out.set(m[1], named.length ? named : null);
     }
@@ -36,7 +37,8 @@ function policies(kind) {
 const sel = policies('select');
 const ins = policies('insert');
 const area = (name) => ACCESS.find((r) => r.area === name);
-const who = (row, ...levels) => ROLES.filter((r) => levels.includes(row[r]));
+// (the advisor reads through policies of its own, checked in tests/farmswitches.test.mjs)
+const who = (row, ...levels) => ROLES.filter((r) => r !== 'advisor' && levels.includes(row[r]));
 
 console.log('\n=== the table is complete ===');
 check('every area gives every role a level, and every role has a summary', () => {
