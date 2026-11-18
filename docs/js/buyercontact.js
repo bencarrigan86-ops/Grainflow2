@@ -5,7 +5,7 @@
 // columns are needed. The form shows three boxes; this turns the line into three and back again. A line typed
 // before the boxes existed ("Jane 0400 123 456") is pulled apart the same way. Pure.
 
-import { emailIn, phoneIn } from './vendordec.js?v=415';
+import { emailIn, phoneIn } from './vendordec.js?v=416';
 
 const clean = (v) => String(v ?? '').trim();
 

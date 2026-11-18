@@ -1116,6 +1116,11 @@ details.fold.feature > *:last-child { margin-bottom: 14px; }
 .assume-line label { display: block; font-size: 14px; font-weight: 800; margin-bottom: 8px; color: var(--text); }
 .assume-line select { width: 100%; min-height: 46px; font-size: 17px; font-weight: 700; border: 2px solid var(--accent-summary); border-radius: 10px; }
 .assume-line .hint { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+/* the smaller one, for a what-if inside a report: the question and the choice on one line, the hint under them */
+.assume-line.compact { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 8px 0 6px; padding: 7px 10px; border-width: 1.5px; border-radius: 10px; }
+.assume-line.compact label { flex: 1 1 auto; margin: 0; font-size: 13px; font-weight: 700; }
+.assume-line.compact select { flex: 0 1 auto; width: auto; max-width: 55%; min-height: 36px; font-size: 14px; font-weight: 700; border-width: 1.5px; border-radius: 8px; }
+.assume-line.compact .hint { flex: 1 0 100%; margin: 0; font-size: 11px; line-height: 1.35; }
 .storage-find.one { grid-template-columns: minmax(0, 1fr); }
 .prod-tools, .tile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
 .prod-tools .tool-tile, .tile-grid .tool-tile { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; min-height: 54px; padding: 8px 12px; text-align: left; margin: 0; min-width: 0; background: var(--surface); border: 1px solid var(--border); color: var(--text); }

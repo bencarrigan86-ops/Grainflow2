@@ -8,18 +8,18 @@
 // The reading and the rules live in loadimport.js, where they are tested. This
 // file is the screen: it holds the person's choices and hands them over.
 
-import { db } from '../storage.js?v=415';
-import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=415';
-import { esc, num, shortDate } from '../fmt.js?v=415';
-import { commodityFills } from '../commodityfill.js?v=415';
-import { isTransit } from '../transit.js?v=415';
-import { reconcileLoads } from '../loadcheck.js?v=415';
+import { db } from '../storage.js?v=416';
+import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=416';
+import { esc, num, shortDate } from '../fmt.js?v=416';
+import { commodityFills } from '../commodityfill.js?v=416';
+import { isTransit } from '../transit.js?v=416';
+import { reconcileLoads } from '../loadcheck.js?v=416';
 import {
   FIELD_SPECS, REQUIRED_KEYS, chooseSetup, recallSetups, rememberSetup, setupProblems, peekFile, distinctOf, likelyFinished,
-} from '../loadmap.js?v=415';
+} from '../loadmap.js?v=416';
 import {
   readFreightExport, planNames, distinctNames, matchCommodity, matchSiloByNumber, suggestCutoff, buildMovements, COMPLETED,
-} from '../loadimport.js?v=415';
+} from '../loadimport.js?v=416';
 
 const MEMORY_KEY = 'grainflow.loadImportChoices';
 const NEW = '__new';
@@ -43,9 +43,10 @@ function remember(choices) {
   try { localStorage.setItem(MEMORY_KEY, JSON.stringify(keep)); } catch { /* private mode: it just asks again */ }
 }
 
-// A bunker is a bunker and a shed holds tonnes without a geometry; anything else
-// is a silo. The person can change it afterwards on the Storage screen.
-const storageKindFor = (name) => (/bunker/i.test(name) ? 'bunker' : /shed|store/i.test(name) ? 'tally' : 'silo');
+// A bunker, a shed or a store is a bunker / shed (grain in a heap, measured and counted in tonnes); anything else is a silo. Never a tally:
+// that is a bare count of bales or modules for cotton, with no measurements, and a weighbridge load is tonnes of grain. The person can
+// change it afterwards on the Storage screen.
+export const storageKindFor = (name) => (/bunker|shed|store/i.test(name) ? 'bunker' : 'silo');
 
 export function openLoadImportSheet() {
   openSheet('Import truck loads', (root) => {

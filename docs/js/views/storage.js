@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=415';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=415';
-import { isHay, balesInStorage, describeBales } from '../hay.js?v=415';
-import { modulesReport } from '../modulesreport.js?v=415';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=415';
-import { isTransit } from '../transit.js?v=415';
-import { isOffFarm } from '../offfarm.js?v=415';
-import { paintOffFarmCard } from './offfarm.js?v=415';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=415';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=415';
-import { hasStorageQuality } from '../mapping.js?v=415';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=415';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=415';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=415';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=415';
-import { renderRelatedMovements } from './movements.js?v=415';
-import { openSiloSetupSheet } from './silosetup.js?v=415';
-import { openCalculatorSheet } from './calculator.js?v=415';
-import { commodityFills } from '../commodityfill.js?v=415';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=415';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=415';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=415';
+import { db } from '../storage.js?v=416';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=416';
+import { isHay, balesInStorage, describeBales } from '../hay.js?v=416';
+import { modulesReport } from '../modulesreport.js?v=416';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=416';
+import { isTransit } from '../transit.js?v=416';
+import { isOffFarm } from '../offfarm.js?v=416';
+import { paintOffFarmCard } from './offfarm.js?v=416';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=416';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=416';
+import { hasStorageQuality } from '../mapping.js?v=416';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=416';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=416';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=416';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=416';
+import { renderRelatedMovements } from './movements.js?v=416';
+import { openSiloSetupSheet } from './silosetup.js?v=416';
+import { openCalculatorSheet } from './calculator.js?v=416';
+import { commodityFills } from '../commodityfill.js?v=416';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=416';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=416';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=416';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=415';
+} from '../silolayers.js?v=416';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -1190,7 +1190,7 @@ function openStorageSheet(existing) {
         <div class="segmented" id="s-kind">
           <button data-kind="silo" class="${kind === 'silo' ? 'active' : ''}">Silo</button>
           <button data-kind="bunker" class="${kind === 'bunker' ? 'active' : ''}">Bunker / shed</button>
-          ${!existing ? `<button data-kind="tally" class="${kind === 'tally' ? 'active' : ''}">Tally</button>` : ''}
+          ${!existing || existing.kind === 'tally' ? `<button data-kind="tally" class="${kind === 'tally' ? 'active' : ''}">Tally</button>` : ''}
         </div>
         ${field({ label: 'Name', id: 's-name', value: existing?.name, placeholder: existing?.kind === 'bunker' || kind === 'bunker' ? 'e.g. Bunker 1' : 'e.g. Silo 12 (155t)' })}
         ${field({ label: 'Commodity currently stored', id: 's-commodity', type: 'select', value: existing?.commodityId, options: commodityOptions(commodities) })}
@@ -1365,7 +1365,15 @@ function openStorageSheet(existing) {
     // measured shape. Reuses the same opening-stock/ledger mechanism as
     // silo/bunker, just skips every geometry field.
     function buildTally() {
+      // an existing tally counted in tonnes (an earlier load import made some) is grain: it can be made a silo or a bunker, to measure it
+      const grainTally = !!existing && existing.kind === 'tally' && !isTransit(existing) && (existing.unitLabel || 't') === 't';
       root.innerHTML = `
+        ${grainTally ? `<div class="field hint" style="margin-bottom:8px">Counted in tonnes, with no measurements. Choose Silo or Bunker / shed to measure it.</div>
+        <div class="segmented" id="s-kind">
+          <button data-kind="silo">Silo</button>
+          <button data-kind="bunker">Bunker / shed</button>
+          <button data-kind="tally" class="active">Tally</button>
+        </div>` : ''}
         ${!existing ? `
         <div class="segmented" id="s-kind">
           <button data-kind="silo" class="${kind === 'silo' ? 'active' : ''}">Silo</button>

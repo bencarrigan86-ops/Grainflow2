@@ -1,35 +1,35 @@
-import { db } from '../storage.js?v=415';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=415';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT, areaShare, productionSummary } from '../derived.js?v=415';
-import { fertPdf } from '../fertpdf.js?v=415';
-import { seedPdf } from '../seedpdf.js?v=415';
-import { yieldPdf } from '../yieldpdf.js?v=415';
-import { harvestPdf } from '../harvestpdf.js?v=415';
-import { modulesPdf } from '../modulespdf.js?v=415';
-import { modulesReport } from '../modulesreport.js?v=415';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=415';
-import { num, tons, esc, money, todayLocal, dmy } from '../fmt.js?v=415';
-import { field, getVal, getNum } from '../ui.js?v=415';
-import { canSeeYield, canOpen, canSeePrices } from '../nav.js?v=415';
-import { gmReport } from '../grossmargin.js?v=415';
-import { gmPdf } from '../gmpdf.js?v=415';
-import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=415';
-import { openMoneySheet, openMtmSheet, openDeliveriesSheet } from './outstanding.js?v=415';
-import { openOptimiserSheet } from './optimiser.js?v=415';
-import { openCalculatorSheet } from './calculator.js?v=415';
-import { openEofySheet } from './eofy.js?v=415';
-import { openPricesSheet } from './prices.js?v=415';
-import { openRotationSheet } from './rotation.js?v=415';
-import { openAveragesSheet } from './averages.js?v=415';
-import { openLoadReportSheet } from './loadreport.js?v=415';
-import { openTraceSheet } from './tracereport.js?v=415';
-import { openXeroSheet } from './xero.js?v=415';
-import { openMapSheet } from './farmmap.js?v=415';
-import { openExportCsvSheet } from './settingsexport.js?v=415';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=415';
-import { harvestReport, siloSpace, roomSplit, roomSummary, pctText } from '../harvest.js?v=415';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=415';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=415';
+import { db } from '../storage.js?v=416';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=416';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT, areaShare, productionSummary } from '../derived.js?v=416';
+import { fertPdf } from '../fertpdf.js?v=416';
+import { seedPdf } from '../seedpdf.js?v=416';
+import { yieldPdf } from '../yieldpdf.js?v=416';
+import { harvestPdf } from '../harvestpdf.js?v=416';
+import { modulesPdf } from '../modulespdf.js?v=416';
+import { modulesReport } from '../modulesreport.js?v=416';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=416';
+import { num, tons, esc, money, todayLocal, dmy } from '../fmt.js?v=416';
+import { field, getVal, getNum } from '../ui.js?v=416';
+import { canSeeYield, canOpen, canSeePrices } from '../nav.js?v=416';
+import { gmReport } from '../grossmargin.js?v=416';
+import { gmPdf } from '../gmpdf.js?v=416';
+import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=416';
+import { openMoneySheet, openMtmSheet, openDeliveriesSheet } from './outstanding.js?v=416';
+import { openOptimiserSheet } from './optimiser.js?v=416';
+import { openCalculatorSheet } from './calculator.js?v=416';
+import { openEofySheet } from './eofy.js?v=416';
+import { openPricesSheet } from './prices.js?v=416';
+import { openRotationSheet } from './rotation.js?v=416';
+import { openAveragesSheet } from './averages.js?v=416';
+import { openLoadReportSheet } from './loadreport.js?v=416';
+import { openTraceSheet } from './tracereport.js?v=416';
+import { openXeroSheet } from './xero.js?v=416';
+import { openMapSheet } from './farmmap.js?v=416';
+import { openExportCsvSheet } from './settingsexport.js?v=416';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=416';
+import { harvestReport, siloSpace, roomSplit, roomSummary, pctText } from '../harvest.js?v=416';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=416';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=416';
 
 let unsub = null;
 let view = null;   // null is the screen of tiles; otherwise the report that is open
@@ -794,7 +794,7 @@ function spaceAsRow(space, options, assume, pick, picked = '') {
   if (!(space.needsCommodity || space.emptyWithVolume) || !options.length) return '';
   const n = space.emptyWithVolume || space.needsCommodity;
   const fallback = space.needsCommodity && !picked && assume ? ` Silos with no commodity set are worked out as ${esc(assume.name)}.` : '';
-  return `<div class="assume-line"><label for="space-as">Try the ${n} empty silo${n === 1 ? '' : 's'} as</label><select id="space-as" data-season="${esc(pick)}"><option value="">As set on each silo</option>${options.map((c) => `<option value="${esc(c.name)}" ${picked === c.name ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select><div class="hint">A what-if for this report: every empty silo with a volume is worked out as the crop picked. Nothing is changed on the silos.${fallback}</div></div>`;
+  return `<div class="assume-line compact"><label for="space-as">Try empty silos (${n}) as</label><select id="space-as" data-season="${esc(pick)}"><option value="">As set</option>${options.map((c) => `<option value="${esc(c.name)}" ${picked === c.name ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select><div class="hint">A what-if: empty silos with a volume are worked out as this crop; "As set" uses each silo's own. Nothing is changed on the silos.${fallback}</div></div>`;
 }
 
 /** A commodity's paddocks for the table: the ones still being harvested, and the finished ones too when asked for. */
