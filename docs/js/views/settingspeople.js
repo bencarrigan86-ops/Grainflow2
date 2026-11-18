@@ -1,10 +1,12 @@
-import { db } from '../storage.js?v=412';
-import { esc } from '../fmt.js?v=412';
-import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=412';
-import { switchGroups, readSwitches, withSwitch } from '../farmswitches.js?v=412';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=412';
-import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=412';
-import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=412';
+import { db } from '../storage.js?v=413';
+import { esc } from '../fmt.js?v=413';
+import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=413';
+import { SWITCHES, switchesForArea, readSwitches, withSwitch } from '../farmswitches.js?v=413';
+import { ACCESS, effectiveAccess } from '../helpcontent.js?v=413';
+import { pill, ROLE_SHORT } from './levelpill.js?v=413';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=413';
+import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=413';
+import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=413';
 
 // ---------------------------------------------------------------------------
 // People
@@ -125,13 +127,28 @@ export function paintPeople(card) {
  * above stay the first thing on the card. The database enforces them (see farmswitches.js), so a person is never sent what a
  * switch keeps from them.
  */
+const ROLE_WORD = { Managers: 'Managers', Workers: 'Workers', Drivers: 'Drivers', Bookkeepers: 'Bookkeepers', Advisors: 'Advisors' };
+
+/** One question under an area: a tick box, with the role it is about in front. A question that needs another is greyed until that is on. */
+function questionRow(x, on) {
+  const blocked = x.needs && !on[x.needs];
+  const need = blocked ? SWITCHES.find((s) => s.key === x.needs)?.label : '';
+  return `<label class="sw-row${blocked ? ' sw-off' : ''}"><input type="checkbox" data-switch="${x.key}" ${on[x.key] ? 'checked' : ''} ${blocked ? 'disabled' : ''} /><span><strong>${ROLE_WORD[x.role] ? `${esc(ROLE_WORD[x.role])}: ` : ''}${esc(x.label)}</strong><span class="meta" style="display:block">${esc(blocked ? `Switch on "${need}" first.` : x.hint)}</span></span></label>`;
+}
+
+/** The farm's rules: each area with what every role can do in it now, and the questions that change it. */
 function switchesFoldHtml() {
   const on = readSwitches(db.getBusinessDetails().switches);
+  const rows = effectiveAccess(on);
   return `<details class="fold" id="switch-fold" ${switchesOpen ? 'open' : ''} style="margin-top:14px">
-    <summary><div><h2>What each role can see</h2><div class="sub">Switches for managers, workers and drivers</div></div></summary>
-    <div class="field hint" style="margin:8px 0">Everything starts off, the standard rules. A switch changes this farm only, and takes effect the next time each person's app refreshes.</div>
-    ${switchGroups().map((g) => `<div class="subhead">${esc(g.role)}</div>
-      ${g.items.map((x) => `<label class="sw-row"><input type="checkbox" data-switch="${x.key}" ${on[x.key] ? 'checked' : ''} /><span><strong>${esc(x.label)}</strong><span class="meta" style="display:block">${esc(x.hint)}</span></span></label>`).join('')}`).join('')}
+    <summary><div><h2>Who can do what</h2><div class="sub">This farm's rules, area by area</div></div></summary>
+    <div class="field hint" style="margin:8px 0">Each area shows what every kind of login can do there now. The questions under it change that for this farm only. Everything starts off, the standard rules, and a change reaches each person's app the next time it refreshes.</div>
+    ${rows.map((r) => {
+      const qs = switchesForArea(r.area);
+      return `<div class="area-block"><div class="ab-head"><strong>${esc(r.area)}</strong><span class="meta">${esc(r.hint)}</span></div>
+        <div class="ab-roles">${Object.keys(ROLE_SHORT).map((k) => `<div><span class="ab-role">${esc(ROLE_SHORT[k])}</span>${pill(r[k])}</div>`).join('')}</div>
+        ${qs.map((x) => questionRow(x, on)).join('')}</div>`;
+    }).join('')}
   </details>`;
 }
 

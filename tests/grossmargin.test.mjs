@@ -5,7 +5,7 @@
 // and the paddock's own cost is saved with the paddock.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { gmReport, costOverride } from '../docs/js/grossmargin.js';
+import { gmReport, costOverride, cropCostPerHa } from '../docs/js/grossmargin.js';
 import { setFarmSwitches, canSeePrices } from '../docs/js/nav.js';
 import { hubGroups } from '../docs/js/reportshub.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
@@ -97,6 +97,16 @@ check('the report is a tile, drawn on the Reports screen, with the cost box and 
   const sql = read('supabase/migrations/20261211000000_field_gm_cost.sql');
   assert.ok(sql.includes('add column if not exists gm_cost_ha numeric'));
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists gm_cost_ha numeric'));
+});
+
+check('the paddock sheet has the cost box: the crop\'s cost per hectare shown faintly, your own figure saved with the paddock', () => {
+  assert.equal(cropCostPerHa(commodities[0], fields), 400);                // 160000 over 400 ha
+  assert.equal(cropCostPerHa(commodities[0], fields, 100), 320);           // a paddock not yet saved counts with the rest
+  assert.equal(cropCostPerHa(null, fields), 0);
+  assert.equal(cropCostPerHa({ id: 'x', grossMarginCost: 500 }, fields), 0, 'no paddocks, no area, no figure');
+  const pr = read('docs/js/views/production.js');
+  assert.ok(pr.includes("id: 'gmCostHa'") && pr.includes('cropCostPerHa(') && pr.includes('gmCostHa: String(getVal(root'), 'the box is on the sheet and saved');
+  assert.ok(pr.includes("canSetCost = ['owner', 'manager']"), 'only those who can change a paddock');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

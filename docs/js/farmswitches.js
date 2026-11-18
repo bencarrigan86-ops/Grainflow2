@@ -6,33 +6,40 @@
 // Pure: no state, no screen.
 
 /**
- * In the order they are shown. `role` is the heading, `key` is what is saved, `label` is the line on the screen and `hint` is the
+ * In the order they are shown. `area` is the part of the app it sits under on the grid, `needs` another switch it only means anything
+ * with. `role` is the heading, `key` is what is saved, `label` is the line on the screen and `hint` is the
  * short plain sentence under it.
  */
 export const SWITCHES = [
-  { key: 'managerSeesPrices', role: 'Managers', label: 'See contract prices',
+  { key: 'managerSeesPrices', area: 'Contracts and prices', role: 'Managers', label: 'See contract prices',
     hint: 'What each contract pays, so their Position and Sales show money. Off, they see tonnes only.' },
-  { key: 'managerSeesOverheads', role: 'Managers', label: "See overheads and the whole farm's profit",
+  { key: 'managerSeesOverheads', area: 'Overheads', role: 'Managers', label: "See overheads and the whole farm's profit",
     hint: 'The farm-wide costs set in Settings. Off, a manager sees margin per paddock but not the farm result.' },
-  { key: 'workerSeesYields', role: 'Workers', label: 'See yields and tonnes per paddock',
+  { key: 'workerSeesYields', area: 'Production', role: 'Workers', label: 'See yields and tonnes per paddock',
     hint: 'What each paddock produced. Off, a worker sees the paddock list without yields.' },
-  { key: 'workerSeesPosition', role: 'Workers', label: 'See the Position tab',
+  { key: 'workerSeesPosition', area: 'Position', role: 'Workers', label: 'See the Position tab',
     hint: 'Tonnes produced, sold and unsold. Contract prices stay hidden.' },
-  { key: 'driverOwnLoadsOnly', role: 'Drivers', label: 'See only the loads they entered',
+  { key: 'driverOwnLoadsOnly', area: 'Loads and tickets', role: 'Drivers', label: 'See only the loads they entered',
     hint: 'Off, a driver sees every load on the farm, as the farm hands over loads between people.' },
-  { key: 'workersRaiseSprays', role: 'Workers', label: 'Write spray requests',
+  { key: 'workersRaiseSprays', area: 'Spray requests', role: 'Workers', label: 'Write spray requests',
     hint: 'They make a draft and save it. A manager sends it to the contractor.' },
-  { key: 'bookkeeperEditsLoads', role: 'Bookkeepers', label: 'Add and change loads',
+  { key: 'bookkeeperEditsLoads', area: 'Loads and tickets', role: 'Bookkeepers', label: 'Add and change loads',
     hint: 'Off, a bookkeeper reads loads but cannot add or change one. They still cannot delete.' },
-  { key: 'deleteOwnerManagerOnly', role: 'Deleting and weights', label: 'Only owners and managers delete',
+  { key: 'deleteOwnerManagerOnly', area: 'Loads and tickets', role: 'Deleting and weights', label: 'Only owners and managers delete',
     hint: 'A load or a contract. Off, anyone can delete what they entered.' },
-  { key: 'finalWeightsManagersOnly', role: 'Deleting and weights', label: 'Only owners and managers mark a weight final',
+  { key: 'finalWeightsManagersOnly', area: 'Loads and tickets', role: 'Deleting and weights', label: 'Only owners and managers mark a weight final',
     hint: 'Others enter loads as an estimate. Once a weight is final, only an owner or manager changes the load.' },
-  { key: 'advisorSeesLoads', role: 'Advisors', label: 'See loads and contracts',
+  { key: 'driverSeesStorage', area: 'Storage', role: 'Drivers', label: 'See the Storage tab',
+    hint: 'The silos and what is in them. Silo contents are worked out from the loads, so with "only the loads they entered" on they will be short.' },
+  { key: 'workerSeesSales', area: 'Contracts and prices', role: 'Workers', label: 'See contracts',
+    hint: 'The Sales tab with contracts and tonnes. Prices stay hidden.' },
+  { key: 'managerHidesBills', area: 'Invoices', role: 'Managers', label: 'Hide invoices and bills',
+    hint: 'Off, a manager sees and handles them as the standard rules say. On, they are not sent to a manager at all.' },
+  { key: 'advisorSeesLoads', area: 'Loads and tickets', role: 'Advisors', label: 'See loads and contracts',
     hint: 'Tonnes, Position and Reports, with no prices. An advisor always sees paddocks, production, inputs and sprays.' },
-  { key: 'advisorSeesPrices', role: 'Advisors', label: 'See prices, invoices and bills',
+  { key: 'advisorSeesPrices', area: 'Contracts and prices', needs: 'advisorSeesLoads', role: 'Advisors', label: 'See prices, invoices and bills',
     hint: 'Needs loads and contracts on as well.' },
-  { key: 'advisorSeesOverheads', role: 'Advisors', label: 'See overheads',
+  { key: 'advisorSeesOverheads', area: 'Overheads', needs: 'advisorSeesLoads', role: 'Advisors', label: 'See overheads',
     hint: 'The farm-wide costs set in Settings.' },
 ];
 
@@ -48,6 +55,9 @@ export function withSwitch(current, key, on) {
   if (!SWITCHES.some((s) => s.key === key)) return readSwitches(current);
   return { ...readSwitches(current), [key]: !!on };
 }
+
+/** The questions under one area of the grid (an area of helpcontent.js's ACCESS), in order. */
+export const switchesForArea = (area) => SWITCHES.filter((s) => s.area === area);
 
 /** The headings in order, each with its switches: [{ role, items: [...] }]. */
 export function switchGroups() {

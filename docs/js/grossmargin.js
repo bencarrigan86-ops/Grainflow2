@@ -9,7 +9,7 @@
 //
 // Pure: it is given what the screen already holds and returns figures; nothing is saved here.
 
-import { positionRows, fieldTons } from './derived.js?v=412';
+import { positionRows, fieldTons } from './derived.js?v=413';
 
 const n = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
@@ -53,4 +53,14 @@ export function gmReport(commodities, fields, sales, movements = []) {
     groups.push({ id: r.commodity.id, name: r.commodity.name, price, defaultCostHa, fields: rows, total: totalOf(rows, price) });
   }
   return { groups, total: totalOf(groups.flatMap((g) => g.fields)) };
+}
+
+/**
+ * The crop's gross margin cost per hectare (Settings), spread over its paddocks: what a paddock with no cost of its own is charged.
+ * `extraHa` is a paddock not yet saved, counted with the rest. Zero when the crop has no cost or no area.
+ */
+export function cropCostPerHa(commodity, fields, extraHa = 0) {
+  if (!commodity) return 0;
+  const area = fields.filter((f) => f.commodityId === commodity.id).reduce((s, f) => s + n(f.areaHa), 0) + n(extraHa);
+  return area > 0 ? n(commodity.grossMarginCost) / area : 0;
 }

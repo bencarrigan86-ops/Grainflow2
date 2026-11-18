@@ -4,24 +4,25 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=412';
-import { openSheet, openOver } from '../ui.js?v=412';
-import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=412';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=412';
-import { windowText } from '../orders.js?v=412';
-import { openOrderSheet } from './orders.js?v=412';
-import { openInvoiceListSheet } from './invoice.js?v=412';
-import { renderPayables, returnToAfterBill } from './payables.js?v=412';
-import { openXeroSheet } from './xero.js?v=412';
-import { cashflow } from '../cashflow.js?v=412';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=412';
-import { buyerStatements, statementPdf } from '../statement.js?v=412';
-import { buyerExposure } from '../exposure.js?v=412';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=412';
-import { exposurePdf } from '../exposurepdf.js?v=412';
-import { emailIn } from '../vendordec.js?v=412';
-import { invoiceLabel } from '../adjustment.js?v=412';
-import { matchesAll, amountText } from '../listsearch.js?v=412';
+import { canSeeBills } from '../nav.js?v=413';
+import { db } from '../storage.js?v=413';
+import { openSheet, openOver } from '../ui.js?v=413';
+import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=413';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=413';
+import { windowText } from '../orders.js?v=413';
+import { openOrderSheet } from './orders.js?v=413';
+import { openInvoiceListSheet } from './invoice.js?v=413';
+import { renderPayables, returnToAfterBill } from './payables.js?v=413';
+import { openXeroSheet } from './xero.js?v=413';
+import { cashflow } from '../cashflow.js?v=413';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=413';
+import { buyerStatements, statementPdf } from '../statement.js?v=413';
+import { buyerExposure } from '../exposure.js?v=413';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=413';
+import { exposurePdf } from '../exposurepdf.js?v=413';
+import { emailIn } from '../vendordec.js?v=413';
+import { invoiceLabel } from '../adjustment.js?v=413';
+import { matchesAll, amountText } from '../listsearch.js?v=413';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -148,7 +149,7 @@ export function openMoneySheet(side = null) {
         <div class="row" style="margin-top:8px"><span class="label"><strong>Net, once both are settled</strong></span><span class="value"><span class="badge ${pos.net >= 0 ? 'pos' : 'neg'}">${money(pos.net, 0)}</span></span></div>
         <div class="row" style="margin-bottom:10px"><span class="label">Overdue to you / overdue by you</span><span class="value"><span ${pos.owedToYou.overdue.count ? 'style="color:var(--danger)"' : ''}>${money(pos.owedToYou.overdue.total, 0)}</span> / <span ${pos.youOwe.overdue.count ? 'style="color:var(--danger)"' : ''}>${money(pos.youOwe.overdue.total, 0)}</span></span></div>
         ${moneySide === 'month' ? cashflowHtml(cashflow(invoices, sales, db.getPayables(), today, 6, expectedReceipts(deliveries(sales, movements, db.getOrders(), today).rows, unb.rows, today))) : moneySide === 'out' ? '<div id="money-bills"></div>' : receivablesHtml({ unb, unpaidRows: side.rows, paidInvoices: invoices.filter((i) => i.status === 'paid' && !i.appliedToInvoice), sales, commodities })}
-        ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? '<button type="button" class="btn secondary" id="open-xero" style="margin-top:14px">Export for Xero</button>' : ''}`;
+        ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) && canSeeBills(db.getRole()) ? '<button type="button" class="btn secondary" id="open-xero" style="margin-top:14px">Export for Xero</button>' : ''}`;
 
       root.querySelector('#rec-q')?.addEventListener('input', (e) => {
         const at = e.target.selectionStart;

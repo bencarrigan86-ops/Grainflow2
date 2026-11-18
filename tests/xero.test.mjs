@@ -128,7 +128,7 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 check('the money sheet opens it, for the roles that see invoices and bills', () => {
   const o = read('docs/js/views/outstanding.js');
   assert.ok(o.includes('openXeroSheet') && o.includes('id="open-xero"'));
-  assert.ok(o.includes("['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? '<button type=\"button\" class=\"btn secondary\" id=\"open-xero\""));
+  assert.ok(o.includes("['owner', 'manager', 'bookkeeper'].includes(db.getRole()) && canSeeBills(db.getRole()) ? '<button type=\"button\" class=\"btn secondary\" id=\"open-xero\""));
   const v = read('docs/js/views/xero.js');
   for (const t of ['xr-from', 'xr-to', 'downloadCSV', 'xeroInvoices', 'xeroBills']) assert.ok(v.includes(t), t);
 });

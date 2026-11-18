@@ -1,21 +1,22 @@
-import { db } from '../storage.js?v=412';
-import { tileIcon } from '../tileicon.js?v=412';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=412';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=412';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=412';
-import { describeMerge } from '../merge.js?v=412';
-import { renderRelatedMovements } from './movements.js?v=412';
-import { canSeeYield } from '../nav.js?v=412';
-import { wireJumps } from '../jump.js?v=412';
-import { openMapSheet } from './farmmap.js?v=412';
-import { openInputsSheet } from './inputs.js?v=412';
-import { openSprayFormSheet, canSpray } from './spray.js?v=412';
-import { stockLevels } from '../inputs.js?v=412';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=412';
-import { openModulesPickedSheet } from './modulespicked.js?v=412';
-import { openBalesBaledSheet } from './balesbaled.js?v=412';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=412';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=412';
+import { db } from '../storage.js?v=413';
+import { tileIcon } from '../tileicon.js?v=413';
+import { cropCostPerHa } from '../grossmargin.js?v=413';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=413';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=413';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=413';
+import { describeMerge } from '../merge.js?v=413';
+import { renderRelatedMovements } from './movements.js?v=413';
+import { canSeeYield } from '../nav.js?v=413';
+import { wireJumps } from '../jump.js?v=413';
+import { openMapSheet } from './farmmap.js?v=413';
+import { openInputsSheet } from './inputs.js?v=413';
+import { openSprayFormSheet, canSpray } from './spray.js?v=413';
+import { stockLevels } from '../inputs.js?v=413';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=413';
+import { openModulesPickedSheet } from './modulespicked.js?v=413';
+import { openBalesBaledSheet } from './balesbaled.js?v=413';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=413';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=413';
 
 let unsub = null;
 
@@ -128,6 +129,7 @@ export function openFieldSheet(existing) {
   const commodityOptions = commodities.map((c) => ({ value: c.id, label: c.name }));
   const actualTons = existing ? movementTonsFromField(existing.id, movements) : 0;
   const initialCommodity = commodities.find((c) => c.id === (existing?.commodityId ?? commodities[0]?.id));
+  const canSetCost = ['owner', 'manager'].includes(db.getRole());   // who can change a paddock, and sees what a crop costs
 
   // cotton paddocks: the modules picked, and how many are still in the field
   const isCotton = existing && initialCommodity?.unit === 'bale';
@@ -177,6 +179,7 @@ export function openFieldSheet(existing) {
       <div class="row"><span class="label">Commodity's default yield estimate</span><span class="value" id="commodity-yield-preview">— t/ha</span></div>
       ${existing ? `<button class="btn secondary small" id="use-default-yield" style="margin-bottom:8px">Use commodity default</button>` : ''}
       </div>
+      ${canSetCost ? `<div class="gm-cost-field">${field({ label: 'Gross margin cost ($/ha)', id: 'gmCostHa', type: 'number', step: '1', value: existing?.gmCostHa ?? '', placeholder: String(Math.round(cropCostPerHa(initialCommodity, db.get().fields))), hint: 'Blank uses the crop\'s cost from Settings, shown faintly. Type a figure to use your own for this paddock (Gross margin report).' })}</div>` : ''}
       ${field({ label: 'Harvest finished', id: 'harvestDone', type: 'select', value: existing?.harvestDone ? 'yes' : 'no', options: [{ value: 'no', label: 'No, still harvesting' }, { value: 'yes', label: 'Yes, all of it is in' }], hint: 'Shows in the harvest report. A finished paddock has nothing left to come, whatever its estimate said.' })}
       <div class="grid-2">
         ${field({ label: 'Hectares left', id: 'harvestHaLeft', type: 'number', step: '0.01', value: existing?.harvestHaLeft ?? '', placeholder: 'Blank: not part cut' })}
@@ -478,6 +481,17 @@ export function openFieldSheet(existing) {
     root.querySelector('#area')?.addEventListener('input', paintCutSoFar);
     paintCutSoFar();
 
+    // the faint figure in the cost box follows the crop chosen
+    const showCropCost = () => {
+      const box = root.querySelector('#gmCostHa'); if (!box) return;
+      const c = commodities.find((x) => x.id === getVal(root, 'commodity'));
+      const own = existing && existing.commodityId === c?.id ? 0 : getNum(root, 'area');   // a paddock not yet counted in this crop's area
+      box.placeholder = String(Math.round(cropCostPerHa(c, db.get().fields, own)));
+    };
+    root.querySelector('#commodity')?.addEventListener('change', showCropCost);
+    root.querySelector('#area')?.addEventListener('input', showCropCost);
+    showCropCost();
+
     root.querySelector('#save').addEventListener('click', () => {
       const name = getVal(root, 'name')?.trim();
       if (!name) { root.querySelector('#name').focus(); return; }
@@ -494,6 +508,7 @@ export function openFieldSheet(existing) {
         harvestDone: getVal(root, 'harvestDone') === 'yes',
         harvestHaLeft: String(getVal(root, 'harvestHaLeft') ?? '').trim() === '' ? null : getNum(root, 'harvestHaLeft'),
         harvestLeftYield: String(getVal(root, 'harvestLeftYield') ?? '').trim() === '' ? null : getNum(root, 'harvestLeftYield'),
+        ...(canSetCost ? { gmCostHa: String(getVal(root, 'gmCostHa') ?? '').trim() === '' ? null : Math.max(0, getNum(root, 'gmCostHa')) } : {}),
         yieldTHa: getNum(root, 'yield'),
         yieldMode,
         ureaRequiredKgHa: getNum(root, 'ureaReq'),

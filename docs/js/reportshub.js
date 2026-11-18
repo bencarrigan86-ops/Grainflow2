@@ -8,7 +8,7 @@
  *   go     another screen (a tab)
  */
 
-import { canSeePrices } from './nav.js?v=412';
+import { canSeePrices, canSeeBills } from './nav.js?v=413';
 
 export const MODE_KEY = 'grainflow.reports.mode';
 
@@ -55,7 +55,7 @@ export function hubGroups({ mode = 'simple', role = '', showYield = true, hasCot
       tiles: [
         can('position') && tile('position', 'Position', 'go', { simple: true, tab: 'position' }),
         can('position') && canSeePrices(role) && tile('gm', 'Gross margin', 'view'),
-        can('sales') && tile('owed', 'Invoices', 'sheet', { simple: true }),
+        can('sales') && canSeeBills(role) && tile('owed', 'Invoices', 'sheet', { simple: true }),
         can('sales') && tile('mtm', 'MTM', 'sheet'),
         BOOKS.includes(role) && tile('deliveries', 'Delivery timeline', 'sheet'),
         can('position') && tile('prices', 'Prices', 'sheet'),
@@ -76,7 +76,7 @@ export function hubGroups({ mode = 'simple', role = '', showYield = true, hasCot
       title: 'Exports',
       tiles: [
         can('settings') && tile('excel', 'Excel exports', 'sheet'),
-        BOOKS.includes(role) && tile('xero', 'Xero', 'sheet'),
+        BOOKS.includes(role) && canSeeBills(role) && tile('xero', 'Xero', 'sheet'),
       ],
     },
   ];

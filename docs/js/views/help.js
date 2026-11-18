@@ -3,18 +3,17 @@
 // The words are in helpcontent.js, checked against nav.js and the database policies by tests/help.test.mjs. This only lays
 // them out, and offers each guide only to the roles that have it.
 
-import { db } from '../storage.js?v=412';
-import { esc } from '../fmt.js?v=412';
-import { canOpen } from '../nav.js?v=412';
-import { ROLE_INFO, ACCESS, LEVELS, guidesForRole, startProgress } from '../helpcontent.js?v=412';
-import { openSetupWalk } from './setupwalk.js?v=412';
-import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=412';
+import { db } from '../storage.js?v=413';
+import { esc } from '../fmt.js?v=413';
+import { canOpen } from '../nav.js?v=413';
+import { ROLE_INFO, ACCESS, LEVELS, effectiveAccess, guidesForRole, startProgress } from '../helpcontent.js?v=413';
+import { readSwitches } from '../farmswitches.js?v=413';
+import { openSetupWalk } from './setupwalk.js?v=413';
+import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=413';
 
-// a coloured chip for what a role can do, so a table of ticks and blanks reads at a glance
-const TINT = { full: 'var(--accent-summary)', view: 'var(--accent-report)', own: 'var(--accent-input)', used: 'var(--accent-input)', none: 'var(--text-dim)' };
-const pill = (level) => `<span title="${esc(LEVELS[level].label)}" style="display:inline-block;min-width:34px;padding:2px 6px;border-radius:10px;font-size:11px;font-weight:700;color:${TINT[level]};background:color-mix(in srgb, ${TINT[level]} ${level === 'none' ? 8 : 18}%, transparent);${level === 'none' ? 'font-weight:400' : ''}">${esc(LEVELS[level].short)}</span>`;
+import { pill, ROLE_SHORT } from './levelpill.js?v=413';
 
-const SHORT = { owner: 'Owner', manager: 'Manager', bookkeeper: 'Book-keeper', farm_worker: 'Worker', driver: 'Driver', advisor: 'Advisor' };
+const SHORT = ROLE_SHORT;
 
 export function renderHelp(root) {
   const role = db.getRole();
@@ -64,14 +63,14 @@ export function renderHelp(root) {
 
       <div class="card">
         <h2>Who can do what</h2>
-        <div class="hint" style="margin-bottom:8px">There are five kinds of login, and a read-only Advisor. An owner chooses which one each person gets, under People in Settings. Your column is shaded. The table is the standard rules: an owner can change some of them for the farm under Who sees what, also in Settings.</div>
+        <div class="hint" style="margin-bottom:8px">There are five kinds of login, and a read-only Advisor. An owner chooses which one each person gets, under People in Settings. Your column is shaded. The table is this farm's rules. An owner can change some of them under Who can do what in Settings.</div>
         <div class="meta" style="margin-bottom:4px">What each kind of login sees along the bottom of the screen (it opens on the green one):</div>
         ${rolesSvg()}
         ${ROLE_INFO.map((r) => `<div class="row" style="align-items:flex-start"><span class="label" style="min-width:92px"><strong>${esc(r.label)}</strong></span><span class="value" style="font-weight:400;font-size:13px">${esc(r.summary)}</span></div>`).join('')}
         <div class="table-scroll" style="margin-top:12px">
           <table>
             <thead><tr><th style="text-align:left">Area</th>${Object.values(SHORT).map((s) => `<th style="text-align:center">${esc(s)}</th>`).join('')}</tr></thead>
-            <tbody>${ACCESS.map(accessRow).join('')}</tbody>
+            <tbody>${effectiveAccess(readSwitches(db.getBusinessDetails().switches)).map(accessRow).join('')}</tbody>
           </table>
         </div>
         <div class="hint" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center">${Object.keys(LEVELS).map((k) => `<span>${pill(k)} ${esc(LEVELS[k].label)}</span>`).join('')}</div>

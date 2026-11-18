@@ -89,6 +89,9 @@ export function tabsForRole(role) {
   const bar = [...TABS_BY_ROLE[r]];
   // a farm that has switched it on gives its workers Position as well, first in the bar like everyone else's
   if (r === 'farm_worker' && farmSwitch('workerSeesPosition') && !bar.includes('position')) bar.unshift('position');
+  // two more the owner can give: a driver the Storage tab, a worker the Sales tab (contracts and tonnes, no prices)
+  if (r === 'driver' && farmSwitch('driverSeesStorage')) bar.push('storage');
+  if (r === 'farm_worker' && farmSwitch('workerSeesSales') && !bar.includes('sales')) bar.splice(bar.indexOf('production') + 1, 0, 'sales');
   // an advisor the owner has let see loads and contracts gets the rest of the bar, tonnes without prices unless those are on too
   if (r === 'advisor' && farmSwitch('advisorSeesLoads')) return ['position', 'production', 'sales', 'movement', 'storage', 'reports'];
   return bar;
@@ -179,6 +182,17 @@ export function canMarkFinal(role) {
 export function canSeePrices(role) {
   if (role === 'owner' || role === 'bookkeeper') return true;
   if (role === 'manager') return farmSwitch('managerSeesPrices');
+  if (role === 'advisor') return farmSwitch('advisorSeesLoads') && farmSwitch('advisorSeesPrices');
+  return false;
+}
+
+/**
+ * Is this role shown invoices and bills? An owner and a bookkeeper always; a manager unless the farm has hidden them; an advisor
+ * once it has switched on loads and prices. Nobody else (as the standard rules already say).
+ */
+export function canSeeBills(role) {
+  if (role === 'owner' || role === 'bookkeeper') return true;
+  if (role === 'manager') return !farmSwitch('managerHidesBills');
   if (role === 'advisor') return farmSwitch('advisorSeesLoads') && farmSwitch('advisorSeesPrices');
   return false;
 }

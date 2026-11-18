@@ -5,8 +5,11 @@
 // and enforced by the database beside the standard rules.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { SWITCHES, readSwitches, withSwitch, switchGroups } from '../docs/js/farmswitches.js';
-import { setFarmSwitches, tabsForRole, routesForRole, landingTabFor, canOpen, canSeeYield, canEditLoads, canDelete, canMarkFinal } from '../docs/js/nav.js';
+import { SWITCHES, readSwitches, withSwitch, switchGroups, switchesForArea } from '../docs/js/farmswitches.js';
+import { ACCESS, LEVELS, effectiveAccess } from '../docs/js/helpcontent.js';
+import { setFarmSwitches, tabsForRole, routesForRole, landingTabFor, canOpen, canSeeYield, canEditLoads, canDelete, canMarkFinal, canSeeBills } from '../docs/js/nav.js';
+import { hubGroups } from '../docs/js/reportshub.js';
+import { setFarmSwitches as setStampedSwitches } from '../docs/js/nav.js?v=413';   // the copy the app's own modules import
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
 let failures = 0;
@@ -137,7 +140,7 @@ check('the screens follow: loads are locked when the role cannot change them, de
 });
 
 check('every switch the screen offers is one the database knows', () => {
-  const sql = read('supabase/migrations/20261209000000_farm_switches.sql') + read('supabase/migrations/20261210000000_farm_switches_two.sql') + '\n// app only: workerSeesYields workerSeesPosition';
+  const sql = read('supabase/migrations/20261209000000_farm_switches.sql') + read('supabase/migrations/20261210000000_farm_switches_two.sql') + read('supabase/migrations/20261212000000_farm_switches_three.sql') + '\n// app only: workerSeesYields workerSeesPosition driverSeesStorage workerSeesSales';
   for (const s of SWITCHES) assert.ok(sql.includes(s.key), `${s.key} is in neither migration`);
 });
 
@@ -155,8 +158,109 @@ check('the second migration adds the Advisor and each switch beside the standard
 check('the people list can invite an advisor, and the account and help pages name them', () => {
   assert.ok(read('docs/js/invites.js').includes("value: 'advisor'"));
   assert.ok(read('docs/js/views/account.js').includes("advisor: 'Advisor (read only)'"));
-  assert.ok(read('docs/js/helpcontent.js').includes("role: 'advisor'") && read('docs/js/views/help.js').includes("advisor: 'Advisor'"));
+  assert.ok(read('docs/js/helpcontent.js').includes("role: 'advisor'") && read('docs/js/views/levelpill.js').includes("advisor: 'Advisor'"));
   assert.ok(read('docs/js/main.js').includes("currentRole === 'advisor'"), 'the screen says it is read only');
+});
+
+// ---- the grid: each question sits under an area, and the table shows the farm's own rules --------------------------------
+
+check('every switch sits under an area of the table, and one it needs is another real switch', () => {
+  const areas = ACCESS.map((r) => r.area);
+  for (const s of SWITCHES) {
+    assert.ok(areas.includes(s.area), `${s.key} is under "${s.area}", which is not an area`);
+    if (s.needs) assert.ok(SWITCHES.some((o) => o.key === s.needs), `${s.key} needs ${s.needs}`);
+  }
+  assert.equal(SWITCHES.filter((s) => s.area === 'Loads and tickets').length, switchesForArea('Loads and tickets').length);
+  assert.deepEqual(switchesForArea('Nowhere'), []);
+});
+
+check('the table for a farm with every switch off is the standard table', () => {
+  const eff = effectiveAccess({});
+  assert.deepEqual(eff, ACCESS);
+  assert.notEqual(eff[0], ACCESS[0], 'new rows: the standard table is never changed');
+});
+
+check('a switch changes only the cells it should, and the table agrees with the tab bar', () => {
+  const cell = (rows, area, role) => rows.find((r) => r.area === area)[role];
+  const eff = effectiveAccess({ workerSeesPosition: true, managerSeesOverheads: true, bookkeeperEditsLoads: true, workersRaiseSprays: true });
+  assert.equal(cell(eff, 'Position', 'farm_worker'), 'view');
+  assert.equal(cell(eff, 'Overheads', 'manager'), 'view');
+  assert.equal(cell(eff, 'Loads and tickets', 'bookkeeper'), 'full');
+  assert.equal(cell(eff, 'Spray requests', 'farm_worker'), 'draft');
+  assert.equal(cell(eff, 'Position', 'manager'), cell(ACCESS, 'Position', 'manager'), 'other cells stay');
+  assert.ok(LEVELS.draft, 'the new level has a name');
+  // advisors: loads first, then prices and overheads on top
+  assert.equal(cell(effectiveAccess({ advisorSeesPrices: true }), 'Invoices', 'advisor'), 'none', 'prices need loads');
+  const adv = effectiveAccess({ advisorSeesLoads: true, advisorSeesPrices: true, advisorSeesOverheads: true });
+  for (const a of ['Position', 'Contracts and prices', 'Loads and tickets', 'Reports', 'Invoices', 'Bills', 'Overheads']) assert.equal(cell(adv, a, 'advisor'), 'view', a);
+  // the table's Position row for a worker is the tab bar
+  for (const sw of [{}, { workerSeesPosition: true }, { advisorSeesLoads: true }]) {
+    setFarmSwitches(sw);
+    const rows = effectiveAccess(sw);
+    for (const role of ['farm_worker', 'advisor']) assert.equal(cell(rows, 'Position', role) !== 'none', tabsForRole(role).includes('position'), `${role} with ${JSON.stringify(sw)}`);
+  }
+  setFarmSwitches({});
+});
+
+check('Settings shows the table for the farm, with the questions under each area; Help shows the same table', () => {
+  const v = read('docs/js/views/settingspeople.js');
+  assert.ok(v.includes('effectiveAccess(on)') && v.includes('switchesForArea(r.area)') && v.includes('class="area-block"'));
+  assert.ok(read('docs/js/views/help.js').includes('effectiveAccess(readSwitches('), 'Help follows the farm');
+});
+
+// ---- the third set: a driver's Storage, a worker's Sales, a manager kept from bills -------------------------------------------
+
+check('a driver can be given Storage and a worker Sales, in the usual order of the bar', () => {
+  setFarmSwitches({});
+  assert.deepEqual(tabsForRole('driver'), ['movement']);
+  assert.deepEqual(tabsForRole('farm_worker'), ['production', 'movement', 'storage', 'reports']);
+  setFarmSwitches({ driverSeesStorage: true, workerSeesSales: true });
+  assert.deepEqual(tabsForRole('driver'), ['movement', 'storage']);
+  assert.equal(landingTabFor('driver'), 'movement', 'a driver still opens on loads');
+  assert.deepEqual(tabsForRole('farm_worker'), ['production', 'sales', 'movement', 'storage', 'reports']);
+  setFarmSwitches({ workerSeesPosition: true, workerSeesSales: true });
+  assert.deepEqual(tabsForRole('farm_worker'), ['position', 'production', 'sales', 'movement', 'storage', 'reports']);
+  setFarmSwitches({});
+});
+
+check('the table agrees with the tab bar for those two, and a manager kept from bills loses both rows', () => {
+  const cell = (rows, area, role) => rows.find((r) => r.area === area)[role];
+  const sw = { driverSeesStorage: true, workerSeesSales: true, managerHidesBills: true };
+  const rows = effectiveAccess(sw);
+  assert.equal(cell(rows, 'Storage', 'driver'), 'view');
+  assert.equal(cell(rows, 'Contracts and prices', 'farm_worker'), 'view');
+  assert.equal(cell(rows, 'Invoices', 'manager'), 'none'); assert.equal(cell(rows, 'Bills', 'manager'), 'none');
+  assert.equal(cell(rows, 'Invoices', 'owner'), 'full');
+  setFarmSwitches(sw);
+  assert.equal(tabsForRole('driver').includes('storage'), cell(rows, 'Storage', 'driver') !== 'none');
+  assert.equal(tabsForRole('farm_worker').includes('sales'), cell(rows, 'Contracts and prices', 'farm_worker') !== 'none');
+  setFarmSwitches({});
+});
+
+check('who is shown invoices and bills follows the farm', () => {
+  setFarmSwitches({});
+  for (const r of ['owner', 'bookkeeper', 'manager']) assert.equal(canSeeBills(r), true, r);
+  for (const r of ['farm_worker', 'driver', 'advisor']) assert.equal(canSeeBills(r), false, r);
+  setFarmSwitches({ managerHidesBills: true, advisorSeesLoads: true, advisorSeesPrices: true });
+  assert.equal(canSeeBills('manager'), false); assert.equal(canSeeBills('owner'), true); assert.equal(canSeeBills('advisor'), true);
+  setFarmSwitches({});
+  setStampedSwitches({});
+  const ids = (role) => hubGroups({ mode: 'full', role, can: () => true }).flatMap((g) => g.tiles).map((t) => t.id);
+  assert.ok(ids('manager').includes('owed') && ids('manager').includes('xero'));
+  setStampedSwitches({ managerHidesBills: true });
+  assert.ok(!ids('manager').includes('owed') && !ids('manager').includes('xero'), 'no invoice or Xero tile for a manager kept from bills');
+  assert.ok(ids('owner').includes('owed'));
+  setStampedSwitches({});
+  setFarmSwitches({});
+});
+
+check('the third migration narrows managers beside the standard rules, and is in the paste-in file', () => {
+  const sql = read('supabase/migrations/20261212000000_farm_switches_three.sql');
+  assert.ok(sql.includes('invoices_manager_hidden') && sql.includes('payables_manager_hidden') && sql.includes('as restrictive for select') && sql.includes("'managerHidesBills'"));
+  assert.ok(!/drop policy if exists (invoices|payables)_(select|insert|update)\b/.test(sql), 'the standard policies are not touched');
+  assert.ok(read('supabase/paste-into-sql-editor.sql').includes('invoices_manager_hidden'), 'it is in the paste-in file');
+  const s2 = read('docs/js/views/sales.js');
+  assert.ok(s2.includes('canSeeBills(db.getRole())'), 'a contract shows no Invoices button to a manager kept from bills');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

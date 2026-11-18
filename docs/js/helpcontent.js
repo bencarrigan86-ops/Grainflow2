@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=412';
+import { ROLES, canOpen } from './nav.js?v=413';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ export const LEVELS = {
   view: { label: 'See only', short: 'See' },
   own: { label: 'Add loads, change open ones', short: 'Loads' },
   used: { label: 'See stock, record use and counts (no prices)', short: 'Use' },
+  draft: { label: 'Write drafts for a manager to send', short: 'Draft' },
   none: { label: 'Not available', short: '—' },
 };
 
@@ -93,6 +94,30 @@ export const ACCESS = [
 ];
 
 /** The rows of the access table for one role: what they can do in each area. */
+/**
+ * The table as it stands on a farm with these switches on (see farmswitches.js): the standard rows, with the cells a switch
+ * changes changed. A switch that narrows (delete, final weights, a driver's own loads) changes no cell: those are rules inside
+ * an area. Returns new rows; ACCESS itself is the standard rules and is not touched.
+ */
+export function effectiveAccess(switches = {}) {
+  const rows = ACCESS.map((r) => ({ ...r }));
+  const set = (area, role, level) => { const r = rows.find((x) => x.area === area); if (r) r[role] = level; };
+  const on = (k) => switches[k] === true;
+  if (on('workerSeesPosition')) set('Position', 'farm_worker', 'view');
+  if (on('managerSeesOverheads')) set('Overheads', 'manager', 'view');
+  if (on('bookkeeperEditsLoads')) set('Loads and tickets', 'bookkeeper', 'full');
+  if (on('workersRaiseSprays')) set('Spray requests', 'farm_worker', 'draft');
+  if (on('driverSeesStorage')) set('Storage', 'driver', 'view');
+  if (on('workerSeesSales')) set('Contracts and prices', 'farm_worker', 'view');
+  if (on('managerHidesBills')) { set('Invoices', 'manager', 'none'); set('Bills', 'manager', 'none'); }
+  if (on('advisorSeesLoads')) {
+    for (const a of ['Position', 'Contracts and prices', 'Loads and tickets', 'Reports']) set(a, 'advisor', 'view');
+    if (on('advisorSeesPrices')) for (const a of ['Invoices', 'Bills', 'Grain orders and freight orders']) set(a, 'advisor', 'view');
+    if (on('advisorSeesOverheads')) set('Overheads', 'advisor', 'view');
+  }
+  return rows;
+}
+
 export function accessFor(role) {
   return ACCESS.map((r) => ({ area: r.area, hint: r.hint, level: r[role] || 'none', note: r.note || '' }));
 }
