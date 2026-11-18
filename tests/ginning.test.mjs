@@ -800,5 +800,14 @@ check('the ginning run sheet keeps the whole gin invoice as the bill, and the bi
   assert.ok(st.includes('linePayableId(l, c.movements)') && st.includes('linePayableId(l, current().movements)'));
 });
 
+check('a module move is cotton: the paddock\'s cotton, else cotton, else the yard\'s commodity; the list counts a move with none as cotton; the sheet names its ticket number', () => {
+  const mm = read('docs/js/views/modulemove.js');
+  assert.ok(mm.includes('const moveCommodityId = (f, toId)') && mm.includes("commodities.find((c) => c.unit === 'bale')") && mm.includes('commodityId: moveCommodityId(f, toId)'));
+  assert.ok(mm.includes("existing.ticketNo ? ` #${existing.ticketNo}` : ''"));
+  const mv = read('docs/js/views/movements.js');
+  assert.ok(mv.includes('const moveCommodity = (m, commodities) => m.commodityId || (hasModules(m)'));
+  assert.ok(mv.includes('moveCommodity(m, commodities) === listFilter.commodityId') && mv.includes('moveCommodity(m, ctx.commodities)'));
+});
+
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
 console.log('\nall passed');

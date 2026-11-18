@@ -1,10 +1,10 @@
 // Bales baled on a hay paddock: the date, which cut or run, how many bales and their approximate weight.
 // The weight starts at the bales times the average bale weight (the commodity's hay setting) until it is typed over.
 
-import { db } from '../storage.js?v=384';
-import { num, esc, todayLocal, shortDate } from '../fmt.js?v=384';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=384';
-import { cleanBaled, describeBales, describeBaleSetting, isHay } from '../hay.js?v=384';
+import { db } from '../storage.js?v=385';
+import { num, esc, todayLocal, shortDate } from '../fmt.js?v=385';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=385';
+import { cleanBaled, describeBales, describeBaleSetting, isHay } from '../hay.js?v=385';
 
 export function openBalesBaledSheet(fieldId, existing = null) {
   const f = db.get().fields.find((x) => x.id === fieldId);

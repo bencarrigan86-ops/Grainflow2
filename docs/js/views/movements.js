@@ -1,27 +1,27 @@
-import { db } from '../storage.js?v=384';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=384';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=384';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=384';
-import { withholdingClash } from '../fumigation.js?v=384';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=384';
-import { compressAndStampImage } from '../img.js?v=384';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=384';
-import { specText, extraSpecKey } from '../outload.js?v=384';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=384';
-import { pickableSilos } from '../silopick.js?v=384';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=384';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=384';
-import { activeSales } from '../paidsales.js?v=384';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=384';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=384';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=384';
-import { nowTime } from '../loadreport.js?v=384';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=384';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=384';
-import { openGinRunSheet } from './ginrun.js?v=384';
-import { openModuleMoveSheet } from './modulemove.js?v=384';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=384';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=384';
+import { db } from '../storage.js?v=385';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=385';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=385';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=385';
+import { withholdingClash } from '../fumigation.js?v=385';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=385';
+import { compressAndStampImage } from '../img.js?v=385';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=385';
+import { specText, extraSpecKey } from '../outload.js?v=385';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=385';
+import { pickableSilos } from '../silopick.js?v=385';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=385';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=385';
+import { activeSales } from '../paidsales.js?v=385';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=385';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=385';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=385';
+import { nowTime } from '../loadreport.js?v=385';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=385';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=385';
+import { openGinRunSheet } from './ginrun.js?v=385';
+import { openModuleMoveSheet } from './modulemove.js?v=385';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=385';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=385';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -67,7 +67,7 @@ function paint(root) {
   const { storages, commodities, movements } = db.get();
   // the commodities with loads, the one with the most tonnes moved first
   const movedOf = (c) => movements.reduce((sum, m) => sum + (m.commodityId === c.id ? Number(m.tons) || 0 : 0), 0);
-  const inUse = commodities.filter((c) => movements.some((m) => m.commodityId === c.id)).sort(bigFirst(movedOf, (c) => c.name));
+  const inUse = commodities.filter((c) => movements.some((m) => moveCommodity(m, commodities) === c.id)).sort(bigFirst(movedOf, (c) => c.name));
   if (listFilter.commodityId && !inUse.some((c) => c.id === listFilter.commodityId)) listFilter.commodityId = '';
   const finishCount = toFinish(movements, storages).length;
   if (listFilter.toFinish && finishCount === 0) listFilter.toFinish = false;
@@ -128,13 +128,16 @@ function paint(root) {
   root.querySelector('[data-finish]')?.addEventListener('click', () => { listFilter.toFinish = !listFilter.toFinish; if (listFilter.toFinish) listFilter.commodityId = ''; listFilter.limit = PAGE_SIZE; paint(root); });
 }
 
+/** The commodity a ticket is under: its own, or cotton for a module move saved without one. */
+const moveCommodity = (m, commodities) => m.commodityId || (hasModules(m) ? commodities.find((c) => c.unit === 'bale')?.id || '' : '');
+
 /** The ticket list and its totals, repainted alone so the search box keeps focus. */
 function paintList(root) {
   const { fields, storages, sales, commodities, movements } = db.get();
   const ctx = { fields, storages, sales, commodities, grouped: true, freightOrders: db.getFreightOrders(), dupOutloads: duplicateOutloads(movements) };
   const q = listFilter.q.trim().toLowerCase();
   const shown = movements
-    .filter((m) => !listFilter.commodityId || m.commodityId === listFilter.commodityId)
+    .filter((m) => !listFilter.commodityId || moveCommodity(m, commodities) === listFilter.commodityId)
     .filter((m) => !listFilter.toFinish || stageOf(m, storages))
     .filter((m) => !q || ticketSearchText(m, ctx).includes(q))
     .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (Number(b.ticketNo) || 0) - (Number(a.ticketNo) || 0));
@@ -285,7 +288,7 @@ export function movementRow(m, ctx) {
   const fromLabel = froms.map((f) => endLabel(f.type, f.id, ctx)).join(' + ') || 'Unknown';
   const toLabel = tos.map((t) => endLabel(t.type, t.id, ctx)).join(' + ') || (isUsedOnFarm(m) ? 'Used on farm' : 'Unknown');
   const stage = stageOf(m, ctx.storages);
-  const commodity = ctx.commodities.find((c) => c.id === m.commodityId)?.name;
+  const commodity = ctx.commodities.find((c) => c.id === moveCommodity(m, ctx.commodities))?.name;
   const fromBreakdown = froms.length > 1
     ? froms.map((f) => `From ${endpointLabel(f.type, f.id, ctx)}: ${num(f.tons, 2)} t`).join(', ')
     : null;

@@ -7,11 +7,11 @@
 // One move is one truck load. The driver gives the number of modules and the weight is estimated from what was picked on the
 // paddock (its kilograms a module); when the load is weighed at the gin the weighbridge weight is typed over it and the load is final.
 
-import { db } from '../storage.js?v=384';
-import { num, esc, todayLocal } from '../fmt.js?v=384';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=384';
-import { cleanModules, moduleLegs, shareLoad, estimateBales, describeModules, DEFAULT_TURNOUT } from '../ginning.js?v=384';
-import { pickedTotals, moduleEstimate, describeEstimate, avgModuleKg } from '../modulespicked.js?v=384';
+import { db } from '../storage.js?v=385';
+import { num, esc, todayLocal } from '../fmt.js?v=385';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=385';
+import { cleanModules, moduleLegs, shareLoad, estimateBales, describeModules, DEFAULT_TURNOUT } from '../ginning.js?v=385';
+import { pickedTotals, moduleEstimate, describeEstimate, avgModuleKg } from '../modulespicked.js?v=385';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -46,7 +46,7 @@ export function openModuleMoveSheet(existing = null) {
   const startRows = existing ? moduleLegs(existing).map((l) => ({ id: l.fieldId, count: l.count })) : [];
   if (!startRows.length) startRows.push({ id: '', count: '' });
 
-  openSheet(existing ? 'Edit module move' : 'Move modules', (root) => {
+  openSheet(existing ? `Edit module move${existing.ticketNo ? ` #${existing.ticketNo}` : ''}` : 'Move modules', (root) => {
     if (!yards.length || !paddocks.length) {
       if (!yards.length) { offerGinYard(root, 'The modules are counted in a gin yard between the paddock and the gin. Name it after the gin, or add a Tally storage in Storage.', () => openModuleMoveSheet(existing)); return; }
       root.innerHTML = `<div class="empty">Add the cotton paddocks first.</div>`;
@@ -187,7 +187,7 @@ export function openModuleMoveSheet(existing = null) {
         date: getVal(root, 'mm-date'),
         froms: legs.map((l) => ({ type: 'field', id: l.id, tons: l.bales })),
         tos: [{ type: 'silo', id: toId, tons: count }],
-        ...(f?.commodityId ? { commodityId: f.commodityId } : {}),
+        ...(moveCommodityId(f, toId) ? { commodityId: moveCommodityId(f, toId) } : {}),
         tons: estBales,
         weightStatus: kgTyped ? 'final' : 'estimate',
         truckRego: getVal(root, 'mm-truck')?.trim() || '',
@@ -197,6 +197,13 @@ export function openModuleMoveSheet(existing = null) {
       });
       closeSheet(); toast('Saved');
     });
+
+    // a module move is cotton: the paddock's own commodity when it is a bale one, otherwise cotton, otherwise the gin yard's
+    const moveCommodityId = (f, toId) => {
+      const cotton = commodities.find((c) => c.unit === 'bale');
+      if (f?.commodityId && baleIds.has(f.commodityId)) return f.commodityId;
+      return cotton?.id || yards.find((y) => y.id === toId)?.commodityId || f?.commodityId || '';
+    };
 
     root.querySelector('#mm-del')?.addEventListener('click', () => {
       confirmDelete(`Delete this move of ${esc(describeModules(mod) || 'modules')}?`, () => {
