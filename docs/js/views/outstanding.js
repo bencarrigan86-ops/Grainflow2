@@ -4,24 +4,24 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=402';
-import { openSheet, openOver } from '../ui.js?v=402';
-import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=402';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=402';
-import { windowText } from '../orders.js?v=402';
-import { openOrderSheet } from './orders.js?v=402';
-import { openInvoiceListSheet } from './invoice.js?v=402';
-import { renderPayables, returnToAfterBill } from './payables.js?v=402';
-import { openXeroSheet } from './xero.js?v=402';
-import { cashflow } from '../cashflow.js?v=402';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=402';
-import { buyerStatements, statementPdf } from '../statement.js?v=402';
-import { buyerExposure } from '../exposure.js?v=402';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=402';
-import { exposurePdf } from '../exposurepdf.js?v=402';
-import { emailIn } from '../vendordec.js?v=402';
-import { invoiceLabel } from '../adjustment.js?v=402';
-import { matchesAll, amountText } from '../listsearch.js?v=402';
+import { db } from '../storage.js?v=403';
+import { openSheet, openOver } from '../ui.js?v=403';
+import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=403';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=403';
+import { windowText } from '../orders.js?v=403';
+import { openOrderSheet } from './orders.js?v=403';
+import { openInvoiceListSheet } from './invoice.js?v=403';
+import { renderPayables, returnToAfterBill } from './payables.js?v=403';
+import { openXeroSheet } from './xero.js?v=403';
+import { cashflow } from '../cashflow.js?v=403';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=403';
+import { buyerStatements, statementPdf } from '../statement.js?v=403';
+import { buyerExposure } from '../exposure.js?v=403';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=403';
+import { exposurePdf } from '../exposurepdf.js?v=403';
+import { emailIn } from '../vendordec.js?v=403';
+import { invoiceLabel } from '../adjustment.js?v=403';
+import { matchesAll, amountText } from '../listsearch.js?v=403';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -33,7 +33,7 @@ const END_WORD = { ended: 'Past end', soon: 'Ending soon', ok: 'In window', none
 
 // which side of the money the sheet shows, and the deliveries filter; kept while the app is open
 let scheduleGrain = 'month';     // week | month
-let moneySide = 'in';          // in | out | month | buyer
+let moneySide = 'in';          // in | out | month
 let deliveriesFilter = '';     // '' | ended | soon
 let deliveriesView = 'timeline'; // timeline | list
 let recView = 'unpaid';        // receivables: notinvoiced | unpaid | paid | all
@@ -125,6 +125,7 @@ export function openDeliveriesSheet() {
 /** `side` opens it on that tab: 'in' (receivables) or 'out' (payables); left out, it opens where it was last left. */
 export function openMoneySheet(side = null) {
   if (side === 'in' || side === 'out') moneySide = side;
+  if (moneySide === 'buyer') moneySide = 'in';
   returnToAfterBill(() => openMoneySheet());
   openSheet('Invoices', (root) => {
     const draw = () => {
@@ -139,7 +140,6 @@ export function openMoneySheet(side = null) {
           <button data-side="in" class="${moneySide === 'in' ? 'active' : ''}">Receivables</button>
           <button data-side="out" class="${moneySide === 'out' ? 'active' : ''}">Payables</button>
           <button data-side="month" class="${moneySide === 'month' ? 'active' : ''}">By month</button>
-          <button data-side="buyer" class="${moneySide === 'buyer' ? 'active' : ''}">MTM</button>
         </div>
         <div class="stat-grid">
           <div class="stat"><div class="n">${money(pos.owedToYou.outstanding.total, 0)}</div><div class="l">Owed to you (${pos.owedToYou.outstanding.count})</div></div>
@@ -147,7 +147,7 @@ export function openMoneySheet(side = null) {
         </div>
         <div class="row" style="margin-top:8px"><span class="label"><strong>Net, once both are settled</strong></span><span class="value"><span class="badge ${pos.net >= 0 ? 'pos' : 'neg'}">${money(pos.net, 0)}</span></span></div>
         <div class="row" style="margin-bottom:10px"><span class="label">Overdue to you / overdue by you</span><span class="value"><span ${pos.owedToYou.overdue.count ? 'style="color:var(--danger)"' : ''}>${money(pos.owedToYou.overdue.total, 0)}</span> / <span ${pos.youOwe.overdue.count ? 'style="color:var(--danger)"' : ''}>${money(pos.youOwe.overdue.total, 0)}</span></span></div>
-        ${moneySide === 'month' ? cashflowHtml(cashflow(invoices, sales, db.getPayables(), today, 6, expectedReceipts(deliveries(sales, movements, db.getOrders(), today).rows, unb.rows, today))) : moneySide === 'buyer' ? buyersHtml(buyerExposure(invoices, sales, movements, commodities, today), commodities) : moneySide === 'out' ? '<div id="money-bills"></div>' : receivablesHtml({ unb, unpaidRows: side.rows, paidInvoices: invoices.filter((i) => i.status === 'paid' && !i.appliedToInvoice), sales, commodities })}
+        ${moneySide === 'month' ? cashflowHtml(cashflow(invoices, sales, db.getPayables(), today, 6, expectedReceipts(deliveries(sales, movements, db.getOrders(), today).rows, unb.rows, today))) : moneySide === 'out' ? '<div id="money-bills"></div>' : receivablesHtml({ unb, unpaidRows: side.rows, paidInvoices: invoices.filter((i) => i.status === 'paid' && !i.appliedToInvoice), sales, commodities })}
         ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? '<button type="button" class="btn secondary" id="open-xero" style="margin-top:14px">Export for Xero</button>' : ''}`;
 
       root.querySelector('#rec-q')?.addEventListener('input', (e) => {
@@ -166,6 +166,24 @@ export function openMoneySheet(side = null) {
       root.querySelectorAll('[data-statement]').forEach((b) => b.addEventListener('click', () => sendStatement(b.dataset.statement, { invoices, sales, movements, commodities, today })));
       const bills = root.querySelector('#money-bills');
       if (bills) renderPayables(bills, { stats: false });
+    };
+    draw();
+  });
+}
+
+/**
+ * MTM, in a report of its own: what each buyer owes now, the grain still to go to them, and how far their contracts sit from the market
+ * (the buyer's exposure). A statement can be sent to any buyer who owes, and the whole thing is a PDF.
+ */
+export function openMtmSheet() {
+  openSheet('MTM', (root) => {
+    const draw = () => {
+      const { sales, commodities, invoices, movements } = db.get();
+      const today = todayLocal();
+      root.innerHTML = buyersHtml(buyerExposure(invoices, sales, movements, commodities, today), commodities);
+      root.querySelectorAll('[data-open-invoices]').forEach((el) => el.addEventListener('click', () => openOver(() => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.openInvoices)), draw)));
+      root.querySelector('#exposure-pdf')?.addEventListener('click', () => exportExposurePdf(buyerExposure(invoices, sales, movements, commodities, today), today));
+      root.querySelectorAll('[data-statement]').forEach((b) => b.addEventListener('click', () => sendStatement(b.dataset.statement, { invoices, sales, movements, commodities, today })));
     };
     draw();
   });
@@ -315,7 +333,7 @@ function buyersHtml({ buyers, total, weeks }, commodities) {
         </tr></tfoot>
       </table>
     </div>` : ''}
-    <div class="hint" style="margin:8px 0">Owing now is credit already given: invoices not yet paid, plus grain delivered that is not on an invoice. Still to go is the tonnes left on open contracts at the contract price. Against MTM is the contract price less your MTM price over those tonnes: above zero, the contracts are worth more than the market today, which is what you are out if the buyer does not take the grain.${esc(gapNote)}</div>
+    <div class="hint" style="margin:8px 0;font-size:12px;color:var(--text-dim)">Owing now is credit already given: invoices not yet paid, plus grain delivered that is not on an invoice. Still to go is the tonnes left on open contracts at the contract price. Against MTM is the contract price less your MTM price over those tonnes: above zero, the contracts are worth more than the market today, which is what you are out if the buyer does not take the grain.${esc(gapNote)}</div>
     ${buyers.map((b) => `
       <div class="list-item stack">
         <div class="li-top"><div class="main">${esc(b.buyer)}</div><div class="main">${money(b.owing, 0)}</div></div>

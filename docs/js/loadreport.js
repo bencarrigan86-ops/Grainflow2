@@ -3,10 +3,10 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=402';
-import { drawBrandLogo } from './brand.js?v=402';
-import { dmy } from './fmt.js?v=402';
-import { SPECS, specOf } from './outload.js?v=402';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=403';
+import { drawBrandLogo } from './brand.js?v=403';
+import { dmy } from './fmt.js?v=403';
+import { SPECS, specOf } from './outload.js?v=403';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -55,16 +55,24 @@ export function endName(leg, { fields = [], storages = [], sales = [] } = {}) {
   return '';
 }
 
+const same = (a, b) => String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase();
+
 /**
  * The loads for the report, oldest first (date, then time, then ticket). `from` and `to` are inclusive dates,
- * `commodityId` and `saleId` narrow it to one commodity or to the loads going to one contract.
+ * `commodityId` and `saleId` narrow it to one commodity or to the loads going to one contract. Also: `fieldId` (loads that came from
+ * that paddock), `storageId` (loads into or out of that silo), `grade`, `truck` (the rego) and `driver`, each ignoring capitals.
  */
-export function loadReportRows(movements, ctx, { from = '', to = '', commodityId = '', saleId = '' } = {}) {
+export function loadReportRows(movements, ctx, { from = '', to = '', commodityId = '', saleId = '', fieldId = '', storageId = '', grade = '', truck = '', driver = '' } = {}) {
   const commodities = ctx.commodities || [];
   return (movements || [])
     .filter((m) => (!from || (m.date || '') >= from) && (!to || (m.date || '') <= to))
     .filter((m) => !commodityId || m.commodityId === commodityId)
     .filter((m) => !saleId || (m.tos || []).some((t) => t.type === 'sale' && t.id === saleId))
+    .filter((m) => !fieldId || (m.froms || []).some((l) => l.type === 'field' && l.id === fieldId))
+    .filter((m) => !storageId || [...(m.froms || []), ...(m.tos || [])].some((l) => l.type === 'silo' && l.id === storageId))
+    .filter((m) => !grade || same(m.grade, grade))
+    .filter((m) => !truck || same(m.truckRego, truck))
+    .filter((m) => !driver || same(m.driver, driver))
     .map((m) => ({
       id: m.id,
       date: m.date || '',
@@ -91,9 +99,61 @@ export function loadReportRows(movements, ctx, { from = '', to = '', commodityId
     .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time) || (Number(a.ticketNo) || 0) - (Number(b.ticketNo) || 0));
 }
 
+/**
+ * What there is to narrow the loads by: the paddocks and silos that loads touched, and the grades, trucks and drivers written on them,
+ * each once (capitals ignored), in order. Used to fill the drop-downs, so only things that are on a load are offered.
+ */
+export function loadFilterChoices(movements, ctx = {}) {
+  const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  const fieldIds = new Set(); const storageIds = new Set();
+  const grades = new Map(); const trucks = new Map(); const drivers = new Map();
+  const seen = (map, v) => { const s = String(v ?? '').trim(); if (s && !map.has(s.toLowerCase())) map.set(s.toLowerCase(), s); };
+  for (const m of movements || []) {
+    for (const l of m.froms || []) if (l.type === 'field') fieldIds.add(l.id);
+    for (const l of [...(m.froms || []), ...(m.tos || [])]) if (l.type === 'silo' && l.id !== '__transit__') storageIds.add(l.id);
+    seen(grades, m.grade); seen(trucks, m.truckRego); seen(drivers, m.driver);
+  }
+  const named = (ids, list) => [...ids].map((id) => ({ id, name: list.find((x) => x.id === id)?.name })).filter((x) => x.name).sort(byName);
+  const words = (map) => [...map.values()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  return { fields: named(fieldIds, ctx.fields || []), storages: named(storageIds, ctx.storages || []), grades: words(grades), trucks: words(trucks), drivers: words(drivers) };
+}
+
+/** The narrowing in words, for under the heading of the PDF and the line in the sheet: "Paddock North · Truck ABC123"; '' when nothing is chosen. */
+export function filterText({ fieldId = '', storageId = '', grade = '', truck = '', driver = '' } = {}, ctx = {}) {
+  return [
+    fieldId ? `Paddock ${(ctx.fields || []).find((x) => x.id === fieldId)?.name || ''}`.trim() : '',
+    storageId ? `Storage ${(ctx.storages || []).find((x) => x.id === storageId)?.name || ''}`.trim() : '',
+    grade ? `Grade ${grade}` : '',
+    truck ? `Truck ${truck}` : '',
+    driver ? `Driver ${driver}` : '',
+  ].filter(Boolean).join(' · ');
+}
+
 export function loadReportTotals(rows) {
   const sum = (k) => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
   return { loads: rows.length, tons: sum('tons'), gross: sum('gross'), tare: sum('tare') };
+}
+
+/**
+ * The quick date ranges for the buttons above the date boxes: [{ key, label, from, to }], working from today's date ('YYYY-MM-DD').
+ * Weeks run Monday to Sunday. "All dates" has no start or end.
+ */
+export function datePresets(today) {
+  const [y, m, d] = String(today).split('-').map(Number);
+  const iso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  const at = (yy, mm, dd) => new Date(yy, mm, dd);
+  const day = at(y, m - 1, d);
+  const back = (day.getDay() + 6) % 7;                 // days since Monday
+  const monday = at(y, m - 1, d - back);
+  return [
+    { key: 'today', label: 'Today', from: today, to: today },
+    { key: 'yesterday', label: 'Yesterday', from: iso(at(y, m - 1, d - 1)), to: iso(at(y, m - 1, d - 1)) },
+    { key: 'week', label: 'This week', from: iso(monday), to: iso(at(y, m - 1, d - back + 6)) },
+    { key: 'lastweek', label: 'Last week', from: iso(at(y, m - 1, d - back - 7)), to: iso(at(y, m - 1, d - back - 1)) },
+    { key: 'month', label: 'This month', from: iso(at(y, m - 1, 1)), to: iso(at(y, m, 0)) },
+    { key: 'lastmonth', label: 'Last month', from: iso(at(y, m - 2, 1)), to: iso(at(y, m - 1, 0)) },
+    { key: 'all', label: 'All dates', from: '', to: '' },
+  ];
 }
 
 /** A line of the covered dates: "15-11-2026" or "01-11-2026 to 15-11-2026". */
@@ -139,7 +199,7 @@ export function reportColumns({ showOrigin = true, showCommodity = true, showDes
 }
 
 /** The report as a landscape A4 PDF, as many pages as the loads need. */
-export function buildLoadReportPdf(rows, { title = 'Load report', business = '', ngr = '', from = '', to = '', showOrigin = true, showDestination = true, showQuality = true, madeAt = '' } = {}) {
+export function buildLoadReportPdf(rows, { title = 'Load report', business = '', ngr = '', from = '', to = '', showOrigin = true, showDestination = true, showQuality = true, madeAt = '', filters = '' } = {}) {
   const pdf = new Pdf({ width: PAGE.width, height: PAGE.height });
   const cols = reportColumns({ showOrigin, showCommodity: new Set(rows.map((r) => r.commodity).filter(Boolean)).size > 0, showDestination: showDestination && rows.some((r) => r.destination), showGrossTare: rows.some((r) => r.gross !== null || r.tare !== null), showGrade: rows.some((r) => r.grade) });
   const totals = loadReportTotals(rows);
@@ -156,7 +216,7 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
     pdf.text(MARGIN, 30, title.toUpperCase(), { size: 18, bold: true });
     const rx = drawBrandLogo(pdf, { right: PAGE.width - MARGIN, top: 10, maxW: 100, maxH: 40 });   // the farm's logo, if it has one
     pdf.text(rx, 36, `${totals.loads} load${totals.loads === 1 ? '' : 's'}, ${plain(totals.tons)} t`, { size: 11, bold: true, align: 'right' });
-    pdf.text(MARGIN, 56, [business, ngr ? `NGR ${ngr}` : '', rangeText(from, to)].filter(Boolean).join('   ·   '), { size: 9.5, gray: 0.2 });
+    pdf.text(MARGIN, 56, [business, ngr ? `NGR ${ngr}` : '', rangeText(from, to), filters].filter(Boolean).join('   ·   '), { size: 9.5, gray: 0.2 });
     let y = 80;
     pdf.rect(MARGIN, y, PAGE.width - 2 * MARGIN, 18, { stroke: null, fill: 0.88 });
     for (const c of cols) pdf.text(c.right ? c.x + c.w - 4 : c.x + 4, y + 5, c.head, { size: 8.5, bold: true, align: c.right ? 'right' : 'left' });

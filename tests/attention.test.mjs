@@ -184,9 +184,11 @@ check('Settings says when the last backup was, and the export remembers it', () 
   const s = read('docs/js/views/settings.js');
   assert.ok(s.includes('id="last-backup"') && s.includes('downloadBackup(db.exportJSON())'));
 });
-check('Receivables & payables has the month view and the buyer statements', () => {
+check('Invoices has the month view; MTM is a report of its own with the buyer statements', () => {
   const o = read('docs/js/views/outstanding.js');
-  assert.ok(o.includes('data-side="month"') && o.includes('data-side="buyer"') && o.includes('data-statement'));
+  assert.ok(o.includes('data-side="month"') && !o.includes('data-side="buyer"') && o.includes('data-statement'));
+  assert.ok(o.includes('export function openMtmSheet()') && o.includes("openSheet('MTM'"));
+  assert.ok(read('docs/js/reportshub.js').includes("tile('mtm', 'MTM', 'sheet')") && read('docs/js/views/reports.js').includes('mtm: () => openMtmSheet()'));
 });
 check('the paddock sheet has the history, and a paddock or a contract can start a movement', () => {
   assert.ok(read('docs/js/views/production.js').includes('historyHtml(existing, showYield)'));

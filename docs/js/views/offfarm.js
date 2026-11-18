@@ -4,15 +4,15 @@
 // into and out of a location are ordinary movements (see the movement form); what a location holds is
 // worked out from them (offfarm.js).
 
-import { db } from '../storage.js?v=402';
-import { openSheet, closeSheet, openOver, field, getVal, confirmDelete, toast } from '../ui.js?v=402';
-import { num, esc, money, dmy, todayLocal } from '../fmt.js?v=402';
-import { storageFeesByMonth, feeTermsText, BASES, cleanFee } from '../storagefees.js?v=402';
-import { downloadCSV } from '../csv.js?v=402';
-import { safeFileName } from '../sharefile.js?v=402';
-import { isOffFarm, holdings, totalHeld, cleanOffFarm } from '../offfarm.js?v=402';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=402';
-import { renderRelatedMovements } from './movements.js?v=402';
+import { db } from '../storage.js?v=403';
+import { openSheet, closeSheet, openOver, field, getVal, confirmDelete, toast } from '../ui.js?v=403';
+import { num, esc, money, dmy, todayLocal } from '../fmt.js?v=403';
+import { storageFeesByMonth, feeTermsText, BASES, cleanFee } from '../storagefees.js?v=403';
+import { downloadCSV } from '../csv.js?v=403';
+import { safeFileName } from '../sharefile.js?v=403';
+import { isOffFarm, holdings, totalHeld, cleanOffFarm } from '../offfarm.js?v=403';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=403';
+import { renderRelatedMovements } from './movements.js?v=403';
 
 const OPERATORS = ['GrainCorp', 'Viterra', 'Cargill', 'Emerald Grain', 'Louis Dreyfus', 'Olam', 'Bunge', 'CBH'];
 

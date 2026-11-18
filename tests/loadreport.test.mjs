@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadReportRows, loadReportTotals, reportColumns, buildLoadReportPdf, buildLoadTicketPdf, siteOf, cleanTime, nowTime, rangeText, clipText, endName } from '../docs/js/loadreport.js';
+import { loadReportRows, loadReportTotals, reportColumns, buildLoadReportPdf, buildLoadTicketPdf, siteOf, cleanTime, nowTime, rangeText, clipText, endName, loadFilterChoices, filterText, datePresets } from '../docs/js/loadreport.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
 let failures = 0;
@@ -247,6 +247,61 @@ check('wired in: the Movement button, the time on the load sheet, and the rememb
   assert.ok(m2.includes('id="tk-comments"') && m2.includes('saveComments(e.target.checked)') && m2.includes("showComments: root.querySelector"), 'a tick for the comments');
   assert.ok(v.includes('id="lr-dest"') && m2.includes('id="tk-dest"') && m2.includes('saveDestination(e.target.checked)') && v.includes('showDestination: d.showDestination'), 'a tick for the destination in both places');
   assert.ok(v.includes('id="lr-origin"') && v.includes('showOrigin: d.showOrigin') && v.includes('sharePdf(bytes, fileName'));
+});
+
+console.log('\n=== narrowing by paddock, storage, grade, truck, driver ===');
+const more = [
+  { ...mv({ id: 'e', ticketNo: 5, date: '2026-11-16', truckRego: 'xyz 9', froms: [{ type: 'field', id: 'f1' }], tos: [{ type: 'silo', id: 's1' }] }), grade: 'APW1', driver: 'Pat' },
+  { ...mv({ id: 'g', ticketNo: 6, date: '2026-11-16', truckRego: 'Abc123' }), grade: 'ASW1', driver: 'pat' },
+];
+const all = [...moves, ...more];
+check('a paddock keeps the loads that came from it', () => {
+  assert.deepEqual(loadReportRows(all, ctx, { fieldId: 'f1' }).map((r) => r.id), ['b', 'e']);
+});
+check('a storage keeps the loads into or out of it', () => {
+  assert.deepEqual(loadReportRows(all, ctx, { storageId: 's1' }).map((r) => r.id).sort(), ['a', 'c', 'd', 'e', 'g']);
+  assert.deepEqual(loadReportRows(all, ctx, { storageId: 's1', commodityId: 'b' }).map((r) => r.id), ['d'], 'with another filter it narrows further');
+});
+check('grade, truck and driver ignore capitals and spaces', () => {
+  assert.deepEqual(loadReportRows(all, ctx, { grade: 'apw1' }).map((r) => r.id), ['e']);
+  assert.deepEqual(loadReportRows(all, ctx, { truck: ' abc123 ' }).map((r) => r.id).sort(), ['a', 'b', 'c', 'd', 'g']);
+  assert.deepEqual(loadReportRows(all, ctx, { driver: 'PAT' }).map((r) => r.id).sort(), ['e', 'g']);
+  assert.deepEqual(loadReportRows(all, ctx, { truck: 'nothing' }), []);
+});
+check('the choices are what is on the loads, each once', () => {
+  const c = loadFilterChoices(all, ctx);
+  assert.deepEqual(c.fields, [{ id: 'f1', name: 'River Block' }]);
+  assert.deepEqual(c.storages, [{ id: 's1', name: 'Silo 3' }]);
+  assert.deepEqual(c.grades, ['APW1', 'ASW1']);
+  assert.equal(c.trucks.length, 2, 'ABC123 and Abc123 are one truck');
+  assert.ok(c.drivers.map((x) => x.toLowerCase()).includes('pat') && c.drivers.filter((x) => x.toLowerCase() === 'pat').length === 1, 'Pat and pat are one driver');
+  assert.deepEqual(loadFilterChoices([], ctx), { fields: [], storages: [], grades: [], trucks: [], drivers: [] });
+});
+check('the narrowing is written under the heading of the PDF', () => {
+  assert.equal(filterText({}, ctx), '');
+  assert.equal(filterText({ fieldId: 'f1', truck: 'ABC123' }, ctx), 'Paddock River Block · Truck ABC123');
+  const pdf = text(buildLoadReportPdf(loadReportRows(all, ctx, { fieldId: 'f1' }), { filters: filterText({ fieldId: 'f1' }, ctx) }));
+  assert.ok(pdf.includes('Paddock River Block'));
+});
+check('the quick date ranges: today, yesterday, weeks from Monday, months, and all dates', () => {
+  const by = (today) => Object.fromEntries(datePresets(today).map((p) => [p.key, [p.from, p.to]]));
+  const p = by('2026-11-19');   // a Thursday
+  assert.deepEqual(p.today, ['2026-11-19', '2026-11-19']);
+  assert.deepEqual(p.yesterday, ['2026-11-18', '2026-11-18']);
+  assert.deepEqual(p.week, ['2026-11-16', '2026-11-22']);
+  assert.deepEqual(p.lastweek, ['2026-11-09', '2026-11-15']);
+  assert.deepEqual(p.month, ['2026-11-01', '2026-11-30']);
+  assert.deepEqual(p.lastmonth, ['2026-10-01', '2026-10-31']);
+  assert.deepEqual(p.all, ['', '']);
+  assert.deepEqual(by('2026-01-05').lastweek, ['2025-12-29', '2026-01-04'], 'across the new year');
+  assert.deepEqual(by('2026-03-01').lastmonth, ['2026-02-01', '2026-02-28']);
+  assert.deepEqual(by('2026-11-15').week, ['2026-11-09', '2026-11-15'], 'a Sunday is the end of its week');
+});
+check('the sheet has the Narrow it down fold and sends the choice to the report', () => {
+  const v = read('docs/js/views/loadreport.js');
+  assert.ok(v.includes('id="lr-more"') && v.includes("'lr-field'") && v.includes("'lr-storage'") && v.includes("'lr-grade'") && v.includes("'lr-truck'") && v.includes("'lr-driver'"));
+  assert.ok(v.includes('id="lr-presets"') && v.includes('data-preset') && v.includes('datePresets(todayLocal())'), 'the quick ranges sit above the dates');
+  assert.ok(v.includes('filters: filterText(d, ctx)') && v.includes('loadReportRows(movements, ctx, d)'));
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
