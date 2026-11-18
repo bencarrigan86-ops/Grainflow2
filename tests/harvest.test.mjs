@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fieldHarvest, harvestReport, siloSpace, roomSplit, pctText } from '../docs/js/harvest.js';
+import { fieldHarvest, harvestReport, siloSpace, roomSplit, roomSummary, pctText } from '../docs/js/harvest.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
 let failures = 0;
@@ -250,7 +250,7 @@ check('Reports has a Harvest view for every role, and a role that is not shown y
   const noYield = src.slice(src.indexOf('function harvestNoYieldHtml'), src.indexOf('function paintYield'));
   assert.ok(noYield.length > 500, 'no version without yields');
   for (const bad of ['estimateT', 'inT', 'toComeT', 'yieldSoFar', 'Est t', 'to come', 'Harvested']) assert.ok(!noYield.includes(bad), `the no-yield harvest report shows ${bad}`);
-  assert.ok(noYield.includes('doneHa') && noYield.includes('space.totalRoom'));
+  assert.ok(noYield.includes('doneHa') && noYield.includes('roomSummary(split, space, false)'));
 });
 check('the paddock form has the finished box', () => {
   assert.match(read('docs/js/views/production.js'), /id: 'harvestDone'/);
@@ -298,6 +298,30 @@ check('the sums agree: room left less the room that cannot help less what is sti
   assert.equal(120 - split.unusable - 60, split.margin);
 });
 
+check('the room summary reads as a sum: the room that can take what is left, less what is left, is the margin, and the rest is the room that cannot help', () => {
+  const space = { ...sp([['w', { room: 250, silos: 3 }], ['b', { room: 100, silos: 1 }], ['c', { room: 200, silos: 2 }]], 50), emptyCount: 1 };
+  const split = roomSplit(space, [grp('w', 'Wheat', 400, 80), grp('b', 'Barley', 0, 0), grp('c', 'Chick peas', 150, 40)]);
+  const s = roomSummary(split, space, true);
+  assert.equal(s.stillT, 550);
+  assert.equal(s.cropUsable, 250 + 150, 'wheat needs all its 250, chick peas only 150 of their 200, barley none');
+  assert.equal(s.cropSilos, 5, 'wheat and chick pea silos');
+  assert.equal(s.canTake, 450);
+  assert.equal(s.unusable, 100 + 50, 'the barley room and the chick peas beyond what is needed');
+  assert.equal(s.margin, 450 - 550);
+  assert.equal(s.margin, split.margin, 'the same answer as the split gives');
+  assert.equal(s.canTake + s.unusable, 50 + 250 + 100 + 200, 'every tonne of room is in one or the other');
+});
+
+check('the room summary with no yields counts a crop with hectares left to cut, whole, and a finished crop not at all', () => {
+  const space = { ...sp([['w', { room: 250, silos: 3 }], ['b', { room: 100, silos: 1 }]], 40), emptyCount: 2 };
+  const split = roomSplit(space, [grp('w', 'Wheat', 0, 30), grp('b', 'Barley', 0, 0)]);
+  const s = roomSummary(split, space, false);
+  assert.equal(s.cropUsable, 250);
+  assert.equal(s.canTake, 290);
+  assert.equal(s.unusable, 100);
+  assert.equal(s.emptyCount, 2);
+});
+
 check('each crop lists its own silos under it, and the empty ones are listed apart', () => {
   const silos = [roomSilo('a', 'Silo 1', 'w', 90), roomSilo('b', 'Silo 2', 'w', 160), roomSilo('c', 'Silo 3', 'b', 100), roomSilo('d', 'Silo 4', null, 40, true)];
   const split = roomSplit(sp([['w', { room: 250, silos: 2 }], ['b', { room: 100, silos: 1 }]], 40, silos), [grp('w', 'Wheat', 100, 20), grp('b', 'Barley', 0, 0)]);
@@ -312,7 +336,8 @@ check('the screen groups the silos under a heading for each crop, with the leave
   assert.equal(src.split('${minRoomRow(minRoom)}').length - 1, 2);
   assert.ok(src.indexOf('${minRoomRow(minRoom)}') > src.indexOf("fold('room'"), 'the box is the first thing inside the room section, so folding it away takes it too');
   assert.ok(!src.includes('Each silo'), 'no flat list of silos any more');
-  assert.equal(src.split('${spaceAsRow(space, assumeOptions, assume, pick)}').length - 1, 2, 'the empty-silo commodity choice is up with the empty silos total in both versions');
+  assert.equal(src.split('${roomSummaryHtml({').length - 1, 2, 'both versions use the one room summary');
+  assert.equal(src.split('${spaceAsRow(space, assumeOptions, assume, pick, picked)}').length - 1, 1, 'which has the empty-silo commodity choice, once, beside the empty silos total');
 });
 
 console.log('\n=== hectares left with a yield of their own ===');

@@ -10,10 +10,10 @@
 //
 // Pure apart from the two sums it borrows from derived.js.
 
-import { estimateFieldTons, movementTonsFromField, storageLedgerStock, bigFirst } from './derived.js?v=414';
-import { isTransit } from './transit.js?v=414';
-import { capacityInfo, commodityOf } from './storagecapacity.js?v=414';
-import { harvestSeasonOf, HARVEST_SEASONS } from './harvestseason.js?v=414';
+import { estimateFieldTons, movementTonsFromField, storageLedgerStock, bigFirst } from './derived.js?v=415';
+import { isTransit } from './transit.js?v=415';
+import { capacityInfo, commodityOf } from './storagecapacity.js?v=415';
+import { harvestSeasonOf, HARVEST_SEASONS } from './harvestseason.js?v=415';
 
 /**
  * One field.
@@ -146,6 +146,26 @@ export function roomSplit(space, groups, nameOf = () => '') {
 }
 
 /**
+ * The room section's summary, from roomSplit and siloSpace: what is still to harvest, the room that can actually take it (silos of crops
+ * still to come, up to what each needs, plus the empty silos), and the room that cannot (in silos of crops with little or nothing left to
+ * harvest). The screen and the PDF both read this, so they say the same thing. With no yields (`showYield` false) there is no tonnage to
+ * come: a crop with hectares left to cut counts, with all of its room, and a finished crop's room cannot help.
+ *
+ * @returns {{stillT: number, cropUsable: number, cropSilos: number, emptyRoom: number, emptyCount: number, canTake: number, unusable: number, margin: number}}
+ */
+export function roomSummary(split, space, showYield = true) {
+  const rows = split?.rows || [];
+  const emptyRoom = space?.emptyRoom || 0;
+  const open = (r) => (showYield ? r.toComeT > 0 : !r.finished);
+  const stillT = rows.reduce((a, r) => a + r.toComeT, 0);
+  const cropUsable = rows.reduce((a, r) => a + (!open(r) ? 0 : (showYield ? Math.min(r.room, r.toComeT) : r.room)), 0);
+  const cropSilos = rows.filter((r) => open(r) && r.room > 0).reduce((a, r) => a + r.silos, 0);
+  const cropRoom = rows.reduce((a, r) => a + r.room, 0);
+  const canTake = cropUsable + emptyRoom;
+  return { stillT, cropUsable, cropSilos, emptyRoom, emptyCount: space?.emptyCount || 0, canTake, unusable: Math.max(0, cropRoom - cropUsable), margin: canTake - stillT };
+}
+
+/**
  * The room left in the farm's silos and bunkers, against what is still to come.
  *
  * Room in a silo is its capacity less what is tracked in it now. A silo holding a commodity has room for that
@@ -157,6 +177,9 @@ export function roomSplit(space, groups, nameOf = () => '') {
  *
  * With `season` ('winter' or 'summer') only the room for that season's crops is counted: silos holding the other season's crop are left
  * out, and empty silos count in full (so in both seasons' views, and once in the whole-farm one).
+ *
+ * With a `scenario` (a commodity picked to see what-if) every empty silo with a volume is worked out as that crop instead, so the room can be
+ * tried against different plans without changing a silo.
  *
  * An empty silo with a volume but no commodity is worked out as the commodity given in `assume` (a commodity record, or null), and flagged
  * `assumed`; `needsCommodity` counts those silos so the report knows whether to offer the choice.
@@ -170,8 +193,8 @@ export function roomSplit(space, groups, nameOf = () => '') {
  *   notCounted: string[]                                       silos left out, and why, so they can be fixed
  * }}
  */
-export function siloSpace(storages, movements, { minRoom = 0, commodities = [], assume = null, season = null } = {}) {
-  const out = { byCommodity: new Map(), emptyRoom: 0, emptyCount: 0, totalRoom: 0, notCounted: [], silos: [], tooSmall: { count: 0, room: 0 }, needsCommodity: 0, assumeName: assume?.name || '' };
+export function siloSpace(storages, movements, { minRoom = 0, commodities = [], assume = null, scenario = null, season = null } = {}) {
+  const out = { byCommodity: new Map(), emptyRoom: 0, emptyCount: 0, totalRoom: 0, notCounted: [], silos: [], tooSmall: { count: 0, room: 0 }, needsCommodity: 0, emptyWithVolume: 0, assumeName: scenario?.name || assume?.name || '' };
   for (const s of storages || []) {
     if (s.offFarm || isTransit(s) || s.kind === 'tally') continue;
     const stock = Math.max(0, storageLedgerStock(s, movements));
@@ -185,14 +208,17 @@ export function siloSpace(storages, movements, { minRoom = 0, commodities = [], 
     // worked out as the commodity chosen in `assume` (the report lets the person pick), and counted as such.
     const open = !s.commodityId && empty;
     if (open && Number(s.volumeM3) > 0 && !(Number(s.testWeight) > 0)) out.needsCommodity += 1;
+    if (empty && Number(s.volumeM3) > 0) out.emptyWithVolume += 1;
+    // A what-if (`scenario`, a commodity picked on purpose): every empty silo with a volume is worked out as that crop, whatever it last held.
+    const forced = !!scenario && empty && Number(s.volumeM3) > 0;
     // from its volume and what is in it when it has a volume, otherwise the tonnes typed on it
-    const info = capacityInfo(s, commodityOf(s, commodities) || (open ? assume : null));
+    const info = forced ? capacityInfo({ ...s, testWeight: 0 }, scenario) : capacityInfo(s, commodityOf(s, commodities) || (open ? assume : null));
     const capacity = info.tons;
     if (!(capacity > 0)) {
       out.notCounted.push(`${s.name} (${open && Number(s.volumeM3) > 0 ? 'has a volume but no commodity to work the tonnes from' : 'no capacity set'})`);
       continue;
     }
-    const assumed = open && !!assume && info.source === 'volume' && info.testWeightSource === 'commodity';
+    const assumed = forced || (open && !!assume && info.source === 'volume' && info.testWeightSource === 'commodity');
     const room = Math.max(0, capacity - stock);
     // a silo with only a little room left is not worth sending a load to, so it is not counted or listed
     if (minRoom > 0 && room < minRoom) { out.tooSmall.count += 1; out.tooSmall.room += room; continue; }

@@ -8,7 +8,7 @@
  *   go     another screen (a tab)
  */
 
-import { canSeePrices, canSeeBills } from './nav.js?v=414';
+import { canSeePrices, canSeeBills } from './nav.js?v=415';
 
 export const MODE_KEY = 'grainflow.reports.mode';
 
@@ -65,7 +65,7 @@ export function hubGroups({ mode = 'simple', role = '', showYield = true, hasCot
     {
       title: 'Loads and storage',
       tiles: [
-        tile('room', 'Silo room', 'view', { simple: true, view: 'harvest' }),
+        tile('room', 'Available storage', 'view', { simple: true, view: 'harvest' }),
         can('movement') && tile('loads', 'Load report', 'sheet', { simple: true }),
         can('movement') && tile('trace', 'Traceability', 'sheet'),
         can('storage') && tile('optimiser', 'Silo blending', 'sheet'),

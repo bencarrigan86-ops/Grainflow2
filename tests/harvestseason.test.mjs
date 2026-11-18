@@ -131,12 +131,32 @@ check('a silo already holding grain is not worked out as a guess: it needs its c
   assert.ok(r.notCounted.some((x) => /no capacity set|volume but no commodity/.test(x)));
 });
 
+check('a what-if works every empty silo with a volume out as the crop picked, whatever it last held, and leaves the full ones alone', () => {
+  const storages = [
+    { id: 'a', name: 'Silo A', kind: 'silo', volumeM3: 300 },
+    { id: 'b', name: 'Silo B', kind: 'silo', volumeM3: 300, commodityId: 'w', openingStock: 0 },
+    { id: 'c', name: 'Silo C', kind: 'silo', volumeM3: 300, commodityId: 'w', testWeight: 0.5, openingStock: 0 },
+    { id: 'd', name: 'Silo D', kind: 'silo', volumeM3: 300, commodityId: 'w', openingStock: 100 },
+  ];
+  const base = siloSpace(storages, [], { commodities: [wheat, canola], assume: wheat });
+  const trial = siloSpace(storages, [], { commodities: [wheat, canola], assume: wheat, scenario: canola });
+  const row = (r, id) => r.silos.find((s) => s.id === id);
+  near(row(base, 'b').room, 246); assert.equal(row(base, 'b').assumed, false, 'as set: wheat, its own');
+  for (const id of ['a', 'b', 'c']) { near(row(trial, id).room, 201); assert.equal(row(trial, id).assumed, true, id); }
+  near(row(trial, 'd').room, 246 - 100, 'a silo holding grain is not an empty one, so it keeps its own crop');
+  assert.equal(trial.assumeName, 'Canola');
+  assert.equal(trial.emptyWithVolume, 3, 'the report offers the choice whenever an empty silo has a volume');
+  assert.equal(base.emptyWithVolume, 3);
+  assert.ok(trial.emptyRoom < base.emptyRoom, 'canola is lighter than wheat, so the same silos hold less');
+});
+
 check('it is wired: the harvest report, its PDF, and the storage tab', () => {
   const rp = read('docs/js/views/reports.js');
-  assert.ok(rp.includes('siloSpace(storages, movements, { minRoom, commodities, assume, season: scope ? pick : null })') && rp.includes('id="space-as"'));
+  assert.ok(rp.includes('siloSpace(storages, movements, { minRoom, commodities, assume, scenario, season: scope ? pick : null })') && rp.includes('id="space-as"'));
   assert.ok(rp.includes('saveSpaceAs(e.target.value, e.target.dataset.season)'), 'the pick is remembered');
   assert.equal(rp.split('${seasonBlock(').length - 1, 2, 'the season block is in both layouts');
-  assert.equal(rp.split('${spaceAsRow(space, assumeOptions, assume, pick)').length - 1, 2, 'so is the picker');
+  assert.equal(rp.split('${roomSummaryHtml({').length - 1, 2, 'so is the room summary, with the picker in it');
+  assert.equal(rp.split('${spaceAsRow(space, assumeOptions, assume, pick, picked)').length - 1, 1);
   const pdf = read('docs/js/harvestpdf.js');
   assert.ok(pdf.includes('seasons.length > 1') && pdf.includes('space.assumeName'));
   const st = read('docs/js/views/storage.js');

@@ -3,7 +3,8 @@
 // room in the silos, as on the screen. The report's own figures (harvest.js) go in; nothing is worked out again here.
 // Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=414';
+import { createReport, fixed } from './reportpdf.js?v=415';
+import { roomSummary } from './harvest.js?v=415';
 
 const pct = (p) => `${Math.round((Number(p) || 0) * 100)}%`;
 const haPct = (done, area) => (area > 0 ? `${Math.round((done / area) * 100)}%` : '-');
@@ -38,7 +39,7 @@ export function harvestPdf({ groups = [], farm = {}, seasons = [], scopeLabel = 
     title: 'Harvest', business, season, today,
     footerNote: showYield
       ? 'In is the tonnes carted off the field; to come is its estimate less that, until the field is finished.'
-      : 'Hectares cut and left, and the room in the silos. Third-party storage is not counted.',
+      : 'Hectares cut and left, and the available storage. Third-party storage is not counted.',
   });
   if (!groups.length) { report.message('Nothing to report yet: add a paddock in Production.'); return report.bytes(); }
 
@@ -67,8 +68,7 @@ export function harvestPdf({ groups = [], farm = {}, seasons = [], scopeLabel = 
   report.gap(8);
 
   // ---- the room in the silos ----
-  const margin = split ? split.margin : (space.totalRoom || 0) - (farm.toComeT || 0);
-  report.heading('Room in the silos');
+  report.heading('Available storage');
   if (minRoom > 0) report.note(`Silos with less than ${t0(minRoom)} t of room are left out.`);
   // crop by crop, so room in a silo of a crop with nothing left to cut is not read as room for what is coming
   if (split && split.rows.length) {
@@ -80,14 +80,14 @@ export function harvestPdf({ groups = [], farm = {}, seasons = [], scopeLabel = 
       { head: showYield ? 'Space t' : '', w: 0.28, cell: (r) => (showYield ? `${r.space > 0.5 ? '+' : (r.space < -0.5 ? '-' : '')}${t0(Math.abs(r.space))}${r.nothingToCome && r.room > 0.5 ? ' (none to come)' : ''}` : (r.finished && r.room > 0.5 ? 'No use now' : '')) },
     ], split.rows, { name: 'By crop' });
   }
-  report.pair('In silos already holding a commodity', `${t0((space.totalRoom || 0) - (space.emptyRoom || 0))} t`);
-  report.pair(`In empty silos (${space.emptyCount || 0}), for any grain`, `${t0(space.emptyRoom)} t`);
-  report.pair('Room left', `${t0(space.totalRoom)} t`, { bold: true });
-  if (showYield) {
-    if (split && split.unusable > 0.5) { report.pair('Less surplus room in silos over remaining commodity', `${t0(split.unusable)} t`); }
-    report.pair('Still to harvest', `${t0(farm.toComeT)} t`);
-    report.pair(margin >= 0 ? 'Room to spare' : 'Short of room by', `${t0(Math.abs(margin))} t`, { bold: true });
-  }
+  // what is still to harvest, then the room that can take it, then the answer; the room that cannot help is a note
+  const sum = roomSummary(split, space, showYield);
+  if (showYield) report.pair('Still to harvest', `${t0(sum.stillT)} t`, { bold: true });
+  report.pair(`In silos of crops still to ${showYield ? 'harvest' : 'cut'}${sum.cropSilos ? ` (${sum.cropSilos})` : ''}`, `${t0(sum.cropUsable)} t`);
+  report.pair(`In empty silos (${sum.emptyCount}), for any grain`, `${t0(sum.emptyRoom)} t`);
+  report.pair('Available storage space', `${t0(sum.canTake)} t`, { bold: true });
+  if (showYield) report.pair(sum.margin >= 0 ? 'Room to spare' : 'Short of room by', `${t0(Math.abs(sum.margin))} t`, { bold: true });
+  if (sum.unusable > 0.5) report.note(`Another ${t0(sum.unusable)} t of room is in silos of crops with ${showYield ? 'little or nothing left to harvest' : 'every hectare already cut'}, so it can't take what is left unless a silo is emptied.`);
   if ((space.silos || []).length) {
     report.table([
       { head: 'Silo', w: 0.26, left: true, cell: (s) => s.name },
