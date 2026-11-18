@@ -1,33 +1,33 @@
-import { db } from '../storage.js?v=382';
+import { db } from '../storage.js?v=383';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=382';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=382';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=382';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=382';
-import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=382';
-import { patternsFor } from '../deliveryplan.js?v=382';
-import { INVOICING } from '../invoicing.js?v=382';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=382';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=382';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=382';
-import { renderRelatedMovements } from './movements.js?v=382';
-import { openInvoiceListSheet } from './invoice.js?v=382';
-import { openContractDocSheet } from './contract.js?v=382';
-import { wireJumps } from '../jump.js?v=382';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=382';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=382';
-import { freightState } from '../freight.js?v=382';
-import { activeSales, paidSales } from '../paidsales.js?v=382';
-import { openVendorDecSheet } from './vendordec.js?v=382';
-import { summarise as summariseOrders } from '../orders.js?v=382';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=382';
-import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=382';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=382';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=382';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=382';
-import { standardFor } from '../grades.js?v=382';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=382';
+} from '../documents.js?v=383';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=383';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=383';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=383';
+import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=383';
+import { patternsFor } from '../deliveryplan.js?v=383';
+import { INVOICING } from '../invoicing.js?v=383';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=383';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=383';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=383';
+import { renderRelatedMovements } from './movements.js?v=383';
+import { openInvoiceListSheet } from './invoice.js?v=383';
+import { openContractDocSheet } from './contract.js?v=383';
+import { wireJumps } from '../jump.js?v=383';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=383';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=383';
+import { freightState } from '../freight.js?v=383';
+import { activeSales, paidSales } from '../paidsales.js?v=383';
+import { openVendorDecSheet } from './vendordec.js?v=383';
+import { summarise as summariseOrders } from '../orders.js?v=383';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=383';
+import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=383';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=383';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=383';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=383';
+import { standardFor } from '../grades.js?v=383';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=383';
 
 let unsub = null;
 
@@ -316,9 +316,9 @@ function deliveryWindow(s) {
 }
 
 function saleRow(s, movements, commodities, index = 0) {
-  const econ = saleEconomics(s, movements);
-  const window = deliveryWindow(s);
   const invoices = db.getInvoicesForSale(s.id);
+  const econ = saleEconomics(s, movements, invoices);
+  const window = deliveryWindow(s);
   const outstandingInvoices = invoices.filter((inv) => inv.status !== 'paid');
   const isBales = commodities.find((c) => c.id === s.commodityId)?.unit === 'bale';
   const unit = isBales ? 'bales' : 't';

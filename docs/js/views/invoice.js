@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=382';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=382';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=382';
-import { addressLinesOf } from '../address.js?v=382';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=382';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=382';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=382';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=382';
-import { docBandHTML } from '../docband.js?v=382';
-import { deductionNotes } from '../deductions.js?v=382';
-import { ginPrepaid } from '../ginning.js?v=382';
-import { cottonInvoiceModel } from '../cottoninvoice.js?v=382';
-import { openMovementSheet } from './movements.js?v=382';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=382';
+import { db } from '../storage.js?v=383';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=383';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=383';
+import { addressLinesOf } from '../address.js?v=383';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=383';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=383';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=383';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=383';
+import { docBandHTML } from '../docband.js?v=383';
+import { deductionNotes } from '../deductions.js?v=383';
+import { ginOffsetOptions, ginOffsetLine, linePayableId } from '../ginoffset.js?v=383';
+import { cottonInvoiceModel } from '../cottoninvoice.js?v=383';
+import { openMovementSheet } from './movements.js?v=383';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=383';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -99,6 +99,9 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
   const startFx = isCotton ? (lastFx([existingInvoice]) || (existingInvoice ? 0 : lastFx(db.getInvoicesForSale(sale.id)))) : 0;
   // adjustment notes applied to this invoice: lines of their own, kept as they are, whose amounts go on top of the totals
   const adjustmentLines = (existingInvoice?.lines || []).filter((l) => l.isAdjustmentLine);
+  // the gin invoices the lint buyer pays that can come off this invoice, and what this invoice already takes off each
+  const ginOptions = isCotton ? ginOffsetOptions({ payables: db.getPayables(), invoices: db.get().invoices || [], movements, sale, existingInvoice }) : [];
+  const existingGinLines = (existingInvoice?.lines || []).filter((l) => l.isGinPrepaid);
 
   const body = openSheet(existingInvoice ? `Edit invoice #${existingInvoice.invoiceNo}` : 'New invoice', (root) => {
     root.innerHTML = `
@@ -117,6 +120,12 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
         <div id="custom-items"></div>
         <button type="button" class="btn secondary small" id="add-custom-item" style="margin-top:6px">${isCotton ? '+ Add premium or discount' : '+ Add custom item'}</button>
       </div>
+      ${ginOptions.length ? `<hr class="sep" />
+      <div class="field">
+        <label>Gin invoices to take off</label>
+        <div class="hint" style="margin-bottom:6px">Gin invoices the lint buyer pays for us. Tick the ones to take off this invoice, and how much of each (GST included).</div>
+        <div id="gin-offsets"></div>
+      </div>` : ''}
       <hr class="sep" />
       <div class="field">
         <label>Totals — hand-adjust for rounding if needed</label>
@@ -125,7 +134,7 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
       ${field({ label: 'Freight', id: 't-freight', type: 'number', step: '0.01', allowNegative: true })}
       ${field({ label: 'Grain levies', id: 't-levies', type: 'number', step: '0.01', allowNegative: true })}
       ${field({ label: 'GST', id: 't-gst', type: 'number', step: '0.01', allowNegative: true })}
-      <div class="row" id="t-gin-row" style="display:none"><span class="label">Ginning invoices prepaid<small style="display:block;font-size:11.5px;color:var(--text-dim)">By the buyer, GST included</small></span><span class="value" id="t-gin"></span></div>
+      <div class="row" id="t-gin-row" style="display:none"><span class="label">Gin invoices taken off<small style="display:block;font-size:11.5px;color:var(--text-dim)">Chosen above, GST included</small></span><span class="value" id="t-gin"></span></div>
       <div class="row"><span class="label"><strong>Total amount payable</strong></span><span class="value" id="t-total" style="font-size:18px">$0.00</span></div>
       <button class="btn" id="save-invoice" style="margin-top:12px">${existingInvoice ? 'Save changes' : 'Create invoice'}</button>
     `;
@@ -188,6 +197,63 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
       }));
     };
     paintLoads(null);
+
+    // One row for each gin invoice still open (and any this invoice already takes off): tick it, and say how much comes off this one
+    const ginBox = root.querySelector('#gin-offsets');
+    const ginRow = (o) => {
+      const taken = existingGinLines.filter((l) => linePayableId(l, movements) === o.payableId).reduce((s, l) => s + (Number(l.amount) || 0), 0);
+      const bits = [o.date ? dmy(o.date) : '', `${money(o.outstanding, 2)} open of ${money(o.total, 2)}`, o.forThisContract ? 'ginned for this contract' : ''].filter(Boolean);
+      return `
+        <div class="list-item ld-row">
+          <div style="width:100%;display:flex;align-items:center;gap:10px">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0">
+              <input type="checkbox" class="go-check" data-pid="${o.payableId}" ${taken > 0 ? 'checked' : ''} style="width:18px;height:18px;flex:none" />
+              <div style="min-width:0">
+                <div class="main">${esc(o.label)}</div>
+                <div class="meta">${esc(bits.join(' · '))}</div>
+              </div>
+            </label>
+            <div style="flex:none;width:96px">
+              <input type="number" inputmode="decimal" step="0.01" class="go-amt" data-pid="${o.payableId}" value="${taken > 0 ? taken.toFixed(2) : ''}" placeholder="Amount" style="width:100%;min-width:0;box-sizing:border-box;padding:8px 6px" aria-label="Amount of this gin invoice to take off" />
+              <div class="meta" style="text-align:right">taken off</div>
+            </div>
+          </div>
+        </div>`;
+    };
+    if (ginBox) ginBox.innerHTML = ginOptions.map(ginRow).join('');
+    const ginPickLines = () => {
+      const out = [];
+      ginBox?.querySelectorAll('.go-check:checked').forEach((c) => {
+        const o = ginOptions.find((x) => x.payableId === c.dataset.pid);
+        const bill = db.getPayables().find((p) => p.id === c.dataset.pid);
+        if (!o || !bill) return;
+        const typed = Number(ginBox.querySelector(`.go-amt[data-pid="${c.dataset.pid}"]`).value) || 0;
+        const amount = Math.round(Math.min(typed, o.outstanding) * 100) / 100;
+        if (!(amount > 0)) return;
+        // a line already on this invoice for the same amount is kept just as it is
+        const same = existingGinLines.find((l) => linePayableId(l, movements) === o.payableId && Math.abs((Number(l.amount) || 0) - amount) < 0.005);
+        out.push(same || ginOffsetLine({ bill, amount, movements, sale, date: sale.date }));
+      });
+      return out;
+    };
+    const ginPicked = () => Math.round(ginPickLines().reduce((s, l) => s + (Number(l.amount) || 0), 0) * 100) / 100;
+    ginBox?.querySelectorAll('.go-check').forEach((c) => c.addEventListener('change', () => {
+      const amt = ginBox.querySelector(`.go-amt[data-pid="${c.dataset.pid}"]`);
+      if (c.checked && !(Number(amt.value) > 0)) {
+        // what the buyer pays on this invoice, less the gin already ticked: the most that can sensibly come off
+        const o = ginOptions.find((x) => x.payableId === c.dataset.pid);
+        const due = getNum(root, 't-subtotal') + getNum(root, 't-gst') - getNum(root, 't-levies') - getNum(root, 't-freight');
+        const left = due - ginPicked();
+        amt.value = Math.max(0, Math.min(o.outstanding, Math.round(left * 100) / 100)).toFixed(2);
+      }
+      if (!c.checked) amt.value = '';
+      ginChanged();
+    }));
+    ginBox?.querySelectorAll('.go-amt').forEach((a) => a.addEventListener('input', () => {
+      const c = ginBox.querySelector(`.go-check[data-pid="${a.dataset.pid}"]`);
+      c.checked = Number(a.value) > 0;
+      ginChanged();
+    }));
     root.querySelector('#manual-tons').addEventListener('input', recomputeTotals);
     ['t-subtotal', 't-freight', 't-levies', 't-gst'].forEach((id) => root.querySelector(`#${id}`).addEventListener('input', recomputeFinalTotal));
 
@@ -212,11 +278,8 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
           ...(cur.usd ? { foreign: { usd: item.amount, rate: cur.rate } } : {}),
           ...(item.perBale ? { perBale: item.perBale, ...(item.bales ? { bales: item.bales } : {}) } : {}) });
       });
-      // a cotton buyer that pays the gin takes each prepaid gin invoice off the total due: one line for each run on this invoice
-      ginPrepaid(sale, selectedMovements).forEach((p) => {
-        lines.push({ date: p.date || sale.date, rego: '—', tons: null, movementId: null, rate: null, subtotal: 0, isGinPrepaid: true, ginRunId: p.movementId,
-          description: `${p.ginName || 'Ginning'} invoice ${p.invoiceNo || ''}`.trim(), ginning: p.ginning, levies: p.levies, gst: p.gst, amount: p.total });
-      });
+      // a cotton buyer that pays the gin takes the gin invoices chosen above off the total due: one line for each
+      lines.push(...ginPickLines());
       lines.push(...adjustmentLines);
       lines.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
       return lines;
@@ -238,12 +301,15 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
     }
 
     // the gin invoices the buyer prepaid, taken off the total (kept with the lines, so editing the others leaves it alone)
-    let ginTotal = existingInvoice ? Math.round((existingInvoice.lines || []).filter((l) => l.isGinPrepaid).reduce((s, l) => s + (Number(l.amount) || 0), 0) * 100) / 100 : 0;
+    let ginTotal = existingInvoice ? Math.round(existingGinLines.reduce((s, l) => s + (Number(l.amount) || 0), 0) * 100) / 100 : 0;
+    // ticking a gin invoice, or changing its amount, moves the total but leaves any hand-adjusted figures above alone
+    function ginChanged() { ginTotal = ginPicked(); recomputeFinalTotal(); }
     function recomputeFinalTotal() {
       root.querySelector('#t-gin-row').style.display = ginTotal > 0 ? '' : 'none';
       root.querySelector('#t-gin').textContent = `-${money(ginTotal, 2)}`;
       const total = getNum(root, 't-subtotal') + getNum(root, 't-gst') - getNum(root, 't-levies') - getNum(root, 't-freight') - ginTotal;
       root.querySelector('#t-total').textContent = money(total, 2);
+      root.querySelector('#t-total').style.color = total < -0.005 ? 'var(--danger,#c0392b)' : '';
     }
 
     if (existingInvoice) {

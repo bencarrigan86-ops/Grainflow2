@@ -27,7 +27,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ringsAreaHa, simplifyRing } from '../docs/js/farmmap.js';
 import { invoiceLineItems, invoiceTotals } from '../docs/js/derived.js';
-import { ginPrepaid, cleanGin, allocateLint, ginInvoice, contractShare } from '../docs/js/ginning.js';
+import { cleanGin, allocateLint, ginInvoice } from '../docs/js/ginning.js';
+import { ginOffsetLine, ginBillTotal } from '../docs/js/ginoffset.js';
 import { sprayDefaults } from '../docs/js/spray.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -539,10 +540,9 @@ const buildInvoice = (base, sale, movs, extraLines = []) => {
   };
 };
 const ctSale = sales.find((s) => s.id === 'sale-ct1');
-const prepaid = ginPrepaid(ctSale, [ginMovement]).map((p) => ({
-  date: p.date || ctSale.date, rego: '—', tons: null, movementId: null, rate: null, subtotal: 0, isGinPrepaid: true, ginRunId: p.movementId,
-  description: `${p.ginName || 'Ginning'} invoice ${p.invoiceNo || ''}`.trim(), ginning: p.ginning, levies: p.levies, gst: p.gst, amount: p.total,
-}));
+// the gin invoice the lint buyer pays: the whole bill, taken off this lint invoice (chosen on the invoice, as a person would)
+const ginBill = (() => { const gi = ginInvoice(ginRun); return { id: 'pay-gin', kind: 'other', supplier: ginRun.ginName, reference: ginRun.invoiceNo, invoiceDate: '2026-05-02', dueDate: '', amount: round(gi.exGst, 2), gst: round(gi.gst, 2), saleId: '', storageId: '', tons: round(gi.bales, 3), rate: ginRun.ginRate, status: 'unpaid', paidDate: '', payer: 'buyer', notes: 'Paid by the lint buyer and taken off the lint invoices' }; })();
+const prepaid = [ginOffsetLine({ bill: ginBill, amount: ginBillTotal(ginBill), movements: [ginMovement], sale: ctSale, date: ctSale.date })];
 const pdUsd = -1642.35;
 const pdRate = 0.6609;
 const pdAud = round(pdUsd / pdRate, 2);
@@ -558,8 +558,8 @@ const payables = [
   { id: 'pay-1', kind: 'brokerage', supplier: 'Sample Grain Brokers', reference: 'BR-0231', invoiceDate: '2026-12-19', dueDate: '2027-01-18', amount: 1824, gst: 182.4, saleId: 'sale-1', storageId: '', tons: '', rate: '', status: 'unpaid', paidDate: '', notes: '' },
   { id: 'pay-2', kind: 'freight', supplier: 'Ace Haulage', reference: 'AH-5530', invoiceDate: '2026-12-05', dueDate: '2026-12-19', amount: 1290, gst: 129, saleId: 'sale-1', storageId: '', tons: 60, rate: 21.5, status: 'paid', paidDate: '2026-12-17', notes: '' },
   { id: 'pay-3', kind: 'storage', supplier: 'Newbridge Storage Co', reference: 'NS-118', invoiceDate: '2026-12-10', dueDate: '2027-01-09', amount: 960, gst: 96, saleId: '', storageId: 'bunker-1', tons: 320, rate: 3, status: 'unpaid', paidDate: '', notes: 'Wheat, December' },
-  // the gin's invoice, paid by the lint buyer and taken off the lint payment: marked paid when invoice 3 is
-  (() => { const gi = ginInvoice(ginRun); const part = contractShare(ginRun); return { id: 'pay-gin', kind: 'other', supplier: ginRun.ginName, reference: ginRun.invoiceNo, invoiceDate: '2026-05-02', dueDate: '', amount: round(gi.exGst * part, 2), gst: round(gi.gst * part, 2), saleId: '', storageId: '', tons: round(gi.bales * part, 3), rate: ginRun.ginRate, status: 'unpaid', paidDate: '', payer: 'buyer', notes: 'Paid by the lint buyer and taken off the lint payment' }; })(),
+  // the gin's invoice, paid by the lint buyer and taken off the lint invoice (invoice 3): marked paid when that is
+  ginBill,
   { id: 'pay-4', kind: 'other', supplier: 'Sample Ag Services', reference: 'AS-2204', invoiceDate: '2026-11-22', dueDate: '2026-12-22', amount: 540, gst: 54, saleId: '', storageId: '', tons: '', rate: '', status: 'unpaid', paidDate: '', notes: 'Weighbridge calibration' },
 ];
 const inputStock = [

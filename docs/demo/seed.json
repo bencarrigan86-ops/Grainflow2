@@ -3297,7 +3297,7 @@
           "freightTotal": 0,
           "levies": 0,
           "gst": 33901.28,
-          "totalPayable": 321240.09,
+          "totalPayable": 256647.57,
           "lines": [
             {
               "date": "2026-05-02",
@@ -3343,12 +3343,13 @@
               "rate": null,
               "subtotal": 0,
               "isGinPrepaid": true,
+              "payableId": "pay-gin",
               "ginRunId": "mv-1044",
               "description": "Bimbi Ginning invoice I021/26",
-              "ginning": 44933.91,
-              "levies": 2246.7,
-              "gst": 4493.39,
-              "amount": 51674
+              "ginning": 101101.32,
+              "levies": 5055.07,
+              "gst": 10110.13,
+              "amount": 116266.52
             }
           ]
         },
@@ -3534,16 +3535,16 @@
           "reference": "I021/26",
           "invoiceDate": "2026-05-02",
           "dueDate": "",
-          "amount": 78923.45,
-          "gst": 7516.52,
+          "amount": 106156.39,
+          "gst": 10110.13,
           "saleId": "",
           "storageId": "",
-          "tons": 1002.203,
+          "tons": 1348.018,
           "rate": 75,
           "status": "unpaid",
           "paidDate": "",
           "payer": "buyer",
-          "notes": "Paid by the lint buyer and taken off the lint payment"
+          "notes": "Paid by the lint buyer and taken off the lint invoices"
         },
         {
           "id": "pay-4",

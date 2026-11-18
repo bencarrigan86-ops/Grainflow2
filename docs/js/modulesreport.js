@@ -2,9 +2,9 @@
 //
 // Pure functions over the farm's records. The screen (views/reports.js) and the PDF (modulespdf.js) both draw from this.
 
-import { hasGin, hasModules, moduleLegs, cleanGin, stdBales, estimateBales, DEFAULT_TURNOUT } from './ginning.js?v=382';
-import { pickedTotals, cleanPicked } from './modulespicked.js?v=382';
-import { storageLedgerStock } from './derived.js?v=382';
+import { hasGin, hasModules, moduleLegs, cleanGin, stdBales, estimateBales, DEFAULT_TURNOUT } from './ginning.js?v=383';
+import { pickedTotals, cleanPicked } from './modulespicked.js?v=383';
+import { storageLedgerStock } from './derived.js?v=383';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
@@ -78,7 +78,7 @@ export function modulesReport({ fields = [], movements = [], storages = [], comm
   const waiting = movements.filter((m) => hasModules(m) && m.weightStatus !== 'final');
   const pending = { loads: waiting.length, modules: waiting.reduce((s, m) => s + num(m.modules.count), 0), ids: waiting.map((m) => m.id) };
 
-  // the grower position, laid out as the gin prints it: paddock, variety, hectares, picked, loads, delivered, ginned, bales, turnout, yield
+  // the grower position, laid out as the gin prints it: paddock, hectares, picked, in the field, loads, delivered, ginned, bales, turnout, yield
   const ginnedBy = new Map(ginned.rows.filter((r) => r.field).map((r) => [r.field.id, r]));
   const loadsBy = new Map();
   for (const m of movements) {
@@ -90,15 +90,15 @@ export function modulesReport({ fields = [], movements = [], storages = [], comm
     const ha = num(r.field.areaHa);
     const bales = g ? g.bales : 0;
     return {
-      field: r.field, variety: String(r.field.seedVariety || ''), ha, picked: r.picked, loads: loadsBy.get(r.field.id) || 0, moved: r.moved,
+      field: r.field, ha, picked: r.picked, inField: r.inField, loads: loadsBy.get(r.field.id) || 0, moved: r.moved,
       ginnedModules: g ? g.modules : 0, inYard: Math.max(0, r.moved - (g ? g.modules : 0)), avgKg: g && g.avgKg > 0 ? g.avgKg : r.avgKg,
       bales, turnoutPct: g ? g.turnoutPct : 0, yieldBalesHa: ha > 0 && bales > 0 ? bales / ha : 0,
     };
   });
   const gsum = grower.reduce((s, r) => ({
-    ha: s.ha + r.ha, picked: s.picked + r.picked, loads: s.loads + r.loads, moved: s.moved + r.moved, ginnedModules: s.ginnedModules + r.ginnedModules,
+    ha: s.ha + r.ha, picked: s.picked + r.picked, inField: s.inField + r.inField, inYard: s.inYard + r.inYard, loads: s.loads + r.loads, moved: s.moved + r.moved, ginnedModules: s.ginnedModules + r.ginnedModules,
     bales: s.bales + r.bales, ginnedHa: s.ginnedHa + (r.bales > 0 ? r.ha : 0),
-  }), { ha: 0, picked: 0, loads: 0, moved: 0, ginnedModules: 0, bales: 0, ginnedHa: 0 });
+  }), { ha: 0, picked: 0, inField: 0, inYard: 0, loads: 0, moved: 0, ginnedModules: 0, bales: 0, ginnedHa: 0 });
   const growerTotals = {
     ...gsum, avgKg: ginned.totals.avgKg > 0 ? ginned.totals.avgKg : totals.avgKg, turnoutPct: ginned.totals.turnoutPct,
     yieldBalesHa: gsum.ginnedHa > 0 ? gsum.bales / gsum.ginnedHa : 0,
@@ -111,7 +111,14 @@ export function modulesReport({ fields = [], movements = [], storages = [], comm
   const yardBales = estimateBales((totals.avgKg || 0) * inYard, turnoutAvg);
   const inShed = storages.filter((s) => s.kind === 'tally' && !s.deleted && !ids.has(s.id) && s.unitLabel === 'bales').reduce((s, x) => s + storageLedgerStock(x, movements), 0);
   const onHand = { inField: totals.inField, inFieldBales: totals.inFieldBales, inYard, yardBales, inShed, total: totals.inFieldBales + yardBales + inShed };
-  return { rows, totals, yards, pending, ginned, grower, growerTotals, onHand };
+  // the summary at the top of the report: where the modules are, what has been ginned, and the bales to expect in all
+  // (the bales ginned, plus the modules still in the field and in the yard at their average weight and turnout)
+  const summary = {
+    picked: totals.picked, inField: totals.inField, inYard, ginnedModules: ginned.totals.modules,
+    ginnedBales: ginned.totals.bales, turnoutPct: ginned.totals.turnoutPct,
+    expectedBales: ginned.totals.bales + totals.inFieldBales + yardBales,
+  };
+  return { rows, totals, yards, pending, ginned, grower, growerTotals, onHand, summary };
 }
 
 /**

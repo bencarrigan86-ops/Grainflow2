@@ -83,7 +83,7 @@ export function remapIds(input) {
 
     for (const i of year.invoices || []) {
       i.saleId = idFor(i.saleId);
-      for (const l of i.lines || []) { if (l.movementId) l.movementId = idFor(l.movementId); if (l.ginRunId) l.ginRunId = idFor(l.ginRunId); }
+      for (const l of i.lines || []) { if (l.movementId) l.movementId = idFor(l.movementId); if (l.ginRunId) l.ginRunId = idFor(l.ginRunId); if (l.payableId) l.payableId = idFor(l.payableId); }
     }
     for (const p of year.payables || []) { p.saleId = idFor(p.saleId); p.storageId = idFor(p.storageId); p.freightOrderId = idFor(p.freightOrderId); }
     for (const j of year.sprayJobs || []) for (const p of j.paddocks || []) p.id = idFor(p.id);

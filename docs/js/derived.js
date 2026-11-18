@@ -1,12 +1,13 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=382';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=382';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=382';
-import { isGinContract } from './cottonkinds.js?v=382';
-import { ginDeduction, cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=382';
-import { commoditySort } from './commodityorder.js?v=382';
-import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=382';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=383';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=383';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=383';
+import { isGinContract } from './cottonkinds.js?v=383';
+import { ginTakenOff } from './ginoffset.js?v=383';
+import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=383';
+import { commoditySort } from './commodityorder.js?v=383';
+import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=383';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -70,7 +71,7 @@ export function storageLedgerStock(storage, movements) {
   return (Number(storage.openingStock) || 0) + movementNetForStorage(storage.id, movements);
 }
 
-export function saleEconomics(sale, movements = []) {
+export function saleEconomics(sale, movements = [], invoices = []) {
   const price = Number(sale.price) || 0;
   const freight = Number(sale.freight) || 0;
   const premium = Number(sale.premiumDiscount) || 0;
@@ -95,10 +96,10 @@ export function saleEconomics(sale, movements = []) {
   const oil = oilAdjustment(sale, movements);
   // and a load can carry deductions of its own for faults the contract does not price
   const deductions = deductionAdjustment(sale, movements);
-  // and for cotton, the gin charges the buyer of the lint pays and takes off the lint payment. That is a deduction from
-  // the payment at the foot of the invoice, not part of the price: the contract's value stays what the lint is worth,
-  // and `netPayment` is what the buyer actually pays after the gin comes off.
-  const gin = ginDeduction(sale, movements);
+  // and for cotton, the gin invoices the buyer of the lint pays, which are taken off this contract's lint invoices (the lines the invoices
+  // carry, passed in). That is a deduction from the payment at the foot of the invoice, not part of the price: the contract's value
+  // stays what the lint is worth, and `netPayment` is what the buyer actually pays after the gin comes off.
+  const gin = ginTakenOff(invoices);
   const totalValue = tons * priceExFarm - ginning + grades.total + oil.total + deductions.total;
   const netPayment = totalValue - gin.total;
   const tonsDue = tons - tonsDelivered;
@@ -112,7 +113,7 @@ export function saleEconomics(sale, movements = []) {
   return {
     netOfFreight, levies, priceExFarm, ginning, totalValue, netPayment, tonsDue,
     gradeAdjustment: grades.total, gradeLines: grades.lines, gradeOtherTons: grades.otherTons,
-    oilAdjustment: oil.total, oilSummary: oil, deductionAdjustment: deductions.total, deductionLoads: deductions.loads, ginDeduction: gin.total, ginRuns: gin.runs,
+    oilAdjustment: oil.total, oilSummary: oil, deductionAdjustment: deductions.total, deductionLoads: deductions.loads, ginDeduction: gin.total, ginInvoices: gin.lines,
     manualDelivered, movementDelivered, tonsDelivered,
     toleranceTons, minTons, maxTons, isFull, isOverDelivered, tonsToFill, tonsRemainingMax,
   };

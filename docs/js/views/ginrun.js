@@ -6,18 +6,18 @@
 // contract or a storage, which should add up to the bales pressed. The gin's invoice is saved as a bill when we pay it
 // (see ginning.js).
 
-import { db } from '../storage.js?v=382';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=382';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=382';
-import { activeSales } from '../paidsales.js?v=382';
-import { isGinContract, cottonKind, ginContracts, cleanCottonTerms, kindSummary } from '../cottonkinds.js?v=382';
-import { storageLedgerStock, movementTonsToSale } from '../derived.js?v=382';
-import { offerGinYard } from './modulemove.js?v=382';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=382';
+import { db } from '../storage.js?v=383';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=383';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=383';
+import { activeSales } from '../paidsales.js?v=383';
+import { isGinContract, cottonKind, ginContracts, cleanCottonTerms, kindSummary } from '../cottonkinds.js?v=383';
+import { storageLedgerStock, movementTonsToSale } from '../derived.js?v=383';
+import { offerGinYard } from './modulemove.js?v=383';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=383';
 import {
-  STD_BALE_KG, cleanGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, contractShare, splitGinCharge,
+  STD_BALE_KG, cleanGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice,
   baleRangeCount, allocateLint, allocationProblems, padOffBy,
-} from '../ginning.js?v=382';
+} from '../ginning.js?v=383';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -218,12 +218,7 @@ export function openGinRunSheet(existing = null) {
       const buyerPays = g.paidBy === 'buyer';
       const toContract = readAllocs().some((a) => parseTarget(a.to)?.type === 'sale');
       root.querySelector('#g-paid-note').innerHTML = !buyerPays ? ''
-        : toContract ? (() => {
-          const split = splitGinCharge(g, data.sales);
-          const name = (id) => { const s = data.sales.find((x) => x.id === id); return s ? `${s.buyer || 'Contract'}${s.contractNo ? ` #${s.contractNo}` : ''}` : 'the contract'; };
-          const lines = split.map((s) => `${esc(name(s.saleId))}: ${money(s.ginning + s.levies, 2)} ex GST`);
-          return `Comes off the first contract's lint payment, up to what its lint is worth, then the next. ${lines.length > 1 ? lines.join(' · ') + '. ' : lines.length ? `All of it comes off ${lines[0].split(':')[0]}. ` : ''}A bill is saved in Payables and marked paid when that lint invoice is.`;
-        })()
+        : toContract ? 'The lint buyer pays this invoice. It is saved in Payables for the lint buyer to pay, and you choose how much of it comes off each lint contract when you invoice that contract.'
           : 'Choose the contract the lint goes to above, so the charges can be taken off its payment.';
     };
 
@@ -323,18 +318,13 @@ export function openGinRunSheet(existing = null) {
       // the gin's invoice, kept as a bill when we pay it, so what ginning cost is in the books
       const inv = ginInvoice(g);
       let payableId = g.payableId;
-      // which contract's lint payment the gin comes off (the first, up to what its lint is worth, then the next)
-      const split = g.paidBy === 'buyer' ? splitGinCharge(g, data.sales) : null;
-      if (split) g.ginSplit = split.map(({ saleId, ginning, levies, gst }) => ({ saleId, ginning, levies, gst }));
       if (inv.bales > 0) {
-        // a run the lint buyer pays is billed for what the contracts pay: the rest is not on any buyer's invoice
-        const part = g.paidBy === 'buyer' ? contractShare(g) : 1;
-        const paidByContracts = split ? { ex: split.reduce((s, x) => s + x.ginning + x.levies, 0), gst: split.reduce((s, x) => s + x.gst, 0) } : null;
+        // the whole gin invoice is kept as the bill; one the lint buyer pays is taken off lint invoices a part at a time
         const bill = {
           payer: g.paidBy === 'buyer' ? 'buyer' : null, ...(g.paidBy === 'buyer' ? {} : { __hasPayer: true }),
           kind: 'other', supplier: g.ginName || 'Gin', reference: g.invoiceNo, invoiceDate: getVal(root, 'g-date'),
-          amount: paidByContracts ? Math.round(paidByContracts.ex * 100) / 100 : Math.round(inv.exGst * part * 100) / 100, gst: paidByContracts ? Math.round(paidByContracts.gst * 100) / 100 : Math.round(inv.gst * part * 100) / 100, tons: round3(inv.bales * part), rate: g.ginRate,
-          notes: `Ginning run: ${num(inv.bales, 2)} standard bales${part < 1 ? `, ${num(part * 100, 1)}% of them to contracts` : ''}. Ginning ${money(inv.ginning, 2)}, levies ${money(inv.levies, 2)}.`,
+          amount: Math.round(inv.exGst * 100) / 100, gst: Math.round(inv.gst * 100) / 100, tons: round3(inv.bales), rate: g.ginRate,
+          notes: `Ginning run: ${num(inv.bales, 2)} standard bales. Ginning ${money(inv.ginning, 2)}, levies ${money(inv.levies, 2)}.${g.paidBy === 'buyer' ? ' Paid by the lint buyer: taken off the lint invoices.' : ''}`,
         };
         const same = payableId && db.getPayables().find((p) => p.id === payableId);
         // a new bill takes the id the file was attached under; the files go with it

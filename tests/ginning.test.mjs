@@ -5,7 +5,8 @@
 // I053/23 (90,273 kg of lint, 393 bales pressed): $65.00 a bale to gin, $2.25 research levy, GST on the ginning only.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction, splitGinCharge, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems, cleanCotton, hasCotton, cottonComponents, cottonRunTotals, SEED_FACTOR_DEFAULT, ginPrepaid, lotsForSale, padOffBy, cleanModules, hasModules, moduleLegs, shareLoad, estimateBales, describeModules, DEFAULT_TURNOUT } from '../docs/js/ginning.js';
+import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems, cleanCotton, hasCotton, cottonComponents, cottonRunTotals, SEED_FACTOR_DEFAULT, lotsForSale, padOffBy, cleanModules, hasModules, moduleLegs, shareLoad, estimateBales, describeModules, DEFAULT_TURNOUT } from '../docs/js/ginning.js';
+import { ginOffsetOptions, ginOffsetLine, ginTakenOff, ginBillTotal, linePayableId } from '../docs/js/ginoffset.js';
 import { avgModuleKg } from '../docs/js/modulespicked.js';
 import { modulesReport, ginnedByField } from '../docs/js/modulesreport.js';
 import { modulesPdf } from '../docs/js/modulespdf.js';
@@ -73,26 +74,26 @@ check('the run reads in words for the movement list', () => {
   assert.equal(describeGin({ modules: 1, lintKg: 227 }), '1 module → (1.00 std)');
 });
 
-check('when the lint buyer pays the gin, the ginning and levies come off the contract, not into the bills', () => {
+check('when the lint buyer pays the gin, what comes off a contract is what its invoices take off: nothing is taken automatically', () => {
   const sale = { id: 's1', price: 593.57, tons: 500, contractNo: 'P23-139' };
-  const gin = { ...run, voluntaryLevy: 1.5, paidBy: 'buyer' };
+  const gin = { ...run, voluntaryLevy: 1.5, paidBy: 'buyer', payableId: 'b1' };
   const lint = Math.round(stdBales(90273) * 1000) / 1000;   // as saved on the leg
-  const move = (g, to) => ({ id: 'm1', date: '2026-05-18', tons: lint, froms: [], tos: [{ type: to, id: 's1', tons: lint }], gin: g });
-  const d = ginDeduction(sale, [move(gin, 'sale')]);
-  assert.equal(d.total, 27340.40, 'ginning + research + voluntary, ex GST');
-  assert.equal(d.runs, 1);
-  assert.equal(ginDeduction(sale, [move({ ...gin, paidBy: 'us' }, 'sale')]).total, 0, 'a run we pay is a bill, not a deduction');
-  assert.equal(ginDeduction(sale, [move(gin, 'silo')]).total, 0, 'lint in a storage is not on the contract yet');
-  assert.equal(ginDeduction({ id: 'other' }, [move(gin, 'sale')]).total, 0);
-  const half = { ...move(gin, 'sale'), tos: [{ type: 'sale', id: 's1', tons: lint / 2 }] };
-  assert.equal(ginDeduction(sale, [half]).total, 13670.20, 'only the share of the run delivered to this contract');
+  const inv = ginInvoice(gin);
+  const bill = { id: 'b1', supplier: 'Brighann Ginning', reference: 'I053/23', invoiceDate: '2026-05-02', amount: inv.exGst, gst: inv.gst, payer: 'buyer' };
+  const mv = { id: 'm1', date: '2026-05-18', tons: lint, froms: [], tos: [{ type: 'sale', id: 's1', tons: lint }], gin };
   const base = saleEconomics(sale, []).totalValue;
-  const e = saleEconomics(sale, [move(gin, 'sale')]);
+  const none = saleEconomics(sale, [mv], []);
+  assert.equal(none.ginDeduction, 0, 'the lint goes to the contract, but no invoice has taken the gin off');
+  assert.equal(none.netPayment, base);
+  const line = ginOffsetLine({ bill, amount: ginBillTotal(bill), movements: [mv], sale });
+  const invoice = { id: 'i1', saleId: 's1', lines: [line] };
+  assert.equal(ginTakenOff([invoice]).total, 27340.40, 'ginning + research + voluntary, ex GST');
+  assert.equal(ginTakenOff([invoice]).totalInclGst, 29925.31);
+  const e = saleEconomics(sale, [mv], [invoice]);
   assert.equal(e.ginDeduction, 27340.40);
   assert.equal(e.totalValue, base, 'the contract value is not changed by the gin: it is a deduction from the payment, not the price');
   assert.equal(e.priceExFarm, saleEconomics(sale, []).priceExFarm, 'nor is the price');
   assert.equal(Math.round((base - e.netPayment) * 100) / 100, 27340.40, 'but the payment is that much less');
-  assert.equal(saleEconomics(sale, []).netPayment, base, 'with no gin deduction the payment is the value');
   assert.equal(cleanGin({}).paidBy, 'us', 'a run saved before this existed is ours to pay');
 });
 
@@ -141,17 +142,6 @@ check('bad allocations are named: a gap, an overlap, outside the run, not a rang
   assert.match(p([lot('a', 'BG027626', 'BG027234')]), /not a bale range/);
   assert.match(allocationProblems({ ...split, physicalBales: 400 }).join(' '), /range is 393 bales but 400 were pressed/);
   assert.equal(cleanAllocations([lot('', '', ''), lot('sale:s1', ' BG1 ', 'BG9')]).length, 1, 'a blank lot is dropped');
-});
-
-check('when the buyer pays the gin, each contract is charged for the bales in its range only', () => {
-  const g = { ...split, allocations: [lot('sale:s1', 'BG027234', 'BG027400'), lot('sale:s2', 'BG027401', 'BG027626')] };
-  const legs = allocateLint(g).map((a) => ({ type: 'sale', id: a.to.slice(5), tons: Math.round(a.std * 1000) / 1000 }));
-  const m = { id: 'm1', date: '2026-05-18', tons: 397.678, froms: [], tos: legs, gin: g };
-  const d1 = ginDeduction({ id: 's1' }, [m]);
-  const d2 = ginDeduction({ id: 's2' }, [m]);
-  assert.ok(Math.abs(d1.total + d2.total - 27340.40) < 0.02, 'the two shares make the whole invoice');
-  assert.ok(Math.abs(d1.total - 27340.40 * (167 / 393)) < 0.02);
-  assert.equal(ginDeduction({ id: 's3' }, [m]).total, 0);
 });
 
 check('the sheet takes lint by bale range, with a lot per contract or storage, and warns before saving a mismatch', () => {
@@ -321,22 +311,30 @@ check('premiums and discounts show apart from the gross and count in the value n
   assert.equal(m.valueNett, 708978.50);
 });
 
-check('a run delivered to a contract puts its bale numbers on the invoice line, and a buyer-paid gin invoice is a prepayment with GST', () => {
+check('a run delivered to a contract puts its bale numbers on the invoice line, and a gin invoice taken off is a line with GST on the ginning only', () => {
   const g = { ...run, voluntaryLevy: 1.5, paidBy: 'buyer', baleFrom: 'BG027234', baleTo: 'BG027626', allocations: [lot('sale:s1', 'BG027234', 'BG027400'), lot('sale:s2', 'BG027401', 'BG027626')] };
   const lots = allocateLint(g);
-  const mv = { id: 'm1', date: '2026-05-18', commodityId: 'cot', tons: 397.678, froms: [], tos: lots.map((a) => ({ type: 'sale', id: a.to.slice(5), tons: Math.round(a.std * 1000) / 1000 })), gin: g };
+  const mv = { id: 'm1', date: '2026-05-18', commodityId: 'cot', tons: 397.678, froms: [], tos: lots.map((a) => ({ type: 'sale', id: a.to.slice(5), tons: Math.round(a.std * 1000) / 1000 })), gin: { ...g, payableId: 'b1' } };
   assert.deepEqual(lotsForSale(mv, 's1').map((a) => a.bales), [167]);
   const line = invoiceLineItems({ id: 's1', price: 600 }, [mv])[0];
   assert.equal(line.bales, 167);
   assert.deepEqual(line.baleRanges, [{ from: 'BG027234', to: 'BG027400', bales: 167 }]);
-  const p = ginPrepaid({ id: 's1' }, [mv]);
-  assert.equal(p.length, 1);
-  assert.equal(p[0].invoiceNo, 'I053/23');
-  const whole = { ...mv, tos: [{ type: 'sale', id: 'x', tons: 397.678 }], gin: { ...g, allocations: [lot('sale:x', 'BG027234', 'BG027626')] } };
-  assert.equal(ginPrepaid({ id: 'x' }, [whole])[0].total, 29925.31, 'the whole invoice, GST on the ginning only');
-  assert.equal(ginPrepaid({ id: 'x' }, [whole])[0].gst, 2584.91);
-  assert.equal(ginDeduction({ id: 'x' }, [whole]).totalInclGst, 29925.31);
-  assert.equal(ginPrepaid({ id: 's1' }, [{ ...mv, gin: { ...g, paidBy: 'us' } }]).length, 0, 'a gin invoice we pay is a bill');
+  const inv = ginInvoice(g);
+  const bill = { id: 'b1', supplier: 'Brighann Ginning', reference: 'I053/23', invoiceDate: '2026-05-02', amount: inv.exGst, gst: inv.gst, payer: 'buyer' };
+  const whole = ginOffsetLine({ bill, amount: ginBillTotal(bill), movements: [mv], sale: { id: 's1' } });
+  assert.equal(whole.amount, 29925.31, 'the whole invoice, GST on the ginning only');
+  assert.equal(whole.gst, 2584.91);
+  assert.equal(whole.description, 'Brighann Ginning invoice I053/23');
+  assert.equal(whole.payableId, 'b1');
+  assert.equal(whole.ginRunId, 'm1');
+  assert.ok(whole.isGinPrepaid && whole.subtotal === 0);
+  assert.ok(Math.abs(whole.ginning + whole.levies - 27340.40) < 0.02);
+  assert.ok(Math.abs(whole.ginning - inv.ginning) < 0.02 && Math.abs(whole.levies - inv.levies) < 0.02, 'split as the gin charged it');
+  const part = ginOffsetLine({ bill, amount: 20000, movements: [mv], sale: { id: 's1' } });
+  assert.equal(part.amount, 20000);
+  assert.ok(Math.abs(part.ginning + part.levies + part.gst - 20000) < 0.011, 'the parts add up to what was taken');
+  assert.ok(Math.abs(part.gst - 2584.91 * (20000 / 29925.31)) < 0.02, 'GST in the same proportion');
+  assert.equal(ginOffsetLine({ bill, amount: 99999, movements: [mv] }).amount, 29925.31, 'never more than the bill');
 });
 
 check('the Xero file takes each gin prepayment off as the gin charged it: ginning with GST, levies without', () => {
@@ -348,11 +346,12 @@ check('the Xero file takes each gin prepayment off as the gin charged it: ginnin
   assert.ok(gin.every((r) => r['*UnitAmount'] < 0));
 });
 
-check('the builder adds a prepaid gin line for each selected run, the document is the cotton layout, and the total has the gin taken off', () => {
+check('the builder lists the gin invoices to take off, the document is the cotton layout, and the total has the gin taken off', () => {
   const v = read('docs/js/views/invoice.js');
-  assert.ok(v.includes('ginPrepaid(sale, selectedMovements)') && v.includes('isGinPrepaid: true'));
+  assert.ok(v.includes('ginOffsetOptions(') && v.includes('ginOffsetLine(') && v.includes('Gin invoices to take off') && v.includes('class="go-check"') && v.includes('class="go-amt"'));
+  assert.ok(!v.includes('ginPrepaid('), 'nothing is taken off automatically');
   assert.ok(v.includes("commodity?.unit === 'bale') return cottonInvoiceDocHTML"));
-  assert.ok(v.includes('Ginning invoices prepaid') && v.includes('Total gin prepayments on this invoice') && v.includes('Total amount due including tax') && v.includes('Bale range:'));
+  assert.ok(v.includes('Gin invoices taken off') && v.includes('Total gin prepayments on this invoice') && v.includes('Total amount due including tax') && v.includes('Bale range:'));
   assert.ok(v.includes('- ginTotal'));
 });
 
@@ -545,7 +544,7 @@ check('the Modules report weight is the estimate until a load is weighed at the 
   assert.equal(done.avgKg, 12300, '123,000 kg over the 10 modules');
   assert.ok(Math.abs(row.avgKg - 122100 / 10) < 1e-9, 'weight over the modules it covers: 4 estimated, 3 weighed, 3 in the field');
   assert.ok(Math.abs(mid.totals.avgKg - 12210) < 1e-9);
-  assert.ok(read('docs/js/views/reports.js').includes('Weight kg') && !read('docs/js/views/reports.js').includes('<th>Est t</th>'));
+  assert.ok(!read('docs/js/views/reports.js').includes('<th>Est t</th>'));
 });
 
 check('the average module weight is a cotton setting that every paddock starts from, until modules are picked on it', () => {
@@ -559,7 +558,7 @@ check('the average module weight is a cotton setting that every paddock starts f
   assert.ok(s.includes("label: 'Module weight (kg)'") && s.includes('moduleKg: getNum(root, ' + "'ginModuleKg')"));
   const p = read('docs/js/views/modulespicked.js');
   assert.ok(p.includes('moduleKgDefault') && p.includes('Math.round(n * moduleKgDefault)'));
-  assert.ok(read('docs/js/views/reports.js').includes('<th>Avg module kg</th>') && read('docs/js/modulespdf.js').includes("head: 'Avg module kg'"));
+  assert.ok(read('docs/js/views/reports.js').includes('<th>Avg kg</th>') && read('docs/js/modulespdf.js').includes("head: 'Avg kg'"));
 });
 
 check('the cotton Position shows the seed and the ginning in dollars a bale as well', () => {
@@ -655,10 +654,10 @@ console.log('\n=== the grower position, as the gin prints it, and the cotton on 
 const demoSeed = JSON.parse(readFileSync(new URL('../docs/demo/seed.json', import.meta.url), 'utf8'));
 const demoYear = demoSeed.years[demoSeed.currentYear];
 const demoReport = modulesReport({ fields: demoYear.fields, movements: demoYear.movements, storages: demoYear.storages, commodities: demoYear.commodities });
-check('a row to a paddock: variety, hectares, picked, loads, to the gin, ginned, bales, turnout and bales a hectare', () => {
+check('a row to a paddock: hectares, picked, in the field, loads, to the gin, ginned, bales, turnout and bales a hectare', () => {
   const north = demoReport.grower.find((r) => r.field.name === 'Cotton North');
-  assert.equal(north.variety, 'Sicot 746B3F');
-  assert.deepEqual([north.ha, north.picked, north.loads, north.moved, north.ginnedModules, north.inYard], [150, 360, 3, 300, 300, 0]);
+  assert.ok(!('variety' in north), 'the variety is not on the report');
+  assert.deepEqual([north.ha, north.picked, north.inField, north.loads, north.moved, north.ginnedModules, north.inYard], [150, 360, 60, 3, 300, 300, 0]);
   assert.ok(north.bales > 1300 && north.turnoutPct > 40);
   assert.ok(Math.abs(north.yieldBalesHa - north.bales / 150) < 1e-9, 'yield is ginned standard bales over the hectares');
   const south = demoReport.grower.find((r) => r.field.name === 'Cotton South');
@@ -666,7 +665,7 @@ check('a row to a paddock: variety, hectares, picked, loads, to the gin, ginned,
 });
 check('the totals add the paddocks, and the yield is over the hectares that have been ginned', () => {
   const t = demoReport.growerTotals;
-  assert.deepEqual([t.ha, t.picked, t.loads, t.moved, t.ginnedModules], [268, 510, 4, 340, 300]);
+  assert.deepEqual([t.ha, t.picked, t.inField, t.inYard, t.moved, t.ginnedModules], [268, 510, 170, 40, 340, 300]);
   assert.ok(Math.abs(t.yieldBalesHa - t.bales / 150) < 1e-9);
 });
 check('cotton on hand: in the field, in the gin yard and in the bale shed, each module in one place', () => {
@@ -678,10 +677,22 @@ check('cotton on hand: in the field, in the gin yard and in the bale shed, each 
   assert.ok(Math.abs(h.total - (h.inFieldBales + h.yardBales + h.inShed)) < 1e-9);
 });
 check('the report screen, the PDF and the Storage tab carry them', () => {
-  assert.ok(read('docs/js/views/reports.js').includes('Grower position') && read('docs/js/modulespdf.js').includes('GROWER_COLUMNS_2'));
+  assert.ok(read('docs/js/views/reports.js').includes('Grower position') && read('docs/js/modulespdf.js').includes('GROWER_COLUMNS'));
   assert.ok(read('docs/js/views/storage.js').includes('function cottonOnHandCard') && read('docs/js/views/storage.js').includes('Cotton on hand'));
   const pdf = Buffer.from(modulesPdf({ report: demoReport, business: 'Sample', season: 'Sample 2026', today: '18-11-2026' })).toString('latin1');
-  assert.ok(pdf.includes('Grower position') && pdf.includes('Sicot 746B3F'));
+  assert.ok(pdf.includes('Grower position') && pdf.includes('Total expected bales') && pdf.includes('Cotton North'));
+  assert.ok(!pdf.includes('Sicot 746B3F'), 'no variety column');
+});
+check('the summary at the top: picked, in the field, in the yard, ginned, bales ginned, turnout and the bales expected in all', () => {
+  const s = demoReport.summary;
+  assert.deepEqual([s.picked, s.inField, s.inYard, s.ginnedModules], [510, 170, 40, 300]);
+  assert.ok(s.ginnedBales > 1300 && s.turnoutPct > 40);
+  assert.ok(Math.abs(s.ginnedBales - demoReport.ginned.totals.bales) < 1e-9);
+  assert.ok(Math.abs(s.expectedBales - (s.ginnedBales + demoReport.onHand.inFieldBales + demoReport.onHand.yardBales)) < 1e-9, 'the bales ginned, and what is still to come from the field and the yard');
+  assert.ok(s.expectedBales > s.ginnedBales);
+  const v = read('docs/js/views/reports.js');
+  for (const l of ['Modules picked', 'Still in the field', 'At the gin, not ginned', 'Bales ginned', 'Turnout', 'Total expected bales']) assert.ok(v.includes(l), l);
+  assert.ok(!v.includes('Where the modules are'));
 });
 
 console.log('\n=== a load of modules from more than one paddock ===');
@@ -738,33 +749,44 @@ check('the move sheet takes more than one paddock, as grain does, and saves each
   assert.ok(s.includes('fields: legs.map((l) => ({ id: l.id, count: l.count, kg: l.kg, bales: l.bales }))'));
 });
 
-check('split across contracts, the first pays all the ginning when its lint is worth enough, then the next', () => {
-  const g = { ...split, allocations: [lot('sale:s1', 'BG027234', 'BG027400'), lot('sale:s2', 'BG027401', 'BG027626')] };
-  const rich = splitGinCharge(g, [{ id: 's1', price: 300 }, { id: 's2', price: 300 }]);
-  assert.equal(rich.length, 1, 'the first covers it');
-  assert.equal(rich[0].saleId, 's1');
-  assert.ok(Math.abs(rich[0].ginning + rich[0].levies - 27340.40) < 0.02, 'the whole of the ginning and levies, ex GST');
-  assert.ok(Math.abs(rich[0].gst - ginInvoice(g).gst) < 0.02);
-  const poor = splitGinCharge(g, [{ id: 's1', price: 100 }, { id: 's2', price: 300 }]);
-  assert.equal(poor.length, 2);
-  const s1 = poor[0], s2 = poor[1];
-  assert.ok(Math.abs(s1.ginning + s1.levies - s1.std * 100) < 0.05, 'the first takes what its lint is worth');
-  assert.ok(Math.abs(s1.ginning + s1.levies + s2.ginning + s2.levies - 27340.40) < 0.02, 'and the next takes the rest');
-  assert.equal(splitGinCharge(g, []).length, 1, 'a contract with no price covers it');
+const offBill = (o = {}) => ({ id: 'b1', supplier: 'Brighann Ginning', reference: 'I053/23', invoiceDate: '2026-05-02', amount: 27340.40, gst: 2584.91, payer: 'buyer', ...o });
+const offRun = { id: 'm1', date: '2026-05-18', tons: 397.678, froms: [], tos: [], gin: { ...split, allocations: [lot('sale:s1', 'BG027234', 'BG027400'), lot('sale:s2', 'BG027401', 'BG027626')], payableId: 'b1' } };
+check('a lint invoice is offered the gin invoices the buyer pays that are still open, the ones for its contract first', () => {
+  const bills = [offBill(), offBill({ id: 'b2', reference: 'I060/23', amount: 1000, gst: 100, invoiceDate: '2026-04-01' }), offBill({ id: 'b3', payer: null })];
+  const o = ginOffsetOptions({ payables: bills, invoices: [], movements: [offRun], sale: { id: 's1' } });
+  assert.deepEqual(o.map((x) => x.payableId), ['b1', 'b2'], 'a bill we pay ourselves is not offered; the run for this contract comes first');
+  assert.equal(o[0].outstanding, 29925.31);
+  assert.equal(o[0].total, 29925.31);
+  assert.equal(o[0].forThisContract, true);
+  assert.equal(o[1].forThisContract, false);
+  assert.equal(ginOffsetOptions({ payables: bills, invoices: [], movements: [offRun], sale: { id: 's9' } })[0].forThisContract, false);
 });
-check('a run saved with its split is charged to the contract that pays; one without is shared by bales as before', () => {
-  const g = { ...split, allocations: [lot('sale:s1', 'BG027234', 'BG027400'), lot('sale:s2', 'BG027401', 'BG027626')] };
-  const legs = allocateLint(g).map((a) => ({ type: 'sale', id: a.to.slice(5), tons: Math.round(a.std * 1000) / 1000 }));
-  const ginSplit = splitGinCharge(g, [{ id: 's1', price: 300 }, { id: 's2', price: 300 }]).map(({ saleId, ginning, levies, gst }) => ({ saleId, ginning, levies, gst }));
-  const m = { id: 'm1', date: '2026-05-18', tons: 397.678, froms: [], tos: legs, gin: { ...g, ginSplit } };
-  assert.ok(Math.abs(ginDeduction({ id: 's1' }, [m]).total - 27340.40) < 0.02, 'the first contract is charged all of it');
-  assert.equal(ginDeduction({ id: 's2' }, [m]).total, 0, 'the second is charged none');
-  assert.equal(cleanGin({ ...g, ginSplit }).ginSplit.length, 1, 'it is kept on the run');
-  assert.ok(!('ginSplit' in cleanGin(g)));
+check('what one lint invoice takes off a gin invoice is no longer open for the next; an invoice being edited still has its own', () => {
+  const bill = offBill();
+  const line = (amount) => ginOffsetLine({ bill, amount, movements: [offRun], sale: { id: 's1' } });
+  const i1 = { id: 'i1', saleId: 's1', lines: [line(20000)] };
+  const forS2 = ginOffsetOptions({ payables: [bill], invoices: [i1], movements: [offRun], sale: { id: 's2' } });
+  assert.equal(forS2[0].outstanding, 9925.31, 'the first contract took 20,000 of it');
+  assert.equal(forS2[0].takenElsewhere, 20000);
+  const editing = ginOffsetOptions({ payables: [bill], invoices: [i1], movements: [offRun], sale: { id: 's1' }, existingInvoice: i1 });
+  assert.equal(editing[0].outstanding, 29925.31, 'its own part is not counted against it');
+  assert.equal(editing[0].here, 20000);
+  const i2 = { id: 'i2', saleId: 's2', lines: [line(9925.31)] };
+  assert.equal(ginOffsetOptions({ payables: [bill], invoices: [i1, i2], movements: [offRun], sale: { id: 's3' } }).length, 0, 'all taken: nothing left to offer');
+  assert.equal(ginOffsetOptions({ payables: [bill], invoices: [i1, i2], movements: [offRun], sale: { id: 's2' }, existingInvoice: i2 }).length, 1, 'but the invoice that took the last of it still shows it');
+  assert.equal(ginTakenOff([i1]).totalInclGst, 20000);
+  assert.equal(ginTakenOff([i1, i2]).totalInclGst, 29925.31);
+  // an older invoice's line, made when the app took it off automatically, has the run and not the bill
+  const old = { id: 'i0', saleId: 's1', lines: [{ isGinPrepaid: true, ginRunId: 'm1', amount: 5000 }] };
+  assert.equal(linePayableId(old.lines[0], [offRun]), 'b1');
+  assert.equal(ginOffsetOptions({ payables: [bill], invoices: [old], movements: [offRun], sale: { id: 's2' } })[0].outstanding, 24925.31);
 });
-check('the ginning run sheet works out and saves the split, and says which contract pays', () => {
+check('the ginning run sheet keeps the whole gin invoice as the bill, and the bill is settled by the invoices that take it off', () => {
   const v = read('docs/js/views/ginrun.js');
-  assert.ok(v.includes('splitGinCharge(g, data.sales)') && v.includes('g.ginSplit = split'));
+  assert.ok(!v.includes('splitGinCharge') && !v.includes('contractShare') && !v.includes('ginSplit'));
+  assert.ok(v.includes('Math.round(inv.exGst * 100) / 100') && v.includes('you choose how much of it comes off each lint contract'));
+  const st = read('docs/js/storage.js');
+  assert.ok(st.includes('linePayableId(l, c.movements)') && st.includes('linePayableId(l, current().movements)'));
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

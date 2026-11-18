@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=382';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=382';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=382';
-import { fertPdf } from '../fertpdf.js?v=382';
-import { seedPdf } from '../seedpdf.js?v=382';
-import { yieldPdf } from '../yieldpdf.js?v=382';
-import { harvestPdf } from '../harvestpdf.js?v=382';
-import { modulesPdf } from '../modulespdf.js?v=382';
-import { modulesReport } from '../modulesreport.js?v=382';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=382';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=382';
-import { field, getVal, getNum } from '../ui.js?v=382';
-import { canSeeYield } from '../nav.js?v=382';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=382';
-import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=382';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=382';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=382';
+import { db } from '../storage.js?v=383';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=383';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=383';
+import { fertPdf } from '../fertpdf.js?v=383';
+import { seedPdf } from '../seedpdf.js?v=383';
+import { yieldPdf } from '../yieldpdf.js?v=383';
+import { harvestPdf } from '../harvestpdf.js?v=383';
+import { modulesPdf } from '../modulespdf.js?v=383';
+import { modulesReport } from '../modulesreport.js?v=383';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=383';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=383';
+import { field, getVal, getNum } from '../ui.js?v=383';
+import { canSeeYield } from '../nav.js?v=383';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=383';
+import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=383';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=383';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=383';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -87,13 +87,12 @@ function dockPdf(root) {
   slot.appendChild(b);
 }
 
-/** Where the modules are: picked on each paddock, still in the field, carted to the gin, with the estimated weight and bales. */
-const weighedText = (p) => (p >= 0.995 ? 'All' : (p > 0 ? `${Math.round(p * 100)}%` : 'None'));
+/** The modules report: a summary of where the modules are and what has been ginned, then the grower position as the gin prints it. */
 
 function paintModules(root) {
   const { fields, movements, storages, commodities } = db.get();
   const report = modulesReport({ fields, movements, storages, commodities });
-  const t = report.totals;
+  const s = report.summary;
   const body = root.querySelector('#reports-body');
   if (!report.rows.length) {
     body.innerHTML = `<div class="card report"><h2><span class="dot report"></span>Modules</h2><div class="empty">Nothing yet. Open a cotton paddock in Production and tap + Log modules picked.</div></div>`;
@@ -102,64 +101,33 @@ function paintModules(root) {
   body.innerHTML = `
     <button type="button" class="btn secondary" id="modules-pdf" style="margin-bottom:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>
     <div class="card report">
-      <h2><span class="dot report"></span>Where the modules are</h2>
-      <div class="stat-grid">
-        <div class="stat"><div class="n">${num(t.picked, 0)}</div><div class="l">Picked</div></div>
-        <div class="stat"><div class="n">${num(t.inField, 0)}</div><div class="l">Still in the field</div></div>
-        <div class="stat"><div class="n">${num(t.moved, 0)}</div><div class="l">Moved to the gin</div></div>
-        <div class="stat"><div class="n">${num(t.estBales, 0)}</div><div class="l">Expected bales</div></div>
+      <h2><span class="dot report"></span>Summary</h2>
+      <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);gap:8px">
+        <div class="stat" style="padding:10px 8px"><div class="n" style="font-size:18px">${num(s.picked, 0)}</div><div class="l">Modules picked</div></div>
+        <div class="stat" style="padding:10px 8px"><div class="n" style="font-size:18px">${num(s.inField, 0)}</div><div class="l">Still in the field</div></div>
+        <div class="stat" style="padding:10px 8px"><div class="n" style="font-size:18px">${num(s.inYard, 0)}</div><div class="l">At the gin, not ginned</div></div>
+        <div class="stat" style="padding:10px 8px"><div class="n" style="font-size:18px">${num(s.ginnedModules, 0)}</div><div class="l">Ginned</div></div>
+        <div class="stat" style="padding:10px 8px"><div class="n" style="font-size:18px">${num(s.ginnedBales, 1)}</div><div class="l">Bales ginned</div></div>
+        <div class="stat" style="padding:10px 8px"><div class="n" style="font-size:18px">${s.turnoutPct > 0 ? `${num(s.turnoutPct, 1)}%` : '-'}</div><div class="l">Turnout</div></div>
+        <div class="stat" style="padding:10px 8px;grid-column:1 / -1"><div class="n" style="font-size:18px">${num(s.expectedBales, 0)}</div><div class="l">Total expected bales</div></div>
       </div>
-      <div class="table-scroll tight-wrap" style="margin-top:8px">
-        <table class="tight wrap-first">
-          <colgroup><col style="width:28%"><col style="width:17%"><col style="width:19%"><col style="width:16%"><col style="width:20%"></colgroup>
-          <thead><tr><th>Field</th><th>Picked</th><th>In field</th><th>To gin</th><th>Bales</th></tr></thead>
-          <tbody>
-            ${report.rows.map((r) => `<tr><td><span class="fname" title="${esc(r.field.name)}">${esc(r.field.name)}</span></td><td>${num(r.picked, 0)}</td><td>${num(r.inField, 0)}</td><td>${num(r.moved, 0)}</td><td>${num(r.estBales, 0)}</td></tr>`).join('')}
-          </tbody>
-          <tfoot><tr><td>Total</td><td>${num(t.picked, 0)}</td><td>${num(t.inField, 0)}</td><td>${num(t.moved, 0)}</td><td>${num(t.estBales, 0)}</td></tr></tfoot>
-        </table>
-      </div>
-      <h3 style="margin:14px 0 4px;font-size:14px">Weight</h3>
-      <div class="table-scroll tight-wrap">
-        <table class="tight wrap-first">
-          <colgroup><col style="width:28%"><col style="width:26%"><col style="width:26%"><col style="width:20%"></colgroup>
-          <thead><tr><th>Field</th><th>Weight kg</th><th>Avg module kg</th><th>Weighed</th></tr></thead>
-          <tbody>
-            ${report.rows.map((r) => `<tr><td><span class="fname" title="${esc(r.field.name)}">${esc(r.field.name)}</span></td><td>${num(r.kg, 0)}</td><td>${num(r.avgKg, 0)}</td><td>${weighedText(r.weighedPct)}</td></tr>`).join('')}
-          </tbody>
-          <tfoot><tr><td>Total</td><td>${num(t.kg, 0)}</td><td>${num(t.avgKg, 0)}</td><td>${weighedText(t.weighedPct)}</td></tr></tfoot>
-        </table>
-      </div>
-      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Weight is the weighbridge weight for the loads weighed at the gin yard, and the estimate for modules still in the field or not yet weighed. Bales follow the weight, until the ginning runs give the real lint.</div>
+      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Total expected bales is the bales ginned plus the modules still in the field and the yard, at their average weight and turnout.</div>
     </div>
-    ${report.grower.length ? `<div class="card report">
+    <div class="card report">
       <h2><span class="dot report"></span>Grower position</h2>
-      <div class="table-scroll tight-wrap">
-        <table class="tight wrap-first">
-          <colgroup><col style="width:30%"><col style="width:13%"><col style="width:14%"><col style="width:13%"><col style="width:15%"><col style="width:15%"></colgroup>
-          <thead><tr><th>Field</th><th>Ha</th><th>Picked</th><th>Loads</th><th>To gin</th><th>Ginned</th></tr></thead>
+      <div class="table-scroll">
+        <table class="tight" style="min-width:520px">
+          <thead><tr><th>Field</th><th>Ha</th><th>Picked</th><th>In field</th><th>Delivered</th><th>At gin</th><th>Avg kg</th><th>Ginned</th><th>227 kg bales</th><th>Turnout %</th><th>Yield</th></tr></thead>
           <tbody>
-            ${report.grower.map((r) => `<tr><td><span class="fname" title="${esc(r.field.name)}">${esc(r.field.name)}</span>${r.variety ? `<br><span class="meta">${esc(r.variety)}</span>` : ''}</td><td>${num(r.ha, 0)}</td><td>${num(r.picked, 0)}</td><td>${num(r.loads, 0)}</td><td>${num(r.moved, 0)}</td><td>${num(r.ginnedModules, 0)}</td></tr>`).join('')}
+            ${report.grower.map((r) => `<tr><td><span class="fname" title="${esc(r.field.name)}">${esc(r.field.name)}</span></td><td>${num(r.ha, 0)}</td><td>${num(r.picked, 0)}</td><td>${num(r.inField, 0)}</td><td>${num(r.moved, 0)}</td><td>${num(r.inYard, 0)}</td><td>${num(r.avgKg, 0)}</td><td>${num(r.ginnedModules, 0)}</td><td>${r.bales > 0 ? num(r.bales, 1) : '-'}</td><td>${r.turnoutPct > 0 ? num(r.turnoutPct, 1) : '-'}</td><td>${r.yieldBalesHa > 0 ? num(r.yieldBalesHa, 1) : '-'}</td></tr>`).join('')}
           </tbody>
-          <tfoot><tr><td>Total</td><td>${num(report.growerTotals.ha, 0)}</td><td>${num(report.growerTotals.picked, 0)}</td><td>${num(report.growerTotals.loads, 0)}</td><td>${num(report.growerTotals.moved, 0)}</td><td>${num(report.growerTotals.ginnedModules, 0)}</td></tr></tfoot>
+          <tfoot><tr><td>Total</td><td>${num(report.growerTotals.ha, 0)}</td><td>${num(report.growerTotals.picked, 0)}</td><td>${num(report.growerTotals.inField, 0)}</td><td>${num(report.growerTotals.moved, 0)}</td><td>${num(report.growerTotals.inYard, 0)}</td><td>${num(report.growerTotals.avgKg, 0)}</td><td>${num(report.growerTotals.ginnedModules, 0)}</td><td>${report.growerTotals.bales > 0 ? num(report.growerTotals.bales, 1) : '-'}</td><td>${report.growerTotals.turnoutPct > 0 ? num(report.growerTotals.turnoutPct, 1) : '-'}</td><td>${report.growerTotals.yieldBalesHa > 0 ? num(report.growerTotals.yieldBalesHa, 1) : '-'}</td></tr></tfoot>
         </table>
       </div>
-      <div class="table-scroll tight-wrap" style="margin-top:10px">
-        <table class="tight wrap-first">
-          <colgroup><col style="width:30%"><col style="width:20%"><col style="width:20%"><col style="width:15%"><col style="width:15%"></colgroup>
-          <thead><tr><th>Field</th><th>Avg module kg</th><th>227 kg bales</th><th>Turnout</th><th>Yield</th></tr></thead>
-          <tbody>
-            ${report.grower.map((r) => `<tr><td><span class="fname">${esc(r.field.name)}</span></td><td>${num(r.avgKg, 0)}</td><td>${r.bales > 0 ? num(r.bales, 1) : '-'}</td><td>${r.turnoutPct > 0 ? `${num(r.turnoutPct, 1)}%` : '-'}</td><td>${r.yieldBalesHa > 0 ? num(r.yieldBalesHa, 1) : '-'}</td></tr>`).join('')}
-          </tbody>
-          <tfoot><tr><td>Total</td><td>${num(report.growerTotals.avgKg, 0)}</td><td>${report.growerTotals.bales > 0 ? num(report.growerTotals.bales, 1) : '-'}</td><td>${report.growerTotals.turnoutPct > 0 ? `${num(report.growerTotals.turnoutPct, 1)}%` : '-'}</td><td>${report.growerTotals.yieldBalesHa > 0 ? num(report.growerTotals.yieldBalesHa, 1) : '-'}</td></tr></tfoot>
-        </table>
-      </div>
-      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Laid out as the gin's grower position summary, to check against it. Yield is ginned standard bales a hectare, so it grows as the ginning does. Modules come out of the yard in the order they arrived, so a run that mixed paddocks is shared between them by module weight.</div>
-    </div>` : ''}
-    ${report.yards.length || report.pending.loads ? `<div class="card report">
-      <h2><span class="dot report"></span>Gin yard</h2>
-      ${report.yards.map((y) => `<div class="row"><span class="label">${esc(y.storage.name)}: in the yard now</span><span class="value">${num(y.inYard, 0)} modules</span></div><div class="row"><span class="label">${esc(y.storage.name)}: ginned</span><span class="value">${num(y.ginned, 0)} modules</span></div>`).join('')}
-      ${report.pending.loads ? `<div class="row" id="modules-pending" style="cursor:pointer"><span class="label">Loads waiting for the weighbridge weight</span><span class="value"><span class="badge warn">${report.pending.loads} · ${num(report.pending.modules, 0)} modules</span></span></div>` : ''}
+      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Laid out as the gin's grower position summary, to check against it. Yield is ginned standard bales a hectare, so it grows as the ginning does. Modules come out of the yard in the order they arrived, so a run that mixed paddocks is shared between them by module weight. Slide the table sideways to see every column.</div>
+    </div>
+    ${report.pending.loads ? `<div class="card report">
+      <div class="row" id="modules-pending" style="cursor:pointer"><span class="label">Loads waiting for the weighbridge weight</span><span class="value"><span class="badge warn">${report.pending.loads} · ${num(report.pending.modules, 0)} modules</span></span></div>
     </div>` : ''}`;
   body.querySelector('#modules-pdf')?.addEventListener('click', async () => {
     const season = db.getCurrentYear();

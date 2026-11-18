@@ -4,15 +4,16 @@
 // what is unpaid and overdue, and the brokerage that has run up on contracts but has not been billed yet. Each
 // bill is recorded in a form of its own. The arithmetic is in payables.js.
 
-import { db } from '../storage.js?v=382';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=382';
-import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=382';
+import { db } from '../storage.js?v=383';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=383';
+import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=383';
 import {
   KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed, paidByBuyer,
-} from '../payables.js?v=382';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=382';
-import { activeSales } from '../paidsales.js?v=382';
-import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=382';
+} from '../payables.js?v=383';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=383';
+import { activeSales } from '../paidsales.js?v=383';
+import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=383';
+import { ginOffsetOptions, ginBillTotal } from '../ginoffset.js?v=383';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'unpaid';   // unpaid | paid | all
@@ -20,6 +21,15 @@ let filterKind = '';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const round3 = (n) => Math.round(n * 1000) / 1000;
+
+/** What a gin bill the lint buyer pays has had taken off lint invoices so far, and what is still to come off. */
+function takenOffText(p) {
+  const { movements, invoices } = db.get();
+  const open = ginOffsetOptions({ payables: [p], invoices: invoices || [], movements: movements || [] })[0];
+  const total = ginBillTotal(p);
+  const taken = open ? open.takenElsewhere : total;
+  return taken > 0 ? `${money(taken, 2)} taken off lint invoices · ${money(open ? open.outstanding : 0, 2)} still to take off` : 'The lint buyer pays it: take it off a lint invoice';
+}
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -122,7 +132,7 @@ export function renderPayables(root, opts = {}) {
             <div class="li-top"><div class="main">${esc(p.supplier || kindLabel(p.kind))}</div><div class="main">${money(billTotal(p), 2)}</div></div>
             <div class="meta">${[kindLabel(p.kind), p.reference ? `#${p.reference}` : '', p.invoiceDate ? shortDate(p.invoiceDate) : ''].filter(Boolean).map(esc).join(' · ')}</div>
             ${place(p) ? `<div class="meta">${esc(place(p))}</div>` : ''}
-            <div class="li-foot"><span class="meta">${p.status === 'paid' ? `Paid ${p.paidDate ? shortDate(p.paidDate) : ''}${viaBuyer ? ' by the lint buyer' : ''}` : viaBuyer ? 'The lint buyer takes it off the lint payment' : (p.dueDate ? `Due ${shortDate(p.dueDate)}` : 'No due date')}</span>
+            <div class="li-foot"><span class="meta">${p.status === 'paid' ? `Paid ${p.paidDate ? shortDate(p.paidDate) : ''}${viaBuyer ? ' by the lint buyer' : ''}` : viaBuyer ? takenOffText(p) : (p.dueDate ? `Due ${shortDate(p.dueDate)}` : 'No due date')}</span>
               <span class="badges"><span class="badge ${p.status === 'paid' ? 'pos' : over ? 'neg' : 'warn'}">${p.status === 'paid' ? 'Paid' : over ? 'Overdue' : viaBuyer ? 'Buyer pays' : 'Unpaid'}</span></span></div>
           </div>`;
         }).join('')}

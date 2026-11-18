@@ -11,8 +11,8 @@
 // remapIds() reissues every one on import and two trial accounts never collide
 // on a primary key.
 
-import { DEFAULT_BUSINESS_DETAILS, prepareImport, newId } from './import.js?v=382';
-import { APP_VERSION } from './version.js?v=382';
+import { DEFAULT_BUSINESS_DETAILS, prepareImport, newId } from './import.js?v=383';
+import { APP_VERSION } from './version.js?v=383';
 
 const WANTED_KEY = 'grainflow.seedSample';
 
@@ -247,6 +247,7 @@ export function sampleCottonHayFrom(seed, farm = {}) {
     lines: (i.lines || []).map((l) => ({
       ...l, ...(l.movementId ? { movementId: kept.has(ref(l.movementId)) ? ref(l.movementId) : null } : {}),
       ...(l.ginRunId ? { ginRunId: ref(l.ginRunId) } : {}),
+      ...(l.payableId ? { payableId: ginBillIds.get(l.payableId) || '' } : {}),
     })),
   }));
 
