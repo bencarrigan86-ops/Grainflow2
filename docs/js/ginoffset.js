@@ -5,7 +5,7 @@
 // of each, so the right amount comes off each contract. What is taken off is a line on the lint invoice (isGinPrepaid, with the
 // bill's id), and a bill is open for whatever its invoices have not yet taken.
 
-import { ginInvoice, hasGin, cleanGin, lotsForSale } from './ginning.js?v=406';
+import { ginInvoice, hasGin, cleanGin, lotsForSale } from './ginning.js?v=407';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;

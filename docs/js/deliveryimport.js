@@ -8,14 +8,14 @@
 // owner saves it) and recognised the next time by the column headings. The reading and the rules are here, pure; the screen that
 // drives them is views/importdeliveries.js. Nothing here touches the farm.
 
-import { parseCsv, detectDelimiter, parseDate } from './loadimport.js?v=406';
-import { normHeader, looksLikeKilograms } from './loadmap.js?v=406';
-import { normaliseOutloadNo } from './outloadno.js?v=406';
-import { appendNote } from './carryover.js?v=406';
+import { parseCsv, detectDelimiter, parseDate } from './loadimport.js?v=407';
+import { normHeader, looksLikeKilograms } from './loadmap.js?v=407';
+import { normaliseOutloadNo } from './outloadno.js?v=407';
+import { appendNote } from './carryover.js?v=407';
 
 /** What a delivery file can give us. `synonyms` are headings sites tend to use (spacing, case and punctuation ignored). */
 export const DELIVERY_FIELDS = [
-  { key: 'outloadNo', label: 'Outload number (the number the driver quoted)', kind: 'text', required: true,
+  { key: 'outloadNo', label: 'Ticket number (the number the driver quoted)', kind: 'text', required: true,
     synonyms: ['paddock', 'outloadno', 'outloadnumber', 'outload', 'loadno', 'loadnumber', 'ourref', 'ourreference', 'growerref', 'growerreference', 'reference', 'ref', 'consignment'] },
   { key: 'netTons', label: 'Net weight', kind: 'weight',
     synonyms: ['nettonnesmt', 'nettonnes', 'netweight', 'net', 'netwt', 'nett', 'netkg', 'netmt', 'nettons', 'tonnes', 'tons', 'weight'] },
@@ -82,7 +82,7 @@ export function guessMapping(headers) {
 export function mappingProblems(mapping, headers) {
   const has = (k) => !!mapping?.[k] && headers.includes(mapping[k]);
   const out = [];
-  if (!has('outloadNo')) out.push('Say which column holds the outload number.');
+  if (!has('outloadNo')) out.push('Say which column holds the ticket number.');
   if (!has('netTons') && !(has('grossTons') && has('tareTons'))) out.push('Say which column holds the net weight (or the gross and the tare).');
   return out;
 }
@@ -212,12 +212,14 @@ const oneDigitOff = (a, b) => {
  */
 export function matchDeliveries(rows, movements, { commodities = [], seasonYY: yy = '', withinDays = 7 } = {}) {
   const loads = movements || [];
+  // a load is known by its ticket number, and by the outload number it had before the two were one
+  const numbersOf = (m) => [...new Set([normaliseOutloadNo(m.ticketNo), normaliseOutloadNo(m.outloadNo)].filter(Boolean))];
   const byNo = new Map();
   for (const m of loads) {
-    const k = normaliseOutloadNo(m.outloadNo);
-    if (!k) continue;
-    if (!byNo.has(k)) byNo.set(k, []);
-    byNo.get(k).push(m);
+    for (const k of numbersOf(m)) {
+      if (!byNo.has(k)) byNo.set(k, []);
+      byNo.get(k).push(m);
+    }
   }
   const commodityName = (m) => commodities.find((c) => c.id === m.commodityId)?.name || '';
   const claimed = new Map();   // load id -> the row that took it
@@ -238,12 +240,13 @@ export function matchDeliveries(rows, movements, { commodities = [], seasonYY: y
     const out = [];
     for (const m of loads) {
       if (claimed.has(m.id)) continue;
-      const k = normaliseOutloadNo(m.outloadNo);
+      const nums = numbersOf(m); const k = nums[0] || '';
       const sameTruck = row.rego && m.truckRego && keyOf(row.rego) === keyOf(m.truckRego);
       const dd = dayDiff(row.date, m.date);
       const close = dd !== null && dd <= 3;
-      if (oneDigitOff(k, row.outloadNo)) out.push({ load: m, why: `Its number ${k} is one digit away from ${row.outloadNo}.`, score: 0 });
-      else if (sameTruck && close) out.push({ load: m, why: `Same truck, ${Math.round(dd)} day${Math.round(dd) === 1 ? '' : 's'} apart${k ? ` (its number is ${k})` : ' (it has no outload number)'}.`, score: 1 + dd });
+      const near = nums.find((x) => oneDigitOff(x, row.outloadNo));
+      if (near) out.push({ load: m, why: `Its number ${near} is one digit away from ${row.outloadNo}.`, score: 0 });
+      else if (sameTruck && close) out.push({ load: m, why: `Same truck, ${Math.round(dd)} day${Math.round(dd) === 1 ? '' : 's'} apart${k ? ` (its number is ${k})` : ' (it has no ticket number)'}.`, score: 1 + dd });
     }
     return out.sort((a, b) => a.score - b.score).slice(0, 5).map((s) => ({ load: s.load, why: s.why }));
   };
@@ -251,11 +254,11 @@ export function matchDeliveries(rows, movements, { commodities = [], seasonYY: y
   return rows.map((row) => {
     const item = { row, kind: 'unmatched', load: null, candidates: [], reasons: [] };
     if (row.rejected) { item.kind = 'rejected'; item.reasons = [/block|reject|cancel|void/i.test(row.status) ? `The site's status is ${row.status}.` : 'The site recorded no weight for it.']; return item; }
-    if (!row.outloadNo) { item.reasons = ['No outload number on this row.']; item.candidates = suggest(row); return item; }
+    if (!row.outloadNo) { item.reasons = ['No ticket number on this row.']; item.candidates = suggest(row); return item; }
 
     const holders = byNo.get(row.outloadNo) || [];
     if (holders.length === 0) {
-      item.reasons = [`No load has the outload number ${row.outloadNo}.`];
+      item.reasons = [`No load has the ticket number ${row.outloadNo}.`];
       const rowYY = row.outloadNo.slice(0, 2);
       if (yy && rowYY !== yy && row.outloadNo.length >= 6) item.reasons.push(`The number is from season ${rowYY}, and this season is ${yy}: switch season in Settings to import it.`);
       item.candidates = suggest(row);

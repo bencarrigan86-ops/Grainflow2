@@ -4,10 +4,10 @@
 // then import. A season the farm already has is left alone. The seasons go in beside the current one and do not
 // change it; the rotation and yield history then reaches back as far as the records do.
 
-import { db, uid } from '../storage.js?v=406';
-import { openSheet, closeSheet, toast } from '../ui.js?v=406';
-import { esc, num } from '../fmt.js?v=406';
-import { parsePastSeasons, planPastSeasons, seasonRecords } from '../pastseasons.js?v=406';
+import { db, uid } from '../storage.js?v=407';
+import { openSheet, closeSheet, toast } from '../ui.js?v=407';
+import { esc, num } from '../fmt.js?v=407';
+import { parsePastSeasons, planPastSeasons, seasonRecords } from '../pastseasons.js?v=407';
 
 export function openPastSeasonsSheet() {
   openSheet('Import past seasons', (root) => {

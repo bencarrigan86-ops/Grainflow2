@@ -18,34 +18,34 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=406';
-import { setBrandLogo } from './brand.js?v=406';
+import { hydrate } from './hydrate.js?v=407';
+import { setBrandLogo } from './brand.js?v=407';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=406';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=406';
-import { isLegacyDirty } from './dirty.js?v=406';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=406';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=406';
-import { hasDeductions } from './deductions.js?v=406';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=406';
-import { hasHay, hasHayLoad } from './hay.js?v=406';
-import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=406';
-import { todayLocal } from './fmt.js?v=406';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=406';
-import { settleLegs, dedupeLegs } from './legs.js?v=406';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=406';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=406';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=406';
-import { setCommodityOrder } from './commodityorder.js?v=406';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=406';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=406';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=406';
-import { schedulePush, pushOnReconnect } from './sync.js?v=406';
-import { hasParts as hasAddressParts } from './address.js?v=406';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=406';
-import { linePayableId } from './ginoffset.js?v=406';
+} from './local.js?v=407';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=407';
+import { isLegacyDirty } from './dirty.js?v=407';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=407';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=407';
+import { hasDeductions } from './deductions.js?v=407';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=407';
+import { hasHay, hasHayLoad } from './hay.js?v=407';
+import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=407';
+import { todayLocal } from './fmt.js?v=407';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=407';
+import { settleLegs, dedupeLegs } from './legs.js?v=407';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=407';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=407';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=407';
+import { setCommodityOrder } from './commodityorder.js?v=407';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=407';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=407';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=407';
+import { schedulePush, pushOnReconnect } from './sync.js?v=407';
+import { hasParts as hasAddressParts } from './address.js?v=407';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=407';
+import { linePayableId } from './ginoffset.js?v=407';
 
 /**
  * A gin bill the lint buyer pays is settled once lint invoices have taken all of it off: the farm owes the gin nothing, the buyer settles
@@ -149,12 +149,15 @@ function repairLegs(m) {
   if ((m.tos || []).some((l) => !l.__legId)) { m.tos = settleLegs([], m.tos, uid).legs; legRepairs += 1; }
 }
 
+const PLAIN_TICKET_LIMIT = 100000;   // plain counted tickets stay under six digits; 261001 and up are season-person-count
+
 function deriveCounters(state) {
   let maxTicket = 0;
   let maxInvoice = 0;
   for (const year of Object.values(state.years || {})) {
     for (const m of year.movements || []) {
-      if (Number(m.ticketNo) > maxTicket) maxTicket = Number(m.ticketNo);
+      // a ticket of the season-person-count kind (261001) is not part of the plain count, so the count never runs into one
+      if (Number(m.ticketNo) > maxTicket && Number(m.ticketNo) < PLAIN_TICKET_LIMIT) maxTicket = Number(m.ticketNo);
       repairLegs(m);
     }
     for (const inv of year.invoices || []) {
@@ -173,6 +176,19 @@ let data = defaultData();
 const shareOrder = () => setCommodityOrder(data.businessDetails?.commodityOrder);
 let farmId = null;
 let role = 'owner';
+/**
+ * The number for the next load saved: the season, this person's digit and their count (26 1 001 is 261001), worked out from every load
+ * the phone holds, so two phones without signal can never give the same one. Someone with no digit yet gets the next plain count.
+ * { no, plain }: plain is true when it came from the plain count, which then moves on.
+ */
+function nextTicket() {
+  const yy = seasonYY(data.currentYear, new Date().toISOString().slice(0, 10));
+  // numbers already used in either way: a ticket, or an outload number from before the two were one
+  const used = Object.values(data.years || {}).flatMap((y) => y.movements || []).flatMap((m) => [{ outloadNo: m.ticketNo }, { outloadNo: m.outloadNo }]);
+  const kept = nextOutloadNo({ series: outloadSeries, yy, movements: used });
+  return kept ? { no: Number(kept), plain: false } : { no: data.nextMovementNo, plain: true };
+}
+
 let outloadSeries = null;   // this person's digit for outload numbers, as the server gave it (null until known)
 let ready = false;
 
@@ -1168,13 +1184,14 @@ export const db = {
       touch('movement', movement.id);
     } else {
       const id = uid();
-      const made = { ...movement, id, ticketNo: data.nextMovementNo };
+      const ticket = nextTicket();
+      const made = { ...movement, id, ticketNo: ticket.no };
       if (hasLoadQuality(made)) made.__hasQuality = true;
       markOil(made);
       made.froms = settleLegs([], made.froms, uid).legs;
       made.tos = settleLegs([], made.tos, uid).legs;
       c.movements.push(made);
-      data.nextMovementNo += 1;
+      if (ticket.plain) data.nextMovementNo += 1;
       touch('movement', id);
     }
     persist();
@@ -1440,11 +1457,14 @@ export const db = {
     persist();
   },
 
-  // --- outload numbers: the number a truck quotes at a third-party site (see outloadno.js) ---
+  /** The ticket number the next saved load will get (shown on the load sheet before it is saved). */
+  nextTicketNo() { return nextTicket().no; },
+
+  // --- ticket numbers: season, person digit and count (see outloadno.js) ---
   getOutloadSeries() { return outloadSeries; },
   setOutloadSeries(n) { outloadSeries = Number(n) >= 1 && Number(n) <= 9 ? Number(n) : null; },
   /**
-   * The next outload number for this person, in the season being worked in, worked out from every load the phone holds.
+   * The next season-person-count number for this person, in the season being worked in, from every load the phone holds.
    * Nothing is stored until the load is saved with it. Null when this person has no digit yet.
    */
   nextOutloadNo() {

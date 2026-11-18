@@ -1,33 +1,33 @@
-import { db } from '../storage.js?v=406';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=406';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=406';
-import { fertPdf } from '../fertpdf.js?v=406';
-import { seedPdf } from '../seedpdf.js?v=406';
-import { yieldPdf } from '../yieldpdf.js?v=406';
-import { harvestPdf } from '../harvestpdf.js?v=406';
-import { modulesPdf } from '../modulespdf.js?v=406';
-import { modulesReport } from '../modulesreport.js?v=406';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=406';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=406';
-import { field, getVal, getNum } from '../ui.js?v=406';
-import { canSeeYield, canOpen } from '../nav.js?v=406';
-import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=406';
-import { openMoneySheet, openMtmSheet, openDeliveriesSheet } from './outstanding.js?v=406';
-import { openOptimiserSheet } from './optimiser.js?v=406';
-import { openCalculatorSheet } from './calculator.js?v=406';
-import { openEofySheet } from './eofy.js?v=406';
-import { openPricesSheet } from './prices.js?v=406';
-import { openRotationSheet } from './rotation.js?v=406';
-import { openAveragesSheet } from './averages.js?v=406';
-import { openLoadReportSheet } from './loadreport.js?v=406';
-import { openTraceSheet } from './tracereport.js?v=406';
-import { openXeroSheet } from './xero.js?v=406';
-import { openMapSheet } from './farmmap.js?v=406';
-import { openExportCsvSheet } from './settingsexport.js?v=406';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=406';
-import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=406';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=406';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=406';
+import { db } from '../storage.js?v=407';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=407';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT, areaShare, productionSummary } from '../derived.js?v=407';
+import { fertPdf } from '../fertpdf.js?v=407';
+import { seedPdf } from '../seedpdf.js?v=407';
+import { yieldPdf } from '../yieldpdf.js?v=407';
+import { harvestPdf } from '../harvestpdf.js?v=407';
+import { modulesPdf } from '../modulespdf.js?v=407';
+import { modulesReport } from '../modulesreport.js?v=407';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=407';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=407';
+import { field, getVal, getNum } from '../ui.js?v=407';
+import { canSeeYield, canOpen } from '../nav.js?v=407';
+import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=407';
+import { openMoneySheet, openMtmSheet, openDeliveriesSheet } from './outstanding.js?v=407';
+import { openOptimiserSheet } from './optimiser.js?v=407';
+import { openCalculatorSheet } from './calculator.js?v=407';
+import { openEofySheet } from './eofy.js?v=407';
+import { openPricesSheet } from './prices.js?v=407';
+import { openRotationSheet } from './rotation.js?v=407';
+import { openAveragesSheet } from './averages.js?v=407';
+import { openLoadReportSheet } from './loadreport.js?v=407';
+import { openTraceSheet } from './tracereport.js?v=407';
+import { openXeroSheet } from './xero.js?v=407';
+import { openMapSheet } from './farmmap.js?v=407';
+import { openExportCsvSheet } from './settingsexport.js?v=407';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=407';
+import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=407';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=407';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=407';
 
 let unsub = null;
 let view = null;   // null is the screen of tiles; otherwise the report that is open
@@ -971,6 +971,21 @@ function harvestNoYieldHtml({ groups, farm, seasons, space, minRoom, t1, haPct, 
     }).join('')}`;
 }
 
+/** The summary at the top of the Yield report: the same table as By commodity on the Production tab (area, share of area, yield, tonnes). */
+function yieldSummaryCard({ rows, totals }) {
+  if (!rows.length) return '';
+  return `<div class="card report">
+      <h2><span class="dot report"></span>Production summary</h2>
+      <div class="table-scroll">
+        <table class="tight">
+          <thead><tr><th>Commodity</th><th>Area</th><th>% of area</th><th>Yield</th><th>Tons</th></tr></thead>
+          <tbody>${rows.map((r) => `<tr><td>${esc(r.commodity.name)}</td><td>${num(r.area, 0)}</td><td>${areaShare(r.area, totals.area)}</td><td>${num(r.yieldTHa, 2)}</td><td>${num(r.tons, 0)}</td></tr>`).join('')}</tbody>
+          <tfoot><tr><td>Total</td><td>${num(totals.area, 0)}</td><td>${totals.area > 0 ? '100%' : ''}</td><td>${num(totals.yieldTHa, 2)}</td><td>${num(totals.tons, 0)}</td></tr></tfoot>
+        </table>
+      </div>
+    </div>`;
+}
+
 function paintYield(root) {
   const { commodities, fields, movements } = db.get();
   const groups = groupFieldsByCommodity(commodities, fields, movements);
@@ -981,6 +996,7 @@ function paintYield(root) {
 
   body.innerHTML = `
     ${groups.length > 0 ? `<button type="button" class="btn secondary" id="yield-pdf" style="margin-bottom:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>` : ''}
+    ${groups.length > 0 ? yieldSummaryCard(productionSummary(commodities, fields, movements)) : ''}
     ${groups.length > 0 ? sensitivityCard() : ''}
     <div class="card report">
       <h2><span class="dot report"></span>Yield by commodity, by field</h2>

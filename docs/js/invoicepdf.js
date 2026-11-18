@@ -4,16 +4,16 @@
 // The same words, in the same order, as the page on screen (views/invoice.js). Pure: it builds bytes from the records and the
 // farm's details and touches nothing else.
 
-import { Pdf, wrapText } from './pdf.js?v=406';
-import { drawBrandLogo } from './brand.js?v=406';
-import { letterheadLine } from './docband.js?v=406';
-import { addressLinesOf } from './address.js?v=406';
-import { num, money, dmy } from './fmt.js?v=406';
-import { signerName } from './signdoc.js?v=406';
-import { deductionNotes } from './deductions.js?v=406';
-import { cottonInvoiceModel } from './cottoninvoice.js?v=406';
-import { noteLabel, netPayable } from './adjustment.js?v=406';
-import { hasSignature, strokesInBox } from './signature.js?v=406';
+import { Pdf, wrapText } from './pdf.js?v=407';
+import { drawBrandLogo } from './brand.js?v=407';
+import { letterheadLine } from './docband.js?v=407';
+import { addressLinesOf } from './address.js?v=407';
+import { num, money, dmy } from './fmt.js?v=407';
+import { signerName } from './signdoc.js?v=407';
+import { deductionNotes } from './deductions.js?v=407';
+import { cottonInvoiceModel } from './cottoninvoice.js?v=407';
+import { noteLabel, netPayable } from './adjustment.js?v=407';
+import { hasSignature, strokesInBox } from './signature.js?v=407';
 
 const M = 40;
 const GREEN = [0.18, 0.49, 0.196];

@@ -1,13 +1,13 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=406';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=406';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=406';
-import { isGinContract } from './cottonkinds.js?v=406';
-import { ginTakenOff } from './ginoffset.js?v=406';
-import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=406';
-import { commoditySort } from './commodityorder.js?v=406';
-import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=406';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=407';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=407';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=407';
+import { isGinContract } from './cottonkinds.js?v=407';
+import { ginTakenOff } from './ginoffset.js?v=407';
+import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=407';
+import { commoditySort } from './commodityorder.js?v=407';
+import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=407';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -379,6 +379,24 @@ export function fieldSeed(f, bufferPct = SEED_BUFFER_PCT) {
 export function fieldTons(f, movements = []) {
   if (f.yieldMode === 'actual') return movementTonsFromField(f.id, movements, f.commodityId);
   return estimateFieldTons(f);
+}
+
+/** A commodity's share of the farm's area: '38%', or '<1%' for a sliver. */
+export const areaShare = (area, total) => {
+  if (!(total > 0) || !(area > 0)) return '0%';
+  const p = (area / total) * 100;
+  return p < 1 ? '<1%' : `${Math.round(p)}%`;
+};
+
+/**
+ * The By commodity table of the Production tab and the top of the Yield report: a row for each commodity that has fields, the
+ * most tonnes first, and the farm total. { rows: [{ commodity, area, tons, yieldTHa, fieldCount }], totals: { area, tons, yieldTHa } }
+ */
+export function productionSummary(commodities, fields, movements = []) {
+  const rows = productionByCommodity(commodities, fields, movements).filter((r) => r.fieldCount > 0).sort(bigFirst((r) => r.tons, (r) => r.commodity.name));
+  const totals = rows.reduce((acc, r) => ({ area: acc.area + r.area, tons: acc.tons + r.tons }), { area: 0, tons: 0 });
+  totals.yieldTHa = totals.area > 0 ? totals.tons / totals.area : 0;
+  return { rows, totals };
 }
 
 export function productionByCommodity(commodities, fields, movements = []) {

@@ -4,13 +4,13 @@
 // matched, then apply. Nothing is saved until the last step. The reading and the rules are in deliveryimport.js, where they are
 // tested; this file is the screen.
 
-import { db } from '../storage.js?v=406';
-import { openSheet, closeSheet, notify, toast, field, getVal } from '../ui.js?v=406';
-import { esc, num, shortDate, todayLocal, dmy } from '../fmt.js?v=406';
+import { db } from '../storage.js?v=407';
+import { openSheet, closeSheet, notify, toast, field, getVal } from '../ui.js?v=407';
+import { esc, num, shortDate, todayLocal, dmy } from '../fmt.js?v=407';
 import {
   readTable, guessMapping, mappingProblems, extractRows, matchDeliveries, deliveryPatch, makeFormat, saveFormat, removeFormat, findFormat, DELIVERY_FIELDS,
-} from '../deliveryimport.js?v=406';
-import { seasonYY } from '../outloadno.js?v=406';
+} from '../deliveryimport.js?v=407';
+import { seasonYY } from '../outloadno.js?v=407';
 
 const isOwner = () => db.getRole() === 'owner';
 
@@ -18,7 +18,7 @@ export function openDeliveryImportSheet() {
   openSheet('Import site deliveries', (root) => {
     root.innerHTML = `
       <div class="field hint" style="margin-bottom:10px">Choose the delivery file (CSV) from the receiving site. Each row is matched to a
-        load by the outload number the driver quoted, and the site's weight and quality are put on the load. You see how every row
+        load by the ticket number the driver quoted, and the site's weight and quality are put on the load. You see how every row
         matched before anything is saved.</div>
       <input type="file" id="di-file" accept=".csv,.txt,text/csv" />
       <div id="di-body" style="margin-top:14px"></div>`;

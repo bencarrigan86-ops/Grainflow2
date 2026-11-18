@@ -3,10 +3,10 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=406';
-import { drawBrandLogo } from './brand.js?v=406';
-import { dmy } from './fmt.js?v=406';
-import { SPECS, specOf } from './outload.js?v=406';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=407';
+import { drawBrandLogo } from './brand.js?v=407';
+import { dmy } from './fmt.js?v=407';
+import { SPECS, specOf } from './outload.js?v=407';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -232,7 +232,7 @@ export function reportColumns({ showOrigin = true, showCommodity = true, showDes
   const build = (withGrossTare) => [
     { key: 'date', head: 'Date', w: 56 },
     { key: 'time', head: 'Time', w: 34 },
-    { key: 'ticketNo', head: 'Ticket', w: 40 },
+    { key: 'ticketNo', head: 'Ticket', w: 50 },
     { key: 'truck', head: 'Truck', w: 58 },
     { key: 'driver', head: 'Driver', w: 66 },
     ...(showCommodity ? [{ key: 'commodity', head: 'Commodity', w: 52 }] : []),

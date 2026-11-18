@@ -1,7 +1,7 @@
 // The Modules report as a PDF: where the picked modules are, paddock by paddock. The report's own figures (modulesreport.js) go in;
 // nothing is worked out again here. Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=406';
+import { createReport, fixed } from './reportpdf.js?v=407';
 
 const n0 = (v) => fixed(v, 0);
 

@@ -44,7 +44,7 @@ check('paddocks grouped by commodity run biggest first', () => {
 });
 
 check('every screen that lists commodities sorts them that way', () => {
-  assert.ok(read('docs/js/views/production.js').includes('sort(bigFirst((r) => r.tons'), 'production');
+  assert.ok(read('docs/js/views/production.js').includes('productionSummary(commodities, fields, movements)') && read('docs/js/derived.js').includes('sort(bigFirst((r) => r.tons, (r) => r.commodity.name))'), 'production, and the summary at the top of the Yield report, use the same sorted rows');
   const sales = read('docs/js/views/sales.js');
   assert.ok(sales.includes('sort(bigFirst((r) => r.tons') && sales.includes('.sort(bigFirst((g) => g.tons))'), 'sales roll-up and groups');
   const st = read('docs/js/views/storage.js');

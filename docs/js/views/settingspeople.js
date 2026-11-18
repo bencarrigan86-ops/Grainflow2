@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=406';
-import { esc } from '../fmt.js?v=406';
-import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm } from '../ui.js?v=406';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=406';
-import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=406';
-import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=406';
+import { db } from '../storage.js?v=407';
+import { esc } from '../fmt.js?v=407';
+import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm } from '../ui.js?v=407';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=407';
+import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=407';
+import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=407';
 
 // ---------------------------------------------------------------------------
 // People
@@ -33,7 +33,7 @@ async function loadPeople() {
     // them. The session is in there because a farm can have several owners now,
     // so "the owner" is no longer a useful way to identify the person looking
     // at the screen — only their own user id is.
-    // the digit each person has for outload numbers comes separately, so the card still loads if it cannot be had
+    // the digit each person has for ticket numbers comes separately, so the card still loads if it cannot be had
     const [found, pending, session, digits] = await Promise.all([
       listMembers(farmId), listPendingInvitations(farmId), getSession(), listSeries(farmId).catch(() => new Map()),
     ]);
@@ -128,7 +128,7 @@ function memberRow(m, meId) {
   const editable = canEditMember(m, meId);
   const extra = m.canWriteProduction && (m.role === 'farm_worker' || m.role === 'driver')
     ? ' · can record production' : '';
-  const digit = m.series ? ` · outload digit ${m.series}` : '';
+  const digit = m.series ? ` · ticket digit ${m.series}` : '';
   return `
     <div class="list-item" ${editable ? `data-edit-member="${esc(m.userId)}"` : ''}>
       <div>
@@ -163,9 +163,9 @@ function openMemberSheet(m) {
           hint: 'Lets them enter yields and fertiliser as well as their own loads.' })}
       </div>
       <div id="mem-series-wrap">
-        ${field({ label: 'Outload digit', id: 'mem-series', type: 'select', value: m.series ? String(m.series) : '',
+        ${field({ label: 'Ticket digit', id: 'mem-series', type: 'select', value: m.series ? String(m.series) : '',
           options: [{ value: '', label: 'None' }, ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => ({ value: String(d), label: String(d) }))],
-          hint: 'The digit in the middle of the outload numbers this person gives out (26 1 001). Nobody else on the farm can have the same one, so two phones without signal never give out the same number.' })}
+          hint: 'The digit in the middle of the ticket numbers this person gives out (26 1 001). Nobody else on the farm can have the same one, so two phones without signal never give out the same number.' })}
       </div>
       <div class="field hint">Takes effect the next time they open the app.</div>
       <div id="mem-problem"></div>

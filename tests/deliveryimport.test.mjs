@@ -308,12 +308,28 @@ check('every column the importer can fill has a heading it recognises', () => {
   for (const f of DELIVERY_FIELDS) assert.ok(f.synonyms.length > 0, f.key);
 });
 
+check('the ticket number is the season-person-count number, over the tickets and old outload numbers together', () => {
+  const used = (list) => list.flatMap((m) => [{ outloadNo: m.ticketNo }, { outloadNo: m.outloadNo }]);
+  assert.equal(nextOutloadNo({ series: 1, yy: '26', movements: used([]) }), '261001', 'the first one');
+  assert.equal(nextOutloadNo({ series: 1, yy: '26', movements: used([{ ticketNo: 261001 }, { ticketNo: 261002 }, { ticketNo: 412 }]) }), '261003', 'plain tickets from before do not count');
+  assert.equal(nextOutloadNo({ series: 1, yy: '26', movements: used([{ ticketNo: 412, outloadNo: '261005' }]) }), '261006', 'an old outload number is not given out again');
+  assert.equal(nextOutloadNo({ series: 2, yy: '26', movements: used([{ ticketNo: 261002 }]) }), '262001', 'each person has their own run');
+  const st = read('docs/js/storage.js');
+  assert.ok(st.includes('Number(m.ticketNo) < PLAIN_TICKET_LIMIT'), 'the plain count does not run on from a 261001 ticket');
+});
+check('a row matches a load by its ticket number, or by the outload number it had before', () => {
+  const rows = [{ outloadNo: '261004', rego: '', date: '2026-11-04', netTons: 30 }, { outloadNo: '261001', rego: '', date: '2026-11-04', netTons: 30 }];
+  const r = matchDeliveries(rows, [{ id: 'T', ticketNo: 261004, date: '2026-11-04' }, { id: 'O', ticketNo: 412, outloadNo: '261001', date: '2026-11-04' }]);
+  assert.equal(r[0].load?.id, 'T'); assert.equal(r[1].load?.id, 'O');
+  assert.equal(r[0].kind === 'unmatched', false);
+});
 check('it is wired: the load form, the data layer, boot, People and the SQL', () => {
   const mv = read('docs/js/views/movements.js');
-  assert.ok(mv.includes('id="outloadNo"') && mv.includes('id="ol-get"') && mv.includes('outloadNo: olNo') && mv.includes('id="get-outload"'));
-  assert.ok(mv.includes('is already on load #'), 'a number on another load is refused');
+  assert.ok(!mv.includes('id="outloadNo"') && !mv.includes('id="ol-get"') && !mv.includes('id="get-outload"') && !mv.includes('wantOutload'), 'no separate outload box or button: the ticket number is the number');
+  assert.ok(mv.includes('db.nextTicketNo()') && mv.includes('Our ticket no.'), 'the sheet shows the ticket number a new load will get');
+  assert.ok(mv.includes("outloadNo: existing?.outloadNo || ''"), 'an old outload number is kept');
   const st = read('docs/js/storage.js');
-  assert.ok(st.includes('nextOutloadNo()') && st.includes('__hasOutloadNo') && st.includes('__hasImportFormats'));
+  assert.ok(st.includes('nextTicket()') && st.includes('PLAIN_TICKET_LIMIT') && st.includes('__hasOutloadNo') && st.includes('__hasImportFormats'));
   const mn = read('docs/js/main.js');
   assert.ok(mn.includes('loadMySeries(myId, membership.farmId)') && mn.includes('rememberedSeries(myId, membership.farmId)'));
   const se = read('docs/js/views/settings.js') + read('docs/js/views/settingspeople.js');

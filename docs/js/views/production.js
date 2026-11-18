@@ -1,30 +1,23 @@
-import { db } from '../storage.js?v=406';
-import { tileIcon } from '../tileicon.js?v=406';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=406';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=406';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=406';
-import { describeMerge } from '../merge.js?v=406';
-import { renderRelatedMovements } from './movements.js?v=406';
-import { canSeeYield } from '../nav.js?v=406';
-import { wireJumps } from '../jump.js?v=406';
-import { openMapSheet } from './farmmap.js?v=406';
-import { openInputsSheet } from './inputs.js?v=406';
-import { openSprayFormSheet, canSpray } from './spray.js?v=406';
-import { stockLevels } from '../inputs.js?v=406';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=406';
-import { openModulesPickedSheet } from './modulespicked.js?v=406';
-import { openBalesBaledSheet } from './balesbaled.js?v=406';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=406';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=406';
+import { db } from '../storage.js?v=407';
+import { tileIcon } from '../tileicon.js?v=407';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=407';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=407';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=407';
+import { describeMerge } from '../merge.js?v=407';
+import { renderRelatedMovements } from './movements.js?v=407';
+import { canSeeYield } from '../nav.js?v=407';
+import { wireJumps } from '../jump.js?v=407';
+import { openMapSheet } from './farmmap.js?v=407';
+import { openInputsSheet } from './inputs.js?v=407';
+import { openSprayFormSheet, canSpray } from './spray.js?v=407';
+import { stockLevels } from '../inputs.js?v=407';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=407';
+import { openModulesPickedSheet } from './modulespicked.js?v=407';
+import { openBalesBaledSheet } from './balesbaled.js?v=407';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=407';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=407';
 
 let unsub = null;
-
-/** A commodity's share of the farm's area: '38%', or '<1%' for a sliver. */
-const areaShare = (area, total) => {
-  if (!(total > 0) || !(area > 0)) return '0%';
-  const p = (area / total) * 100;
-  return p < 1 ? '<1%' : `${Math.round(p)}%`;
-};
 
 export function renderProduction(root) {
   if (unsub) unsub();
@@ -40,10 +33,8 @@ function paint(root) {
   const inputProducts = canSeeInputs ? stockLevels(db.getInputMoves()).length : 0;
   const sprayAllowed = canSpray(db.getRole());
   const sprayOpen = sprayAllowed ? db.getSprayJobs().filter((j) => j.status !== 'done').length : 0;
-  const rollup = productionByCommodity(commodities, fields, movements).filter((r) => r.fieldCount > 0).sort(bigFirst((r) => r.tons, (r) => r.commodity.name));   // most tonnes first
+  const { rows: rollup, totals: productionTotals } = productionSummary(commodities, fields, movements);   // most tonnes first
   const groups = groupFieldsByCommodity(commodities, fields, movements);
-  const productionTotals = rollup.reduce((acc, r) => ({ area: acc.area + r.area, tons: acc.tons + r.tons }), { area: 0, tons: 0 });
-  productionTotals.yieldTHa = productionTotals.area > 0 ? productionTotals.tons / productionTotals.area : 0;
 
   root.innerHTML = `
     <div class="topbar">

@@ -2,7 +2,7 @@
 // This file is the thinking (which step is next, the records each answer makes); views/setupwalk.js is the screens.
 // Pure, so it can be tested without a browser.
 
-import { startProgress } from './helpcontent.js?v=406';
+import { startProgress } from './helpcontent.js?v=407';
 
 /**
  * The steps this person can do, each with whether the farm already has it, and the position of the first one not done.

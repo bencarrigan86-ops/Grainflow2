@@ -809,12 +809,13 @@ check('a module move is cotton: the paddock\'s cotton, else cotton, else the yar
   assert.ok(mv.includes('moveCommodity(m, commodities) === listFilter.commodityId') && mv.includes('moveCommodity(m, ctx.commodities)'));
 });
 
-check('the Movement tab opens calm: a summary line, the search with a More menu holding the four tools, the commodity chips, and a labelled Add load button', () => {
+check('the Movement tab opens calm: a summary line, the search with a More menu holding the tools, the commodity chips, and a labelled Add load button', () => {
   const m = read('docs/js/views/movements.js');
   assert.ok(m.includes('class="mv-summary" id="move-stats"') && !m.includes('class="stat-grid" id="move-stats"'));
   assert.ok(m.includes('id="mv-tools-btn"') && m.includes('id="mv-tools" hidden'));
   const menu = m.slice(m.indexOf('id="mv-tools" hidden'), m.indexOf('class="chips"'));
-  for (const id of ['move-modules', 'log-ginning', 'load-report', 'get-outload']) assert.ok(menu.includes(`id="${id}"`), `${id} is in the menu`);
+  for (const id of ['move-modules', 'log-ginning', 'load-report']) assert.ok(menu.includes(`id="${id}"`), `${id} is in the menu`);
+  assert.ok(!menu.includes('get-outload'), 'no outload number tool: the ticket number is the number');
   assert.ok(!m.includes('class="move-tools"'), 'no row of tool buttons above the list');
   assert.ok(m.includes('data-chip="${esc(c.id)}"') && !m.includes('id="mv-crop"'), 'the commodities stay as chips');
   assert.ok(m.includes('id="add-movement" aria-label="Add a load">+ Add load</button>'));

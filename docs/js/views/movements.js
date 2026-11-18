@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=406';
-import { commodityClass } from '../commoditycolor.js?v=406';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=406';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=406';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=406';
-import { withholdingClash } from '../fumigation.js?v=406';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=406';
-import { compressAndStampImage } from '../img.js?v=406';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=406';
-import { specText, extraSpecKey } from '../outload.js?v=406';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=406';
-import { pickableSilos } from '../silopick.js?v=406';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=406';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=406';
-import { activeSales } from '../paidsales.js?v=406';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=406';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=406';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=406';
-import { nowTime } from '../loadreport.js?v=406';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=406';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=406';
-import { openGinRunSheet } from './ginrun.js?v=406';
-import { openModuleMoveSheet } from './modulemove.js?v=406';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=406';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=406';
+import { db } from '../storage.js?v=407';
+import { commodityClass } from '../commoditycolor.js?v=407';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=407';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=407';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=407';
+import { withholdingClash } from '../fumigation.js?v=407';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=407';
+import { compressAndStampImage } from '../img.js?v=407';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=407';
+import { specText, extraSpecKey } from '../outload.js?v=407';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=407';
+import { pickableSilos } from '../silopick.js?v=407';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=407';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=407';
+import { activeSales } from '../paidsales.js?v=407';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=407';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=407';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=407';
+import { nowTime } from '../loadreport.js?v=407';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=407';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=407';
+import { openGinRunSheet } from './ginrun.js?v=407';
+import { openModuleMoveSheet } from './modulemove.js?v=407';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=407';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=407';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -91,7 +91,6 @@ function paint(root) {
         <div class="mv-menu" id="mv-tools" hidden>
           ${(storages.some((s) => s.kind === 'tally') || commodities.some((c) => c.unit === 'bale')) ? `<button type="button" id="move-modules">Move modules</button><button type="button" id="log-ginning">Log ginning</button>` : ''}
           ${movements.length > 0 ? `<button type="button" id="load-report">Load report</button>` : ''}
-          <button type="button" id="get-outload">Get an outload number</button>
         </div>
         ${movements.length > 0 && (inUse.length > 1 || finishCount > 0) ? `<div class="chips">
           <button type="button" class="chip ${listFilter.commodityId || listFilter.toFinish ? '' : 'active'}" data-chip="">All</button>
@@ -121,8 +120,6 @@ function paint(root) {
   root.querySelector('#log-ginning')?.addEventListener('click', () => openGinRunSheet(null));
   root.querySelector('#move-modules')?.addEventListener('click', () => openModuleMoveSheet(null));
   root.querySelector('#load-report')?.addEventListener('click', () => openLoadReportSheet());
-  // a number to quote at a third-party site: the load form opens with the number already in it
-  root.querySelector('#get-outload')?.addEventListener('click', () => openMovementSheet(null, { wantOutload: true }));
   // The most recent ticket by date — not the last one typed in, which is
   // whatever order an import or an edit happened to leave.
   root.querySelector('#repeat-movement')?.addEventListener('click', () => {
@@ -594,12 +591,9 @@ export function openMovementSheet(existing, template) {
           ${field({ label: 'Manual docket no.', id: 'manualDocket', value: existing?.manualDocketNo, placeholder: 'Our paper docket' })}
         </div>
         <div class="field">
-          <label for="outloadNo">Outload number</label>
-          <input id="outloadNo" type="text" inputmode="numeric" autocomplete="off" value="${esc(existing?.outloadNo || '')}" placeholder="Quoted at the site" />
-        </div>
-        <div style="display:flex;gap:10px;align-items:center;margin:-2px 0 10px">
-          <button type="button" class="btn secondary small" id="ol-get" style="width:auto;flex:none">Get a number</button>
-          <div class="hint" id="ol-hint" style="margin:0;font-size:11.5px;color:var(--text-dim)">The driver gives this to the site. It matches the site's delivery file to this load.</div>
+          <label>Our ticket no.</label>
+          <div class="readout">${existing ? (existing.ticketNo ?? '-') : db.nextTicketNo()}${existing ? '' : ' (given when you save)'}</div>
+          <div class="hint">${existing?.outloadNo && String(existing.outloadNo) !== String(existing.ticketNo) ? `Old outload number: ${esc(existing.outloadNo)}. ` : ''}The number the driver gives the site. It matches the site's delivery file to this load.</div>
         </div>
       </section>
 
@@ -1064,29 +1058,7 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
     root.querySelector('#m-photo-take').addEventListener('click', () => root.querySelector('#m-photo-file').click());
     root.querySelector('#m-photo-pick').addEventListener('click', () => root.querySelector('#m-photo-lib').click());
 
-    // the outload number: this person's next one, worked out here, kept when the load is saved
-    const olInput = root.querySelector('#outloadNo');
-    const olHint = root.querySelector('#ol-hint');
-    root.querySelector('#ol-get').addEventListener('click', () => {
-      if (olInput.value.trim()) { toast('This load already has a number'); return; }
-      const n = db.nextOutloadNo();
-      if (!n) {
-        notify(db.getOutloadSeries()
-          ? 'There is no season to put on the number. Check the season in Settings.'
-          : 'You do not have an outload digit yet. It is given when you join the farm: try again with signal, or ask the owner to look in Settings > People.');
-        return;
-      }
-      olInput.value = n;
-      olHint.innerHTML = `Quote <strong>${esc(n)}</strong> at the site. Save the load to keep it.`;
-    });
-    if (template?.wantOutload && !existing) root.querySelector('#ol-get').click();
-
     root.querySelector('#save').addEventListener('click', async () => {
-      const olNo = normaliseOutloadNo(getVal(root, 'outloadNo'));
-      if (olNo) {
-        const clash = movements.find((m) => m.id !== existing?.id && normaliseOutloadNo(m.outloadNo) === olNo);
-        if (clash) { notify(`Outload number ${olNo} is already on load #${clash.ticketNo ?? '?'}. Use a different number, or clear this one.`); return; }
-      }
       const froms = readFromRows(fromRowsEl).filter((f) => f.type && f.id);
       let tos;
       if (toKind === 'sale') {
@@ -1130,7 +1102,7 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
         externalTicketNo: getVal(root, 'extTicket')?.trim() || '',
         manualDocketNo: getVal(root, 'manualDocket')?.trim() || '',
         deductions: readDeductions(root.querySelector('#ded-rows')),
-        outloadNo: olNo,
+        outloadNo: existing?.outloadNo || '',   // an old outload number is kept as it was; new loads have only the ticket number
         // the order it fills; only a load going to a contract can be against one
         orderId: toKind === 'sale' ? (getVal(root, 'to-order-select') || null) : null,
         // the freight order it is carted on; kept as it was when this person cannot see freight orders (no select)
