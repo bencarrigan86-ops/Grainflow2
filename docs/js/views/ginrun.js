@@ -6,25 +6,28 @@
 // contract or a storage, which should add up to the bales pressed. The gin's invoice is saved as a bill when we pay it
 // (see ginning.js).
 
-import { db } from '../storage.js?v=375';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=375';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=375';
-import { activeSales } from '../paidsales.js?v=375';
-import { storageLedgerStock } from '../derived.js?v=375';
-import { offerGinYard } from './modulemove.js?v=375';
+import { db } from '../storage.js?v=376';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=376';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=376';
+import { activeSales } from '../paidsales.js?v=376';
+import { isGinContract, cottonKind, ginContracts, cleanCottonTerms } from '../cottonkinds.js?v=376';
+import { storageLedgerStock } from '../derived.js?v=376';
+import { offerGinYard } from './modulemove.js?v=376';
 import {
   STD_BALE_KG, cleanGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, contractShare,
   baleRangeCount, allocateLint, allocationProblems, padOffBy,
-} from '../ginning.js?v=375';
+} from '../ginning.js?v=376';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
 /** The storages and contracts a run's lint or seed can go to, as one pick list. */
 function targetOptions({ storages, sales, commodities }, unit) {
   const unitOf = (id) => commodities.find((c) => c.id === id)?.unit === 'bale' ? 'bale' : 't';
-  const stores = storages.filter((s) => !s.deleted && s.kind !== 'tally').map((s) => ({ value: `silo:${s.id}`, label: s.name }));
+  // a bale shed is a tally storage counting bales, so lint can go there; the gin yard counts modules and is not a place for lint or seed
+  const baleShed = (s) => s.kind === 'tally' && /bale/i.test(s.unitLabel || '');
+  const stores = storages.filter((s) => !s.deleted && (s.kind !== 'tally' || (unit === 'bale' && baleShed(s)))).map((s) => ({ value: `silo:${s.id}`, label: s.name }));
   const contracts = activeSales(sales)
-    .filter((s) => unitOf(s.commodityId) === unit)
+    .filter((s) => unitOf(s.commodityId) === unit && !isGinContract(s))
     .map((s) => ({ value: `sale:${s.id}`, label: `Contract: ${s.buyer || 'No buyer'}${s.contractNo ? ` #${s.contractNo}` : ''}` }));
   return [{ value: '', label: 'Not allocated yet' }, ...stores, ...contracts];
 }
@@ -47,6 +50,8 @@ export function openGinRunSheet(existing = null) {
   // a run saved with allocations has them; an older one had its lint leg first and its seed leg second
   const startAllocs = gin.allocations.length ? gin.allocations : [{ to: legValue(existing?.tos?.[0]), baleFrom: '', baleTo: '', bales: 0, location: '', kg: 0 }];
   const seedStart = gin.seedTo || legValue(existing?.tos?.[1]);
+  // the contracts with the gin that are still open, and the one this run is already on, whatever its state
+  const ginContractList = [...ginContracts(data.sales), ...(gin.ginContract && !ginContracts(data.sales).some((s) => s.id === gin.ginContract) ? data.sales.filter((s) => s.id === gin.ginContract) : [])];
 
   const kindOf = (to) => (String(to).startsWith('sale:') ? 'sale' : String(to).startsWith('silo:') ? 'silo' : '');
   const optionsFor = (kind, to) => {
@@ -109,6 +114,8 @@ export function openGinRunSheet(existing = null) {
       </div>
       <div class="field"><div class="hint" id="g-std-line"></div></div>
 
+      ${ginContractList.length ? field({ label: 'Ginning contract', id: 'g-contract', type: 'select', value: gin.ginContract || '', options: [{ value: '', label: "None, ginned at the gin's rates" }, ...ginContractList.map((s) => ({ value: s.id, label: `${s.buyer || 'Gin'}${s.contractNo ? ` #${s.contractNo}` : ''}, ${cottonKind(s) === 'ginforseed' ? 'gin for seed' : 'ginning'}` }))], hint: 'Fills in the rates, and counts these bales on that contract' }) : ''}
+
       <h3 style="margin:14px 0 6px">Lint goes to</h3>
       <div class="field" style="margin-bottom:8px"><div class="hint">Each lot goes to a storage (say where in it) or to a bale contract. Give its bale numbers and its weight. To split the run, add a lot for each place.</div></div>
       <div class="field" style="margin:-2px 0 8px"><div class="hint" id="g-pad-note"></div></div>
@@ -157,6 +164,7 @@ export function openGinRunSheet(existing = null) {
       paidBy: getVal(root, 'g-paid-by'),
       allocations: readAllocs(),
       seedTo: getVal(root, 'g-seed-to'),
+      ...(getVal(root, 'g-contract') ? { ginContract: getVal(root, 'g-contract') } : {}),
       ...(gin.payableId ? { payableId: gin.payableId } : {}),
     });
 
@@ -201,6 +209,26 @@ export function openGinRunSheet(existing = null) {
         : toContract ? `Taken off the lint payment on the contract, for the bales that go there. Ex GST ${money(inv.exGst, 2)} for the whole run. A bill is saved in Payables and marked paid when that lint invoice is.`
           : 'Choose the contract the lint goes to above, so the charges can be taken off its payment.';
     };
+
+    // a contract with the gin brings its rates (and the gin's name); for gin for seed the seed goes to the gin on the contract
+    const contractEl = root.querySelector('#g-contract');
+    const syncContract = (fill) => {
+      const s = ginContractList.find((x) => x.id === contractEl?.value);
+      const forSeed = s && cottonKind(s) === 'ginforseed';
+      root.querySelector('#g-seed-to').closest('.field').style.display = forSeed ? 'none' : '';
+      if (fill && s) {
+        const t = cleanCottonTerms(s.cottonTerms);
+        if (s.buyer) root.querySelector('#g-gin').value = s.buyer;
+        if (t) {
+          root.querySelector('#g-rate').value = t.ginRate || '';
+          root.querySelector('#g-research').value = t.researchLevy || '';
+          root.querySelector('#g-vol').value = t.voluntaryLevy || '';
+          root.querySelector('#g-gst').checked = t.gstOnGin;
+        }
+      }
+    };
+    contractEl?.addEventListener('change', () => { syncContract(true); paint(); });
+    syncContract(false);
 
     let paidByChosen = !!existing;
     root.querySelector('#g-paid-by').addEventListener('change', () => { paidByChosen = true; });
@@ -258,7 +286,14 @@ export function openGinRunSheet(existing = null) {
         const target = parseTarget(a.to);
         if (target && a.std > 0) tos.push({ ...target, tons: round3(a.std) });
       }
-      if (seedTo && seedT > 0) tos.push({ ...seedTo, tons: seedT });
+      // the contract with the gin counts the run in standard bales: a gin-for-seed contract is where the seed goes (the seed is
+      // sold to the gin on it), and a ginning-only contract is a leg of its own
+      const ginSale = data.sales.find((s) => s.id === g.ginContract);
+      if (ginSale && cottonKind(ginSale) === 'ginforseed') tos.push({ type: 'sale', id: ginSale.id, tons: bales });
+      else {
+        if (seedTo && seedT > 0) tos.push({ ...seedTo, tons: seedT });
+        if (ginSale) tos.push({ type: 'sale', id: ginSale.id, tons: bales });
+      }
 
       // the gin's invoice, kept as a bill when we pay it, so what ginning cost is in the books
       const inv = ginInvoice(g);

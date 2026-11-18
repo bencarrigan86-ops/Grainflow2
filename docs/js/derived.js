@@ -1,11 +1,12 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=375';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=375';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=375';
-import { ginDeduction, cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=375';
-import { commoditySort } from './commodityorder.js?v=375';
-import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=375';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=376';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=376';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=376';
+import { isGinContract } from './cottonkinds.js?v=376';
+import { ginDeduction, cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=376';
+import { commoditySort } from './commodityorder.js?v=376';
+import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=376';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -422,7 +423,8 @@ export function groupFieldsByCommodity(commodities, fields, movements = []) {
 
 export function salesByCommodity(commodities, sales, movements = []) {
   return commodities.map((c) => {
-    const rows = sales.filter((s) => s.commodityId === c.id);
+    // a contract with the gin (gin for seed, ginning only) is not lint sold: the seed and the ginning are in the cotton components
+    const rows = sales.filter((s) => s.commodityId === c.id && !isGinContract(s));
     let tons = 0, tonsDelivered = 0, totalValue = 0;
     rows.forEach((s) => {
       const econ = saleEconomics(s, movements);

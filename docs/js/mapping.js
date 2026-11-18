@@ -27,13 +27,14 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=375';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=375';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=375';
-import { cleanPicked } from './modulespicked.js?v=375';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=375';
-import { cleanOffFarm } from './offfarm.js?v=375';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=375';
+import { cleanGradeOptions } from './gradeprice.js?v=376';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=376';
+import { cleanCottonTerms } from './cottonkinds.js?v=376';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=376';
+import { cleanPicked } from './modulespicked.js?v=376';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=376';
+import { cleanOffFarm } from './offfarm.js?v=376';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=376';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -460,6 +461,9 @@ export function stateToRows(state, farmId) {
         // How the contract is delivered: 'call' (the buyer orders it) or 'even' (spread over the window). Optional like the other later columns.
         ...((sale.deliveryPattern || sale.__hasDeliveryPattern) ? { delivery_pattern: ['even', 'call', 'sellers', 'ginrun'].includes(sale.deliveryPattern) ? sale.deliveryPattern : null } : {}),
         // Who invoices: 'seller' (the farm) or 'rcti' (the buyer, by a recipient created tax invoice). Optional like the other later columns.
+        // A contract with the gin (gin for seed, ginning only) and the gin's charges per bale. Optional like the other later columns.
+        ...((sale.cottonKind || sale.__hasCottonKind) ? { cotton_kind: ['ginforseed', 'ginning'].includes(sale.cottonKind) ? sale.cottonKind : null } : {}),
+        ...((sale.cottonTerms || sale.__hasCottonTerms) ? { cotton_terms: cleanCottonTerms(sale.cottonTerms) } : {}),
         ...((sale.invoicing || sale.__hasInvoicing) ? { invoicing: ['seller', 'rcti'].includes(sale.invoicing) ? sale.invoicing : null } : {}),
       });
       out.sale_terms.push({
@@ -868,6 +872,8 @@ export function rowsToState(rows) {
           ...(sale.is_paid != null ? { paid: !!sale.is_paid, __hasPaid: true } : {}),
           ...(sale.delivery_pattern != null ? { deliveryPattern: sale.delivery_pattern, __hasDeliveryPattern: true } : {}),
           ...(sale.invoicing != null ? { invoicing: sale.invoicing, __hasInvoicing: true } : {}),
+          ...(sale.cotton_kind != null ? { cottonKind: sale.cotton_kind, __hasCottonKind: true } : {}),
+          ...(sale.cotton_terms != null ? { cottonTerms: cleanCottonTerms(sale.cotton_terms) || undefined, __hasCottonTerms: true } : {}),
           broker: t.broker ?? '',
           brokerRef: t.broker_ref ?? '',
           brokeragePaidBy: t.brokerage_paid_by ?? '',

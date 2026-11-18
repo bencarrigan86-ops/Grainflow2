@@ -18,31 +18,31 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=375';
-import { setBrandLogo } from './brand.js?v=375';
+import { hydrate } from './hydrate.js?v=376';
+import { setBrandLogo } from './brand.js?v=376';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=375';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=375';
-import { isLegacyDirty } from './dirty.js?v=375';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=375';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=375';
-import { hasDeductions } from './deductions.js?v=375';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=375';
-import { hasHay, hasHayLoad } from './hay.js?v=375';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=375';
-import { settleLegs, dedupeLegs } from './legs.js?v=375';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=375';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=375';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=375';
-import { setCommodityOrder } from './commodityorder.js?v=375';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=375';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=375';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=375';
-import { schedulePush, pushOnReconnect } from './sync.js?v=375';
-import { hasParts as hasAddressParts } from './address.js?v=375';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=375';
+} from './local.js?v=376';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=376';
+import { isLegacyDirty } from './dirty.js?v=376';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=376';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=376';
+import { hasDeductions } from './deductions.js?v=376';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=376';
+import { hasHay, hasHayLoad } from './hay.js?v=376';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=376';
+import { settleLegs, dedupeLegs } from './legs.js?v=376';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=376';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=376';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=376';
+import { setCommodityOrder } from './commodityorder.js?v=376';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=376';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=376';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=376';
+import { schedulePush, pushOnReconnect } from './sync.js?v=376';
+import { hasParts as hasAddressParts } from './address.js?v=376';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=376';
 
 /**
  * A gin bill the lint buyer pays is paid when the lint payment is: each paid invoice that carries a prepaid line for a ginning run
@@ -975,6 +975,8 @@ export const db = {
         if (merged.ourRef) merged.__hasOurRef = true;   // so clearing it reaches the server
         if (merged.paid) merged.__hasPaid = true;       // and so does marking it unpaid again
         if (merged.deliveryPattern) merged.__hasDeliveryPattern = true;   // and clearing how it is delivered
+        if (merged.cottonKind) merged.__hasCottonKind = true;             // and going back to a lint sale
+        if (merged.cottonTerms) merged.__hasCottonTerms = true;
         if (merged.invoicing) merged.__hasInvoicing = true;               // and clearing who invoices
         if (hasAddressParts(merged.buyerAddressParts)) merged.__hasBuyerAddressParts = true;   // and clearing the buyer's address parts
         c.sales[idx] = merged;
@@ -982,7 +984,7 @@ export const db = {
       touch('sale', sale.id);
     } else {
       const id = uid();
-      c.sales.push({ ...sale, id, ...(Number(sale.brokerageRate) ? { __hasBrokerageRate: true } : {}), ...(sale.freightPaidBy === 'buyer' ? { __hasFreightPaidBy: true } : {}), ...(sale.ourRef ? { __hasOurRef: true } : {}), ...(sale.paid ? { __hasPaid: true } : {}), ...(sale.deliveryPattern ? { __hasDeliveryPattern: true } : {}), ...(sale.invoicing ? { __hasInvoicing: true } : {}), ...(hasAddressParts(sale.buyerAddressParts) ? { __hasBuyerAddressParts: true } : {}) });
+      c.sales.push({ ...sale, id, ...(Number(sale.brokerageRate) ? { __hasBrokerageRate: true } : {}), ...(sale.freightPaidBy === 'buyer' ? { __hasFreightPaidBy: true } : {}), ...(sale.ourRef ? { __hasOurRef: true } : {}), ...(sale.paid ? { __hasPaid: true } : {}), ...(sale.deliveryPattern ? { __hasDeliveryPattern: true } : {}), ...(sale.invoicing ? { __hasInvoicing: true } : {}), ...(sale.cottonKind ? { __hasCottonKind: true } : {}), ...(sale.cottonTerms ? { __hasCottonTerms: true } : {}), ...(hasAddressParts(sale.buyerAddressParts) ? { __hasBuyerAddressParts: true } : {}) });
       touch('sale', id);
     }
     persist();

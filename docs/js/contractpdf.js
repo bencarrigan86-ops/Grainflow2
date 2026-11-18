@@ -3,19 +3,33 @@
 // The same terms, in the same order, as the page on screen (views/contract.js reads its rows from here too, so the two can
 // never say different things). Pure: it builds bytes from the sale and the farm's details and touches nothing else.
 
-import { Pdf, wrapText } from './pdf.js?v=375';
-import { drawBrandLogo } from './brand.js?v=375';
-import { letterheadLine } from './docband.js?v=375';
-import { addressLinesOf } from './address.js?v=375';
-import { num, money, dmy } from './fmt.js?v=375';
-import { PATTERN_ON_CONTRACT } from './deliveryplan.js?v=375';
-import { INVOICING_ON_CONTRACT } from './invoicing.js?v=375';
-import { contactLines } from './buyercontact.js?v=375';
-import { signerName } from './signdoc.js?v=375';
-import { toleranceText, gradeTermsLines, gradeNamesText } from './contractterms.js?v=375';
-import { hasSignature, strokesInBox } from './signature.js?v=375';
+import { Pdf, wrapText } from './pdf.js?v=376';
+import { drawBrandLogo } from './brand.js?v=376';
+import { letterheadLine } from './docband.js?v=376';
+import { addressLinesOf } from './address.js?v=376';
+import { num, money, dmy } from './fmt.js?v=376';
+import { PATTERN_ON_CONTRACT } from './deliveryplan.js?v=376';
+import { INVOICING_ON_CONTRACT } from './invoicing.js?v=376';
+import { contactLines } from './buyercontact.js?v=376';
+import { signerName } from './signdoc.js?v=376';
+import { toleranceText, gradeTermsLines, gradeNamesText } from './contractterms.js?v=376';
+import { cottonKind, cleanCottonTerms, netPerBale } from './cottonkinds.js?v=376';
+import { hasSignature, strokesInBox } from './signature.js?v=376';
 
 export const DASH = '—';
+
+/** The gin's charges on a contract with the gin, one to a line, and what gin for seed nets a bale. */
+export function ginTermsLines(sale, perUnit = 'bale') {
+  const k = cottonKind(sale);
+  const t = cleanCottonTerms(sale.cottonTerms);
+  if (k === 'lint' || !t) return [];
+  const lines = [];
+  if (t.ginRate) lines.push(`Ginning ${money(t.ginRate, 2)} per ${perUnit}${t.gstOnGin ? ', plus GST' : ''}`);
+  if (t.researchLevy) lines.push(`Research levy ${money(t.researchLevy, 2)} per ${perUnit}`);
+  if (t.voluntaryLevy) lines.push(`Voluntary levy ${money(t.voluntaryLevy, 2)} per ${perUnit}`);
+  if (k === 'ginforseed') lines.push(`Seed value less ginning is ${money(netPerBale(sale), 2)} per ${perUnit}`);
+  return lines;
+}
 
 /** A date as a document should write it: 01-08-2026, not 2026-08-01. */
 export function longDate(iso) {
@@ -69,7 +83,8 @@ export function termRows(sale, commodity, { showFreight = true, showComments = t
     [gradeLines.length ? 'Grades' : 'Grade', gradeLines.length ? gradeNamesText(sale) : sale.grade],
     ['Quality', cotton ? `As per ${ICA_NAME} standards` : 'As per Grain Trade Australia standards'],
     ['Quantity', [`${num(sale.tons, 0)} ${unit}`, toleranceText(sale, unit)]],
-    ['Price', sale.price ? `${money(sale.price, 2)} per ${perUnit}, exclusive of GST` : ''],
+    [cottonKind(sale) === 'ginforseed' ? 'Seed value' : 'Price', cottonKind(sale) !== 'ginning' && sale.price ? `${money(sale.price, 2)} per ${perUnit}, exclusive of GST` : ''],
+    ['Ginning', ginTermsLines(sale, perUnit)],
     ['Freight', showFreight && sale.freight ? `${money(sale.freight, 2)} per ${perUnit}` : ''],
     ['Premium / discount', sale.premiumDiscount ? `${money(sale.premiumDiscount, 2)} per ${perUnit}` : ''],
     ['Premium / discount by grade', gradeLines.length ? [...gradeLines, 'A grade not listed is paid the price as above'] : ''],

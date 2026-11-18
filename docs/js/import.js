@@ -77,6 +77,7 @@ export function remapIds(input) {
         for (const a of m.gin.allocations || []) a.to = ref(a.to);
         if (m.gin.seedTo) m.gin.seedTo = ref(m.gin.seedTo);
         if (m.gin.payableId) m.gin.payableId = idFor(m.gin.payableId);
+        if (m.gin.ginContract) m.gin.ginContract = idFor(m.gin.ginContract);
       }
     }
 

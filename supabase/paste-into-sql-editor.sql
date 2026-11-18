@@ -2015,4 +2015,8 @@ notify pgrst, 'reload schema';
 -- Gin bills the lint buyer pays: who settles a bill
 alter table payables add column if not exists payer text;
 
+-- Cotton contracts with the gin: gin for seed, and ginning only
+alter table sales add column if not exists cotton_kind text;
+alter table sales add column if not exists cotton_terms jsonb;
+
 notify pgrst, 'reload schema';

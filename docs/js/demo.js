@@ -11,8 +11,8 @@
 // remapIds() reissues every one on import and two trial accounts never collide
 // on a primary key.
 
-import { DEFAULT_BUSINESS_DETAILS, prepareImport, newId } from './import.js?v=375';
-import { APP_VERSION } from './version.js?v=375';
+import { DEFAULT_BUSINESS_DETAILS, prepareImport, newId } from './import.js?v=376';
+import { APP_VERSION } from './version.js?v=376';
 
 const WANTED_KEY = 'grainflow.seedSample';
 
@@ -59,6 +59,12 @@ export function sampleStateFor(rawJson, farmName) {
   };
   return state;
 }
+
+/**
+ * Is this a sample farm whose owner may refresh it to the latest sample? The owner only, because it replaces everything on the
+ * farm. The sample is copied once when a farm is made, so a farm made earlier keeps the old silos, contracts and terms until it is.
+ */
+export const sampleRefreshOffered = (currentYear = '', role = 'owner') => /^sample/i.test(currentYear || '') && role === 'owner';
 
 /** The earlier seasons the sample farm carries. */
 export const SAMPLE_HISTORY = ['Sample 2024', 'Sample 2025'];
@@ -232,7 +238,7 @@ export function sampleCottonHayFrom(seed, farm = {}) {
     if (froms.includes(null) || tos.includes(null)) continue;   // a load from a paddock this farm does not have
     movements.push({
       ...m, id: ids.get(m.id), commodityId: ref(m.commodityId), froms, tos,
-      ...(m.gin ? { gin: { ...m.gin, allocations: (m.gin.allocations || []).map((a) => ({ ...a, to: refTyped(a.to) })), ...(m.gin.seedTo ? { seedTo: refTyped(m.gin.seedTo) } : {}), ...(m.gin.payableId ? { payableId: ginBillIds.get(m.gin.payableId) || '' } : {}) } } : {}),
+      ...(m.gin ? { gin: { ...m.gin, allocations: (m.gin.allocations || []).map((a) => ({ ...a, to: refTyped(a.to) })), ...(m.gin.seedTo ? { seedTo: refTyped(m.gin.seedTo) } : {}), ...(m.gin.payableId ? { payableId: ginBillIds.get(m.gin.payableId) || '' } : {}), ...(m.gin.ginContract ? { ginContract: ref(m.gin.ginContract) } : {}) } } : {}),
     });
   }
   const kept = new Set(movements.map((m) => m.id));

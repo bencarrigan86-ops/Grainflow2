@@ -260,6 +260,13 @@ sales.push(...[
     location: 'Delivered gin', deliveryStart: '2026-04-01', deliveryEnd: '2026-09-30', freight: 0, leviesPct: 0, deliveryPattern: 'ginrun', tolerancePct: 0, toleranceCapTons: 1 },
   { id: 'sale-ct2', commodityId: 'cotton', buyer: 'Wattle Cotton Merchants', contractNo: 'WCM-2611', grade: '', tons: 500, price: 585, date: '2025-11-12',
     location: 'Delivered gin', deliveryStart: '2026-04-01', deliveryEnd: '2026-09-30', freight: 0, leviesPct: 0, deliveryPattern: 'ginrun', tolerancePct: 0, toleranceCapTons: 1 },
+  // with the gin: the seed sold to it with the ginning netted off (this season's run is on it), and a ginning-only contract for the next
+  { id: 'sale-gin1', commodityId: 'cotton', cottonKind: 'ginforseed', buyer: 'Bimbi Ginning', contractNo: 'BG-GFS-26', grade: '', tons: 1350, price: 118, date: '2025-11-20',
+    location: 'Bimbi gin yard', deliveryStart: '2026-04-01', deliveryEnd: '2026-09-30', freight: 0, leviesPct: 0, deliveryPattern: 'ginrun', tolerancePct: 0, toleranceCapTons: 1,
+    cottonTerms: { ginRate: 75, researchLevy: 2.25, voluntaryLevy: 1.5, gstOnGin: true } },
+  { id: 'sale-gin2', commodityId: 'cotton', cottonKind: 'ginning', buyer: 'Bimbi Ginning', contractNo: 'BG-GIN-27', grade: '', tons: 1500, price: 0, date: '2026-09-10',
+    location: 'Bimbi gin yard', deliveryStart: '2027-04-01', deliveryEnd: '2027-09-30', freight: 0, leviesPct: 0, deliveryPattern: 'ginrun', tolerancePct: 0, toleranceCapTons: 1,
+    cottonTerms: { ginRate: 78, researchLevy: 2.25, voluntaryLevy: 1.5, gstOnGin: true } },
   { id: 'sale-hay1', commodityId: 'lucerne', buyer: 'Valley Stockfeeds', contractNo: 'VS-3310', grade: 'Premium', tons: 150, price: 395, date: '2026-09-20',
     location: 'Ex farm', deliveryStart: '2026-12-01', deliveryEnd: '2027-02-28', freight: 0, leviesPct: 0 },
   { id: 'sale-hay2', commodityId: 'wheatstraw', buyer: 'Hillcrest Dairy Co-op', contractNo: 'HD-0412', grade: '', tons: 80, price: 82, date: '2026-10-08',
@@ -457,7 +464,7 @@ const run = {
     { to: 'silo:bale-shed', baleFrom: 'KG101001', baleTo: 'KG101340', bales: 340, kg: 78500, location: 'Shed bay 2' },
   ],
 };
-const ginRun = { ...cleanGin(run), payableId: 'pay-gin' };
+const ginRun = { ...cleanGin({ ...run, ginContract: 'sale-gin1' }), payableId: 'pay-gin' };
 const lots = allocateLint(ginRun);
 const ginMovement = {
   id: `mv-${ticket}`, ticketNo: ticket, date: '2026-05-02', commodityId: 'cotton', status: 'closed',
@@ -466,6 +473,8 @@ const ginMovement = {
   tos: lots.map((a) => { const [type, ...rest] = a.to.split(':'); return { type, id: rest.join(':'), tons: r3(a.std) }; }),
   notes: 'Ginning', gin: ginRun,
 };
+// the seed is sold to the gin on its gin-for-seed contract, counted in the bales ginned
+ginMovement.tos.push({ type: 'sale', id: 'sale-gin1', tons: r3(lots.reduce((s, a) => s + a.std, 0)) });
 movements.push(ginMovement);
 ticket += 1;
 

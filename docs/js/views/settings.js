@@ -1,51 +1,51 @@
-import { db } from '../storage.js?v=375';
-import { getTheme, setTheme } from '../theme.js?v=375';
-import { num, money, esc, todayLocal } from '../fmt.js?v=375';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=375';
-import { planYieldUpdate } from '../yieldupdate.js?v=375';
-import { openLoadImportSheet } from './importloads.js?v=375';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=375';
-import { openPastSeasonsSheet } from './pastseasons.js?v=375';
-import { openPastSalesSheet } from './pastsales.js?v=375';
-import { openLineupSheet } from './lineup.js?v=375';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=375';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=375';
-import { openDangerSheet } from './dangerconfirm.js?v=375';
-import { sampleHistoryFrom, sampleHistoryOffered, sampleOrdersFrom, sampleOrdersOffered, sampleCottonHayFrom, sampleCottonHayOffered } from '../demo.js?v=375';
-import { seasonContents, contentsText } from '../seasondelete.js?v=375';
-import { openDeletedSheet } from './deleted.js?v=375';
-import { APP_VERSION } from '../version.js?v=375';
-import { checkNow } from '../updatecheck.js?v=375';
-import { logoFromFile } from '../logo.js?v=375';
-import { exportRowsAsCSV } from '../csv.js?v=375';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=375';
-import { cleanCotton } from '../ginning.js?v=375';
-import { cleanHay, hasHay, BALE_TYPES } from '../hay.js?v=375';
-import { orderedNames, moveName } from '../commodityorder.js?v=375';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=375';
-import { endpointLabel } from './movements.js?v=375';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=375';
-import { layersForStorage } from '../outload.js?v=375';
-import { traceLoads, traceText } from '../trace.js?v=375';
-import { holdings, totalHeld } from '../offfarm.js?v=375';
-import { kindLabel, billTotal } from '../payables.js?v=375';
-import { orderState, STATE_LABEL } from '../orders.js?v=375';
-import { fieldHarvest } from '../harvest.js?v=375';
-import { capacityFor } from '../storagecapacity.js?v=375';
-import { autoSeasonText } from '../harvestseason.js?v=375';
-import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=375';
-import { openMySignatureSheet } from './signaturepad.js?v=375';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=375';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=375';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=375';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=375';
+import { db } from '../storage.js?v=376';
+import { getTheme, setTheme } from '../theme.js?v=376';
+import { num, money, esc, todayLocal } from '../fmt.js?v=376';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=376';
+import { planYieldUpdate } from '../yieldupdate.js?v=376';
+import { openLoadImportSheet } from './importloads.js?v=376';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=376';
+import { openPastSeasonsSheet } from './pastseasons.js?v=376';
+import { openPastSalesSheet } from './pastsales.js?v=376';
+import { openLineupSheet } from './lineup.js?v=376';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=376';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=376';
+import { openDangerSheet } from './dangerconfirm.js?v=376';
+import { sampleHistoryFrom, sampleHistoryOffered, sampleOrdersFrom, sampleOrdersOffered, sampleCottonHayFrom, sampleCottonHayOffered, sampleRefreshOffered, sampleStateFor } from '../demo.js?v=376';
+import { seasonContents, contentsText } from '../seasondelete.js?v=376';
+import { openDeletedSheet } from './deleted.js?v=376';
+import { APP_VERSION } from '../version.js?v=376';
+import { checkNow } from '../updatecheck.js?v=376';
+import { logoFromFile } from '../logo.js?v=376';
+import { exportRowsAsCSV } from '../csv.js?v=376';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics, closingStock, position } from '../derived.js?v=376';
+import { cleanCotton } from '../ginning.js?v=376';
+import { cleanHay, hasHay, BALE_TYPES } from '../hay.js?v=376';
+import { orderedNames, moveName } from '../commodityorder.js?v=376';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=376';
+import { endpointLabel } from './movements.js?v=376';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=376';
+import { layersForStorage } from '../outload.js?v=376';
+import { traceLoads, traceText } from '../trace.js?v=376';
+import { holdings, totalHeld } from '../offfarm.js?v=376';
+import { kindLabel, billTotal } from '../payables.js?v=376';
+import { orderState, STATE_LABEL } from '../orders.js?v=376';
+import { fieldHarvest } from '../harvest.js?v=376';
+import { capacityFor } from '../storagecapacity.js?v=376';
+import { autoSeasonText } from '../harvestseason.js?v=376';
+import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=376';
+import { openMySignatureSheet } from './signaturepad.js?v=376';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=376';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=376';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=376';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=376';
 import {
   INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember,
-} from '../invites.js?v=375';
+} from '../invites.js?v=376';
 import {
   createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember,
   changeMemberRole, getSession,
-} from '../auth.js?v=375';
+} from '../auth.js?v=376';
 
 let unsub = null;
 
@@ -159,6 +159,8 @@ function paint(root) {
         <button class="btn secondary small" id="add-sample-orders" style="margin-top:6px">Add a sample grain order and freight order</button>` : ''}
         ${sampleCottonHayOffered(db.get().sales, db.get().fields, currentYear, db.getRole()) ? `<div class="hint" style="margin-top:8px">This sample farm has no sample cotton or hay. Add two cotton paddocks, modules to a gin yard and a ginning run, lucerne and straw with their bales, sheds, contracts and invoices, so those screens have something to show.</div>
         <button class="btn secondary small" id="add-sample-cotton-hay" style="margin-top:6px">Add sample cotton and hay</button>` : ''}
+        ${sampleRefreshOffered(currentYear, db.getRole()) ? `<div class="hint" style="margin-top:8px">Sample farm: replace everything on it with the latest sample (new contracts, silos and bills). Anything you added here goes. A backup is kept first.</div>
+        <button class="btn danger small" id="refresh-sample" style="margin-top:6px">Refresh the sample&hellip;</button>` : ''}
         ${years.length > 1 && db.getRole() === 'owner' ?`<button class="btn danger small" id="delete-year" style="margin-top:8px">Delete "${esc(currentYear)}" season&hellip;</button>` : ''}
       </div>
 
@@ -439,6 +441,35 @@ function paint(root) {
       toast(`Added cotton and hay: ${made.paddocks} paddocks, ${made.loads} loads, ${made.invoices} invoices`);
       btn.hidden = true;
     } catch (err) { notify(err.message || 'The sample cotton and hay could not be added.'); btn.disabled = false; }
+  });
+  root.querySelector('#refresh-sample')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget; btn.disabled = true;
+    try {
+      const res = await fetch(`./demo/seed.json?v=${APP_VERSION}`, { cache: 'no-cache' });
+      if (!res.ok) throw new Error(`The latest sample could not be fetched (${res.status}).`);
+      // the farm keeps its own name and business details: only the farm's data is replaced
+      const state = sampleStateFor(await res.text(), db.getBusinessDetails()?.farmName || "");
+      state.businessDetails = { ...state.businessDetails, ...(db.getBusinessDetails() || {}) };
+      const seasons = db.getYears();
+      openDangerSheet({
+        title: 'Refresh the sample',
+        warning: `This replaces the <strong>whole sample farm</strong> (${seasons.length} season${seasons.length === 1 ? '' : 's'}) with the latest sample. Whatever you added to it is lost.`,
+        contents: contentsText(seasonContents(seasons.reduce((all, l) => {
+          const y = db.getYearData(l);
+          for (const k of Object.keys(y)) if (Array.isArray(y[k])) all[k] = [...(all[k] || []), ...y[k]];
+          return all;
+        }, {}))),
+        name: 'refresh',
+        confirmLabel: 'Replace with the latest sample',
+        done: 'The sample was refreshed',
+        onConfirm: () => {
+          try { db.importJSON(JSON.stringify(state)); } catch (err) { notify(`The sample could not be refreshed.
+
+${err.message}`); }
+        },
+      });
+    } catch (err) { notify(err.message || 'The latest sample could not be fetched.'); }
+    btn.disabled = false;
   });
   root.querySelector('#add-sample-orders')?.addEventListener('click', async (e) => {
     const btn = e.currentTarget; btn.disabled = true;

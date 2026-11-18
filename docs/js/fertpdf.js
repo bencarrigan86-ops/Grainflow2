@@ -2,9 +2,9 @@
 // style with the Position page. Nitrogen columns are amber and urea-equivalent columns green, as on the screen.
 // The figures come from fertfigures.js (ureaFigures, starterFigures), the same ones the screen uses. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=375';
-import { drawBrandLogo } from './brand.js?v=375';
-import { ureaSummary, starterSummary } from './fertfigures.js?v=375';
+import { Pdf, wrapText } from './pdf.js?v=376';
+import { drawBrandLogo } from './brand.js?v=376';
+import { ureaSummary, starterSummary } from './fertfigures.js?v=376';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;

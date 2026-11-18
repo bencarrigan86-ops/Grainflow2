@@ -11,7 +11,7 @@
 // named for the store, and a load that took more than the silo was recorded as holding says "Not recorded" for the
 // difference. Pure.
 
-import { inOrder, outloadEndOf } from './outload.js?v=375';
+import { inOrder, outloadEndOf } from './outload.js?v=376';
 
 const num = (v) => Number(v) || 0;
 const EPS = 1e-9;

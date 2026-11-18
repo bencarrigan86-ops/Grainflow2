@@ -1,32 +1,33 @@
-import { db } from '../storage.js?v=375';
+import { db } from '../storage.js?v=376';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=375';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=375';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=375';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=375';
-import { patternsFor } from '../deliveryplan.js?v=375';
-import { INVOICING } from '../invoicing.js?v=375';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=375';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=375';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=375';
-import { renderRelatedMovements } from './movements.js?v=375';
-import { openInvoiceListSheet } from './invoice.js?v=375';
-import { openContractDocSheet } from './contract.js?v=375';
-import { wireJumps } from '../jump.js?v=375';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=375';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=375';
-import { freightState } from '../freight.js?v=375';
-import { activeSales, paidSales } from '../paidsales.js?v=375';
-import { openVendorDecSheet } from './vendordec.js?v=375';
-import { summarise as summariseOrders } from '../orders.js?v=375';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=375';
-import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=375';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=375';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=375';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=375';
-import { standardFor } from '../grades.js?v=375';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=375';
+} from '../documents.js?v=376';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=376';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=376';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=376';
+import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=376';
+import { patternsFor } from '../deliveryplan.js?v=376';
+import { INVOICING } from '../invoicing.js?v=376';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=376';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=376';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=376';
+import { renderRelatedMovements } from './movements.js?v=376';
+import { openInvoiceListSheet } from './invoice.js?v=376';
+import { openContractDocSheet } from './contract.js?v=376';
+import { wireJumps } from '../jump.js?v=376';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=376';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=376';
+import { freightState } from '../freight.js?v=376';
+import { activeSales, paidSales } from '../paidsales.js?v=376';
+import { openVendorDecSheet } from './vendordec.js?v=376';
+import { summarise as summariseOrders } from '../orders.js?v=376';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=376';
+import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=376';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=376';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=376';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=376';
+import { standardFor } from '../grades.js?v=376';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=376';
 
 let unsub = null;
 
@@ -329,7 +330,8 @@ function saleRow(s, movements, commodities, index = 0) {
         <div class="main">${money(econ.totalValue, 0)}</div>
       </div>
       <div class="meta">${[s.grade, s.gradeOptions?.length ? `${s.gradeOptions.length} grades` : '', s.contractNo ? `#${s.contractNo}` : '', s.brokerNote, (s.notes || '').split('\n')[0].slice(0, 60)].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</div>
-      <div class="meta">${amount} @ ${money(econ.priceExFarm, 2)}/${isBales ? 'bale' : 't'} net</div>
+      <div class="meta">${isGinContract(s) ? esc(kindSummary(s)) : `${amount} @ ${money(econ.priceExFarm, 2)}/${isBales ? 'bale' : 't'} net`}</div>
+      ${isGinContract(s) ? `<div class="meta">Ginned so far: ${num(econ.tonsDelivered, 0)} bales · cost ${money(ginCostFor(s, econ.tonsDelivered).exGst, 0)} ex GST${s.cottonKind === 'ginforseed' ? ` · seed value ${money(econ.tonsDelivered * (Number(s.price) || 0), 0)}` : ''}</div>` : ''}
       ${econ.ginDeduction > 0 ? `<div class="meta">Less ginning ${money(econ.ginDeduction, 0)} · ${money(econ.netPayment, 0)} to receive</div>` : ''}
       <div class="meta">${[s.location, window].filter(Boolean).map(esc).join(' · ') || 'No delivery location/date set'}</div>
       ${fillGauge(econ, s.tons)}
@@ -411,9 +413,24 @@ function openSaleSheet(existing) {
         ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
         ${gradeFieldHtml({ id: 'grade', commodity: commodities.find((c) => c.id === (existing?.commodityId ?? commodities[0]?.id)), value: existing?.grade })}
       </div>
+      <div id="kind-wrap" style="${cottonFirst ? '' : 'display:none'}">
+        ${field({ label: 'Contract type', id: 'cottonKind', type: 'select', value: cottonKind(existing), options: COTTON_KINDS, hint: 'Seed sold outright is a contract on the cottonseed commodity' })}
+      </div>
       <div class="grid-2">
         ${field({ label: 'Tons', id: 'tons', type: 'number', step: '0.01', value: existing?.tons })}
         ${field({ label: 'Price ($/t)', id: 'price', type: 'number', step: '0.01', value: existing?.price })}
+      </div>
+      <div id="gin-terms" style="${isGinContract(existing) ? '' : 'display:none'}">
+        <div class="subhead" style="margin-top:4px">Gin's charges, per bale</div>
+        <div class="grid-2">
+          ${field({ label: 'Ginning ($/bale)', id: 'gtGin', type: 'number', step: '0.01', value: existing?.cottonTerms?.ginRate || '' })}
+          ${field({ label: 'Research levy ($/bale)', id: 'gtRes', type: 'number', step: '0.01', value: existing?.cottonTerms?.researchLevy || '' })}
+        </div>
+        <div class="grid-2">
+          ${field({ label: 'Voluntary levy ($/bale)', id: 'gtVol', type: 'number', step: '0.01', value: existing?.cottonTerms?.voluntaryLevy || '' })}
+          <div class="field"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:24px"><input type="checkbox" id="gtGst" ${existing?.cottonTerms?.gstOnGin === false ? '' : 'checked'} style="width:18px;height:18px" /> GST on ginning</label></div>
+        </div>
+        <div class="row" id="gin-net-row" style="margin-bottom:12px"><span class="label" id="gin-net-label">Net per bale</span><span class="value" id="gin-net">—</span></div>
       </div>
       <div class="grid-2">
         ${field({ label: 'Tolerance (%)', id: 'tolPct', type: 'number', step: '0.1', value: existing?.tolerancePct ?? (cottonFirst ? COTTON_TOLERANCE_PCT : DEFAULT_TOLERANCE_PCT) })}
@@ -833,8 +850,26 @@ function openSaleSheet(existing) {
       patternEl.innerHTML = patternsFor(bales, next).map((p) => `<option value="${p.value}">${esc(p.label)}</option>`).join('');
       patternEl.value = next;
     };
-    root.querySelector('#commodity').addEventListener('change', () => { syncPatterns(); syncUnitLabels(); gradeCtl.refresh(); goCtls.forEach((r) => r.ctl.refresh()); syncOilVisibility(); });
+    // a contract with the gin: the price is the seed value, the gin's charges come off it, and the buyer is the gin
+    const kindEl = root.querySelector('#cottonKind');
+    const readGinTerms = () => ({ ginRate: getNum(root, 'gtGin'), researchLevy: getNum(root, 'gtRes'), voluntaryLevy: getNum(root, 'gtVol'), gstOnGin: !!root.querySelector('#gtGst').checked });
+    const syncKind = () => {
+      const bales = isBalesNow();
+      root.querySelector('#kind-wrap').style.display = bales ? '' : 'none';
+      const kind = bales ? kindEl.value : 'lint';
+      root.querySelector('#gin-terms').style.display = kind === 'lint' ? 'none' : '';
+      root.querySelector('label[for="buyer"]').textContent = kind === 'lint' ? 'Buyer' : 'Gin';
+      root.querySelector('#price').closest('.field').style.display = kind === 'ginning' ? 'none' : '';
+      root.querySelector('label[for="price"]').textContent = kind === 'ginforseed' ? 'Seed value ($/bale)' : `Price (${bales ? '$/bale' : '$/t'})`;
+      const net = kind === 'ginforseed' ? netPerBale({ price: getNum(root, 'price'), cottonTerms: readGinTerms() }) : ginCostPerBale({ cottonTerms: readGinTerms() });
+      root.querySelector('#gin-net-label').textContent = kind === 'ginforseed' ? 'Net per bale (seed less ginning)' : 'Ginning per bale (with levies)';
+      root.querySelector('#gin-net').textContent = money(net, 2);
+    };
+    kindEl.addEventListener('change', () => { syncKind(); recomputeValue(); });
+    ['gtGin', 'gtRes', 'gtVol', 'price'].forEach((id) => root.querySelector('#' + id).addEventListener('input', syncKind));
+    root.querySelector('#commodity').addEventListener('change', () => { syncKind(); syncPatterns(); syncUnitLabels(); gradeCtl.refresh(); goCtls.forEach((r) => r.ctl.refresh()); syncOilVisibility(); });
     syncUnitLabels();
+    syncKind();
 
     // --- documents -------------------------------------------------------
     //
@@ -952,6 +987,8 @@ function openSaleSheet(existing) {
         deliveryStart: getVal(root, 'deliveryStart'),
         deliveryEnd: getVal(root, 'deliveryEnd'),
         deliveryPattern: getVal(root, 'deliveryPattern') || '',
+        cottonKind: isBalesNow() && kindEl.value !== 'lint' ? kindEl.value : '',
+        cottonTerms: isBalesNow() && kindEl.value !== 'lint' ? cleanCottonTerms(readGinTerms()) : null,
         invoicing: getVal(root, 'invoicing') || '',
         tons: getNum(root, 'tons'),
         tonsDelivered: getNum(root, 'tonsDelivered'),

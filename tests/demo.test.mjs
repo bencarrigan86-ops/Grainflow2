@@ -22,7 +22,7 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { prepareImport, isUuid, remapIds } from '../docs/js/import.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
-import { sampleStateFor, sampleHistoryFrom, sampleHistoryOffered, sampleCottonHayFrom, sampleCottonHayOffered } from '../docs/js/demo.js';
+import { sampleStateFor, sampleHistoryFrom, sampleHistoryOffered, sampleCottonHayFrom, sampleCottonHayOffered, sampleRefreshOffered } from '../docs/js/demo.js';
 import { ringsAreaHa, matchBoundaries } from '../docs/js/farmmap.js';
 
 const raw = readFileSync(new URL('../docs/demo/seed.json', import.meta.url), 'utf8');
@@ -430,7 +430,12 @@ check('it brings the cotton and hay paddocks, stores, contracts, loads and the t
   assert.equal(pack.commodities.length, 3);
   assert.equal(pack.fields.length, 3);
   assert.equal(pack.storages.length, 4);
-  assert.equal(pack.sales.length, 4);
+  assert.equal(pack.sales.length, 6);
+  const ginRun = pack.movements.find((m) => m.gin);
+  const forSeed = pack.sales.find((s) => s.cottonKind === "ginforseed");
+  assert.ok(forSeed && pack.sales.some((s) => s.cottonKind === "ginning"), "a gin-for-seed and a ginning contract");
+  assert.equal(ginRun.gin.ginContract, forSeed.id, "the run is on its gin-for-seed contract");
+  assert.ok(ginRun.tos.some((l) => l.type === "sale" && l.id === forSeed.id));
   assert.equal(pack.invoices.length, 2);
   assert.ok(pack.movements.some((m) => m.gin) && pack.movements.some((m) => m.modules) && pack.movements.some((m) => m.hayLoad));
   assert.ok(pack.payables.length && pack.inputStock.length && pack.sprayJobs.length);
@@ -467,6 +472,22 @@ check('a seed without cotton and hay gives nothing', () => {
   assert.equal(sampleCottonHayFrom({ currentYear: 'x', years: { x: { commodities: [], fields: [] } } }, {}), null);
 });
 
+
+console.log('\n=== refreshing a sample farm ===');
+check('Refresh the sample is for the owner of a sample farm only', () => {
+  assert.equal(sampleRefreshOffered('Sample 2026', 'owner'), true);
+  assert.equal(sampleRefreshOffered('Sample 2026', 'manager'), false);
+  assert.equal(sampleRefreshOffered('Sample 2026', 'support'), false);
+  assert.equal(sampleRefreshOffered('2026', 'owner'), false, 'a real farm never sees it');
+});
+check('it goes through the backup and typed confirmation, and keeps the farm\'s own details', () => {
+  const s = readFileSync(new URL('../docs/js/views/settings.js', import.meta.url), 'utf8');
+  const i = s.indexOf("#refresh-sample')?.addEventListener");
+  const block = s.slice(i, i + 2200);
+  assert.ok(block.includes('openDangerSheet({') && block.includes("name: 'refresh'"));
+  assert.ok(block.includes('db.importJSON(JSON.stringify(state))'));
+  assert.ok(block.includes('...(db.getBusinessDetails() || {})'), 'the farm keeps its name and details');
+});
 
 if (failures) { console.log(`${failures} FAILURES`); process.exit(1); }
 console.log('ALL PASS');

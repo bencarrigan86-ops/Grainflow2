@@ -63,6 +63,8 @@ export function cleanGin(g) {
     // where the lint went, by bale range: [{ to: 'sale:<id>' | 'silo:<id>', baleFrom, baleTo, bales }]; and where the seed went
     allocations: cleanAllocations(g.allocations),
     seedTo: text(g.seedTo),
+    // the contract with the gin this run was ginned under (gin for seed, or ginning only): the rates came from it
+    ...(g.ginContract ? { ginContract: String(g.ginContract) } : {}),
     ...(g.payableId ? { payableId: String(g.payableId) } : {}),
   };
 }
