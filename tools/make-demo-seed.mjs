@@ -678,7 +678,19 @@ const pastSeason = (h) => {
 // have something in them. The freight order is numbered from its contract, as the app does.
 const orders = [
   { id: 'order-1', saleId: 'sale-1', orderNo: 'B-1001', tons: 300, deliverFrom: '2026-11-20', deliverBy: '2026-12-05',
-    freightCompany: 'Ace Haulage', status: 'open', notes: 'Gate 3, 7am to 4pm. Call the receival site before loading.' },
+    freightCompany: 'Ace Haulage', status: 'open', notes: 'Gate 3, 7am to 4pm. Call the receival site before loading.',
+    // what the buyer's order carries, so the order sheet and the carrier's copy of the freight order have something to show
+    detail: {
+      issuedBy: 'Sample Trader', issuedOn: '2026-11-17', contractNo: 'RGT-4471', comments: ['Carriers must follow the receival site rules and wear high-vis.'].join('\n'), grade: 'APW1', deliveryRef: 'B-1001', destination: 'Newbridge Receival Site',
+      address: { line1: '1 Rail Rd', line2: '', town: 'Newbridge', state: 'NSW', postcode: '2810' },
+      bookingContact: 'The receival site bookings office',
+      booking: [
+        'Book by email or phone, Monday to Friday, 6am to 4pm.',
+        'A booking needs the order number, the transport company, the registration and the time to unload.',
+        'Registrations must be confirmed by 1:30pm the day before or the slot is released.',
+      ].join('\n'),
+      nilTolerance: ['Any dead animals visible', 'Phosphine tablets', 'Urea: and proof of tipping elsewhere before re-entering', 'Live insects (depending on count)'].join('\n'),
+    } },
 ];
 const freightOrders = [
   { id: 'freight-1', saleId: 'sale-1', orderId: 'order-1', freightNo: 'RGT-4471-01', carrier: 'Ace Haulage', carrierEmail: '',
@@ -687,7 +699,8 @@ const freightOrders = [
     pickupParts: { line1: '12 Back Rd', line2: 'Kurrajong Downs', town: 'Newbridge', state: 'NSW', postcode: '2810' },
     deliverTo: 'Newbridge Receival Site, 1 Rail Rd, Newbridge NSW 2810',
     deliverToParts: { line1: '1 Rail Rd', line2: 'Newbridge Receival Site', town: 'Newbridge', state: 'NSW', postcode: '2810' },
-    loadFrom: '2026-11-20', loadBy: '2026-12-05', status: 'open', notes: 'Gate 3, 7am to 4pm.' },
+    loadFrom: '2026-11-20', loadBy: '2026-12-05', status: 'open', notes: 'Gate 3, 7am to 4pm.',
+    detail: { packaging: 'Bulk', transportMode: 'Truck', paymentTerms: '30 days end of week', pickupSite: 'Kurrajong Downs', deliverySite: 'Newbridge Receival Site', deliveryOrderNo: 'B-1001' } },
 ];
 
 const state = {

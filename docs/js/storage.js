@@ -18,31 +18,31 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=377';
-import { setBrandLogo } from './brand.js?v=377';
+import { hydrate } from './hydrate.js?v=378';
+import { setBrandLogo } from './brand.js?v=378';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=377';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=377';
-import { isLegacyDirty } from './dirty.js?v=377';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=377';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=377';
-import { hasDeductions } from './deductions.js?v=377';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=377';
-import { hasHay, hasHayLoad } from './hay.js?v=377';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=377';
-import { settleLegs, dedupeLegs } from './legs.js?v=377';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=377';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=377';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=377';
-import { setCommodityOrder } from './commodityorder.js?v=377';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=377';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=377';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=377';
-import { schedulePush, pushOnReconnect } from './sync.js?v=377';
-import { hasParts as hasAddressParts } from './address.js?v=377';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=377';
+} from './local.js?v=378';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=378';
+import { isLegacyDirty } from './dirty.js?v=378';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=378';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=378';
+import { hasDeductions } from './deductions.js?v=378';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=378';
+import { hasHay, hasHayLoad } from './hay.js?v=378';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=378';
+import { settleLegs, dedupeLegs } from './legs.js?v=378';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=378';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=378';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=378';
+import { setCommodityOrder } from './commodityorder.js?v=378';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=378';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=378';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=378';
+import { schedulePush, pushOnReconnect } from './sync.js?v=378';
+import { hasParts as hasAddressParts } from './address.js?v=378';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=378';
 
 /**
  * A gin bill the lint buyer pays is paid when the lint payment is: each paid invoice that carries a prepaid line for a ginning run
@@ -1284,12 +1284,12 @@ export const db = {
     c.orders = c.orders || [];
     if (order.id) {
       const idx = c.orders.findIndex((o) => o.id === order.id);
-      if (idx >= 0) c.orders[idx] = { ...c.orders[idx], ...order };
-      else c.orders.push({ status: 'open', ...order });             // a new order whose id was minted up front, so a file could be attached first
+      if (idx >= 0) c.orders[idx] = { ...c.orders[idx], ...order, ...((c.orders[idx].detail || order.detail) ? { __hasDetail: true } : {}) };   // so clearing it reaches the server
+      else c.orders.push({ status: 'open', ...order, ...(order.detail ? { __hasDetail: true } : {}) });             // a new order whose id was minted up front, so a file could be attached first
       touch('order', order.id);
     } else {
       const id = uid();
-      c.orders.push({ status: 'open', ...order, id });
+      c.orders.push({ status: 'open', ...order, id, ...(order.detail ? { __hasDetail: true } : {}) });
       touch('order', id);
       persist();
       return id;
@@ -1313,7 +1313,7 @@ export const db = {
   getFreightOrders() { return current().freightOrders || []; },
   upsertFreightOrder(fo) {
     // the address parts beside the pick-up and drop-off lines: marked once there are any, so clearing them reaches the server
-    fo = { ...fo, ...(hasAddressParts(fo.pickupParts) ? { __hasPickupParts: true } : {}), ...(hasAddressParts(fo.deliverToParts) ? { __hasDeliverToParts: true } : {}), ...(fo.buyerOrderNo ? { __hasBuyerOrderNo: true } : {}) };
+    fo = { ...fo, ...(hasAddressParts(fo.pickupParts) ? { __hasPickupParts: true } : {}), ...(hasAddressParts(fo.deliverToParts) ? { __hasDeliverToParts: true } : {}), ...(fo.buyerOrderNo ? { __hasBuyerOrderNo: true } : {}), ...(fo.detail ? { __hasDetail: true } : {}) };
     const c = current();
     c.freightOrders = c.freightOrders || [];
     if (fo.id) {

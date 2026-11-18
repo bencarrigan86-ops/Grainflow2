@@ -10,11 +10,13 @@
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { Pdf, wrapText } from './pdf.js?v=377';
-import { drawBrandLogo } from './brand.js?v=377';
-import { dmy } from './fmt.js?v=377';
-import { movementTonsToSale } from './derived.js?v=377';
-import { hasSignature, strokesInBox } from './signature.js?v=377';
+import { Pdf, wrapText } from './pdf.js?v=378';
+import { drawBrandLogo } from './brand.js?v=378';
+import { dmy } from './fmt.js?v=378';
+import { movementTonsToSale } from './derived.js?v=378';
+import { hasSignature, strokesInBox } from './signature.js?v=378';
+import { orderDelivery, orderGrade, receivalRows, nilToleranceLines, orderCommentLines, freightDetailDefaults } from './orderdetail.js?v=378';
+import { toleranceText } from './contractterms.js?v=378';
 
 export const BASES = [
   { key: 'per_t', label: '$ per tonne' },
@@ -126,31 +128,56 @@ export function freightOrdersForLoad(saleId, orderId, list, movements, keepId = 
 export const freightTitle = (f) => [clean(f?.freightNo) || 'Freight order', clean(f?.carrier), f?.tons ? `${num(f.tons)} t` : ''].filter(Boolean).join(' · ');
 
 /**
+ * What the last freight order to a carrier knew: their email, ABN, contact and phone, the payment terms, and the rate agreed. The
+ * newest first. Used to fill in a new freight order to the same carrier.
+ */
+export function carrierHistory(carrier, freightOrders = []) {
+  const name = clean(carrier).toLowerCase();
+  if (!name) return null;
+  const last = [...(freightOrders || [])].reverse().find((f) => clean(f.carrier).toLowerCase() === name);
+  if (!last) return null;
+  const d = last.detail || {};
+  return {
+    carrierEmail: clean(last.carrierEmail), rate: last.rate, rateBasis: last.rateBasis, flatRate: last.flatRate,
+    detail: Object.fromEntries(['carrierAbn', 'carrierContact', 'carrierPhone', 'paymentTerms'].filter((k) => clean(d[k])).map((k) => [k, clean(d[k])])),
+  };
+}
+
+/**
  * A new freight order, filled in from what is already known: the buyer's order gives the tonnes, the window and
  * the carrier; the contract gives where it is going and a starting rate (its Freight $/t estimate).
  */
-export function freightDefaults({ sale, order = null, freightOrders = [], carrierEmails = {} }) {
+export function freightDefaults({ sale, order = null, freightOrders = [], carrierEmails = {}, business = {} }) {
   const carrier = clean(order?.freightCompany);
+  // the buyer's order says where it goes; failing that, the contract's delivery site
+  const to = orderDelivery(order);
+  const hist = carrierHistory(carrier, freightOrders);
   return {
     saleId: sale?.id || '',
     orderId: order?.id || '',
     freightNo: contractFreightNo(sale, freightOrders),
     buyerOrderNo: clean(order?.orderNo),
     carrier,
-    carrierEmail: carrierEmails[carrier.toLowerCase()] || '',
+    carrierEmail: carrierEmails[carrier.toLowerCase()] || hist?.carrierEmail || '',
     tons: order ? num(order.tons) : num(sale?.tons),
-    rate: num(sale?.freight) || '',
-    rateBasis: 'per_t',
-    flatRate: '',
+    // the contract's freight estimate, or what this carrier was last paid
+    rate: num(sale?.freight) || (hist && num(hist.rate) > 0 ? hist.rate : ''),
+    rateBasis: !num(sale?.freight) && hist && num(hist.rate) > 0 ? hist.rateBasis || 'per_t' : 'per_t',
+    flatRate: !num(sale?.freight) && hist && hist.rateBasis === 'flat_tkm' ? hist.flatRate : '',
     distanceKm: '',
-    pickup: '',
-    deliverTo: clean(sale?.location),
+    pickup: clean(business.address),
+    deliverTo: to.text || clean(sale?.location),
+    ...(to.parts ? { deliverToParts: to.parts } : {}),
     loadFrom: (order && order.deliverFrom) || sale?.deliveryStart || '',
     loadBy: (order && order.deliverBy) || sale?.deliveryEnd || '',
     status: 'open',
     notes: clean(order?.notes),
+    ...(withCarrier(freightDetailDefaults({ order, business }), hist) ? { detail: withCarrier(freightDetailDefaults({ order, business }), hist) } : {}),
   };
 }
+
+// a detail with the carrier's own particulars from their last freight order laid over it
+const withCarrier = (detail, hist) => (hist && Object.keys(hist.detail).length ? { ...(detail || {}), ...hist.detail } : detail);
 
 /** What would send it back: the carrier, the tonnes, the rate. Empty when it is ready to go. */
 export function freightProblems(fo) {
@@ -220,10 +247,12 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
     ['Contact:', [business.contactName, business.phone].filter(Boolean).join('  ')],
     ['Email:', business.email],
     ['Address:', business.address],
-    ['ABN:', business.abn],
+    ['ABN / NGR:', [business.abn, business.ngr ? `NGR ${business.ngr}` : ''].filter(Boolean).join('   ')],
   ]);
   party(M + colW + 14, 'TO (THE CARRIER)', [
     ['Carrier:', fo.carrier],
+    ['ABN:', fo.detail?.carrierAbn],
+    ['Contact:', [fo.detail?.carrierContact, fo.detail?.carrierPhone].filter(Boolean).join('  ')],
     ['Email:', fo.carrierEmail],
   ]);
 
@@ -232,7 +261,7 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
   box(pdf, M, jy, W, 196, 'THE JOB');
   let y = jy + 24;
   const half = (W - 24) / 2;
-  y = labelled(pdf, M + 8, y, 60, W - 76, 'Commodity:', [commodityName, sale?.grade ? `(${sale.grade})` : ''].filter(Boolean).join(' '));
+  y = labelled(pdf, M + 8, y, 60, W - 76, 'Commodity:', [commodityName, orderGrade(order, sale) ? `(${orderGrade(order, sale)})` : ''].filter(Boolean).join(' '));
   y = labelled(pdf, M + 8, y, 60, W - 76, 'Contract no:', sale?.contractNo);
   y = labelled(pdf, M + 8, y, 60, W - 76, "Buyer's order:", clean(fo.buyerOrderNo) || (order?.orderNo ? `${order.orderNo}` : ''));
   labelled(pdf, M + 8, y, 60, half - 52, 'Tonnes:', num(fo.tons) ? `${num(fo.tons)} t` : '');
@@ -248,15 +277,53 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
   const est = estimatedTotal(fo);
   pdf.text(M + 8, ry + 42, est > 0 ? `About ${money(est, 0)} for ${num(fo.tons)} t, paid on the tonnes actually delivered, per the receival ticket. Rates ex GST.` : 'Paid on the tonnes actually delivered, per the receival ticket. Rates ex GST.', { size: 8.5, gray: 0.25 });
 
-  // instructions
+  // instructions, then what the buyer's order says about the receival and what is rejected there
   let ny = ry + 74;
+  const room = (h) => { if (ny + h > pdf.height - 60) { pdf.addPage(); ny = M; } };
+  const section = (title, lines) => {
+    const wrapped = lines.flatMap((l) => wrapText(l, W - 16, 9.5));
+    const h = 24 + Math.min(wrapped.length, 40) * 12.5 + 6;
+    room(h);
+    box(pdf, M, ny, W, h, title);
+    wrapped.slice(0, 40).forEach((l, i) => pdf.text(M + 8, ny + 24 + i * 12.5, l, { size: 9.5 }));
+    ny += h + 10;
+  };
+  // a box of labelled rows: only those with something in them
+  const rowsBox = (title, rows) => {
+    const live = rows.filter(([, v]) => clean(v));
+    if (!live.length) return;
+    const linesOf = (v) => Math.min(3, wrapText(clean(v), W - 16 - 104 - 6, 9).length);
+    const h = 24 + live.reduce((s, [, v]) => s + 12 * linesOf(v) + 4, 0) + 4;
+    room(h);
+    box(pdf, M, ny, W, h, title);
+    let ry2 = ny + 24;
+    for (const [label, v] of live) ry2 = labelled(pdf, M + 8, ry2, 104, W - 16 - 104, label, v, linesOf(v));
+    ny += h + 10;
+  };
+  const dt = fo.detail || {};
+  rowsBox('COMMODITY AND TERMS', [
+    ['Variety:', dt.variety], ['Season:', sale?.cropYear], ['Packaging:', dt.packaging],
+    ['Tolerance:', sale ? toleranceText(sale, 't') : ''], ['Transport:', dt.transportMode], ['Payment terms:', dt.paymentTerms],
+  ]);
+  rowsBox('SITES', [
+    ['Pick up site:', dt.pickupSite], ['Pick up phone:', dt.pickupPhone], ['Pick up order no:', dt.pickupOrderNo], ['Pick up instructions:', dt.pickupInstructions],
+    ['Delivery site:', dt.deliverySite], ['Delivery phone:', dt.deliverySitePhone], ['Delivery order no:', dt.deliveryOrderNo], ['Delivery instructions:', dt.deliveryInstructions],
+  ]);
+  const receival = receivalRows(order);
+  if (receival.length) section('RECEIVAL', receival.flatMap(([label, lines]) => lines.map((l, i) => (i === 0 && lines.length === 1 ? `${label}: ${l}` : l))));
+  const nil = nilToleranceLines(order?.detail);
+  if (nil.length) section('REJECTED ON ARRIVAL', nil.map((l) => `- ${l}`));
+  const terms = orderCommentLines(order);
+  if (terms.length) section("OTHER TERMS ON THE BUYER'S ORDER", terms);
   if (clean(fo.notes)) {
     const lines = wrapText(fo.notes, W - 16, 9.5);
     const h = 24 + Math.min(lines.length, 12) * 12.5 + 6;
+    room(h);
     box(pdf, M, ny, W, h, 'INSTRUCTIONS');
     pdf.paragraph(M + 8, ny + 24, lines.slice(0, 12).join('\n'), W - 16, { size: 9.5, lineHeight: 12.5 });
     ny += h + 12;
   }
+  room(96);   // the closing line and the signature stay together
   pdf.paragraph(M, ny, 'Please quote this freight order number on your tax invoice, and keep the weighbridge or receival ticket for each load. Contact us before loading if anything here does not match your booking.', W, { size: 8.5, lineHeight: 11, gray: 0.25 });
   const signed = !!signature && hasSignature(signature.strokes);
   if (signed) {

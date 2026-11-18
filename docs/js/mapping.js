@@ -27,14 +27,15 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=377';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=377';
-import { cleanCottonTerms } from './cottonkinds.js?v=377';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=377';
-import { cleanPicked } from './modulespicked.js?v=377';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=377';
-import { cleanOffFarm } from './offfarm.js?v=377';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=377';
+import { cleanGradeOptions } from './gradeprice.js?v=378';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=378';
+import { cleanCottonTerms } from './cottonkinds.js?v=378';
+import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=378';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=378';
+import { cleanPicked } from './modulespicked.js?v=378';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=378';
+import { cleanOffFarm } from './offfarm.js?v=378';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=378';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -634,6 +635,8 @@ export function stateToRows(state, farmId) {
         tons: n(o.tons),
         deliver_from: orNull(o.deliverFrom), deliver_by: orNull(o.deliverBy),
         freight_company: orNull(o.freightCompany),
+        // the buyer's detail on the order, sent once there is some (or has been), so the others save before the column exists
+        ...((o.detail || o.__hasDetail) ? { detail: cleanOrderDetail(o.detail) } : {}),
         status: o.status || 'open',
         notes: orNull(o.notes),
       });
@@ -656,6 +659,8 @@ export function stateToRows(state, farmId) {
         ...(partsOut(f.deliverToParts, f.__hasDeliverToParts) ? { deliver_to_parts: partsOut(f.deliverToParts, f.__hasDeliverToParts).v } : {}),
         // the buyer's order number typed on the freight order: sent once there is one, so the others save before the column exists
         ...(f.buyerOrderNo || f.__hasBuyerOrderNo ? { buyer_order_no: orNull(f.buyerOrderNo) } : {}),
+        // what the carrier's copy carries beyond the job, sent once there is some (or has been)
+        ...((f.detail || f.__hasDetail) ? { detail: cleanFreightDetail(f.detail) } : {}),
         load_from: orNull(f.loadFrom), load_by: orNull(f.loadBy),
         status: f.status || 'open',
         notes: orNull(f.notes),
@@ -926,6 +931,7 @@ export function rowsToState(rows) {
         orderNo: o.order_no ?? '', tons: n(o.tons),
         deliverFrom: o.deliver_from ?? '', deliverBy: o.deliver_by ?? '',
         freightCompany: o.freight_company ?? '',
+        ...(o.detail != null ? { detail: cleanOrderDetail(o.detail) || undefined, __hasDetail: true } : {}),
         status: o.status || 'open', notes: o.notes ?? '',
         ...docsOf(o.id),
       })),
@@ -941,6 +947,7 @@ export function rowsToState(rows) {
         ...(f.pickup_parts != null ? { __hasPickupParts: true, ...(partsIn(f.pickup_parts, f.pickup) ? { pickupParts: partsIn(f.pickup_parts, f.pickup) } : {}) } : {}),
         ...(f.deliver_to_parts != null ? { __hasDeliverToParts: true, ...(partsIn(f.deliver_to_parts, f.deliver_to) ? { deliverToParts: partsIn(f.deliver_to_parts, f.deliver_to) } : {}) } : {}),
         ...('buyer_order_no' in f ? { __hasBuyerOrderNo: true, buyerOrderNo: f.buyer_order_no ?? '' } : {}),
+        ...(f.detail != null ? { detail: cleanFreightDetail(f.detail) || undefined, __hasDetail: true } : {}),
         loadFrom: f.load_from ?? '', loadBy: f.load_by ?? '',
         status: f.status || 'open', notes: f.notes ?? '',
       })),

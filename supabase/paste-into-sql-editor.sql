@@ -2019,4 +2019,8 @@ alter table payables add column if not exists payer text;
 alter table sales add column if not exists cotton_kind text;
 alter table sales add column if not exists cotton_terms jsonb;
 
+-- The buyer's detail on a grain order: issuer, destination, address, booking and site rules
+alter table orders add column if not exists detail jsonb;
+alter table freight_orders add column if not exists detail jsonb;
+
 notify pgrst, 'reload schema';

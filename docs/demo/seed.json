@@ -3409,7 +3409,26 @@
           "deliverBy": "2026-12-05",
           "freightCompany": "Ace Haulage",
           "status": "open",
-          "notes": "Gate 3, 7am to 4pm. Call the receival site before loading."
+          "notes": "Gate 3, 7am to 4pm. Call the receival site before loading.",
+          "detail": {
+            "issuedBy": "Sample Trader",
+            "issuedOn": "2026-11-17",
+            "contractNo": "RGT-4471",
+            "comments": "Carriers must follow the receival site rules and wear high-vis.",
+            "grade": "APW1",
+            "deliveryRef": "B-1001",
+            "destination": "Newbridge Receival Site",
+            "address": {
+              "line1": "1 Rail Rd",
+              "line2": "",
+              "town": "Newbridge",
+              "state": "NSW",
+              "postcode": "2810"
+            },
+            "bookingContact": "The receival site bookings office",
+            "booking": "Book by email or phone, Monday to Friday, 6am to 4pm.\nA booking needs the order number, the transport company, the registration and the time to unload.\nRegistrations must be confirmed by 1:30pm the day before or the slot is released.",
+            "nilTolerance": "Any dead animals visible\nPhosphine tablets\nUrea: and proof of tipping elsewhere before re-entering\nLive insects (depending on count)"
+          }
         }
       ],
       "freightOrders": [
@@ -3444,7 +3463,15 @@
           "loadFrom": "2026-11-20",
           "loadBy": "2026-12-05",
           "status": "open",
-          "notes": "Gate 3, 7am to 4pm."
+          "notes": "Gate 3, 7am to 4pm.",
+          "detail": {
+            "packaging": "Bulk",
+            "transportMode": "Truck",
+            "paymentTerms": "30 days end of week",
+            "pickupSite": "Kurrajong Downs",
+            "deliverySite": "Newbridge Receival Site",
+            "deliveryOrderNo": "B-1001"
+          }
         }
       ],
       "payables": [

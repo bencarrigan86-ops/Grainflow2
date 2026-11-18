@@ -4,17 +4,19 @@
 // carting it and the buyer's own order number. Everything else about the sale is the contract's and is shown from it.
 // Loads are matched to an order on the movement. The arithmetic is in orders.js.
 
-import { db } from '../storage.js?v=377';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=377';
-import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=377';
-import { movementTonsToSale } from '../derived.js?v=377';
-import { activeSales } from '../paidsales.js?v=377';
-import { movementRow, openMovementSheet } from './movements.js?v=377';
-import { openVendorDecSheet } from './vendordec.js?v=377';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=377';
-import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=377';
-import { freightTitle, freightState, rateText } from '../freight.js?v=377';
-import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=377';
+import { db } from '../storage.js?v=378';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=378';
+import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=378';
+import { movementTonsToSale } from '../derived.js?v=378';
+import { activeSales } from '../paidsales.js?v=378';
+import { movementRow, openMovementSheet } from './movements.js?v=378';
+import { openVendorDecSheet } from './vendordec.js?v=378';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=378';
+import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=378';
+import { freightTitle, freightState, rateText } from '../freight.js?v=378';
+import { addressFields, readAddress } from '../address.js?v=378';
+import { cleanOrderDetail, contractMismatch, orderDefaults } from '../orderdetail.js?v=378';
+import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=378';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | filled | closed | all
@@ -63,6 +65,7 @@ export function openOrdersSheet() {
           <div class="list-item stack" data-edit-order="${esc(o.id)}">
             <div class="li-top"><div class="main">${esc(s ? contractLabel(s, commodities) : 'Unknown contract')}</div><div class="main">${num(st.left, 0)} t left</div></div>
             <div class="meta">${[orderTitle(o), win].filter(Boolean).map(esc).join(' · ')}</div>
+            ${o.detail?.destination ? `<div class="meta">To ${esc(o.detail.destination)}</div>` : ''}
             ${o.freightCompany ? `<div class="meta">Freight: ${esc(o.freightCompany)}</div>` : ''}
             <div class="gauge" role="img" aria-label="${Math.round(st.pct * 100)} percent delivered"><i style="width:${st.pct * 100}%"></i></div>
             <div class="li-foot"><span class="meta">${num(st.delivered, 1)} of ${num(st.ordered, 1)} t delivered${st.over ? ` (${num(st.over, 1)} t over)` : ''}</span>
@@ -124,6 +127,7 @@ export function openOrderSheet(existing, defaults = {}) {
       ${field({ label: 'Contract', id: 'o-sale', type: 'select', value: src.saleId ?? '',
         options: [{ value: '', label: contracts.length ? 'Choose the contract' : 'No contracts yet. Add one in Sales' }, ...contracts.map((s) => ({ value: s.id, label: contractLabel(s, commodities) }))] })}
       <div id="o-contract" class="hint" style="margin:-4px 0 12px"></div>
+      <div id="o-filled" class="hint" style="margin:-4px 0 12px"></div>
       ${existing ? '<div id="o-progress" style="margin:0 0 12px"></div>' : ''}
       <div class="grid-2">
         ${field({ label: 'Tonnes ordered', id: 'o-tons', type: 'number', step: '0.01', value: src.tons ?? '' })}
@@ -134,6 +138,29 @@ export function openOrderSheet(existing, defaults = {}) {
         ${field({ label: 'Deliver by', id: 'o-by', type: 'date', value: src.deliverBy })}
       </div>
       ${field({ label: 'Freight company', id: 'o-freight', value: src.freightCompany, placeholder: 'Who is carting it', list: 'dl-freightcos' })}
+      <details class="fold feature" id="o-detail" ${src.detail ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Buyer's order details</h2>
+          <div class="sub">Who issued it, destination, booking and site rules</div></div></summary>
+        <div class="grid-2">
+          ${field({ label: 'Issued by', id: 'od-by', value: src.detail?.issuedBy, placeholder: "The buyer's contact" })}
+          ${field({ label: 'Date issued', id: 'od-on', type: 'date', value: src.detail?.issuedOn })}
+        </div>
+        <div class="grid-2">
+          ${field({ label: "Buyer's contract no.", id: 'od-cno', value: src.detail?.contractNo, placeholder: 'As the order quotes it' })}
+          ${field({ label: 'Site phone', id: 'od-phone', type: 'tel', value: src.detail?.sitePhone })}
+        </div>
+        <div class="hint" id="od-cno-warn" style="color:var(--danger);margin:-4px 0 12px"></div>
+        <div class="grid-2">
+          ${field({ label: 'Grade ordered', id: 'od-grade', value: src.detail?.grade, placeholder: "e.g. CHKP1" })}
+          ${field({ label: 'Delivery reference', id: 'od-ref', value: src.detail?.deliveryRef })}
+        </div>
+        ${field({ label: 'Destination', id: 'od-dest', value: src.detail?.destination, placeholder: 'e.g. Brisbane (Queensland Bulk Terminal)' })}
+        ${addressFields('od-addr', src.detail?.address, { label: 'Delivery address', optional: true })}
+        ${field({ label: 'Bookings', id: 'od-contact', value: src.detail?.bookingContact, placeholder: 'Email or phone to book a slot' })}
+        ${field({ label: 'Booking instructions', id: 'od-book', type: 'textarea', value: src.detail?.booking, hint: 'Hours, what a booking needs, who to ring to change it' })}
+        ${field({ label: 'Rejected on arrival', id: 'od-nil', type: 'textarea', value: src.detail?.nilTolerance, hint: 'Nil tolerance, one to a line. These go to the carrier on the freight order' })}
+        ${field({ label: 'Other terms and comments', id: 'od-comments', type: 'textarea', value: src.detail?.comments, hint: "Anything else on the buyer's order: terms, carrier obligations, who to call. Goes to the carrier too" })}
+      </details>
       ${field({ label: 'Comments', id: 'o-notes', type: 'textarea', value: src.notes, hint: 'Booking, truck type, gate hours, anything the buyer asked for' })}
       ${existing ? `
       <div class="field">
@@ -158,6 +185,16 @@ export function openOrderSheet(existing, defaults = {}) {
       persist: existing ? (documents) => db.upsertOrder({ id: existing.id, documents }) : undefined,
     });
 
+    // the contract number on the order should be the contract's: a mismatch is usually an order against the wrong contract
+    const warnEl = root.querySelector('#od-cno-warn');
+    const showMismatch = () => {
+      const s = sales.find((x) => x.id === getVal(root, 'o-sale'));
+      warnEl.textContent = contractMismatch({ detail: { contractNo: getVal(root, 'od-cno') } }, s);
+    };
+    root.querySelector('#od-cno').addEventListener('input', showMismatch);
+    root.querySelector('#o-sale').addEventListener('change', showMismatch);
+    showMismatch();
+
     // What the contract says, shown here so the order does not repeat it
     const infoEl = root.querySelector('#o-contract');
     const showContract = () => {
@@ -176,8 +213,27 @@ export function openOrderSheet(existing, defaults = {}) {
       ].filter(Boolean);
       infoEl.innerHTML = lines.map(esc).join('<br>');
     };
-    root.querySelector('#o-sale').addEventListener('change', showContract);
+    // A new order starts with what its contract knows: grade, contract number and contact,
+    // delivery site, and the last carrier. It only fills what is empty, or what it filled itself and has not been typed over.
+    const auto = {};
+    const fillFromContract = () => {
+      if (existing) return;
+      const s = sales.find((x) => x.id === getVal(root, 'o-sale'));
+      const dflt = orderDefaults({ sale: s, orders, movements, today });
+      const put = (id, v) => {
+        const el = root.querySelector('#' + id);
+        if (!el) return;
+        const now = el.value;
+        if (now === '' || now === (auto[id] ?? null)) { el.value = v === '' || v == null ? '' : String(v); auto[id] = el.value; }
+      };
+      put('o-freight', dflt.freightCompany);
+      put('od-grade', dflt.detail.grade); put('od-cno', dflt.detail.contractNo); put('od-by', dflt.detail.issuedBy);
+      put('od-contact', dflt.detail.bookingContact); put('od-dest', dflt.detail.destination);
+      if (s) root.querySelector('#o-filled').textContent = 'Grade, contract number, contact and site filled in from the contract. Change anything the buyer\'s order says differently.';
+    };
+    root.querySelector('#o-sale').addEventListener('change', () => { showContract(); fillFromContract(); showMismatch?.(); });
     showContract();
+    fillFromContract();
 
     if (existing) {
       const progressEl = root.querySelector('#o-progress');
@@ -241,6 +297,12 @@ export function openOrderSheet(existing, defaults = {}) {
         deliverFrom: from,
         deliverBy: by,
         freightCompany: getVal(root, 'o-freight')?.trim(),
+        detail: cleanOrderDetail({
+          issuedBy: getVal(root, 'od-by'), issuedOn: getVal(root, 'od-on'), grade: getVal(root, 'od-grade'), deliveryRef: getVal(root, 'od-ref'),
+          destination: getVal(root, 'od-dest'), address: readAddress(root, 'od-addr'), bookingContact: getVal(root, 'od-contact'),
+          booking: getVal(root, 'od-book'), nilTolerance: getVal(root, 'od-nil'), comments: getVal(root, 'od-comments'),
+          contractNo: getVal(root, 'od-cno'), sitePhone: getVal(root, 'od-phone'),
+        }),
         status,
         notes: getVal(root, 'o-notes')?.trim(),
       });

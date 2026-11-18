@@ -1,0 +1,202 @@
+// Run with:
+//   node tests/orderdetail.test.mjs
+//
+// The detail a buyer puts on a grain order (who issued it, grade, destination, delivery address, booking instructions, what is
+// rejected on arrival), and how the freight order made from it carries it to the carrier.
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { cleanOrderDetail, nilToleranceLines, orderDelivery, orderGrade, receivalRows, contractMismatch, cleanFreightDetail, orderDefaults } from '../docs/js/orderdetail.js';
+import { freightDefaults, freightOrderPdf } from '../docs/js/freight.js';
+import { stateToRows, rowsToState } from '../docs/js/mapping.js';
+
+let failures = 0;
+const check = (name, fn) => {
+  try { fn(); console.log(`  PASS  ${name}`); } catch (e) { failures++; console.log(`  FAIL  ${name}\n        ${e.message}`); }
+};
+const latin1 = (b) => Buffer.from(b).toString('latin1');
+const src = (p) => readFileSync(new URL(`../docs/js/${p}`, import.meta.url), 'utf8');
+
+const detail = {
+  issuedBy: 'Jodie Koczwara', issuedOn: '2026-11-17', grade: 'CHKP1', deliveryRef: 'CMO0000656',
+  destination: 'Brisbane (Queensland Bulk Terminal)',
+  address: { line1: '156 Colmslie Road', line2: '', town: 'Murarrie', state: 'QLD', postcode: '4170' },
+  bookingContact: 'Bookings by email or on the terminal number',
+  booking: 'Monday to Friday, 0600 to 1600.\nA booking needs the order number, the transport company, the registration and the time to unload.',
+  nilTolerance: '• Any dead animals visible\n- Phosphine tablets\nUrea\n\n  Weevils or beetles (depending on count)',
+};
+const order = { id: 'o1', saleId: 's1', orderNo: 'CMO0000656', tons: 110, deliverFrom: '2026-11-18', deliverBy: '2026-11-30', freightCompany: 'Ace Haulage', detail };
+const sale = { id: 's1', buyer: 'ADM', contractNo: 'ADM106256', grade: 'CHKP2', location: 'Brisbane' };
+
+console.log('\n=== the detail ===');
+check('what is typed is kept, and nothing at all is no detail', () => {
+  const d = cleanOrderDetail(detail);
+  assert.equal(d.issuedBy, 'Jodie Koczwara');
+  assert.equal(d.address.town, 'Murarrie');
+  assert.equal(cleanOrderDetail({}), null);
+  assert.equal(cleanOrderDetail({ address: { line1: '', town: '' }, issuedBy: '  ' }), null);
+  assert.equal(cleanOrderDetail(null), null);
+});
+check('the rejections are a list: bullets and blank lines taken off', () => {
+  assert.deepEqual(nilToleranceLines(detail), ['Any dead animals visible', 'Phosphine tablets', 'Urea', 'Weevils or beetles (depending on count)']);
+  assert.deepEqual(nilToleranceLines({}), []);
+});
+check('the grade is the order\'s, or the contract\'s when it does not say', () => {
+  assert.equal(orderGrade(order, sale), 'CHKP1');
+  assert.equal(orderGrade({ ...order, detail: null }, sale), 'CHKP2');
+});
+
+console.log('\n=== the freight order ===');
+check('it is delivered to the buyer\'s address, the site named on the second line', () => {
+  const to = orderDelivery(order);
+  assert.equal(to.parts.line2, 'Brisbane (Queensland Bulk Terminal)');
+  assert.ok(to.text.includes('156 Colmslie Road') && to.text.includes('Murarrie'));
+  const d = freightDefaults({ sale, order });
+  assert.equal(d.deliverTo, to.text);
+  assert.equal(d.deliverToParts.postcode, '4170');
+});
+check('with no address the destination alone is where it goes, and with no detail it is the contract\'s site', () => {
+  assert.equal(freightDefaults({ sale, order: { ...order, detail: { destination: 'Brisbane terminal' } } }).deliverTo, 'Brisbane terminal');
+  const plain = freightDefaults({ sale, order: { ...order, detail: null } });
+  assert.equal(plain.deliverTo, 'Brisbane');
+  assert.equal(plain.deliverToParts, undefined);
+});
+check('the carrier\'s copy has the delivery reference, how to book and what is rejected', () => {
+  const pdf = latin1(freightOrderPdf({
+    fo: { freightNo: 'ADM106256-01', carrier: 'Ace Haulage', tons: 110, rate: 40, rateBasis: 'per_t', pickup: 'Home farm', deliverTo: 'x', loadFrom: '2026-11-18', loadBy: '2026-11-30' },
+    sale, order, commodityName: 'Chickpeas', business: {}, date: '2026-11-17',
+  }));
+  assert.ok(pdf.includes('RECEIVAL') && pdf.includes('CMO0000656') && pdf.includes('Jodie Koczwara'));
+  assert.ok(pdf.includes('Monday to Friday'));
+  assert.ok(pdf.includes('REJECTED ON ARRIVAL') && pdf.includes('Phosphine tablets'));
+  assert.ok(pdf.includes('CHKP1'), 'the grade on the order');
+});
+check('an order with no detail leaves the carrier\'s copy as it was', () => {
+  const pdf = latin1(freightOrderPdf({
+    fo: { freightNo: 'F-1', carrier: 'Ace', tons: 10, rate: 20, rateBasis: 'per_t' },
+    sale, order: { ...order, detail: null }, commodityName: 'Chickpeas', business: {}, date: '2026-11-17',
+  }));
+  assert.ok(!pdf.includes('RECEIVAL') && !pdf.includes('REJECTED ON ARRIVAL'));
+  assert.deepEqual(receivalRows({}), []);
+});
+
+console.log('\n=== saved ===');
+const FARM = '11111111-1111-1111-1111-111111111111';
+const SID = '99999999-9999-4999-8999-999999999999';
+const OID = '77777777-7777-4777-8777-777777777777';
+const CID = '88888888-8888-4888-8888-888888888888';
+const stateWith = (orders) => ({
+  currentYear: '2026', nextMovementNo: 1, businessDetails: {},
+  years: { 2026: { commodities: [{ id: CID, name: 'Chickpeas', unit: 't' }], fields: [], storages: [], movements: [], invoices: [], overheads: {}, sales: [{ id: SID, commodityId: CID, tons: 110, price: 1010 }], orders, payables: [] } },
+});
+check('the detail is not sent until there is some, is sent when there is, and clearing it reaches the server', () => {
+  const plain = stateToRows(stateWith([{ id: OID, saleId: SID, tons: 10 }]), FARM).orders[0];
+  assert.ok(!('detail' in plain));
+  const sent = stateToRows(stateWith([{ id: OID, saleId: SID, tons: 10, detail }]), FARM).orders[0];
+  assert.equal(sent.detail.deliveryRef, 'CMO0000656');
+  assert.equal(sent.detail.address.town, 'Murarrie');
+  const cleared = stateToRows(stateWith([{ id: OID, saleId: SID, tons: 10, detail: null, __hasDetail: true }]), FARM).orders[0];
+  assert.equal(cleared.detail, null);
+});
+check('and it reads back as it was', () => {
+  const rows = stateToRows(stateWith([{ id: OID, saleId: SID, tons: 10, detail }]), FARM);
+  const back = rowsToState(rows).years['2026'].orders[0];
+  assert.equal(back.detail.issuedBy, 'Jodie Koczwara');
+  assert.deepEqual(back.detail.address, { line1: '156 Colmslie Road', line2: '', town: 'Murarrie', state: 'QLD', postcode: '4170' });
+  assert.equal(back.__hasDetail, true);
+});
+
+console.log('\n=== the screens ===');
+check('the order sheet has the buyer\'s details fold and saves them', () => {
+  const v = src('views/orders.js');
+  for (const id of ["'od-by'", "'od-on'", "'od-grade'", "'od-ref'", "'od-dest'", "'od-contact'", "'od-book'", "'od-nil'"]) assert.ok(v.includes(`id: ${id}`), id);
+  assert.ok(v.includes("addressFields('od-addr'") && v.includes('detail: cleanOrderDetail('));
+  assert.ok(v.includes("addressFields('od-addr', src.detail?.address,"), 'the saved address is shown as it is saved');
+});
+check('choosing an order on a freight order brings its address over what was there', () => {
+  const v = src('views/freightorders.js');
+  assert.ok(v.includes('orderDelivery(order).text ? { deliverTo: fresh.deliverTo'));
+});
+
+console.log('\n=== what the examples carry ===');
+check('the contract number on the order is checked against the contract', () => {
+  assert.equal(contractMismatch({ detail: { contractNo: 'ADM106256' } }, { contractNo: 'ADM 106256' }), '');
+  assert.ok(contractMismatch({ detail: { contractNo: 'ADM106256' } }, { contractNo: 'ADM999' }).includes('ADM106256'));
+  assert.equal(contractMismatch({ detail: { contractNo: 'X1' } }, {}), '');
+  assert.equal(contractMismatch({}, { contractNo: 'A' }), '');
+});
+check('the order keeps the buyer\'s contract no., site phone and comments', () => {
+  const d = cleanOrderDetail({ contractNo: ' ADM106256 ', sitePhone: '07 0000 0000', comments: 'Chain of responsibility applies.' });
+  assert.deepEqual([d.contractNo, d.sitePhone, d.comments], ['ADM106256', '07 0000 0000', 'Chain of responsibility applies.']);
+});
+check('the freight order keeps the carrier\'s details, the grain terms and the two sites, and nothing is no detail', () => {
+  const d = cleanFreightDetail({ carrierAbn: '22 764 182 134', carrierContact: 'Brian', variety: 'PBA Warda', packaging: 'Bulk', paymentTerms: '30 days end of week', deliveryOrderNo: '57215', junk: 'x', pickupSite: '  ' });
+  assert.deepEqual(Object.keys(d).sort(), ['carrierAbn', 'carrierContact', 'deliveryOrderNo', 'packaging', 'paymentTerms', 'variety']);
+  assert.equal(cleanFreightDetail({}), null);
+});
+check('a new freight order starts with bulk by truck, the farm as the pick up site, and the buyer\'s site and reference', () => {
+  const d = freightDefaults({ sale, order, business: { entityName: 'Kurrajong Downs', phone: '0400 000 000' } }).detail;
+  assert.equal(d.packaging, 'Bulk'); assert.equal(d.transportMode, 'Truck');
+  assert.equal(d.pickupSite, 'Kurrajong Downs'); assert.equal(d.pickupPhone, '0400 000 000');
+  assert.equal(d.deliverySite, 'Brisbane (Queensland Bulk Terminal)'); assert.equal(d.deliveryOrderNo, 'CMO0000656');
+});
+check('the carrier\'s copy shows the NGR, the carrier\'s ABN, the terms, both sites and the buyer\'s other terms', () => {
+  const pdf = latin1(freightOrderPdf({
+    fo: { freightNo: 'F-1', carrier: 'Ace Haulage', tons: 10, rate: 40, rateBasis: 'per_t', detail: { carrierAbn: '22764182134', carrierContact: 'Brian', variety: 'PBA Warda', paymentTerms: '30 days end of week', pickupSite: 'Home farm', deliveryOrderNo: '57215' } },
+    sale: { ...sale, cropYear: '26/27', tolerancePct: 5, toleranceCapTons: 20 }, order: { ...order, detail: { ...detail, comments: 'Chain of responsibility applies.' } },
+    commodityName: 'Chickpeas', business: { entityName: 'Kurrajong Downs', abn: '11 111 111 111', ngr: '15120110' }, date: '2026-11-17',
+  }));
+  for (const s of ['NGR 15120110', '22764182134', 'PBA Warda', '30 days end of week', 'COMMODITY AND TERMS', 'SITES', 'Home farm', '57215', 'Chain of responsibility applies.', '26/27']) assert.ok(pdf.includes(s), s);
+});
+check('the order sheet and freight sheet have the new fields', () => {
+  const o = src('views/orders.js'); const f = src('views/freightorders.js');
+  for (const id of ["'od-cno'", "'od-phone'", "'od-comments'"]) assert.ok(o.includes(`id: ${id}`), id);
+  assert.ok(!o.includes('od-responded') && !o.includes('24 hours'), 'no 24 hour acceptance');
+  for (const id of ['fd-abn', 'fd-variety', 'fd-terms', 'fd-psite', 'fd-pno', 'fd-dsite', 'fd-dno', 'fd-dins']) assert.ok(f.includes(`id: '${id}'`), id);
+});
+check('the freight order detail goes to the server once there is some, and reads back', () => {
+  const st = { currentYear: '2026', nextMovementNo: 1, businessDetails: {}, years: { 2026: { commodities: [{ id: CID, name: 'C', unit: 't' }], fields: [], storages: [], movements: [], invoices: [], overheads: {}, sales: [{ id: SID, commodityId: CID, tons: 1, price: 1 }], orders: [], freightOrders: [{ id: OID, saleId: SID, tons: 5, rate: 1, detail: { carrierAbn: '123', packaging: 'Bulk' } }], payables: [] } } };
+  const rows = stateToRows(st, FARM);
+  assert.equal(rows.freight_orders[0].detail.carrierAbn, '123');
+  assert.equal(rowsToState(rows).years['2026'].freightOrders[0].detail.packaging, 'Bulk');
+  st.years['2026'].freightOrders[0] = { id: OID, saleId: SID, tons: 5, rate: 1 };
+  assert.ok(!('detail' in stateToRows(st, FARM).freight_orders[0]));
+});
+
+console.log('\n=== pulling from the contract and the grain order ===');
+check('a new grain order takes the contract\'s grade, number, contact and site, but never its tonnes or dates', () => {
+  const s = { id: 's1', tons: 500, deliveryStart: '2026-12-01', deliveryEnd: '2027-01-31', grade: 'APW1', contractNo: 'RGT-4471', location: 'Newbridge', buyerContact: 'Sam Trader 0400 111 222 sam@buyer.example' };
+  const d = orderDefaults({ sale: s, orders: [], movements: [], today: '2026-11-18' });
+  assert.ok(!('tons' in d) && !('deliverFrom' in d) && !('deliverBy' in d));
+  assert.deepEqual([d.detail.grade, d.detail.contractNo, d.detail.issuedBy, d.detail.destination], ['APW1', 'RGT-4471', 'Sam Trader', 'Newbridge']);
+  assert.ok(d.detail.bookingContact.includes('0400 111 222') && d.detail.bookingContact.includes('sam@buyer.example'));
+});
+check('the last carrier on the contract is carried over', () => {
+  const s = { id: 's1', tons: 500 };
+  assert.equal(orderDefaults({ sale: s, orders: [{ id: 'o1', saleId: 's1', tons: 200, freightCompany: 'Ace Haulage' }] }).freightCompany, 'Ace Haulage');
+});
+check('a contract with a choice of grades leaves the grade for the order, and no contract is nothing', () => {
+  assert.equal(orderDefaults({ sale: { id: 's1', tons: 1, grade: 'H2', gradeOptions: ['H1', 'H2'] } }).detail.grade, '');
+  assert.deepEqual(orderDefaults({}).detail, {});
+});
+check('a new freight order to a carrier used before starts with their email, rate and particulars', () => {
+  const past = [{ id: 'f0', carrier: 'Ace Haulage', carrierEmail: 'ace@carrier.example', rate: 18.5, rateBasis: 'per_t', detail: { carrierAbn: '12 345 678 901', paymentTerms: '30 days' } }];
+  const f = freightDefaults({ sale, order, freightOrders: past });
+  assert.equal(f.carrierEmail, 'ace@carrier.example');
+  assert.equal(f.rate, 18.5);
+  assert.equal(f.detail.carrierAbn, '12 345 678 901');
+  assert.equal(f.detail.paymentTerms, '30 days');
+});
+check('the farm\'s address is the pick up, and a new carrier starts with nothing of anyone else\'s', () => {
+  const f = freightDefaults({ sale, order, freightOrders: [{ id: 'f0', carrier: 'Other Co', carrierEmail: 'o@x.example', rate: 9 }], business: { address: '1 Farm Road, Moree NSW 2400' } });
+  assert.equal(f.pickup, '1 Farm Road, Moree NSW 2400');
+  assert.equal(f.carrierEmail, '');
+  assert.notEqual(f.rate, 9);
+});
+check('the order sheet fills from the contract, and the freight sheet keeps what was typed', () => {
+  const o = src('views/orders.js'), f = src('views/freightorders.js');
+  assert.ok(o.includes('orderDefaults(') && o.includes('o-filled'));
+  assert.ok(f.includes('freightDetailDefaults('));
+});
+
+if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
+console.log('\nall passed');
