@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=397';
-import { commodityClass } from '../commoditycolor.js?v=397';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=397';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=397';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=397';
-import { withholdingClash } from '../fumigation.js?v=397';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=397';
-import { compressAndStampImage } from '../img.js?v=397';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=397';
-import { specText, extraSpecKey } from '../outload.js?v=397';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=397';
-import { pickableSilos } from '../silopick.js?v=397';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=397';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=397';
-import { activeSales } from '../paidsales.js?v=397';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=397';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=397';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=397';
-import { nowTime } from '../loadreport.js?v=397';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=397';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=397';
-import { openGinRunSheet } from './ginrun.js?v=397';
-import { openModuleMoveSheet } from './modulemove.js?v=397';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=397';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=397';
+import { db } from '../storage.js?v=398';
+import { commodityClass } from '../commoditycolor.js?v=398';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=398';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=398';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=398';
+import { withholdingClash } from '../fumigation.js?v=398';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=398';
+import { compressAndStampImage } from '../img.js?v=398';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=398';
+import { specText, extraSpecKey } from '../outload.js?v=398';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=398';
+import { pickableSilos } from '../silopick.js?v=398';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=398';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=398';
+import { activeSales } from '../paidsales.js?v=398';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=398';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=398';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=398';
+import { nowTime } from '../loadreport.js?v=398';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=398';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=398';
+import { openGinRunSheet } from './ginrun.js?v=398';
+import { openModuleMoveSheet } from './modulemove.js?v=398';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=398';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=398';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -330,8 +330,9 @@ export function movementRow(m, ctx) {
 function dedRowHtml(d) {
   return `<div class="ded-row">
     <input class="ded-reason" type="text" placeholder="Reason, e.g. Screenings 6% vs contract 5%" value="${esc(d.reason || '')}" aria-label="Reason for the premium or discount" />
-    <input class="ded-per" type="number" step="0.01" inputmode="decimal" placeholder="+/- $/t" value="${esc(amountOnTicket(d))}" aria-label="Dollars per tonne: plus for a premium, minus for a discount" />
-    <button type="button" class="btn ghost-danger small ded-del" style="width:auto;margin:0;padding:8px 12px" aria-label="Remove this premium or discount">&times;</button>
+    <button type="button" class="btn secondary small ded-sign" style="width:auto;margin:0" aria-label="Switch between a premium (plus) and a discount (minus)">+/&minus;</button>
+    <input class="ded-per" type="text" inputmode="decimal" autocomplete="off" placeholder="$/t" value="${esc(amountOnTicket(d))}" aria-label="Dollars per tonne: plus for a premium, minus for a discount" />
+    <button type="button" class="btn ghost-danger small ded-del" style="width:auto;margin:0" aria-label="Remove this premium or discount">&times;</button>
   </div>`;
 }
 
@@ -649,7 +650,7 @@ export function openMovementSheet(existing, template) {
         <summary><div class="feature-head"><h2>Premium / discount</h2><div class="sub" id="ded-sub">${esc(dedSummary(existing?.deductions))}</div></div></summary>
         <div id="ded-rows">${cleanDeductions(existing?.deductions).map(dedRowHtml).join('')}</div>
         <button type="button" class="btn secondary small" id="ded-add">Add a premium / discount</button>
-        <div class="hint" style="margin-top:6px">For something the contract does not cover. Type a discount as a minus (-10) and a premium as a plus (4). It moves this load's price on the invoice, with the reason under the load.</div>
+        <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">For something the contract does not cover. Tap +/&minus; to make it a discount (minus) or a premium (plus), for example -10 or 4. It moves this load's price on the invoice, with the reason under the load.</div>
       </details>
       <details class="fold" id="np-fold" ${src?.notes || existing?.photoPath || existing?.photoDataUrl ? 'open' : ''}>
         <summary><div class="feature-head"><h2>Notes and photo</h2><div class="sub">${esc(src?.notes || 'A note, or a photo of the truck rego')}</div></div></summary>
@@ -722,6 +723,16 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
       dedRowsEl.lastElementChild.querySelector('.ded-reason').focus();
     });
     dedRowsEl.addEventListener('click', (e) => {
+      // the phone's number pad has no minus key, so this flips the amount between a premium and a discount
+      const signBtn = e.target.closest('.ded-sign');
+      if (signBtn) {
+        const input = signBtn.closest('.ded-row').querySelector('.ded-per');
+        const v = input.value.trim().replace(/^[-−]s*/, '');
+        input.value = /^[-−]/.test(input.value.trim()) ? v : `-${v}`;
+        input.focus();
+        paintDedSub();
+        return;
+      }
       if (!e.target.closest('.ded-del')) return;
       e.target.closest('.ded-row').remove();
       paintDedSub();

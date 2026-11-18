@@ -1,17 +1,20 @@
-import { db } from '../storage.js?v=397';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=397';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=397';
-import { addressLinesOf } from '../address.js?v=397';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=397';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=397';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=397';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=397';
-import { docBandHTML } from '../docband.js?v=397';
-import { deductionNotes } from '../deductions.js?v=397';
-import { ginOffsetOptions, ginOffsetLine, linePayableId } from '../ginoffset.js?v=397';
-import { cottonInvoiceModel } from '../cottoninvoice.js?v=397';
-import { openMovementSheet } from './movements.js?v=397';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=397';
+import { db } from '../storage.js?v=398';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=398';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=398';
+import { addressLinesOf } from '../address.js?v=398';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=398';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=398';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=398';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=398';
+import { docBandHTML } from '../docband.js?v=398';
+import { deductionNotes } from '../deductions.js?v=398';
+import { ginOffsetOptions, ginOffsetLine, linePayableId } from '../ginoffset.js?v=398';
+import { cottonInvoiceModel } from '../cottoninvoice.js?v=398';
+import { openMovementSheet } from './movements.js?v=398';
+import { invoicePdf, adjustmentPdf } from '../invoicepdf.js?v=398';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=398';
+import { splitContact } from '../buyercontact.js?v=398';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=398';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -582,6 +585,30 @@ function invoiceDocHTML(sale, invoice, business, commodity, signed = null) {
   `;
 }
 
+/** The three ways out of an invoice: share or email it as a PDF, save the PDF, or print it from the browser where there is a print dialog. */
+function pdfButtonsHtml() {
+  return `<div class="doc-actions">
+        <button class="btn" id="send-invoice" style="margin-top:14px">${canShareFiles() ? 'Share PDF' : 'Download PDF and email'}</button>
+        <button class="btn secondary" id="download-invoice" style="margin-top:8px">Download PDF</button>
+        <button class="btn secondary" id="print-invoice" style="margin-top:8px">Print</button>
+      </div>`;
+}
+
+/** Wire those buttons: makePdf() builds the bytes from what is on the screen now. */
+function wirePdfButtons(root, { makePdf, fileName, subject, body, to }) {
+  root.querySelector('#download-invoice').addEventListener('click', () => {
+    try { downloadFile(makePdf(), fileName()); toast('Downloaded'); } catch (e) { notify(`The PDF could not be made: ${e.message}`); }
+  });
+  root.querySelector('#send-invoice').addEventListener('click', async () => {
+    try {
+      const result = await sharePdf(makePdf(), fileName(), { title: subject, text: body, mail: { to, subject, body } });
+      if (result === 'cancelled') return;
+      toast(result === 'shared' ? 'Sent' : 'Downloaded. Attach it to the email that opened.');
+    } catch (e) { notify(`The PDF could not be made: ${e.message}`); }
+  });
+  root.querySelector('#print-invoice').addEventListener('click', () => window.print());
+}
+
 function openInvoiceDocSheet(sale, invoice) {
   if (isAdjustment(invoice)) { openAdjustmentDocSheet(sale, invoice); return; }
   const { commodities } = db.get();
@@ -611,7 +638,7 @@ function openInvoiceDocSheet(sale, invoice) {
       </div>
       <div class="card input doc-actions" style="margin-top:14px" id="adj-card">${adjustmentsCardHtml(invoice)}</div>
       ${attachmentsHtml('invoice', invoice.documents || [], { sub: 'A copy of the invoice, the remittance, proof of delivery' })}
-      <button class="btn" id="print-invoice" style="margin-top:14px">Print / Save as PDF</button>
+      ${pdfButtonsHtml()}
       <button class="btn danger" id="delete-invoice" style="margin-top:8px">Delete invoice</button>
     `;
     wireAttachments(root, {
@@ -663,7 +690,19 @@ function openInvoiceDocSheet(sale, invoice) {
     };
     wireSignToggle(root, 'sign-doc', (sig) => { signedWith = sig; paintDoc(); });
     wireSignerPick(root, 'signer-pick', business, (name) => { printedName = name; paintDoc(); });
-    root.querySelector('#print-invoice').addEventListener('click', () => window.print());
+    const buyerContact = splitContact(sale.buyerContact);
+    wirePdfButtons(root, {
+      makePdf: () => invoicePdf({ sale, invoice, business, commodity, signature: signedWith, printedName, date: todayLocal() }),
+      fileName: () => safeFileName(`Invoice ${invoice.invoiceNo} ${sale.buyer || ''}`.trim()),
+      subject: `Invoice ${invoice.invoiceNo}${sale.contractNo ? ` - contract ${sale.contractNo}` : ''}`,
+      body: `Hi${buyerContact.name ? ` ${buyerContact.name.split(' ')[0]}` : ''},
+
+Please find invoice ${invoice.invoiceNo} attached${sale.contractNo ? ` for contract ${sale.contractNo}` : ''}.
+
+Regards,
+${printedName || business.contactName || business.entityName || ''}`,
+      to: buyerContact.email || '',
+    });
     root.querySelector('#delete-invoice').addEventListener('click', () => {
       confirmDelete(`Delete invoice #${invoice.invoiceNo}? This cannot be undone.`, () => {
         db.deleteInvoice(invoice.id);
@@ -794,14 +833,26 @@ function openAdjustmentDocSheet(sale, note) {
         ${original ? '<button class="btn secondary" id="adj-open-invoice">Open the invoice</button>' : ''}
       </div>
       <div id="doc-holder">${adjustmentDocHTML(sale, note, business, invoices)}</div>
-      <button class="btn" id="print-invoice" style="margin-top:14px">Print / Save as PDF</button>
+      ${pdfButtonsHtml()}
       <button class="btn danger doc-actions" id="adj-delete" style="margin-top:8px">Delete adjustment note</button>`;
     root.querySelector('#adj-toggle')?.addEventListener('click', () => {
       db.setInvoiceStatus(note.id, isSettled ? 'outstanding' : 'paid');
       openAdjustmentDocSheet(sale, db.getInvoicesForSale(sale.id).find((i) => i.id === note.id));
     });
     root.querySelector('#adj-open-invoice')?.addEventListener('click', () => openInvoiceDocSheet(sale, original));
-    root.querySelector('#print-invoice').addEventListener('click', () => window.print());
+    const buyerContact = splitContact(sale.buyerContact);
+    wirePdfButtons(root, {
+      makePdf: () => adjustmentPdf({ sale, note, invoices, business }),
+      fileName: () => safeFileName(`Adjustment note ${noteLabel(note)} ${sale.buyer || ''}`.trim()),
+      subject: `Adjustment note ${noteLabel(note)}${sale.contractNo ? ` - contract ${sale.contractNo}` : ''}`,
+      body: `Hi${buyerContact.name ? ` ${buyerContact.name.split(' ')[0]}` : ''},
+
+Please find adjustment note ${noteLabel(note)} attached.
+
+Regards,
+${business.contactName || business.entityName || ''}`,
+      to: buyerContact.email || '',
+    });
     root.querySelector('#adj-delete').addEventListener('click', () => {
       confirmDelete(`Delete adjustment note ${noteLabel(note)}?${onInvoice ? ' Its line and amount come off the invoice.' : ''} This cannot be undone.`, () => {
         db.deleteInvoice(note.id);
