@@ -67,6 +67,70 @@
           "targetYieldTHa": 2.2,
           "defaultYieldTHa": 2.1,
           "grossMarginCost": 141000
+        },
+        {
+          "id": "cotton",
+          "name": "Cotton",
+          "unit": "bale",
+          "angleOfRepose": 0,
+          "testWeight": 0,
+          "nPerTonne": 0,
+          "mtmPrice": 565,
+          "targetYieldTHa": 11,
+          "defaultYieldTHa": 10.5,
+          "grossMarginCost": 640000,
+          "cotton": {
+            "seedMtm": 480,
+            "seedFactor": 0.245,
+            "ginRate": 75,
+            "levies": 3.75,
+            "turnout": 43,
+            "moduleKg": 2400
+          },
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": ""
+        },
+        {
+          "id": "lucerne",
+          "name": "Lucerne hay",
+          "unit": "t",
+          "angleOfRepose": 35,
+          "testWeight": 0.14,
+          "nPerTonne": 0,
+          "mtmPrice": 410,
+          "targetYieldTHa": 9,
+          "defaultYieldTHa": 9,
+          "grossMarginCost": 38000,
+          "hay": {
+            "baleType": "round",
+            "baleKg": 480
+          },
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": ""
+        },
+        {
+          "id": "wheatstraw",
+          "name": "Wheat straw",
+          "unit": "t",
+          "angleOfRepose": 35,
+          "testWeight": 0.1,
+          "nPerTonne": 0,
+          "mtmPrice": 82,
+          "targetYieldTHa": 0,
+          "defaultYieldTHa": 0,
+          "grossMarginCost": 0,
+          "hay": {
+            "baleType": "large",
+            "baleKg": 520
+          },
+          "balesPerRoundBale": 0,
+          "openingStock": 0,
+          "retainedSeed": 0,
+          "notes": ""
         }
       ],
       "fields": [
@@ -124,7 +188,17 @@
               ]
             ]
           ],
-          "property": "Home Farm"
+          "property": "Home Farm",
+          "balesBaled": [
+            {
+              "id": "bb-w1",
+              "date": "2026-11-26",
+              "label": "Behind the header",
+              "bales": 160,
+              "kg": 83200,
+              "commodityId": "wheatstraw"
+            }
+          ]
         },
         {
           "id": "fld-river",
@@ -180,7 +254,17 @@
               ]
             ]
           ],
-          "property": "River Flats"
+          "property": "River Flats",
+          "balesBaled": [
+            {
+              "id": "bb-w2",
+              "date": "2026-11-28",
+              "label": "Behind the header",
+              "bales": 120,
+              "kg": 62400,
+              "commodityId": "wheatstraw"
+            }
+          ]
         },
         {
           "id": "fld-long",
@@ -703,6 +787,223 @@
             ]
           ],
           "property": "Home Farm"
+        },
+        {
+          "id": "fld-cotton1",
+          "name": "Cotton North",
+          "areaHa": 150,
+          "commodityId": "cotton",
+          "yieldTHa": 10.8,
+          "yieldMode": "estimate",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Sicot 746B3F",
+          "seedRateKgHa": 12,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.099686,
+                -33.619166
+              ],
+              [
+                148.108528,
+                -33.619154
+              ],
+              [
+                148.1173,
+                -33.619164
+              ],
+              [
+                148.117262,
+                -33.627437
+              ],
+              [
+                148.10856,
+                -33.627535
+              ],
+              [
+                148.099828,
+                -33.627534
+              ],
+              [
+                148.099686,
+                -33.619166
+              ]
+            ]
+          ],
+          "property": "River Flats",
+          "modulesPicked": [
+            {
+              "id": "pk-n1",
+              "date": "2026-04-06",
+              "count": 130,
+              "kg": 312000,
+              "turnoutPct": 43,
+              "estBales": 591.013
+            },
+            {
+              "id": "pk-n2",
+              "date": "2026-04-11",
+              "count": 170,
+              "kg": 408000,
+              "turnoutPct": 43,
+              "estBales": 772.863
+            },
+            {
+              "id": "pk-n3",
+              "date": "2026-04-19",
+              "count": 60,
+              "kg": 144000,
+              "turnoutPct": 42,
+              "estBales": 266.432
+            }
+          ]
+        },
+        {
+          "id": "fld-cotton2",
+          "name": "Cotton South",
+          "areaHa": 118,
+          "commodityId": "cotton",
+          "yieldTHa": 10.2,
+          "yieldMode": "estimate",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "Sicot 746B3F",
+          "seedRateKgHa": 12,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.117513,
+                -33.619116
+              ],
+              [
+                148.124347,
+                -33.619129
+              ],
+              [
+                148.131237,
+                -33.619098
+              ],
+              [
+                148.131301,
+                -33.627448
+              ],
+              [
+                148.124503,
+                -33.627474
+              ],
+              [
+                148.117448,
+                -33.627472
+              ],
+              [
+                148.117513,
+                -33.619116
+              ]
+            ]
+          ],
+          "property": "River Flats",
+          "modulesPicked": [
+            {
+              "id": "pk-s1",
+              "date": "2026-04-14",
+              "count": 90,
+              "kg": 216000,
+              "turnoutPct": 43,
+              "estBales": 409.163
+            },
+            {
+              "id": "pk-s2",
+              "date": "2026-04-22",
+              "count": 60,
+              "kg": 144000,
+              "turnoutPct": 43,
+              "estBales": 272.775
+            }
+          ]
+        },
+        {
+          "id": "fld-lucerne",
+          "name": "Lucerne Flat",
+          "areaHa": 42,
+          "commodityId": "lucerne",
+          "yieldTHa": 9,
+          "yieldMode": "estimate",
+          "soilTestNKgHa": 0,
+          "ureaRequiredKgHa": 0,
+          "ureaApplications": [],
+          "seedVariety": "SARDI 7",
+          "seedRateKgHa": 15,
+          "starterRequiredKgHa": 0,
+          "starterAppliedKgHa": 0,
+          "targetYieldOverrideTHa": 0,
+          "notes": "",
+          "boundary": [
+            [
+              [
+                148.131622,
+                -33.619097
+              ],
+              [
+                148.134045,
+                -33.619163
+              ],
+              [
+                148.136502,
+                -33.619108
+              ],
+              [
+                148.136508,
+                -33.627562
+              ],
+              [
+                148.134083,
+                -33.627583
+              ],
+              [
+                148.131649,
+                -33.627465
+              ],
+              [
+                148.131622,
+                -33.619097
+              ]
+            ]
+          ],
+          "property": "River Flats",
+          "balesBaled": [
+            {
+              "id": "bb-l1",
+              "date": "2026-10-20",
+              "label": "Cut 1",
+              "bales": 260,
+              "kg": 124800
+            },
+            {
+              "id": "bb-l2",
+              "date": "2026-11-25",
+              "label": "Cut 2",
+              "bales": 240,
+              "kg": 115200
+            },
+            {
+              "id": "bb-l3",
+              "date": "2026-12-18",
+              "label": "Cut 3",
+              "bales": 220,
+              "kg": 105600
+            }
+          ]
         }
       ],
       "storages": [
@@ -785,6 +1086,50 @@
           "fillState": "flat",
           "capacityTons": 1500,
           "tarpOverhangM": 1.5
+        },
+        {
+          "id": "gin-yard",
+          "kind": "tally",
+          "name": "Bimbi gin yard",
+          "commodityId": "cotton",
+          "unitLabel": "modules",
+          "openingStock": 0
+        },
+        {
+          "id": "bale-shed",
+          "kind": "tally",
+          "name": "Bale shed",
+          "commodityId": "cotton",
+          "unitLabel": "bales",
+          "openingStock": 0
+        },
+        {
+          "id": "hay-shed-1",
+          "kind": "bunker",
+          "name": "Hay shed 1",
+          "commodityId": "lucerne",
+          "width": 14,
+          "length": 28,
+          "currentHeight": 4,
+          "fillState": "flat",
+          "capacityTons": 150,
+          "tarpOverhangM": 0,
+          "openingStock": 0,
+          "unitLabel": "t"
+        },
+        {
+          "id": "hay-shed-2",
+          "kind": "bunker",
+          "name": "Hay shed 2",
+          "commodityId": "wheatstraw",
+          "width": 14,
+          "length": 28,
+          "currentHeight": 4.6,
+          "fillState": "flat",
+          "capacityTons": 130,
+          "tarpOverhangM": 0,
+          "openingStock": 0,
+          "unitLabel": "t"
         }
       ],
       "sales": [
@@ -943,6 +1288,110 @@
           "deliveryEnd": "2027-02-28",
           "freight": 21.5,
           "leviesPct": 0.011
+        },
+        {
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 14,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 599.119,
+          "deliveryPeriod": "",
+          "id": "sale-ct1",
+          "commodityId": "cotton",
+          "buyer": "Wattle Cotton Merchants",
+          "contractNo": "WCM-2610",
+          "grade": "",
+          "tons": 600,
+          "price": 570,
+          "date": "2025-10-30",
+          "location": "Delivered gin",
+          "deliveryStart": "2026-04-01",
+          "deliveryEnd": "2026-09-30",
+          "freight": 0,
+          "leviesPct": 0
+        },
+        {
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 14,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 403.084,
+          "deliveryPeriod": "",
+          "id": "sale-ct2",
+          "commodityId": "cotton",
+          "buyer": "Wattle Cotton Merchants",
+          "contractNo": "WCM-2611",
+          "grade": "",
+          "tons": 500,
+          "price": 585,
+          "date": "2025-11-12",
+          "location": "Delivered gin",
+          "deliveryStart": "2026-04-01",
+          "deliveryEnd": "2026-09-30",
+          "freight": 0,
+          "leviesPct": 0
+        },
+        {
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 14,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 57.6,
+          "deliveryPeriod": "",
+          "id": "sale-hay1",
+          "commodityId": "lucerne",
+          "buyer": "Valley Stockfeeds",
+          "contractNo": "VS-3310",
+          "grade": "Premium",
+          "tons": 150,
+          "price": 395,
+          "date": "2026-09-20",
+          "location": "Ex farm",
+          "deliveryStart": "2026-12-01",
+          "deliveryEnd": "2027-02-28",
+          "freight": 0,
+          "leviesPct": 0
+        },
+        {
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 14,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 31.2,
+          "deliveryPeriod": "",
+          "id": "sale-hay2",
+          "commodityId": "wheatstraw",
+          "buyer": "Hillcrest Dairy Co-op",
+          "contractNo": "HD-0412",
+          "grade": "",
+          "tons": 80,
+          "price": 82,
+          "date": "2026-10-08",
+          "location": "Ex farm",
+          "deliveryStart": "2026-12-01",
+          "deliveryEnd": "2027-01-31",
+          "freight": 0,
+          "leviesPct": 0
         }
       ],
       "movements": [
@@ -2037,6 +2486,569 @@
             }
           ],
           "notes": ""
+        },
+        {
+          "id": "mv-1040",
+          "ticketNo": 1040,
+          "date": "2026-04-23",
+          "commodityId": "cotton",
+          "status": "closed",
+          "truckRego": "ABC 42Q",
+          "driver": "Sample Driver",
+          "tons": 451.784,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-cotton1",
+              "tons": 451.784
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "gin-yard",
+              "tons": 100
+            }
+          ],
+          "notes": "Modules",
+          "modules": {
+            "count": 100,
+            "kg": 238500,
+            "turnoutPct": 43,
+            "estBales": 451.784
+          }
+        },
+        {
+          "id": "mv-1041",
+          "ticketNo": 1041,
+          "date": "2026-04-25",
+          "commodityId": "cotton",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 456.899,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-cotton1",
+              "tons": 456.899
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "gin-yard",
+              "tons": 100
+            }
+          ],
+          "notes": "Modules",
+          "modules": {
+            "count": 100,
+            "kg": 241200,
+            "turnoutPct": 43,
+            "estBales": 456.899
+          }
+        },
+        {
+          "id": "mv-1042",
+          "ticketNo": 1042,
+          "date": "2026-04-27",
+          "commodityId": "cotton",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 447.617,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-cotton1",
+              "tons": 447.617
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "gin-yard",
+              "tons": 100
+            }
+          ],
+          "notes": "Modules",
+          "modules": {
+            "count": 100,
+            "kg": 236300,
+            "turnoutPct": 43,
+            "estBales": 447.617
+          }
+        },
+        {
+          "id": "mv-1043",
+          "ticketNo": 1043,
+          "date": "2026-04-28",
+          "commodityId": "cotton",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 181.85,
+          "weightStatus": "estimate",
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-cotton2",
+              "tons": 181.85
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "gin-yard",
+              "tons": 40
+            }
+          ],
+          "notes": "Modules",
+          "modules": {
+            "count": 40,
+            "kg": 0,
+            "turnoutPct": 43,
+            "estBales": 181.85
+          }
+        },
+        {
+          "id": "mv-1044",
+          "ticketNo": 1044,
+          "date": "2026-05-02",
+          "commodityId": "cotton",
+          "status": "closed",
+          "truckRego": "",
+          "driver": "",
+          "tons": 1348.018,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "silo",
+              "id": "gin-yard",
+              "tons": 300
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-ct1",
+              "tons": 599.119
+            },
+            {
+              "type": "sale",
+              "id": "sale-ct2",
+              "tons": 403.084
+            },
+            {
+              "type": "silo",
+              "id": "bale-shed",
+              "tons": 345.815
+            }
+          ],
+          "notes": "Ginning",
+          "gin": {
+            "ginName": "Bimbi Ginning",
+            "invoiceNo": "I021/26",
+            "modules": 300,
+            "moduleKg": 716000,
+            "physicalBales": 1340,
+            "lintKg": 306000,
+            "seedKg": 331000,
+            "stdBaleKg": 227,
+            "baleFrom": "KG100001",
+            "baleTo": "KG101340",
+            "ginRate": 75,
+            "researchLevy": 2.25,
+            "voluntaryLevy": 1.5,
+            "gstOnGin": true,
+            "paidBy": "buyer",
+            "allocations": [
+              {
+                "to": "sale:sale-ct1",
+                "baleFrom": "KG100001",
+                "baleTo": "KG100597",
+                "bales": 597,
+                "location": "",
+                "kg": 136000
+              },
+              {
+                "to": "sale:sale-ct2",
+                "baleFrom": "KG100598",
+                "baleTo": "KG101000",
+                "bales": 403,
+                "location": "",
+                "kg": 91500
+              },
+              {
+                "to": "silo:bale-shed",
+                "baleFrom": "KG101001",
+                "baleTo": "KG101340",
+                "bales": 340,
+                "location": "Shed bay 2",
+                "kg": 78500
+              }
+            ],
+            "seedTo": ""
+          }
+        },
+        {
+          "id": "mv-1045",
+          "ticketNo": 1045,
+          "date": "2026-10-24",
+          "commodityId": "lucerne",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 38.4,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-lucerne",
+              "tons": 38.4
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "hay-shed-1",
+              "tons": 38.4
+            }
+          ],
+          "notes": "",
+          "hayLoad": {
+            "bales": 80,
+            "kg": 38400
+          }
+        },
+        {
+          "id": "mv-1046",
+          "ticketNo": 1046,
+          "date": "2026-10-26",
+          "commodityId": "lucerne",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 38.4,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-lucerne",
+              "tons": 38.4
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "hay-shed-1",
+              "tons": 38.4
+            }
+          ],
+          "notes": "",
+          "hayLoad": {
+            "bales": 80,
+            "kg": 38400
+          }
+        },
+        {
+          "id": "mv-1047",
+          "ticketNo": 1047,
+          "date": "2026-11-28",
+          "commodityId": "lucerne",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 38.4,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-lucerne",
+              "tons": 38.4
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "hay-shed-1",
+              "tons": 38.4
+            }
+          ],
+          "notes": "",
+          "hayLoad": {
+            "bales": 80,
+            "kg": 38400
+          }
+        },
+        {
+          "id": "mv-1048",
+          "ticketNo": 1048,
+          "date": "2026-11-30",
+          "commodityId": "lucerne",
+          "status": "closed",
+          "truckRego": "ABC 42Q",
+          "driver": "Sample Driver",
+          "tons": 38.4,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-lucerne",
+              "tons": 38.4
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "hay-shed-1",
+              "tons": 38.4
+            }
+          ],
+          "notes": "",
+          "hayLoad": {
+            "bales": 80,
+            "kg": 38400
+          }
+        },
+        {
+          "id": "mv-1049",
+          "ticketNo": 1049,
+          "date": "2026-12-02",
+          "commodityId": "lucerne",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 38.4,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-lucerne",
+              "tons": 38.4
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "hay-shed-1",
+              "tons": 38.4
+            }
+          ],
+          "notes": "",
+          "hayLoad": {
+            "bales": 80,
+            "kg": 38400
+          }
+        },
+        {
+          "id": "mv-1050",
+          "ticketNo": 1050,
+          "date": "2026-12-08",
+          "commodityId": "lucerne",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 28.8,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "silo",
+              "id": "hay-shed-1",
+              "tons": 28.8
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-hay1",
+              "tons": 28.8
+            }
+          ],
+          "notes": "",
+          "hayLoad": {
+            "bales": 60,
+            "kg": 28800
+          }
+        },
+        {
+          "id": "mv-1051",
+          "ticketNo": 1051,
+          "date": "2026-12-10",
+          "commodityId": "lucerne",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 28.8,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "silo",
+              "id": "hay-shed-1",
+              "tons": 28.8
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-hay1",
+              "tons": 28.8
+            }
+          ],
+          "notes": "",
+          "hayLoad": {
+            "bales": 60,
+            "kg": 28800
+          }
+        },
+        {
+          "id": "mv-1052",
+          "ticketNo": 1052,
+          "date": "2026-12-12",
+          "commodityId": "lucerne",
+          "status": "closed",
+          "truckRego": "ABC 42Q",
+          "driver": "Sample Driver",
+          "tons": 19.2,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "silo",
+              "id": "hay-shed-1",
+              "tons": 19.2
+            }
+          ],
+          "tos": [],
+          "notes": "",
+          "hayLoad": {
+            "bales": 40,
+            "kg": 19200,
+            "use": "Fed to cattle"
+          }
+        },
+        {
+          "id": "mv-1053",
+          "ticketNo": 1053,
+          "date": "2026-11-29",
+          "commodityId": "wheatstraw",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 36.4,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-boundary",
+              "tons": 36.4
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "hay-shed-2",
+              "tons": 36.4
+            }
+          ],
+          "notes": "",
+          "hayLoad": {
+            "bales": 70,
+            "kg": 36400
+          }
+        },
+        {
+          "id": "mv-1054",
+          "ticketNo": 1054,
+          "date": "2026-12-01",
+          "commodityId": "wheatstraw",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 36.4,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-boundary",
+              "tons": 36.4
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "hay-shed-2",
+              "tons": 36.4
+            }
+          ],
+          "notes": "",
+          "hayLoad": {
+            "bales": 70,
+            "kg": 36400
+          }
+        },
+        {
+          "id": "mv-1055",
+          "ticketNo": 1055,
+          "date": "2026-11-30",
+          "commodityId": "wheatstraw",
+          "status": "closed",
+          "truckRego": "JRP 06N",
+          "driver": "Casual Carter",
+          "tons": 52,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "field",
+              "id": "fld-river",
+              "tons": 52
+            }
+          ],
+          "tos": [
+            {
+              "type": "silo",
+              "id": "hay-shed-2",
+              "tons": 52
+            }
+          ],
+          "notes": "",
+          "hayLoad": {
+            "bales": 100,
+            "kg": 52000
+          }
+        },
+        {
+          "id": "mv-1056",
+          "ticketNo": 1056,
+          "date": "2026-12-14",
+          "commodityId": "wheatstraw",
+          "status": "closed",
+          "truckRego": "ABC 42Q",
+          "driver": "Sample Driver",
+          "tons": 31.2,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "silo",
+              "id": "hay-shed-2",
+              "tons": 31.2
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-hay2",
+              "tons": 31.2
+            }
+          ],
+          "notes": "",
+          "hayLoad": {
+            "bales": 60,
+            "kg": 31200
+          }
         }
       ],
       "invoices": [
@@ -2092,6 +3104,119 @@
             "freightTotal": 0,
             "levies": 410.04
           }
+        },
+        {
+          "id": "inv-3",
+          "invoiceNo": 3,
+          "issueDate": "2026-05-08",
+          "dueDate": "2026-05-22",
+          "status": "outstanding",
+          "saleId": "sale-ct1",
+          "totalTons": 599.119,
+          "subtotalExGST": 339012.81,
+          "freightTotal": 0,
+          "levies": 0,
+          "gst": 33901.28,
+          "totalPayable": 321240.09,
+          "lines": [
+            {
+              "date": "2026-05-02",
+              "rego": "—",
+              "tons": 599.119,
+              "movementId": "mv-1044",
+              "grade": "",
+              "ticketNo": "1044",
+              "bales": 597,
+              "baleRanges": [
+                {
+                  "from": "KG100001",
+                  "to": "KG100597",
+                  "bales": 597
+                }
+              ],
+              "basePrice": 570,
+              "adjust": 0,
+              "rate": 570,
+              "subtotal": 341497.83,
+              "freightRate": 0,
+              "freight": 0
+            },
+            {
+              "date": "2025-10-30",
+              "rego": "Classing P&D",
+              "tons": null,
+              "movementId": null,
+              "rate": null,
+              "subtotal": -2485.02,
+              "description": "Classing premiums and discounts",
+              "isCustom": true,
+              "foreign": {
+                "usd": -1642.35,
+                "rate": 0.6609
+              }
+            },
+            {
+              "date": "2026-05-02",
+              "rego": "—",
+              "tons": null,
+              "movementId": null,
+              "rate": null,
+              "subtotal": 0,
+              "isGinPrepaid": true,
+              "ginRunId": "mv-1044",
+              "description": "Bimbi Ginning invoice I021/26",
+              "ginning": 44933.91,
+              "levies": 2246.7,
+              "gst": 4493.39,
+              "amount": 51674
+            }
+          ]
+        },
+        {
+          "id": "inv-4",
+          "invoiceNo": 4,
+          "issueDate": "2026-12-16",
+          "dueDate": "2027-01-15",
+          "status": "outstanding",
+          "saleId": "sale-hay1",
+          "totalTons": 57.6,
+          "subtotalExGST": 22752,
+          "freightTotal": 0,
+          "levies": 0,
+          "gst": 2275.2,
+          "totalPayable": 25027.2,
+          "lines": [
+            {
+              "date": "2026-12-08",
+              "rego": "TDD 88Q",
+              "tons": 28.8,
+              "movementId": "mv-1050",
+              "grade": "",
+              "ticketNo": "1050",
+              "hayBales": 60,
+              "basePrice": 395,
+              "adjust": 0,
+              "rate": 395,
+              "subtotal": 11376,
+              "freightRate": 0,
+              "freight": 0
+            },
+            {
+              "date": "2026-12-10",
+              "rego": "JRP 06N",
+              "tons": 28.8,
+              "movementId": "mv-1051",
+              "grade": "",
+              "ticketNo": "1051",
+              "hayBales": 60,
+              "basePrice": 395,
+              "adjust": 0,
+              "rate": 395,
+              "subtotal": 11376,
+              "freightRate": 0,
+              "freight": 0
+            }
+          ]
         }
       ],
       "orders": [
@@ -2140,6 +3265,300 @@
           "loadBy": "2026-12-05",
           "status": "open",
           "notes": "Gate 3, 7am to 4pm."
+        }
+      ],
+      "payables": [
+        {
+          "id": "pay-1",
+          "kind": "brokerage",
+          "supplier": "Sample Grain Brokers",
+          "reference": "BR-0231",
+          "invoiceDate": "2026-12-19",
+          "dueDate": "2027-01-18",
+          "amount": 1824,
+          "gst": 182.4,
+          "saleId": "sale-1",
+          "storageId": "",
+          "tons": "",
+          "rate": "",
+          "status": "unpaid",
+          "paidDate": "",
+          "notes": ""
+        },
+        {
+          "id": "pay-2",
+          "kind": "freight",
+          "supplier": "Ace Haulage",
+          "reference": "AH-5530",
+          "invoiceDate": "2026-12-05",
+          "dueDate": "2026-12-19",
+          "amount": 1290,
+          "gst": 129,
+          "saleId": "sale-1",
+          "storageId": "",
+          "tons": 60,
+          "rate": 21.5,
+          "status": "paid",
+          "paidDate": "2026-12-17",
+          "notes": ""
+        },
+        {
+          "id": "pay-3",
+          "kind": "storage",
+          "supplier": "Newbridge Storage Co",
+          "reference": "NS-118",
+          "invoiceDate": "2026-12-10",
+          "dueDate": "2027-01-09",
+          "amount": 960,
+          "gst": 96,
+          "saleId": "",
+          "storageId": "bunker-1",
+          "tons": 320,
+          "rate": 3,
+          "status": "unpaid",
+          "paidDate": "",
+          "notes": "Wheat, December"
+        },
+        {
+          "id": "pay-4",
+          "kind": "other",
+          "supplier": "Sample Ag Services",
+          "reference": "AS-2204",
+          "invoiceDate": "2026-11-22",
+          "dueDate": "2026-12-22",
+          "amount": 540,
+          "gst": 54,
+          "saleId": "",
+          "storageId": "",
+          "tons": "",
+          "rate": "",
+          "status": "unpaid",
+          "paidDate": "",
+          "notes": "Weighbridge calibration"
+        }
+      ],
+      "inputStock": [
+        {
+          "id": "in-1",
+          "kind": "seed",
+          "product": "Scepter wheat",
+          "unit": "t",
+          "type": "buy",
+          "qty": 14.7,
+          "unitCost": 640,
+          "date": "2026-05-02",
+          "supplier": "Sample Seeds",
+          "reference": "SS-8801",
+          "notes": "",
+          "location": "Machinery shed"
+        },
+        {
+          "id": "in-2",
+          "kind": "seed",
+          "product": "Scepter wheat",
+          "unit": "t",
+          "type": "use",
+          "qty": 14.1,
+          "unitCost": "",
+          "date": "2026-05-20",
+          "supplier": "",
+          "reference": "",
+          "notes": "Sown",
+          "location": "Machinery shed"
+        },
+        {
+          "id": "in-3",
+          "kind": "fert",
+          "product": "Urea",
+          "unit": "t",
+          "type": "buy",
+          "qty": 75,
+          "unitCost": 690,
+          "date": "2026-04-28",
+          "supplier": "Sample Ag Supplies",
+          "reference": "AG-4417",
+          "notes": "",
+          "location": "Fert shed"
+        },
+        {
+          "id": "in-4",
+          "kind": "fert",
+          "product": "Urea",
+          "unit": "t",
+          "type": "use",
+          "qty": 68,
+          "unitCost": "",
+          "date": "2026-06-02",
+          "supplier": "",
+          "reference": "",
+          "notes": "Spread",
+          "location": "Fert shed"
+        },
+        {
+          "id": "in-5",
+          "kind": "fert",
+          "product": "Urea",
+          "unit": "t",
+          "type": "adjust",
+          "qty": -0.5,
+          "unitCost": "",
+          "date": "2026-09-01",
+          "supplier": "",
+          "reference": "",
+          "notes": "Stocktake",
+          "location": "Fert shed"
+        },
+        {
+          "id": "in-6",
+          "kind": "fuel",
+          "product": "Diesel",
+          "unit": "L",
+          "type": "buy",
+          "qty": 20000,
+          "unitCost": 1.78,
+          "date": "2026-05-10",
+          "supplier": "Sample Fuels",
+          "reference": "SF-3321",
+          "notes": "",
+          "location": "Farm tank"
+        },
+        {
+          "id": "in-7",
+          "kind": "fuel",
+          "product": "Diesel",
+          "unit": "L",
+          "type": "use",
+          "qty": 13400,
+          "unitCost": "",
+          "date": "2026-10-30",
+          "supplier": "",
+          "reference": "",
+          "notes": "Season to date",
+          "location": "Farm tank"
+        },
+        {
+          "id": "in-8",
+          "kind": "chem",
+          "product": "Glyphosate 450",
+          "unit": "L",
+          "type": "buy",
+          "qty": 1200,
+          "unitCost": 6.2,
+          "date": "2026-07-06",
+          "supplier": "Sample Ag Supplies",
+          "reference": "AG-4630",
+          "notes": "",
+          "location": "Chemical shed"
+        },
+        {
+          "id": "in-9",
+          "kind": "chem",
+          "product": "Glyphosate 450",
+          "unit": "L",
+          "type": "use",
+          "qty": 900,
+          "unitCost": "",
+          "date": "2026-08-12",
+          "supplier": "",
+          "reference": "",
+          "notes": "Fallow spray",
+          "location": "Chemical shed"
+        }
+      ],
+      "sprayJobs": [
+        {
+          "id": "spray-1",
+          "jobNo": "SJ-001",
+          "contractor": "Sample Aerial Spraying",
+          "contractorEmail": "",
+          "form": "standard",
+          "status": "sent",
+          "dateRequired": "2026-08-14",
+          "tradingName": "Kurrajong Downs Pty Ltd",
+          "address": "Sample address",
+          "phone": "",
+          "fax": "",
+          "mobile": "",
+          "uhf": "",
+          "contacts": [
+            {
+              "name": "Sample User",
+              "phone": "",
+              "uhf": ""
+            },
+            {
+              "name": "",
+              "phone": "",
+              "uhf": ""
+            }
+          ],
+          "property": "Home Farm, River Flats",
+          "crop": "Wheat",
+          "poNumber": "",
+          "chemicalSuppliedBy": "",
+          "locatedAt": "",
+          "chemicals": [
+            {
+              "name": "Glyphosate 450",
+              "rate": 1.5,
+              "unit": "L"
+            }
+          ],
+          "waterRate": 80,
+          "paddocks": [
+            {
+              "id": "fld-boundary",
+              "name": "Boundary",
+              "areaHa": 210,
+              "crop": "Wheat",
+              "farm": "Home Farm"
+            },
+            {
+              "id": "fld-river",
+              "name": "River Block",
+              "areaHa": 178,
+              "crop": "Wheat",
+              "farm": "River Flats"
+            },
+            {
+              "id": "fld-long",
+              "name": "Long Paddock",
+              "areaHa": 165,
+              "crop": "Wheat",
+              "farm": "Home Farm"
+            }
+          ],
+          "otherInstructions": "",
+          "checklist": {
+            "q1": "",
+            "q2": "",
+            "q3": "",
+            "qI": "",
+            "qII": "",
+            "qIII": "",
+            "qIV": "",
+            "q4": ""
+          },
+          "neighbours": [
+            {
+              "name": "",
+              "phone": "",
+              "contacted": ""
+            },
+            {
+              "name": "",
+              "phone": "",
+              "contacted": ""
+            },
+            {
+              "name": "",
+              "phone": "",
+              "contacted": ""
+            }
+          ],
+          "signedBy": "Sample User",
+          "useSignature": false,
+          "today": "2026-08-10"
         }
       ],
       "overheads": {
@@ -4153,6 +5572,6 @@
     "bsb": "",
     "accountNumber": ""
   },
-  "nextMovementNo": 1040,
-  "nextInvoiceNo": 3
+  "nextMovementNo": 1057,
+  "nextInvoiceNo": 5
 }

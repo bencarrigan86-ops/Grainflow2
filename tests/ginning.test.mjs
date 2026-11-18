@@ -635,5 +635,21 @@ check('classing premiums and discounts go on a cotton invoice by total or by dol
   assert.ok(v.includes('perBale: item.perBale') && v.includes('a bale</small>'), 'the dollars a bale is kept on the line and shown on the invoice');
 });
 
+check('premiums and discounts entered in US$ are converted at the rate, as on the merchant RCTI', () => {
+  // C2610: US$ -1,820.67 at 0.6609 is A$ -2,754.83; nett 168,598.57; GST 16,859.86; due 185,458.43; less gin 50,841.04
+  const aud = Math.round((-1820.67 / 0.6609) * 100) / 100;
+  assert.equal(aud, -2754.83);
+  const inv = { subtotalExGST: 171353.40 + aud, gst: 16859.86, levies: 0, freightTotal: 0, lines: [
+    { movementId: 'm1', tons: 300.62, rate: 570, subtotal: 171353.40 },
+    { isCustom: true, description: 'Classing', subtotal: aud, foreign: { usd: -1820.67, rate: 0.6609 } },
+    { isGinPrepaid: true, description: 'NORTH WEST GINNING Ginning Invoice I016/26', amount: 50841.04 },
+  ] };
+  const m = cottonInvoiceModel(inv);
+  assert.equal(m.usdTotal, -1820.67); assert.equal(m.fxRate, 0.6609);
+  assert.equal(m.valueNett, 168598.57); assert.equal(m.dueIncludingTax, 185458.43); assert.equal(m.totalDue, 134617.39);
+  const v = read('docs/js/views/invoice.js');
+  assert.ok(v.includes('id="ci-ccy"') && v.includes('id="ci-fx"') && v.includes('foreign: { usd: item.amount, rate: cur.rate }') && v.includes('at an exchange rate of'));
+});
+
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
 console.log('\nall passed');

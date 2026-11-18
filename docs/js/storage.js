@@ -18,31 +18,31 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=370';
-import { setBrandLogo } from './brand.js?v=370';
+import { hydrate } from './hydrate.js?v=371';
+import { setBrandLogo } from './brand.js?v=371';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=370';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=370';
-import { isLegacyDirty } from './dirty.js?v=370';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=370';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=370';
-import { hasDeductions } from './deductions.js?v=370';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=370';
-import { hasHay, hasHayLoad } from './hay.js?v=370';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=370';
-import { settleLegs, dedupeLegs } from './legs.js?v=370';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=370';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=370';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=370';
-import { setCommodityOrder } from './commodityorder.js?v=370';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=370';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=370';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=370';
-import { schedulePush, pushOnReconnect } from './sync.js?v=370';
-import { hasParts as hasAddressParts } from './address.js?v=370';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=370';
+} from './local.js?v=371';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=371';
+import { isLegacyDirty } from './dirty.js?v=371';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=371';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=371';
+import { hasDeductions } from './deductions.js?v=371';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=371';
+import { hasHay, hasHayLoad } from './hay.js?v=371';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=371';
+import { settleLegs, dedupeLegs } from './legs.js?v=371';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=371';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=371';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=371';
+import { setCommodityOrder } from './commodityorder.js?v=371';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=371';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=371';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=371';
+import { schedulePush, pushOnReconnect } from './sync.js?v=371';
+import { hasParts as hasAddressParts } from './address.js?v=371';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=371';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -635,6 +635,52 @@ export const db = {
     touch('year', label);
     persist();
     return true;
+  },
+  /**
+   * Add the sample's cotton and hay to a sample farm made before it had any (see demo.js sampleCottonHayFrom). The records keep
+   * the ids they arrive with, so the invoice lines and the ginning run still point at their loads; the loads and invoices take
+   * the next ticket and invoice numbers, and the straw goes onto the paddocks it names.
+   * @returns {{paddocks: number, loads: number, invoices: number}|null} null when the season has these already
+   */
+  addSampleCottonHay(pack) {
+    const c = current();
+    if (!pack || (c.commodities || []).some((x) => pack.commodities.some((p) => p.name === x.name))) return null;
+    for (const x of pack.commodities) {
+      c.commodities.push({ ...x, ...(hasCotton(x.cotton) ? { __hasCotton: true } : {}), ...(hasHay(x.hay) ? { __hasHay: true } : {}) });
+      touch('commodity', x.id);
+    }
+    for (const f of pack.fields) { c.fields.push(f); touch('field', f.id); }
+    for (const s of pack.strawBaled || []) {
+      const f = c.fields.find((q) => q.id === s.fieldId);
+      if (!f) continue;
+      f.balesBaled = [...(f.balesBaled || []), ...s.baled];
+      f.__hasBalesBaled = true;
+      touch('field', f.id);
+    }
+    for (const s of pack.storages) { c.storages.push(s); touch('storage', s.id); }
+    for (const s of pack.sales) { c.sales.push(s); touch('sale', s.id); }
+    for (const m of pack.movements) {
+      const made = { ...m, ticketNo: data.nextMovementNo };
+      markOil(made);
+      made.froms = settleLegs([], made.froms, uid).legs;
+      made.tos = settleLegs([], made.tos, uid).legs;
+      c.movements.push(made);
+      data.nextMovementNo += 1;
+      touch('movement', made.id);
+    }
+    for (const i of pack.invoices) {
+      c.invoices.push({ ...i, invoiceNo: data.nextInvoiceNo });
+      data.nextInvoiceNo += 1;
+      touch('invoice', i.id);
+    }
+    c.payables = c.payables || [];
+    for (const p of pack.payables || []) { c.payables.push(p); touch('payable', p.id); }
+    c.inputStock = c.inputStock || [];
+    for (const m of pack.inputStock || []) { c.inputStock.push(m); touch('inputmove', m.id); }
+    c.sprayJobs = c.sprayJobs || [];
+    for (const j of pack.sprayJobs || []) { c.sprayJobs.push(j); touch('sprayjob', j.id); }
+    persist();
+    return { paddocks: pack.fields.length, loads: pack.movements.length, invoices: pack.invoices.length };
   },
   /**
    * Add the sample farm's earlier seasons to a sample farm made before it had any (see demo.js sampleHistoryFrom).

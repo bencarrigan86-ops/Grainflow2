@@ -6,16 +6,16 @@
 // contract or a storage, which should add up to the bales pressed. The gin's invoice is saved as a bill when we pay it
 // (see ginning.js).
 
-import { db } from '../storage.js?v=370';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=370';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=370';
-import { activeSales } from '../paidsales.js?v=370';
-import { storageLedgerStock } from '../derived.js?v=370';
-import { offerGinYard } from './modulemove.js?v=370';
+import { db } from '../storage.js?v=371';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=371';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=371';
+import { activeSales } from '../paidsales.js?v=371';
+import { storageLedgerStock } from '../derived.js?v=371';
+import { offerGinYard } from './modulemove.js?v=371';
 import {
   STD_BALE_KG, cleanGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice,
   baleRangeCount, allocateLint, allocationProblems, padOffBy,
-} from '../ginning.js?v=370';
+} from '../ginning.js?v=371';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -100,7 +100,7 @@ export function openGinRunSheet(existing = null) {
 
       <h3 style="margin:14px 0 6px">Lint out</h3>
       <div class="grid-2">
-        ${field({ label: 'Bales pressed', id: 'g-bales', type: 'number', step: '1', value: gin.physicalBales || '', hint: 'The count on the pad' })}
+        ${field({ label: 'Bales pressed', id: 'g-bales', type: 'number', step: '1', value: gin.physicalBales || '', hint: 'Fills in from the bale numbers' })}
         ${field({ label: 'Lint weight (kg)', id: 'g-lint-kg', type: 'number', step: '1', value: gin.lintKg || '', hint: 'Total of all bales' })}
       </div>
       <div class="grid-2">
@@ -170,7 +170,7 @@ export function openGinRunSheet(existing = null) {
       if (g.lintKg && g.moduleKg) bits.push(`turnout ${num(turnoutPct(g.lintKg, g.moduleKg), 1)}%`);
       if (g.seedKg && g.lintKg) bits.push(`${num(seedTonnes(g.seedKg), 2)} t seed, ${num(seedKgPerBale(g.lintKg, g.seedKg, g.stdBaleKg), 0)} kg a bale`);
       const range = baleRangeCount(g.baleFrom, g.baleTo);
-      if (range !== null) bits.push(`range is ${range} bales`);
+      if (range !== null && range !== g.physicalBales) bits.push(`the bale numbers are ${range} bales`);
       root.querySelector('#g-std-line').innerHTML = bits.join(' · ') || 'Standard bales are worked out from the lint weight.';
 
       // each lot: its bales and its standard bales
@@ -220,7 +220,15 @@ export function openGinRunSheet(existing = null) {
       }
       paint();
     });
-    root.addEventListener('input', paint);
+    // the bale numbers give the count: type the first and last bale and Bales pressed fills itself in (it can still be changed)
+    const countFromRange = () => {
+      const n = baleRangeCount(getVal(root, 'g-bale-from'), getVal(root, 'g-bale-to'));
+      if (n !== null && n > 0) root.querySelector('#g-bales').value = String(n);
+    };
+    root.addEventListener('input', (e) => {
+      if (e.target.id === 'g-bale-from' || e.target.id === 'g-bale-to') countFromRange();
+      paint();
+    });
     root.querySelector('#g-al-add').addEventListener('click', () => {
       allocsEl.insertAdjacentHTML('beforeend', allocRow({ to: '', baleFrom: '', baleTo: '', location: '', kg: 0 }));
       paint();

@@ -26,6 +26,9 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ringsAreaHa, simplifyRing } from '../docs/js/farmmap.js';
+import { invoiceLineItems, invoiceTotals } from '../docs/js/derived.js';
+import { ginPrepaid, cleanGin, allocateLint } from '../docs/js/ginning.js';
+import { sprayDefaults } from '../docs/js/spray.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -56,6 +59,18 @@ const commodities = [
 ].map((c) => ({
   unit: 't', balesPerRoundBale: 0, openingStock: 0, retainedSeed: 0, notes: '', ...c,
 }));
+
+// Cotton is counted in bales, with its seed and ginning settings; hay is sold in tonnes and counted in bales as well. Wheat
+// straw is baled behind the header on the wheat paddocks: its own commodity, on the same ground as the crop.
+commodities.push(
+  { id: 'cotton', name: 'Cotton', unit: 'bale', angleOfRepose: 0, testWeight: 0, nPerTonne: 0, mtmPrice: 565, targetYieldTHa: 11, defaultYieldTHa: 10.5, grossMarginCost: 640000,
+    cotton: { seedMtm: 480, seedFactor: 0.245, ginRate: 75, levies: 3.75, turnout: 43, moduleKg: 2400 },
+    balesPerRoundBale: 0, openingStock: 0, retainedSeed: 0, notes: '' },
+  { id: 'lucerne', name: 'Lucerne hay', unit: 't', angleOfRepose: 35, testWeight: 0.14, nPerTonne: 0, mtmPrice: 410, targetYieldTHa: 9, defaultYieldTHa: 9, grossMarginCost: 38000,
+    hay: { baleType: 'round', baleKg: 480 }, balesPerRoundBale: 0, openingStock: 0, retainedSeed: 0, notes: '' },
+  { id: 'wheatstraw', name: 'Wheat straw', unit: 't', angleOfRepose: 35, testWeight: 0.1, nPerTonne: 0, mtmPrice: 82, targetYieldTHa: 0, defaultYieldTHa: 0, grossMarginCost: 0,
+    hay: { baleType: 'large', baleKg: 520 }, balesPerRoundBale: 0, openingStock: 0, retainedSeed: 0, notes: '' },
+);
 
 // ---------------------------------------------------------------------------
 // Paddocks. Twelve, about 1,700 ha — a real farm's worth of country, and few
@@ -108,6 +123,19 @@ const fields = FIELDS.map(([id, name, areaHa, commodityId, yieldTHa], i) => {
   };
 });
 
+// Cotton and lucerne paddocks, on an estimated yield (bales a hectare for cotton, tonnes for hay). Their own random draws
+// are not used, so the grain paddocks above come out exactly as they did.
+for (const [id, name, areaHa, commodityId, yieldTHa, seedVariety, seedRateKgHa] of [
+  ['fld-cotton1', 'Cotton North', 150, 'cotton', 10.8, 'Sicot 746B3F', 12],
+  ['fld-cotton2', 'Cotton South', 118, 'cotton', 10.2, 'Sicot 746B3F', 12],
+  ['fld-lucerne', 'Lucerne Flat', 42, 'lucerne', 9, 'SARDI 7', 15],
+]) {
+  fields.push({
+    id, name, areaHa, commodityId, yieldTHa, yieldMode: 'estimate', soilTestNKgHa: 0, ureaRequiredKgHa: 0, ureaApplications: [],
+    seedVariety, seedRateKgHa, starterRequiredKgHa: 0, starterAppliedKgHa: 0, targetYieldOverrideTHa: 0, notes: '',
+  });
+}
+
 // ---------------------------------------------------------------------------
 // The farm map. Every paddock gets an outline of exactly its area, laid out on
 // two invented properties so the Farms list and the farm names have something
@@ -132,6 +160,7 @@ const PROPERTIES = [
   ['River Flats', 4600, [
     [1100, ['fld-river', 'fld-backcreek']],
     [1000, ['fld-dam', 'fld-ironbark', 'fld-bore']],
+    [950, ['fld-cotton1', 'fld-cotton2', 'fld-lucerne']],
   ]],
 ];
 
@@ -188,6 +217,12 @@ const storages = [
   { id: 'bunker-2', kind: 'bunker', name: 'Bunker 2',  commodityId: 'barley',
     width: 20, length: 48, currentHeight: 3.4, fillState: 'flat', capacityTons: 1500, tarpOverhangM: 1.5 },
 ].map((s) => ({ openingStock: 0, unitLabel: 't', ...s }));
+storages.push(
+  { id: 'gin-yard', kind: 'tally', name: 'Bimbi gin yard', commodityId: 'cotton', unitLabel: 'modules', openingStock: 0 },
+  { id: 'bale-shed', kind: 'tally', name: 'Bale shed', commodityId: 'cotton', unitLabel: 'bales', openingStock: 0 },
+  { id: 'hay-shed-1', kind: 'bunker', name: 'Hay shed 1', commodityId: 'lucerne', width: 14, length: 28, currentHeight: 4, fillState: 'flat', capacityTons: 150, tarpOverhangM: 0, openingStock: 0, unitLabel: 't' },
+  { id: 'hay-shed-2', kind: 'bunker', name: 'Hay shed 2', commodityId: 'wheatstraw', width: 14, length: 28, currentHeight: 4.6, fillState: 'flat', capacityTons: 130, tarpOverhangM: 0, openingStock: 0, unitLabel: 't' },
+);
 
 // ---------------------------------------------------------------------------
 // Contracts. Invented buyers — no real trader's name appears anywhere. A mix of
@@ -220,6 +255,21 @@ const sales = [
   tonsDelivered: 0, deliveryPeriod: '', ...s,
 }));
 
+sales.push(...[
+  { id: 'sale-ct1', commodityId: 'cotton', buyer: 'Wattle Cotton Merchants', contractNo: 'WCM-2610', grade: '', tons: 600, price: 570, date: '2025-10-30',
+    location: 'Delivered gin', deliveryStart: '2026-04-01', deliveryEnd: '2026-09-30', freight: 0, leviesPct: 0 },
+  { id: 'sale-ct2', commodityId: 'cotton', buyer: 'Wattle Cotton Merchants', contractNo: 'WCM-2611', grade: '', tons: 500, price: 585, date: '2025-11-12',
+    location: 'Delivered gin', deliveryStart: '2026-04-01', deliveryEnd: '2026-09-30', freight: 0, leviesPct: 0 },
+  { id: 'sale-hay1', commodityId: 'lucerne', buyer: 'Valley Stockfeeds', contractNo: 'VS-3310', grade: 'Premium', tons: 150, price: 395, date: '2026-09-20',
+    location: 'Ex farm', deliveryStart: '2026-12-01', deliveryEnd: '2027-02-28', freight: 0, leviesPct: 0 },
+  { id: 'sale-hay2', commodityId: 'wheatstraw', buyer: 'Hillcrest Dairy Co-op', contractNo: 'HD-0412', grade: '', tons: 80, price: 82, date: '2026-10-08',
+    location: 'Ex farm', deliveryStart: '2026-12-01', deliveryEnd: '2027-01-31', freight: 0, leviesPct: 0 },
+].map((s) => ({
+  premiumDiscount: 0, ginning: 0, paymentTermsDays: 14, tolerancePct: 5,
+  toleranceCapTons: 20, brokerNote: '', buyerAbn: '', buyerAddress: '', notes: '',
+  tonsDelivered: 0, deliveryPeriod: '', ...s,
+})));
+
 // ---------------------------------------------------------------------------
 // Movements. Two kinds, and they have to add up: harvest carts a paddock into a
 // silo or bunker, delivery carts a store out against a contract. Nothing is
@@ -245,7 +295,7 @@ const add = (map, key, t) => map.set(key, round((map.get(key) || 0) + t, 2));
 
 // Harvest: each paddock leaves in two or three loads, split across the stores
 // that hold that commodity.
-for (const f of fields) {
+for (const f of fields.filter((q) => STORE_FOR[q.commodityId])) {
   const stores = STORE_FOR[f.commodityId];
   const total = tonsOf(f);
   const loads = 2 + (fields.indexOf(f) % 2);
@@ -323,6 +373,168 @@ const invoices = [
   };
 });
 
+
+// ---------------------------------------------------------------------------
+// Cotton and hay. Two more crops the sample farm grows, so the Modules report, the gin run, the cotton invoice, the bale
+// logs and the hay stores all have something real in them. The same rules as the grain above: what was carted from a
+// paddock is what arrived in the yard, what was ginned left the yard, and what a contract was delivered is on its
+// invoice. The cotton and hay figures come out of the app's own functions where there is one (the gin invoice, the
+// invoice lines and totals), so the sample agrees with the screens.
+// ---------------------------------------------------------------------------
+
+const r3 = (v) => Math.round(v * 1000) / 1000;
+const STD = 227;
+
+// --- cotton: modules picked, carted to a gin yard, ginned and sold in bales ---
+const cottonPickedNorth = [
+  { id: 'pk-n1', date: '2026-04-06', count: 130, kg: 312000, turnoutPct: 43, estBales: r3((312000 * 0.43) / STD) },
+  { id: 'pk-n2', date: '2026-04-11', count: 170, kg: 408000, turnoutPct: 43, estBales: r3((408000 * 0.43) / STD) },
+  { id: 'pk-n3', date: '2026-04-19', count: 60, kg: 144000, turnoutPct: 42, estBales: r3((144000 * 0.42) / STD) },
+];
+const cottonPickedSouth = [
+  { id: 'pk-s1', date: '2026-04-14', count: 90, kg: 216000, turnoutPct: 43, estBales: r3((216000 * 0.43) / STD) },
+  { id: 'pk-s2', date: '2026-04-22', count: 60, kg: 144000, turnoutPct: 43, estBales: r3((144000 * 0.43) / STD) },
+];
+fields.find((f) => f.id === 'fld-cotton1').modulesPicked = cottonPickedNorth;
+fields.find((f) => f.id === 'fld-cotton2').modulesPicked = cottonPickedSouth;
+
+const YARD = 'gin-yard';
+// three weighed loads of 100 modules from Cotton North, and one estimated load of 40 from Cotton South still on its way
+const cottonLoads = [
+  ['fld-cotton1', '2026-04-23', 100, 238500, true],
+  ['fld-cotton1', '2026-04-25', 100, 241200, true],
+  ['fld-cotton1', '2026-04-27', 100, 236300, true],
+  ['fld-cotton2', '2026-04-28', 40, 0, false],
+];
+for (const [fieldId, date, count, kg, final] of cottonLoads) {
+  const useKg = kg || count * 2400;
+  const estBales = r3((useKg * 0.43) / STD);
+  movements.push({
+    id: `mv-${ticket}`, ticketNo: ticket, date, commodityId: 'cotton', status: 'closed',
+    truckRego: TRUCKS[ticket % TRUCKS.length], driver: DRIVERS[ticket % DRIVERS.length],
+    tons: estBales, weightStatus: final ? 'final' : 'estimate',
+    froms: [{ type: 'field', id: fieldId, tons: estBales }],
+    tos: [{ type: 'silo', id: YARD, tons: count }],
+    notes: 'Modules',
+    modules: { count, kg, turnoutPct: 43, estBales },
+  });
+  ticket += 1;
+}
+
+// the run: 300 modules in, 1,340 bales out, to two contracts and to the bale shed
+const run = {
+  ginName: 'Bimbi Ginning', invoiceNo: 'I021/26', modules: 300, moduleKg: 716000, physicalBales: 1340, lintKg: 306000, seedKg: 331000,
+  stdBaleKg: STD, baleFrom: 'KG100001', baleTo: 'KG101340', ginRate: 75, researchLevy: 2.25, voluntaryLevy: 1.5, gstOnGin: true, paidBy: 'buyer',
+  allocations: [
+    { to: 'sale:sale-ct1', baleFrom: 'KG100001', baleTo: 'KG100597', bales: 597, kg: 136000, location: '' },
+    { to: 'sale:sale-ct2', baleFrom: 'KG100598', baleTo: 'KG101000', bales: 403, kg: 91500, location: '' },
+    { to: 'silo:bale-shed', baleFrom: 'KG101001', baleTo: 'KG101340', bales: 340, kg: 78500, location: 'Shed bay 2' },
+  ],
+};
+const ginRun = cleanGin(run);
+const lots = allocateLint(ginRun);
+const ginMovement = {
+  id: `mv-${ticket}`, ticketNo: ticket, date: '2026-05-02', commodityId: 'cotton', status: 'closed',
+  truckRego: '', driver: '', tons: r3(lots.reduce((s, a) => s + a.std, 0)), weightStatus: 'final',
+  froms: [{ type: 'silo', id: YARD, tons: 300 }],
+  tos: lots.map((a) => { const [type, ...rest] = a.to.split(':'); return { type, id: rest.join(':'), tons: r3(a.std) }; }),
+  notes: 'Ginning', gin: ginRun,
+};
+movements.push(ginMovement);
+ticket += 1;
+
+// --- hay: lucerne baled in the paddock, stored, sold by the tonne, and used on the farm; wheat straw baled behind the header ---
+const baled = (id, date, label, bales, baleKg, commodityId) => ({ id, date, label, bales, kg: bales * baleKg, ...(commodityId ? { commodityId } : {}) });
+fields.find((f) => f.id === 'fld-lucerne').balesBaled = [
+  baled('bb-l1', '2026-10-20', 'Cut 1', 260, 480), baled('bb-l2', '2026-11-25', 'Cut 2', 240, 480), baled('bb-l3', '2026-12-18', 'Cut 3', 220, 480),
+];
+fields.find((f) => f.id === 'fld-boundary').balesBaled = [baled('bb-w1', '2026-11-26', 'Behind the header', 160, 520, 'wheatstraw')];
+fields.find((f) => f.id === 'fld-river').balesBaled = [baled('bb-w2', '2026-11-28', 'Behind the header', 120, 520, 'wheatstraw')];
+
+const hayMove = (date, fromType, fromId, toLegs, commodityId, bales, baleKg, extra = {}) => {
+  const tons = r3((bales * baleKg) / 1000);
+  const m = {
+    id: `mv-${ticket}`, ticketNo: ticket, date, commodityId, status: 'closed',
+    truckRego: TRUCKS[ticket % TRUCKS.length], driver: DRIVERS[ticket % DRIVERS.length],
+    tons, weightStatus: 'final',
+    froms: [{ type: fromType, id: fromId, tons }],
+    tos: toLegs.map((l) => ({ ...l, tons })),
+    notes: '', hayLoad: { bales, kg: Math.round(tons * 1000), ...(extra.use ? { use: extra.use } : {}) },
+  };
+  movements.push(m);
+  ticket += 1;
+  return m;
+};
+for (const d of ['2026-10-24', '2026-10-26', '2026-11-28', '2026-11-30', '2026-12-02']) hayMove(d, 'field', 'fld-lucerne', [{ type: 'silo', id: 'hay-shed-1' }], 'lucerne', 80, 480);
+const hayLoads = [
+  hayMove('2026-12-08', 'silo', 'hay-shed-1', [{ type: 'sale', id: 'sale-hay1' }], 'lucerne', 60, 480),
+  hayMove('2026-12-10', 'silo', 'hay-shed-1', [{ type: 'sale', id: 'sale-hay1' }], 'lucerne', 60, 480),
+];
+const fed = hayMove('2026-12-12', 'silo', 'hay-shed-1', [], 'lucerne', 40, 480, { use: 'Fed to cattle' });
+for (const d of ['2026-11-29', '2026-12-01']) hayMove(d, 'field', 'fld-boundary', [{ type: 'silo', id: 'hay-shed-2' }], 'wheatstraw', 70, 520);
+hayMove('2026-11-30', 'field', 'fld-river', [{ type: 'silo', id: 'hay-shed-2' }], 'wheatstraw', 100, 520);
+const strawLoad = hayMove('2026-12-14', 'silo', 'hay-shed-2', [{ type: 'sale', id: 'sale-hay2' }], 'wheatstraw', 60, 520);
+sales.find((s) => s.id === 'sale-hay1').tonsDelivered = r3(hayLoads.reduce((s, m) => s + m.tons, 0));
+sales.find((s) => s.id === 'sale-hay2').tonsDelivered = strawLoad.tons;
+sales.find((s) => s.id === 'sale-ct1').tonsDelivered = r3(lots[0].std);
+sales.find((s) => s.id === 'sale-ct2').tonsDelivered = r3(lots[1].std);
+
+// invoices, built by the app's own functions so the totals agree with what the screens work out
+const buildInvoice = (base, sale, movs, extraLines = []) => {
+  const lines = [...invoiceLineItems(sale, movs, {}), ...extraLines];
+  const totals = invoiceTotals(sale, lines);
+  const gin = totals.ginTotal || 0;
+  return {
+    ...base, saleId: sale.id,
+    totalTons: round(lines.reduce((s, l) => s + (Number(l.tons) || 0), 0), 3),
+    subtotalExGST: round(totals.subtotalExGST, 2), freightTotal: round(totals.freightTotal, 2), levies: round(totals.levies, 2),
+    gst: round(totals.gst, 2), totalPayable: round(totals.subtotalExGST + totals.gst - totals.levies - totals.freightTotal - gin, 2),
+    lines,
+  };
+};
+const ctSale = sales.find((s) => s.id === 'sale-ct1');
+const prepaid = ginPrepaid(ctSale, [ginMovement]).map((p) => ({
+  date: p.date || ctSale.date, rego: '—', tons: null, movementId: null, rate: null, subtotal: 0, isGinPrepaid: true, ginRunId: p.movementId,
+  description: `${p.ginName || 'Ginning'} invoice ${p.invoiceNo || ''}`.trim(), ginning: p.ginning, levies: p.levies, gst: p.gst, amount: p.total,
+}));
+const pdUsd = -1642.35;
+const pdRate = 0.6609;
+const pdAud = round(pdUsd / pdRate, 2);
+invoices.push(buildInvoice({ id: 'inv-3', invoiceNo: 3, issueDate: '2026-05-08', dueDate: '2026-05-22', status: 'outstanding' }, ctSale, [ginMovement], [
+  { date: ctSale.date, rego: 'Classing P&D', tons: null, movementId: null, rate: null, subtotal: pdAud, description: 'Classing premiums and discounts', isCustom: true, foreign: { usd: pdUsd, rate: pdRate } },
+  ...prepaid,
+]));
+invoices.push(buildInvoice({ id: 'inv-4', invoiceNo: 4, issueDate: '2026-12-16', dueDate: '2027-01-15', status: 'outstanding' },
+  sales.find((s) => s.id === 'sale-hay1'), hayLoads));
+
+// Bills, inputs and a spray request, so Payables, Inputs and stock and Spray requests are not empty either.
+const payables = [
+  { id: 'pay-1', kind: 'brokerage', supplier: 'Sample Grain Brokers', reference: 'BR-0231', invoiceDate: '2026-12-19', dueDate: '2027-01-18', amount: 1824, gst: 182.4, saleId: 'sale-1', storageId: '', tons: '', rate: '', status: 'unpaid', paidDate: '', notes: '' },
+  { id: 'pay-2', kind: 'freight', supplier: 'Ace Haulage', reference: 'AH-5530', invoiceDate: '2026-12-05', dueDate: '2026-12-19', amount: 1290, gst: 129, saleId: 'sale-1', storageId: '', tons: 60, rate: 21.5, status: 'paid', paidDate: '2026-12-17', notes: '' },
+  { id: 'pay-3', kind: 'storage', supplier: 'Newbridge Storage Co', reference: 'NS-118', invoiceDate: '2026-12-10', dueDate: '2027-01-09', amount: 960, gst: 96, saleId: '', storageId: 'bunker-1', tons: 320, rate: 3, status: 'unpaid', paidDate: '', notes: 'Wheat, December' },
+  { id: 'pay-4', kind: 'other', supplier: 'Sample Ag Services', reference: 'AS-2204', invoiceDate: '2026-11-22', dueDate: '2026-12-22', amount: 540, gst: 54, saleId: '', storageId: '', tons: '', rate: '', status: 'unpaid', paidDate: '', notes: 'Weighbridge calibration' },
+];
+const inputStock = [
+  { id: 'in-1', kind: 'seed', product: 'Scepter wheat', unit: 't', type: 'buy', qty: 14.7, unitCost: 640, date: '2026-05-02', supplier: 'Sample Seeds', reference: 'SS-8801', notes: '', location: 'Machinery shed' },
+  { id: 'in-2', kind: 'seed', product: 'Scepter wheat', unit: 't', type: 'use', qty: 14.1, unitCost: '', date: '2026-05-20', supplier: '', reference: '', notes: 'Sown', location: 'Machinery shed' },
+  { id: 'in-3', kind: 'fert', product: 'Urea', unit: 't', type: 'buy', qty: 75, unitCost: 690, date: '2026-04-28', supplier: 'Sample Ag Supplies', reference: 'AG-4417', notes: '', location: 'Fert shed' },
+  { id: 'in-4', kind: 'fert', product: 'Urea', unit: 't', type: 'use', qty: 68, unitCost: '', date: '2026-06-02', supplier: '', reference: '', notes: 'Spread', location: 'Fert shed' },
+  { id: 'in-5', kind: 'fert', product: 'Urea', unit: 't', type: 'adjust', qty: -0.5, unitCost: '', date: '2026-09-01', supplier: '', reference: '', notes: 'Stocktake', location: 'Fert shed' },
+  { id: 'in-6', kind: 'fuel', product: 'Diesel', unit: 'L', type: 'buy', qty: 20000, unitCost: 1.78, date: '2026-05-10', supplier: 'Sample Fuels', reference: 'SF-3321', notes: '', location: 'Farm tank' },
+  { id: 'in-7', kind: 'fuel', product: 'Diesel', unit: 'L', type: 'use', qty: 13400, unitCost: '', date: '2026-10-30', supplier: '', reference: '', notes: 'Season to date', location: 'Farm tank' },
+  { id: 'in-8', kind: 'chem', product: 'Glyphosate 450', unit: 'L', type: 'buy', qty: 1200, unitCost: 6.2, date: '2026-07-06', supplier: 'Sample Ag Supplies', reference: 'AG-4630', notes: '', location: 'Chemical shed' },
+  { id: 'in-9', kind: 'chem', product: 'Glyphosate 450', unit: 'L', type: 'use', qty: 900, unitCost: '', date: '2026-08-12', supplier: '', reference: '', notes: 'Fallow spray', location: 'Chemical shed' },
+];
+const sprayJobs = [(() => {
+  const job = sprayDefaults({
+    business: { entityName: 'Kurrajong Downs Pty Ltd', farmName: 'Kurrajong Downs', address: 'Sample address', contactName: 'Sample User' },
+    paddocks: ['fld-boundary', 'fld-river', 'fld-long'].map((id) => { const f = fields.find((q) => q.id === id); return { id, name: f.name, areaHa: f.areaHa, crop: 'Wheat', farm: f.property }; }),
+    today: '2026-08-10', jobs: [], form: 'standard',
+  });
+  return { id: 'spray-1', ...job, contractor: 'Sample Aerial Spraying', contractorEmail: '', status: 'sent', dateRequired: '2026-08-14',
+    chemicals: [{ name: 'Glyphosate 450', rate: 1.5, unit: 'L' }], waterRate: 80 };
+})()];
+
 const SEASON = 'Sample 2026';
 
 // ---------------------------------------------------------------------------
@@ -367,7 +579,7 @@ const pastSeason = (h) => {
     const c = commodities.find((q) => q.id === cid);
     return { ...c, id: `${cid}-${tag}`, mtmPrice: 0 };
   });
-  const pastFields = fields.map((f) => {
+  const pastFields = fields.filter((f) => h.crops[f.id]).map((f) => {
     const cid = h.crops[f.id];
     const c = commodities.find((q) => q.id === cid);
     const yieldTHa = round(c.defaultYieldTHa * h.yieldFactor * (0.9 + histRnd() * 0.2), 2);
@@ -435,7 +647,7 @@ const state = {
   currentYear: SEASON,
   years: {
     [SEASON]: {
-      commodities, fields, storages, sales, movements, invoices, orders, freightOrders,
+      commodities, fields, storages, sales, movements, invoices, orders, freightOrders, payables, inputStock, sprayJobs,
       overheads: {
         finance: 186000, equipmentRepayments: 214000, depreciation: 168000,
         wages: 152000, drawings: 120000, admin: 34000, energy: 46000,
@@ -457,7 +669,7 @@ const state = {
     bankName: '', accountName: '', bsb: '', accountNumber: '',
   },
   nextMovementNo: ticket,
-  nextInvoiceNo: 3,
+  nextInvoiceNo: 5,
 };
 
 mkdirSync(join(ROOT, 'docs', 'demo'), { recursive: true });

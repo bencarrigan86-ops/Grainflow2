@@ -22,7 +22,7 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { prepareImport, isUuid, remapIds } from '../docs/js/import.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
-import { sampleStateFor, sampleHistoryFrom, sampleHistoryOffered } from '../docs/js/demo.js';
+import { sampleStateFor, sampleHistoryFrom, sampleHistoryOffered, sampleCottonHayFrom, sampleCottonHayOffered } from '../docs/js/demo.js';
 import { ringsAreaHa, matchBoundaries } from '../docs/js/farmmap.js';
 
 const raw = readFileSync(new URL('../docs/demo/seed.json', import.meta.url), 'utf8');
@@ -194,6 +194,8 @@ console.log('\n=== the numbers agree with each other ===');
 
 check('every load balances: what left equals what arrived', () => {
   for (const m of season.movements) {
+    // module loads and ginning runs count modules and bales on one side, so they balance by their own rules (the ginning tests)
+    if (m.modules || m.gin || (m.hayLoad && m.hayLoad.use)) continue; // used on the farm has no destination leg
     const from = m.froms.reduce((s, l) => s + l.tons, 0);
     const to = m.tos.reduce((s, l) => s + l.tons, 0);
     assert.ok(Math.abs(from - m.tons) < 0.05, `ticket ${m.ticketNo}: froms ${from} vs ${m.tons}`);
@@ -218,6 +220,8 @@ check('nothing is delivered against a contract that was never grown', () => {
   const grown = new Map();
   for (const f of season.fields) {
     grown.set(f.commodityId, (grown.get(f.commodityId) || 0) + f.areaHa * f.yieldTHa);
+    // straw baled off a crop paddock is its own commodity, counted by the weight of the bales
+    for (const b of f.balesBaled || []) if (b.commodityId) grown.set(b.commodityId, (grown.get(b.commodityId) || 0) + (b.kg || 0) / 1000);
   }
   const delivered = new Map();
   for (const m of season.movements) {
@@ -335,10 +339,10 @@ check('the same paddocks appear every season, in a rotation rather than the same
   };
   for (const label of earlier) {
     const y = seed.years[label];
-    assert.deepEqual(y.fields.map((f) => f.name).sort(), season.fields.map((f) => f.name).sort(), `${label} paddocks differ`);
+    assert.deepEqual(y.fields.map((f) => f.name).sort(), season.fields.filter((f) => !['cotton', 'lucerne'].includes(f.commodityId)).map((f) => f.name).sort(), `${label} paddocks differ`);
     // each season against the one after it, not against this season: wheat two years apart is a rotation
     const next = label === 'Sample 2025' ? season : seed.years['Sample 2025'];
-    const same = next.fields.filter((f) => cropOf(y, f.name) === cropOf(next, f.name)).length;
+    const same = next.fields.filter((f) => !['cotton', 'lucerne'].includes(f.commodityId)).filter((f) => cropOf(y, f.name) === cropOf(next, f.name)).length;
     assert.equal(same, 0, `${label}: ${same} paddock(s) grew the same crop two seasons running`);
   }
 });
@@ -398,5 +402,64 @@ check('Settings has the button, and the db keeps what it adds under a season id 
 });
 
 console.log('');
+console.log('\n=== cotton and hay added to a sample farm made without them ===');
+
+// a farm as the sample was before cotton and hay: the seed's own grain records, under their own ids
+const OURS = ['cotton', 'lucerne', 'wheatstraw'];
+const oldFarm = {
+  commodities: season.commodities.filter((c) => !OURS.includes(c.id)),
+  fields: season.fields.filter((f) => !OURS.includes(f.commodityId)),
+};
+const pack = sampleCottonHayFrom(seed, { fields: oldFarm.fields });
+
+check('it is offered to the owner of a sample farm with no cotton or hay, and then not again', () => {
+  assert.equal(sampleCottonHayOffered(oldFarm.commodities, 'Sample 2026', 'owner'), true);
+  assert.equal(sampleCottonHayOffered(oldFarm.commodities, 'Sample 2026', 'manager'), true);
+  assert.equal(sampleCottonHayOffered(oldFarm.commodities, 'Sample 2026', 'viewer'), false);
+  assert.equal(sampleCottonHayOffered(oldFarm.commodities, '2026 Season', 'owner'), false);
+  assert.equal(sampleCottonHayOffered([...oldFarm.commodities, ...pack.commodities], 'Sample 2026', 'owner'), false);
+});
+check('it brings the cotton and hay paddocks, stores, contracts, loads and the two invoices', () => {
+  assert.equal(pack.commodities.length, 3);
+  assert.equal(pack.fields.length, 3);
+  assert.equal(pack.storages.length, 4);
+  assert.equal(pack.sales.length, 4);
+  assert.equal(pack.invoices.length, 2);
+  assert.ok(pack.movements.some((m) => m.gin) && pack.movements.some((m) => m.modules) && pack.movements.some((m) => m.hayLoad));
+  assert.ok(pack.payables.length && pack.inputStock.length && pack.sprayJobs.length);
+});
+check('every id is a UUID and none is one the farm already has', () => {
+  const all = [...pack.commodities, ...pack.fields, ...pack.storages, ...pack.sales, ...pack.movements, ...pack.invoices, ...pack.payables, ...pack.inputStock, ...pack.sprayJobs].map((r) => r.id);
+  assert.ok(all.every(isUuid), 'an id is not a UUID');
+  assert.equal(new Set(all).size, all.length, 'an id repeats');
+  const farmIds = new Set([...oldFarm.commodities, ...oldFarm.fields].map((r) => r.id));
+  assert.ok(all.every((id) => !farmIds.has(id)));
+});
+check('every reference points at something that comes with it, or at the farm\'s own paddock', () => {
+  const have = new Set([...pack.commodities, ...pack.fields, ...pack.storages, ...pack.sales, ...pack.movements].map((r) => r.id));
+  const farmFields = new Set(oldFarm.fields.map((f) => f.id));
+  for (const m of pack.movements) {
+    assert.ok(have.has(m.commodityId), `ticket ${m.ticketNo} commodity`);
+    for (const l of [...m.froms, ...m.tos]) assert.ok(have.has(l.id) || (l.type === 'field' && farmFields.has(l.id)), `ticket ${m.ticketNo} leg`);
+    for (const a of m.gin?.allocations || []) assert.ok(have.has(a.to.split(':')[1]), 'a ginning lot goes nowhere');
+  }
+  for (const i of pack.invoices) {
+    assert.ok(have.has(i.saleId));
+    for (const l of i.lines) { if (l.movementId) assert.ok(have.has(l.movementId)); if (l.ginRunId) assert.ok(have.has(l.ginRunId)); }
+  }
+  for (const s of pack.strawBaled) assert.ok(farmFields.has(s.fieldId) && s.baled.every((b) => have.has(b.commodityId)));
+  assert.ok(pack.strawBaled.length >= 2);
+  for (const j of pack.sprayJobs) assert.ok(j.paddocks.length && j.paddocks.every((p) => farmFields.has(p.id)));
+});
+check('a farm with none of the paddocks keeps the straw loads out, and one with bills keeps its own', () => {
+  const bare = sampleCottonHayFrom(seed, { fields: [], payables: [{ id: 'x' }], inputStock: [{ id: 'y' }], sprayJobs: [{ id: 'z' }] });
+  assert.ok(!bare.movements.some((m) => m.commodityId === bare.commodities.find((c) => c.name === 'Wheat straw').id && m.froms.some((l) => l.type === 'field')));
+  assert.deepEqual([bare.payables.length, bare.inputStock.length, bare.sprayJobs.length, bare.strawBaled.length], [0, 0, 0, 0]);
+});
+check('a seed without cotton and hay gives nothing', () => {
+  assert.equal(sampleCottonHayFrom({ currentYear: 'x', years: { x: { commodities: [], fields: [] } } }, {}), null);
+});
+
+
 if (failures) { console.log(`${failures} FAILURES`); process.exit(1); }
 console.log('ALL PASS');

@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=370';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=370';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=370';
-import { addressLinesOf } from '../address.js?v=370';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=370';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=370';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=370';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=370';
-import { docBandHTML } from '../docband.js?v=370';
-import { deductionNotes } from '../deductions.js?v=370';
-import { ginPrepaid } from '../ginning.js?v=370';
-import { cottonInvoiceModel } from '../cottoninvoice.js?v=370';
-import { openMovementSheet } from './movements.js?v=370';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=370';
+import { db } from '../storage.js?v=371';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=371';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=371';
+import { addressLinesOf } from '../address.js?v=371';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=371';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=371';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=371';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=371';
+import { docBandHTML } from '../docband.js?v=371';
+import { deductionNotes } from '../deductions.js?v=371';
+import { ginPrepaid } from '../ginning.js?v=371';
+import { cottonInvoiceModel } from '../cottoninvoice.js?v=371';
+import { openMovementSheet } from './movements.js?v=371';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=371';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -94,6 +94,9 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
   const existingManual = (existingInvoice?.lines || []).find((l) => l.isManual);
   const existingCustoms = (existingInvoice?.lines || []).filter((l) => l.isCustom);
   const isCotton = db.get().commodities.find((c) => c.id === sale.commodityId)?.unit === 'bale';
+  // premiums and discounts on a cotton contract are often in US$ and converted at the rate on the day: this invoice's rate, else the last invoice's
+  const lastFx = (list) => (list || []).filter(Boolean).map((i) => (i.lines || []).find((l) => l.foreign?.rate)?.foreign?.rate).find((r) => r > 0) || 0;
+  const startFx = isCotton ? (lastFx([existingInvoice]) || (existingInvoice ? 0 : lastFx(db.getInvoicesForSale(sale.id)))) : 0;
   // adjustment notes applied to this invoice: lines of their own, kept as they are, whose amounts go on top of the totals
   const adjustmentLines = (existingInvoice?.lines || []).filter((l) => l.isAdjustmentLine);
 
@@ -107,6 +110,10 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
       <div class="field">
         <label>${isCotton ? 'Premiums and discounts' : 'Custom items (premium / deduction)'}</label>
         ${isCotton ? '<div class="hint" style="margin-bottom:6px">From the merchant classing statement. Give a bale range or a note, then either the total, or the bales and the $ a bale (a discount is negative).</div>' : ''}
+        ${isCotton ? `<div class="grid-2" style="margin-bottom:6px">
+          <select id="ci-ccy" aria-label="Currency the premiums and discounts are in"><option value="aud" ${startFx ? '' : 'selected'}>Entered in A$</option><option value="usd" ${startFx ? 'selected' : ''}>Entered in US$</option></select>
+          <input type="number" step="0.0001" id="ci-fx" placeholder="US$ for A$1, e.g. 0.6609" aria-label="Exchange rate, US dollars for one Australian dollar" value="${startFx || ''}" style="${startFx ? '' : 'display:none'}" />
+        </div>` : ''}
         <div id="custom-items"></div>
         <button type="button" class="btn secondary small" id="add-custom-item" style="margin-top:6px">${isCotton ? '+ Add premium or discount' : '+ Add custom item'}</button>
       </div>
@@ -126,8 +133,11 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
     const customContainer = root.querySelector('#custom-items');
     // a cotton premium or discount with a $ a bale and no bale count is worked on all the standard bales on this invoice
     const invoiceBales = () => buildLines().filter((l) => l.movementId && l.tons != null).reduce((s, l) => s + (Number(l.tons) || 0), 0);
-    const cottonOpts = isCotton ? { cotton: true, defaultBales: () => invoiceBales() } : null;
+    const money$ = () => ({ usd: isCotton && getVal(root, 'ci-ccy') === 'usd', rate: getNum(root, 'ci-fx') });
+    const cottonOpts = isCotton ? { cotton: true, defaultBales: () => invoiceBales(), currency: money$ } : null;
     existingCustoms.forEach((c) => addCustomItemRow(customContainer, recomputeTotals, c, cottonOpts));
+    root.querySelector('#ci-ccy')?.addEventListener('change', () => { root.querySelector('#ci-fx').style.display = getVal(root, 'ci-ccy') === 'usd' ? '' : 'none'; recomputeTotals(); });
+    root.querySelector('#ci-fx')?.addEventListener('input', () => recomputeTotals());
     root.querySelector('#add-custom-item').addEventListener('click', () => addCustomItemRow(customContainer, recomputeTotals, null, cottonOpts));
 
     // One row a load: tick it on or off, set its freight, or open the load itself to correct it (a quality figure, a typo in the
@@ -192,9 +202,14 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
       if (manualTons > 0) {
         lines.push({ date: sale.date, rego: '—', tons: manualTons, movementId: null, basePrice: Number(sale.price) || 0, adjust: Number(sale.premiumDiscount) || 0, rate, subtotal: manualTons * rate, freightRate: freightOnInvoice(sale) ? Number(sale.freight) || 0 : 0, freight: freightOnInvoice(sale) ? manualTons * (Number(sale.freight) || 0) : 0, isManual: true });
       }
+      const cur = isCotton ? money$() : { usd: false, rate: 0 };
       readCustomItems(customContainer).forEach((item) => {
         if (item.amount === 0) return;
-        lines.push({ date: sale.date, rego: item.description || 'Adjustment', tons: null, movementId: null, rate: null, subtotal: item.amount, description: item.description, isCustom: true,
+        // in US$ the line is worked out in A$ at the rate, and keeps the US$ figure to show on the invoice
+        const aud = cur.usd ? (cur.rate > 0 ? Math.round((item.amount / cur.rate) * 100) / 100 : 0) : item.amount;
+        if (cur.usd && !(cur.rate > 0)) return;
+        lines.push({ date: sale.date, rego: item.description || 'Adjustment', tons: null, movementId: null, rate: null, subtotal: aud, description: item.description, isCustom: true,
+          ...(cur.usd ? { foreign: { usd: item.amount, rate: cur.rate } } : {}),
           ...(item.perBale ? { perBale: item.perBale, ...(item.bales ? { bales: item.bales } : {}) } : {}) });
       });
       // a cotton buyer that pays the gin takes each prepaid gin invoice off the total due: one line for each run on this invoice
@@ -287,7 +302,7 @@ function addCustomItemRow(container, onChange, existing, cottonOpts = null) {
       <div class="ci-cotton" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
         <input type="number" step="1" class="ci-bales" placeholder="Bales" aria-label="Standard bales" value="${existing?.bales || ''}" />
         <input type="number" step="0.01" class="ci-perbale" placeholder="$ a bale (+/-)" aria-label="Dollars a bale" value="${existing?.perBale || ''}" />
-        <input type="number" step="0.01" class="ci-amount" placeholder="Total (+/-)" aria-label="Total" value="${existing ? existing.subtotal : ''}" />
+        <input type="number" step="0.01" class="ci-amount" placeholder="Total (+/-)" aria-label="Total" value="${existing ? (existing.foreign ? existing.foreign.usd : existing.subtotal) : ''}" />
       </div>
       <div class="hint ci-note" style="margin-top:4px"></div>`;
     container.appendChild(row);
@@ -298,7 +313,8 @@ function addCustomItemRow(container, onChange, existing, cottonOpts = null) {
       const note = row.querySelector('.ci-note');
       if (perBale) {
         amount.value = (Math.round(perBale * bales * 100) / 100).toFixed(2);
-        note.textContent = `${num(bales, 2)} bales at ${money(perBale, 2)} a bale${row.querySelector('.ci-bales').value ? '' : ' (all the bales on this invoice)'}`;
+        const usd = cottonOpts.currency?.().usd;
+        note.textContent = `${num(bales, 2)} bales at ${usd ? 'US' : ''}${money(perBale, 2)} a bale${row.querySelector('.ci-bales').value ? '' : ' (all the bales on this invoice)'}`;
       } else note.textContent = '';
     };
     row.querySelector('.ci-bales').addEventListener('input', () => { work(); onChange(); });
@@ -399,8 +415,8 @@ function cottonInvoiceDocHTML(sale, invoice, business, commodity, signed = null)
       ${m.premiums.length || m.adjustments.length ? `
       <h3 style="margin:14px 0 6px">Premiums and discounts</h3>
       <div class="table-scroll"><table>
-        <tbody>${[...m.premiums, ...m.adjustments].map((l) => `<tr><td>${esc(l.description || l.rego || 'Premium / discount')}${l.perBale ? `<small style="display:block;font-size:11.5px;color:var(--text-dim)">${l.bales ? `${num(l.bales, 2)} bales at ` : ''}${money(l.perBale, 2)} a bale</small>` : ''}</td><td>${money(l.subtotal, 2)}</td></tr>`).join('')}</tbody>
-        <tfoot><tr><td>Total premiums and discounts</td><td>${money(m.premiumTotal + m.adjustmentTotal, 2)}</td></tr></tfoot>
+        <tbody>${[...m.premiums, ...m.adjustments].map((l) => `<tr><td>${esc(l.description || l.rego || 'Premium / discount')}${l.perBale ? `<small style="display:block;font-size:11.5px;color:var(--text-dim)">${l.bales ? `${num(l.bales, 2)} bales at ` : ''}${l.foreign ? 'US' : ''}${money(l.perBale, 2)} a bale</small>` : ''}${l.foreign ? `<small style="display:block;font-size:11.5px;color:var(--text-dim)">US$ ${esc(num(l.foreign.usd, 2))}</small>` : ''}</td><td>${money(l.subtotal, 2)}</td></tr>`).join('')}</tbody>
+        <tfoot>${m.usdTotal != null ? `<tr><td>US$ ${esc(num(m.usdTotal, 2))} at an exchange rate of ${esc(String(m.fxRate))}</td><td></td></tr>` : ''}<tr><td>Total premiums and discounts</td><td>${money(m.premiumTotal + m.adjustmentTotal, 2)}</td></tr></tfoot>
       </table></div>` : ''}
       <div class="invoice-totals">
         ${row('Value nett of premiums and discounts', money(m.valueNett, 2))}

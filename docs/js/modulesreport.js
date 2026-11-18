@@ -2,9 +2,9 @@
 //
 // Pure functions over the farm's records. The screen (views/reports.js) and the PDF (modulespdf.js) both draw from this.
 
-import { hasGin, hasModules, cleanGin, stdBales, estimateBales, DEFAULT_TURNOUT } from './ginning.js?v=370';
-import { pickedTotals, cleanPicked } from './modulespicked.js?v=370';
-import { storageLedgerStock } from './derived.js?v=370';
+import { hasGin, hasModules, cleanGin, stdBales, estimateBales, DEFAULT_TURNOUT } from './ginning.js?v=371';
+import { pickedTotals, cleanPicked } from './modulespicked.js?v=371';
+import { storageLedgerStock } from './derived.js?v=371';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 

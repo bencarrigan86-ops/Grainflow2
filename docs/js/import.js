@@ -52,11 +52,17 @@ export function remapIds(input) {
     for (const i of year.invoices || []) i.id = idFor(i.id);
     for (const o of year.orders || []) o.id = idFor(o.id);
     for (const f of year.freightOrders || []) f.id = idFor(f.id);
+    for (const p of year.payables || []) p.id = idFor(p.id);
+    for (const m of year.inputStock || []) m.id = idFor(m.id);
+    for (const j of year.sprayJobs || []) j.id = idFor(j.id);
   }
 
   // Second pass for references, so every target already has its new id.
   for (const year of Object.values(state.years || {})) {
-    for (const f of year.fields || []) f.commodityId = idFor(f.commodityId);
+    for (const f of year.fields || []) {
+      f.commodityId = idFor(f.commodityId);
+      for (const b of f.balesBaled || []) if (b.commodityId) b.commodityId = idFor(b.commodityId);   // straw baled off a crop paddock
+    }
     for (const s of year.storages || []) s.commodityId = idFor(s.commodityId);
     for (const s of year.sales || []) s.commodityId = idFor(s.commodityId);
 
@@ -65,9 +71,20 @@ export function remapIds(input) {
       m.correctsId = idFor(m.correctsId);
       for (const leg of m.froms || []) leg.id = idFor(leg.id);
       for (const leg of m.tos || []) leg.id = idFor(leg.id);
+      // a ginning run points at its contracts and storages as 'sale:id' / 'silo:id'
+      if (m.gin) {
+        const ref = (v) => { const i = typeof v === 'string' ? v.indexOf(':') : -1; return i < 0 ? v : `${v.slice(0, i)}:${idFor(v.slice(i + 1))}`; };
+        for (const a of m.gin.allocations || []) a.to = ref(a.to);
+        if (m.gin.seedTo) m.gin.seedTo = ref(m.gin.seedTo);
+      }
     }
 
-    for (const i of year.invoices || []) i.saleId = idFor(i.saleId);
+    for (const i of year.invoices || []) {
+      i.saleId = idFor(i.saleId);
+      for (const l of i.lines || []) { if (l.movementId) l.movementId = idFor(l.movementId); if (l.ginRunId) l.ginRunId = idFor(l.ginRunId); }
+    }
+    for (const p of year.payables || []) { p.saleId = idFor(p.saleId); p.storageId = idFor(p.storageId); p.freightOrderId = idFor(p.freightOrderId); }
+    for (const j of year.sprayJobs || []) for (const p of j.paddocks || []) p.id = idFor(p.id);
     for (const o of year.orders || []) o.saleId = idFor(o.saleId);
     for (const f of year.freightOrders || []) { f.saleId = idFor(f.saleId); f.orderId = idFor(f.orderId); }
   }

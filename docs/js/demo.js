@@ -11,8 +11,8 @@
 // remapIds() reissues every one on import and two trial accounts never collide
 // on a primary key.
 
-import { DEFAULT_BUSINESS_DETAILS, prepareImport, newId } from './import.js?v=370';
-import { APP_VERSION } from './version.js?v=370';
+import { DEFAULT_BUSINESS_DETAILS, prepareImport, newId } from './import.js?v=371';
+import { APP_VERSION } from './version.js?v=371';
 
 const WANTED_KEY = 'grainflow.seedSample';
 
@@ -141,4 +141,100 @@ export async function fetchSampleFarm(farmName) {
   const res = await fetch(`./demo/seed.json?v=${APP_VERSION}`, { cache: 'no-cache' });
   if (!res.ok) throw new Error(`sample data unavailable (${res.status})`);
   return sampleStateFor(await res.text(), farmName);
+}
+
+// ---------------------------------------------------------------------------
+// Cotton and hay for a sample farm that was made before the sample grew any.
+// ---------------------------------------------------------------------------
+
+/** The commodities the cotton and hay part of the sample is built on. */
+const COTTON_HAY_NAMES = ['Cotton', 'Lucerne hay', 'Wheat straw'];
+const COTTON_HAY_IDS = ['cotton', 'lucerne', 'wheatstraw'];
+
+/** Is this the sample farm, with no cotton or hay in it yet? Offered to the owner and manager only. */
+export function sampleCottonHayOffered(commodities = [], currentYear = '', role = 'owner') {
+  return /^sample/i.test(currentYear || '') && ['owner', 'manager'].includes(role)
+    && !commodities.some((c) => COTTON_HAY_NAMES.includes(c.name));
+}
+
+/**
+ * The sample's cotton and hay, ready to add to a sample farm made before it had any: the three commodities, the cotton and
+ * lucerne paddocks, the gin yard, bale shed and hay sheds, the cotton and hay contracts, their loads (modules, the ginning
+ * run, bales of hay), the two invoices, and, if the farm has none, the bills, inputs and spray request that come with the
+ * sample. Every id is reissued, as for a new trial. The straw baled off wheat paddocks goes onto the farm's own paddocks of
+ * the same name, and a load from a paddock the farm does not have is left out.
+ * @param {object} seed the parsed seed file
+ * @param {{fields?: object[], payables?: object[], inputStock?: object[], sprayJobs?: object[]}} farm what the farm has now
+ * @returns {object|null} null when the seed carries no cotton or hay
+ */
+export function sampleCottonHayFrom(seed, farm = {}) {
+  const y = seed?.years?.[seed.currentYear] || Object.values(seed?.years || {})[0];
+  if (!y || !COTTON_HAY_IDS.every((id) => (y.commodities || []).some((c) => c.id === id))) return null;
+  const isOurs = (id) => COTTON_HAY_IDS.includes(id);
+  const own = {
+    commodities: y.commodities.filter((c) => isOurs(c.id)),
+    fields: y.fields.filter((f) => isOurs(f.commodityId)),
+    storages: y.storages.filter((s) => isOurs(s.commodityId)),
+    sales: y.sales.filter((s) => isOurs(s.commodityId)),
+    movements: y.movements.filter((m) => isOurs(m.commodityId)).sort((a, b) => a.ticketNo - b.ticketNo),
+  };
+  const ids = new Map();
+  for (const list of Object.values(own)) for (const r of list) ids.set(r.id, newId());
+  // the seed's wheat paddocks, matched to the farm's by name
+  const farmFieldByName = new Map((farm.fields || []).map((f) => [String(f.name).toLowerCase(), f.id]));
+  const seedFieldName = new Map(y.fields.map((f) => [f.id, String(f.name).toLowerCase()]));
+  const outside = (oldId) => farmFieldByName.get(seedFieldName.get(oldId)) || null;
+  const ref = (oldId) => (ids.has(oldId) ? ids.get(oldId) : null);
+  const refTyped = (v) => {
+    const i = typeof v === 'string' ? v.indexOf(':') : -1;
+    if (i < 0) return v;
+    const r = ref(v.slice(i + 1));
+    return r ? `${v.slice(0, i)}:${r}` : '';
+  };
+
+  const commodities = own.commodities.map((c) => ({ ...c, id: ids.get(c.id) }));
+  const fields = own.fields.map((f) => ({
+    ...f, id: ids.get(f.id), commodityId: ref(f.commodityId),
+    ...(f.boundary ? { __hasBoundary: true } : {}), ...(f.property ? { __hasProperty: true } : {}),
+    ...((f.modulesPicked || []).length ? { __hasModulesPicked: true } : {}), ...((f.balesBaled || []).length ? { __hasBalesBaled: true } : {}),
+  }));
+  const strawBaled = y.fields.filter((f) => !isOurs(f.commodityId) && (f.balesBaled || []).length)
+    .map((f) => ({ fieldId: outside(f.id), baled: f.balesBaled.map((b) => ({ ...b, ...(b.commodityId ? { commodityId: ref(b.commodityId) } : {}) })) }))
+    .filter((s) => s.fieldId);
+  const storages = own.storages.map((s) => ({ ...s, id: ids.get(s.id), commodityId: ref(s.commodityId) }));
+  const sales = own.sales.map((s) => ({ ...s, id: ids.get(s.id), commodityId: ref(s.commodityId) }));
+
+  const legOf = (leg) => {
+    if (ids.has(leg.id)) return { ...leg, id: ids.get(leg.id) };
+    if (leg.type === 'field' && outside(leg.id)) return { ...leg, id: outside(leg.id) };
+    return null;
+  };
+  const movements = [];
+  for (const m of own.movements) {
+    const froms = (m.froms || []).map(legOf);
+    const tos = (m.tos || []).map(legOf);
+    if (froms.includes(null) || tos.includes(null)) continue;   // a load from a paddock this farm does not have
+    movements.push({
+      ...m, id: ids.get(m.id), commodityId: ref(m.commodityId), froms, tos,
+      ...(m.gin ? { gin: { ...m.gin, allocations: (m.gin.allocations || []).map((a) => ({ ...a, to: refTyped(a.to) })), ...(m.gin.seedTo ? { seedTo: refTyped(m.gin.seedTo) } : {}) } } : {}),
+    });
+  }
+  const kept = new Set(movements.map((m) => m.id));
+  const invoices = (y.invoices || []).filter((i) => ids.has(i.saleId)).sort((a, b) => a.invoiceNo - b.invoiceNo).map((i) => ({
+    ...i, id: newId(), saleId: ref(i.saleId),
+    lines: (i.lines || []).map((l) => ({
+      ...l, ...(l.movementId ? { movementId: kept.has(ref(l.movementId)) ? ref(l.movementId) : null } : {}),
+      ...(l.ginRunId ? { ginRunId: ref(l.ginRunId) } : {}),
+    })),
+  }));
+
+  // bills, inputs and the spray request: only for a farm that has none, and with no link to a contract or silo it may not have
+  const none = (k) => !(farm[k] || []).length;
+  const payables = none('payables') ? (y.payables || []).map((p) => ({ ...p, id: newId(), saleId: '', storageId: '', freightOrderId: null })) : [];
+  const inputStock = none('inputStock') ? (y.inputStock || []).map((m) => ({ ...m, id: newId() })) : [];
+  const sprayJobs = none('sprayJobs') ? (y.sprayJobs || []).map((j) => ({
+    ...j, id: newId(),
+    paddocks: (j.paddocks || []).map((p) => ({ ...p, id: outside(p.id) })).filter((p) => p.id),
+  })).filter((j) => j.paddocks.length) : [];
+  return { commodities, fields, strawBaled, storages, sales, movements, invoices, payables, inputStock, sprayJobs };
 }

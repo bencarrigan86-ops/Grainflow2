@@ -7,11 +7,11 @@
 // One move is one truck load. The driver gives the number of modules and the weight is estimated from what was picked on the
 // paddock (its kilograms a module); when the load is weighed at the gin the weighbridge weight is typed over it and the load is final.
 
-import { db } from '../storage.js?v=370';
-import { num, esc, todayLocal } from '../fmt.js?v=370';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=370';
-import { cleanModules, estimateBales, describeModules, DEFAULT_TURNOUT } from '../ginning.js?v=370';
-import { pickedTotals, moduleEstimate, describeEstimate, avgModuleKg } from '../modulespicked.js?v=370';
+import { db } from '../storage.js?v=371';
+import { num, esc, todayLocal } from '../fmt.js?v=371';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=371';
+import { cleanModules, estimateBales, describeModules, DEFAULT_TURNOUT } from '../ginning.js?v=371';
+import { pickedTotals, moduleEstimate, describeEstimate, avgModuleKg } from '../modulespicked.js?v=371';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -98,10 +98,15 @@ export function openModuleMoveSheet(existing = null) {
         const n = getNum(root, 'mm-count');
         root.querySelector('#mm-kg').value = n > 0 ? Math.round(n * avgKg) : '';
       }
+      // the average weight of a module in this load, under the weight: what the weighbridge says, over the number of modules
+      const loadModules = getNum(root, 'mm-count');
+      const loadKg = getNum(root, 'mm-kg');
+      const loadAvg = loadModules > 0 && loadKg > 0 ? loadKg / loadModules : 0;
       root.querySelector('#mm-wstat').textContent = kgTyped
-        ? 'Weighed: this is the weighbridge weight.'
+        ? `Weighed: this is the weighbridge weight.${loadAvg > 0 ? ` Average ${num(loadAvg, 0)} kg a module${avgKg > 0 ? ` (the paddock averages ${num(avgKg, 0)} kg)` : ''}.` : ''}`
         : (avgKg > 0 ? `Estimated from ${num(avgKg, 0)} kg a module. Type the weighbridge weight over it when the load is weighed.`
-          : 'Type the weighbridge weight when the load is weighed. Log the modules picked on the paddock to have it estimated.');      if (!turnoutTyped) root.querySelector('#mm-turnout').value = fromId ? turnoutFor(fromId) : '';
+          : 'Type the weighbridge weight when the load is weighed. Log the modules picked on the paddock to have it estimated.');
+      if (!turnoutTyped) root.querySelector('#mm-turnout').value = fromId ? turnoutFor(fromId) : '';
       if (!balesTyped || source === 'kg' || source === 'turnout' || source === 'count' || source === 'from') {
         const b = estimateBales(getNum(root, 'mm-kg'), getNum(root, 'mm-turnout'));
         if (source !== 'bales') root.querySelector('#mm-bales').value = b > 0 ? round3(b) : '';

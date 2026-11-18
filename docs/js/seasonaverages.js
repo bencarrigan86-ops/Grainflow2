@@ -5,7 +5,7 @@
 // Price is the tonnes sold weighted: the contract price, and what was left per tonne after freight and levies.
 // Built from the seasons the farm already holds; nothing is entered. Pure.
 
-import { fieldTons, saleEconomics } from './derived.js?v=370';
+import { fieldTons, saleEconomics } from './derived.js?v=371';
 
 const key = (s) => String(s || '').trim().toLowerCase();
 const isFallow = (name) => /^fallow\b/i.test(String(name || '').trim());

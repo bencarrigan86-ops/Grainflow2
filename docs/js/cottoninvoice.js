@@ -47,6 +47,10 @@ export function cottonInvoiceModel(invoice) {
   const ranges = mergeBaleRanges(lots);
   const premiums = lines.filter((l) => l.isCustom && !l.isAdjustmentLine && num(l.subtotal) !== 0);
   const adjustments = lines.filter((l) => l.isAdjustmentLine);
+  // premiums and discounts entered in US$: the US$ total and the rate it was converted at, as the merchant shows them
+  const usdLines = premiums.filter((l) => l.foreign && num(l.foreign.rate) > 0);
+  const usdTotal = usdLines.length ? round2(usdLines.reduce((s, l) => s + num(l.foreign.usd), 0)) : null;
+  const fxRate = usdLines.length ? num(usdLines[0].foreign.rate) : null;
   const gin = lines.filter((l) => l.isGinPrepaid).map((l) => ({ description: l.description || 'Ginning invoice', amount: round2(num(l.amount)) }));
   const ginTotal = round2(gin.reduce((s, g) => s + g.amount, 0));
   const gross = round2(rows.reduce((s, r) => s + r.amount, 0));
@@ -58,7 +62,7 @@ export function cottonInvoiceModel(invoice) {
   return {
     rows, gross, ranges, physicalBales: ranges.reduce((s, r) => s + r.bales, 0) || loads.reduce((s, l) => s + num(l.bales), 0),
     stdBales: round2(rows.reduce((s, r) => s + r.bales, 0)),
-    premiums, premiumTotal, adjustments, adjustmentTotal,
+    premiums, premiumTotal, adjustments, adjustmentTotal, usdTotal, fxRate,
     valueNett: round2(num(invoice?.subtotalExGST)), levies, freight, gst: round2(num(invoice?.gst)),
     dueIncludingTax, gin, ginTotal, totalDue: round2(dueIncludingTax - ginTotal),
   };
