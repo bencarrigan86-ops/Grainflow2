@@ -4,12 +4,12 @@
 // grade spreads (protein spreads on wheat, for example): a $ a tonne above or below its price for each grade, kept week to week
 // until they are changed. The arithmetic is in pricehistory.js.
 
-import { db } from '../storage.js?v=398';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, toast } from '../ui.js?v=398';
-import { esc, money, todayLocal, dmy } from '../fmt.js?v=398';
+import { db } from '../storage.js?v=399';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, toast } from '../ui.js?v=399';
+import { esc, money, todayLocal, dmy } from '../fmt.js?v=399';
 import {
   seriesByCommodity, weekRows, changeOver, chartPoints, latestEntry, latestSpreads, weekStart, canSetPrices, WHEAT_GRADES, isWheat,
-} from '../pricehistory.js?v=398';
+} from '../pricehistory.js?v=399';
 
 let pickName = '';   // the commodity tab, kept while the app is open
 
