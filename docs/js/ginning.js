@@ -66,6 +66,8 @@ export function cleanGin(g) {
     // the contract with the gin this run was ginned under (gin for seed, or ginning only): the rates came from it
     ...(g.ginContract ? { ginContract: String(g.ginContract) } : {}),
     ...(g.payableId ? { payableId: String(g.payableId) } : {}),
+    // which contract's lint payment the gin charges come off, and how much of them: [{ saleId, ginning, levies, gst }] (see splitGinCharge)
+    ...(Array.isArray(g.ginSplit) ? { ginSplit: g.ginSplit.filter((s) => s && s.saleId).map((s) => ({ saleId: String(s.saleId), ginning: round2(num(s.ginning)), levies: round2(num(s.levies)), gst: round2(num(s.gst)) })) } : {}),
   };
 }
 
@@ -149,9 +151,12 @@ export function ginPrepaid(sale, movements) {
     const share = all > 0 ? Math.min(1, Math.round(std * 1000) / Math.round(all * 1000)) : 0;
     if (!(share > 0)) continue;
     const inv = ginInvoice(g);
-    const ginning = round2(inv.ginning * share);
-    const levies = round2(inv.levies * share);
-    const gst = round2(inv.gst * share);
+    // a run saved with its split says which contract pays it, and how much: one that does not (an older run) is shared by bales
+    const mine = Array.isArray(g.ginSplit) ? g.ginSplit.find((s) => s.saleId === sale?.id) : null;
+    if (Array.isArray(g.ginSplit) && !mine) continue;
+    const ginning = mine ? mine.ginning : round2(inv.ginning * share);
+    const levies = mine ? mine.levies : round2(inv.levies * share);
+    const gst = mine ? mine.gst : round2(inv.gst * share);
     out.push({ movementId: m.id, date: m.date || '', ginName: g.ginName, invoiceNo: g.invoiceNo, std, share, ginning, levies, gst, exGst: round2(ginning + levies), total: round2(ginning + levies + gst) });
   }
   return out;
@@ -205,6 +210,44 @@ export function contractShare(gin) {
   const all = lots.reduce((s, a) => s + a.std, 0);
   const sold = lots.filter((a) => String(a.to).startsWith('sale:')).reduce((s, a) => s + a.std, 0);
   return all > 0 ? Math.min(1, Math.round((sold / all) * 1e6) / 1e6) : 0;
+}
+
+/**
+ * Which lint contract pays the gin for a run the lint buyer pays. The first contract the lint goes to normally pays all of it, as
+ * long as the lint it gets from this run is worth enough to cover it; what it cannot cover goes to the next contract, and so on.
+ * Only the part of the run that goes to contracts is charged (the rest, in a store, is not on anyone's invoice). A contract with no
+ * price on it is taken to cover whatever is left.
+ *
+ * @param {object} gin  the run's gin
+ * @param {{id: string, price?: number}[]} sales  the contracts, to value the lint each gets
+ * @returns {{saleId: string, ginning: number, levies: number, gst: number, std: number}[]}
+ */
+export function splitGinCharge(gin, sales = []) {
+  const g = cleanGin(gin) || cleanGin({});
+  const inv = ginInvoice(g);
+  const part = contractShare(g);
+  const std = new Map();
+  for (const a of allocateLint(g)) {
+    if (!String(a.to).startsWith('sale:') || !(a.std > 0)) continue;
+    const id = String(a.to).slice(5);
+    std.set(id, (std.get(id) || 0) + a.std);
+  }
+  let ginning = round2(inv.ginning * part);
+  let levies = round2(inv.levies * part);
+  let gst = round2(inv.gst * part);
+  const out = [];
+  for (const [id, bales] of std) {
+    const left = round2(ginning + levies);
+    if (!(left > 0)) break;
+    const price = num((sales || []).find((s) => s.id === id)?.price);
+    const cap = price > 0 ? round2(bales * price) : Infinity;
+    const take = Math.min(left, cap);
+    const f = take >= left ? 1 : take / left;
+    const row = f === 1 ? { ginning, levies, gst } : { ginning: round2(ginning * f), levies: round2(levies * f), gst: round2(gst * f) };
+    out.push({ saleId: id, ...row, std: bales });
+    ginning = round2(ginning - row.ginning); levies = round2(levies - row.levies); gst = round2(gst - row.gst);
+  }
+  return out;
 }
 
 /** Things wrong with how a run's bales were allocated, in words; none when it adds up. */

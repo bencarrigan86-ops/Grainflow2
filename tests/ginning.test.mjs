@@ -5,7 +5,7 @@
 // I053/23 (90,273 kg of lint, 393 bales pressed): $65.00 a bale to gin, $2.25 research levy, GST on the ginning only.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems, cleanCotton, hasCotton, cottonComponents, cottonRunTotals, SEED_FACTOR_DEFAULT, ginPrepaid, lotsForSale, padOffBy, cleanModules, hasModules, moduleLegs, shareLoad, estimateBales, describeModules, DEFAULT_TURNOUT } from '../docs/js/ginning.js';
+import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction, splitGinCharge, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems, cleanCotton, hasCotton, cottonComponents, cottonRunTotals, SEED_FACTOR_DEFAULT, ginPrepaid, lotsForSale, padOffBy, cleanModules, hasModules, moduleLegs, shareLoad, estimateBales, describeModules, DEFAULT_TURNOUT } from '../docs/js/ginning.js';
 import { avgModuleKg } from '../docs/js/modulespicked.js';
 import { modulesReport, ginnedByField } from '../docs/js/modulesreport.js';
 import { modulesPdf } from '../docs/js/modulespdf.js';
@@ -736,6 +736,35 @@ check('the move sheet takes more than one paddock, as grain does, and saves each
   const s = read('docs/js/views/modulemove.js');
   assert.ok(s.includes('id="mm-add"') && s.includes('+ Add another paddock') && s.includes('shareLoad(rows, totalKg, estBales, avgKgFor)'));
   assert.ok(s.includes('fields: legs.map((l) => ({ id: l.id, count: l.count, kg: l.kg, bales: l.bales }))'));
+});
+
+check('split across contracts, the first pays all the ginning when its lint is worth enough, then the next', () => {
+  const g = { ...split, allocations: [lot('sale:s1', 'BG027234', 'BG027400'), lot('sale:s2', 'BG027401', 'BG027626')] };
+  const rich = splitGinCharge(g, [{ id: 's1', price: 300 }, { id: 's2', price: 300 }]);
+  assert.equal(rich.length, 1, 'the first covers it');
+  assert.equal(rich[0].saleId, 's1');
+  assert.ok(Math.abs(rich[0].ginning + rich[0].levies - 27340.40) < 0.02, 'the whole of the ginning and levies, ex GST');
+  assert.ok(Math.abs(rich[0].gst - ginInvoice(g).gst) < 0.02);
+  const poor = splitGinCharge(g, [{ id: 's1', price: 100 }, { id: 's2', price: 300 }]);
+  assert.equal(poor.length, 2);
+  const s1 = poor[0], s2 = poor[1];
+  assert.ok(Math.abs(s1.ginning + s1.levies - s1.std * 100) < 0.05, 'the first takes what its lint is worth');
+  assert.ok(Math.abs(s1.ginning + s1.levies + s2.ginning + s2.levies - 27340.40) < 0.02, 'and the next takes the rest');
+  assert.equal(splitGinCharge(g, []).length, 1, 'a contract with no price covers it');
+});
+check('a run saved with its split is charged to the contract that pays; one without is shared by bales as before', () => {
+  const g = { ...split, allocations: [lot('sale:s1', 'BG027234', 'BG027400'), lot('sale:s2', 'BG027401', 'BG027626')] };
+  const legs = allocateLint(g).map((a) => ({ type: 'sale', id: a.to.slice(5), tons: Math.round(a.std * 1000) / 1000 }));
+  const ginSplit = splitGinCharge(g, [{ id: 's1', price: 300 }, { id: 's2', price: 300 }]).map(({ saleId, ginning, levies, gst }) => ({ saleId, ginning, levies, gst }));
+  const m = { id: 'm1', date: '2026-05-18', tons: 397.678, froms: [], tos: legs, gin: { ...g, ginSplit } };
+  assert.ok(Math.abs(ginDeduction({ id: 's1' }, [m]).total - 27340.40) < 0.02, 'the first contract is charged all of it');
+  assert.equal(ginDeduction({ id: 's2' }, [m]).total, 0, 'the second is charged none');
+  assert.equal(cleanGin({ ...g, ginSplit }).ginSplit.length, 1, 'it is kept on the run');
+  assert.ok(!('ginSplit' in cleanGin(g)));
+});
+check('the ginning run sheet works out and saves the split, and says which contract pays', () => {
+  const v = read('docs/js/views/ginrun.js');
+  assert.ok(v.includes('splitGinCharge(g, data.sales)') && v.includes('g.ginSplit = split'));
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
