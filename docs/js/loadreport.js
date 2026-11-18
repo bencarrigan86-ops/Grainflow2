@@ -3,10 +3,10 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=404';
-import { drawBrandLogo } from './brand.js?v=404';
-import { dmy } from './fmt.js?v=404';
-import { SPECS, specOf } from './outload.js?v=404';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=405';
+import { drawBrandLogo } from './brand.js?v=405';
+import { dmy } from './fmt.js?v=405';
+import { SPECS, specOf } from './outload.js?v=405';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -36,6 +36,7 @@ export function testedOn(m) {
     key,
     label: key === 'fallingNumber' ? 'Falling no.' : label,
     text: `${Number(sp[key].toFixed(dp))}${unit === '%' ? '%' : ` ${unit}`}`,
+    value: String(Number(sp[key].toFixed(dp))),   // the number alone, for a column that already says the unit
   }));
 }
 
@@ -208,9 +209,27 @@ export function clipText(str, width, size = 9, bold = false) {
 const PAGE = { width: 841.89, height: 595.28 };   // A4 landscape
 const MARGIN = 36;
 
-/** The columns, left to right, with their widths; the going-to column takes up the slack. */
-export function reportColumns({ showOrigin = true, showCommodity = true, showDestination = false, showGrossTare = true, showGrade = false } = {}) {
-  const cols = [
+/** The short two-line heads of the quality columns: the name, then its unit. */
+const QUALITY_HEAD = {
+  proteinPct: ['Protein', '%'], moisturePct: ['Moist.', '%'], screeningsPct: ['Screen.', '%'], testWeightKgHl: ['Test wt', 'kg/hL'],
+  fallingNumber: ['Falling', 'no. (s)'], oilPct: ['Oil', '%'], ffaPct: ['FFA', '%'], retentionPct: ['Retent.', '%'],
+};
+
+/** Which quality measurements any of the loads has, in the usual order: a column is made for each of these and no others. */
+export function qualityKeys(rows) {
+  const have = new Set();
+  for (const r of rows || []) for (const q of r.quality || []) have.add(q.key);
+  return SPECS.map((x) => x.key).filter((k) => have.has(k));
+}
+
+/**
+ * The columns, left to right, with their widths; the going-to column takes up the slack. Each quality measurement in `quality`
+ * (keys from qualityKeys) is a narrow column of its own after the net weight, so a tested load is still one line. When the page
+ * would get too crowded for the going-to column, the gross and tare columns are dropped (the net stays), then the destination and from columns are narrowed.
+ */
+export function reportColumns({ showOrigin = true, showCommodity = true, showDestination = false, showGrossTare = true, showGrade = false, quality = [] } = {}) {
+  const MIN_GOING = 70;
+  const build = (withGrossTare) => [
     { key: 'date', head: 'Date', w: 56 },
     { key: 'time', head: 'Time', w: 34 },
     { key: 'ticketNo', head: 'Ticket', w: 40 },
@@ -220,12 +239,16 @@ export function reportColumns({ showOrigin = true, showCommodity = true, showDes
     ...(showGrade ? [{ key: 'grade', head: 'Grade', w: 36 }] : []),
     { key: 'goingTo', head: 'Contract / going to', w: 0 },
     ...(showDestination ? [{ key: 'destination', head: 'Destination', w: 90 }] : []),
-    ...(showGrossTare ? [{ key: 'gross', head: 'Gross (t)', w: 48, right: true }, { key: 'tare', head: 'Tare (t)', w: 46, right: true }] : []),
+    ...(withGrossTare ? [{ key: 'gross', head: 'Gross (t)', w: 48, right: true }, { key: 'tare', head: 'Tare (t)', w: 46, right: true }] : []),
     { key: 'net', head: 'Net (t)', w: 64, right: true },
+    ...quality.filter((k) => QUALITY_HEAD[k]).map((k) => ({ key: `q:${k}`, head: QUALITY_HEAD[k][0], head2: QUALITY_HEAD[k][1], w: 34, right: true })),
     ...(showOrigin ? [{ key: 'from', head: 'From', w: 104 }] : []),
   ];
-  const fixed = cols.reduce((s, c) => s + c.w, 0);
-  cols.find((c) => c.key === 'goingTo').w = PAGE.width - 2 * MARGIN - fixed;
+  const slack = (cs) => PAGE.width - 2 * MARGIN - cs.reduce((t, c) => t + c.w, 0);
+  let cols = build(showGrossTare);
+  if (showGrossTare && slack(cols) < MIN_GOING) cols = build(false);
+  if (slack(cols) < MIN_GOING) for (const c of cols) { if (c.key === 'destination') c.w = 70; if (c.key === 'from') c.w = 80; }   // still crowded: the two long text columns get narrower
+  cols.find((c) => c.key === 'goingTo').w = Math.max(40, slack(cols));
   let x = MARGIN;
   for (const c of cols) { c.x = x; x += c.w; }
   return cols;
@@ -234,14 +257,16 @@ export function reportColumns({ showOrigin = true, showCommodity = true, showDes
 /** The report as a landscape A4 PDF, as many pages as the loads need. */
 export function buildLoadReportPdf(rows, { title = 'Load report', business = '', ngr = '', from = '', to = '', showOrigin = true, showDestination = true, showQuality = true, madeAt = '', filters = '' } = {}) {
   const pdf = new Pdf({ width: PAGE.width, height: PAGE.height });
-  const cols = reportColumns({ showOrigin, showCommodity: new Set(rows.map((r) => r.commodity).filter(Boolean)).size > 0, showDestination: showDestination && rows.some((r) => r.destination), showGrossTare: rows.some((r) => r.gross !== null || r.tare !== null), showGrade: rows.some((r) => r.grade) });
+  const cols = reportColumns({ showOrigin, showCommodity: new Set(rows.map((r) => r.commodity).filter(Boolean)).size > 0, showDestination: showDestination && rows.some((r) => r.destination), showGrossTare: rows.some((r) => r.gross !== null || r.tare !== null), showGrade: rows.some((r) => r.grade), quality: showQuality ? qualityKeys(rows) : [] });
   const totals = loadReportTotals(rows);
+  const HEAD_H = cols.some((c) => c.head2) ? 26 : 18;
   const ROW = 17; const BOTTOM = PAGE.height - 40;
   const cell = (c, r) => {
     if (c.key === 'date') return dmy(r.date);
     if (c.key === 'net') return r.tons ? `${plain(r.tons)} ${r.final ? 'final' : 'est'}` : '';
     if (c.key === 'gross' || c.key === 'tare') return r[c.key] === null ? '' : plain(r[c.key]);
     if (c.key === 'ticketNo') return r.ticketNo === '' ? '' : `#${r.ticketNo}`;
+    if (c.key.startsWith('q:')) return (r.quality || []).find((q) => `q:${q.key}` === c.key)?.value ?? '';
     return r[c.key] || '';
   };
 
@@ -251,25 +276,26 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
     pdf.text(rx, 36, `${totals.loads} load${totals.loads === 1 ? '' : 's'}, ${plain(totals.tons)} t`, { size: 11, bold: true, align: 'right' });
     pdf.text(MARGIN, 56, [business, ngr ? `NGR ${ngr}` : '', rangeText(from, to), filters].filter(Boolean).join('   ·   '), { size: 9.5, gray: 0.2 });
     let y = 80;
-    pdf.rect(MARGIN, y, PAGE.width - 2 * MARGIN, 18, { stroke: null, fill: 0.88 });
-    for (const c of cols) pdf.text(c.right ? c.x + c.w - 4 : c.x + 4, y + 5, c.head, { size: 8.5, bold: true, align: c.right ? 'right' : 'left' });
-    y += 18;
+    pdf.rect(MARGIN, y, PAGE.width - 2 * MARGIN, HEAD_H, { stroke: null, fill: 0.88 });
+    for (const c of cols) {
+      const x = c.right ? c.x + c.w - 4 : c.x + 4; const align = c.right ? 'right' : 'left';
+      if (c.head2) { pdf.text(x, y + 4, c.head, { size: 7.5, bold: true, align }); pdf.text(x, y + 14, c.head2, { size: 7, gray: 0.35, align }); }
+      else pdf.text(x, y + (HEAD_H - 18) / 2 + 5, c.head, { size: 8.5, bold: true, align });
+    }
+    y += HEAD_H;
     if (page > 1) pdf.text(PAGE.width - MARGIN, 56, `page ${page}`, { size: 8, gray: 0.4, align: 'right' });
     return y;
   };
 
   let page = 1; let y = header(page); let n = 0;
   for (const r of rows) {
-    // a load that was tested has its results on a line of their own under it
-    const qline = showQuality && r.quality?.length ? clipText(`Tested:  ${r.quality.map((q) => `${q.label} ${q.text}`).join('   ·   ')}`, PAGE.width - 2 * MARGIN - 8, 7.5) : '';
-    const rowH = qline ? ROW + 10 : ROW;
+    const rowH = ROW;   // one line per load: what was tested is in the columns
     if (y + rowH > BOTTOM) { pdf.addPage(); page += 1; y = header(page); n = 0; }
     if (n % 2) pdf.rect(MARGIN, y, PAGE.width - 2 * MARGIN, rowH, { stroke: null, fill: 0.96 });
     for (const c of cols) {
       const s = clipText(cell(c, r), c.w - 8, 9, false);
       pdf.text(c.right ? c.x + c.w - 4 : c.x + 4, y + 4.5, s, { size: 9, align: c.right ? 'right' : 'left' });
     }
-    if (qline) pdf.text(MARGIN + 4, y + ROW - 3, qline, { size: 7.5, gray: 0.4 });
     y += rowH; n += 1;
   }
   if (!rows.length) pdf.text(MARGIN + 4, y + 5, 'No loads match.', { size: 10, gray: 0.4 });

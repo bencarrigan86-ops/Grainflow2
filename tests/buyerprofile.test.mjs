@@ -59,13 +59,14 @@ check('the tolerance is 5% or 20 t side by side, a transfer tickbox sets both to
   assert.ok(s.indexOf("id: 'carryRate'") > s.indexOf('id="pay-fold"') && s.indexOf("id: 'carryRate'") < s.indexOf("id: 'notes'"), 'carry is not in the payment panel');
 });
 
-check('the contract form has no Contract terms section: only Trade rules is kept, above the comments, and the others are left as saved', () => {
+check('the contract form has no Contract terms section: only Trade rules is kept, in the payment fold, and the others are left as saved', () => {
   const s = read('docs/js/views/sales.js');
   assert.ok(!s.includes('id="terms-fold"') && !s.includes('<h2>Contract terms</h2>'), 'the section is gone');
   for (const id of ['cropYear', 'contractType', 'pricingPoint', 'deliveryTerms']) {
     assert.ok(!s.includes("id: '" + id + "'") && !s.includes("getVal(root, '" + id + "')"), id + ' is not on the form or saved from it, so a saved value is kept');
   }
-  assert.ok(s.includes("id: 'tradeRules'") && s.indexOf("id: 'tradeRules'") < s.indexOf("id: 'notes'"), 'trade rules sits above the comments');
+  assert.ok(s.includes("id: 'tradeRules'") && s.indexOf("id: 'tradeRules'") > s.indexOf('id="pay-fold"') && s.indexOf("id: 'tradeRules'") < s.indexOf('<div class="subhead">Notes</div>'), 'trade rules is inside the payment fold, so Notes is only the comments');
+  assert.ok(s.includes('existing.brokerageRate || existing.tradeRules'), 'the fold opens when trade rules are filled in');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

@@ -4,13 +4,13 @@
 // whether it is on, turns it on for 7 days or off early, and shows the log of what happened. A report sends the build,
 // the role, the sync state and the last few errors, with a message; the words are in supportinfo.js.
 
-import { supabase } from '../supabase.js?v=404';
-import { db } from '../storage.js?v=404';
-import { APP_VERSION } from '../version.js?v=404';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=404';
-import { esc } from '../fmt.js?v=404';
-import { buildReport, reportText, recentErrors, supportStatusText, standingStatus, logLine } from '../supportinfo.js?v=404';
-import { trialWatched, standingText } from '../trials.js?v=404';
+import { supabase } from '../supabase.js?v=405';
+import { db } from '../storage.js?v=405';
+import { APP_VERSION } from '../version.js?v=405';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=405';
+import { esc } from '../fmt.js?v=405';
+import { buildReport, reportText, recentErrors, supportStatusText, standingStatus, logLine } from '../supportinfo.js?v=405';
+import { trialWatched, standingText } from '../trials.js?v=405';
 
 const UNAVAILABLE = 'Support access is not available yet. Ask whoever looks after Commodity Mate to finish setting it up.';
 
