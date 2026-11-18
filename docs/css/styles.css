@@ -1444,3 +1444,18 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .table-scroll table.tight th, .table-scroll table.tight td { padding-left: 4px; padding-right: 4px; }
 .sw-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; cursor: pointer; }
 .sw-row input { width: 20px; height: 20px; flex: none; margin: 2px 0 0; }
+
+/* Paid, and finished with: a big tap target at the foot of a contract, green once it is ticked */
+.paid-toggle { display: flex; align-items: center; gap: 14px; margin: 20px 0 8px; padding: 16px; min-height: 68px; cursor: pointer; border: 2px solid var(--border); border-radius: 12px; background: var(--card, transparent); }
+.paid-toggle input { width: 30px; height: 30px; flex: none; margin: 0; }
+.paid-toggle .pt-text { display: flex; flex-direction: column; gap: 3px; }
+.paid-toggle .pt-text b { font-size: 17px; }
+.paid-toggle .pt-text span { font-size: 13px; color: var(--text-dim); }
+.paid-toggle:has(input:checked) { border-color: var(--accent-summary, #2e7d32); background: var(--accent-summary-bg, rgba(46, 125, 50, .12)); }
+
+/* Gross margin report: seven columns on a phone, so the cells are tight; the cost box sits in the table like a number */
+.card.report .table-scroll table.gm-table th, .card.report .table-scroll table.gm-table td { white-space: nowrap; padding: 8px 2px; font-size: 12px; }
+.card.report .table-scroll table.gm-table th { font-size: 10px; letter-spacing: 0; }
+.card.report .table-scroll table.gm-table th:first-child, .card.report .table-scroll table.gm-table td:first-child { white-space: normal; min-width: 52px; max-width: 70px; padding-left: 4px; }
+.gm-cost { width: 42px; padding: 4px 2px; font-size: 12px; text-align: right; }
+.gm-cost.set { font-weight: 700; border-color: var(--accent-summary, #2e7d32); }

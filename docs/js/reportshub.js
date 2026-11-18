@@ -8,6 +8,8 @@
  *   go     another screen (a tab)
  */
 
+import { canSeePrices } from './nav.js?v=412';
+
 export const MODE_KEY = 'grainflow.reports.mode';
 
 export const readMode = () => { try { return localStorage.getItem(MODE_KEY) === 'full' ? 'full' : 'simple'; } catch { return 'simple'; } };
@@ -52,6 +54,7 @@ export function hubGroups({ mode = 'simple', role = '', showYield = true, hasCot
       title: 'Money',
       tiles: [
         can('position') && tile('position', 'Position', 'go', { simple: true, tab: 'position' }),
+        can('position') && canSeePrices(role) && tile('gm', 'Gross margin', 'view'),
         can('sales') && tile('owed', 'Invoices', 'sheet', { simple: true }),
         can('sales') && tile('mtm', 'MTM', 'sheet'),
         BOOKS.includes(role) && tile('deliveries', 'Delivery timeline', 'sheet'),
@@ -84,7 +87,7 @@ export function hubGroups({ mode = 'simple', role = '', showYield = true, hasCot
 
 /** The name of a report, for the line under the title when it is open. */
 export function reportTitle(view) {
-  return ({ yield: 'Yield', harvest: 'Harvest progress', fert: 'Fert', seed: 'Seed', modules: 'Modules' })[view] || '';
+  return ({ yield: 'Yield', harvest: 'Harvest progress', fert: 'Fert', seed: 'Seed', modules: 'Modules', gm: 'Gross margin' })[view] || '';
 }
 
 /** A line picture for each tile (24 by 24, drawn in the tile's colour). From the Tabler icon set (MIT licence, tabler.io/icons). */
@@ -97,6 +100,7 @@ export const TILE_ICONS = {
   modules: '<path d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5"/><path d="M12 12l8 -4.5"/><path d="M12 12l0 9"/><path d="M12 12l-8 -4.5"/><path d="M16 5.25l-8 4.5"/>',
   rotation: '<path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/>',
   averages: '<path d="M4 19l16 0"/><path d="M4 15l4 -6l4 2l4 -5l4 4"/>',
+  gm: '<path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M14.8 9a2 2 0 0 0 -1.8 -1h-2a2 2 0 1 0 0 4h2a2 2 0 1 1 0 4h-2a2 2 0 0 1 -1.8 -1"/><path d="M12 7v10"/>',
   prices: '<path d="M3 17l6 -6l4 4l8 -8"/><path d="M14 7l7 0l0 7"/>',
   deliveries: '<path d="M4 5m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z"/><path d="M16 3l0 4"/><path d="M8 3l0 4"/><path d="M4 11l16 0"/><path d="M8 15h2v2h-2z"/>',
   calculator: '<path d="M4 3m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z"/><path d="M8 7m0 1a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1v1a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1z"/><path d="M8 14l0 .01"/><path d="M12 14l0 .01"/><path d="M16 14l0 .01"/><path d="M8 17l0 .01"/><path d="M12 17l0 .01"/><path d="M16 17l0 .01"/>',

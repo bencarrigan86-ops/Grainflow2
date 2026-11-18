@@ -170,3 +170,15 @@ export function canDelete(role) {
 export function canMarkFinal(role) {
   return role === 'owner' || role === 'manager' || !farmSwitch('finalWeightsManagersOnly');
 }
+
+/**
+ * Is this role shown contract prices? An owner and a bookkeeper always; a manager once the farm has switched it on; an advisor once
+ * it has switched on loads and prices. A report built on prices (Gross margin) is for these roles only: for anyone else the figures
+ * would be sums with the prices left out.
+ */
+export function canSeePrices(role) {
+  if (role === 'owner' || role === 'bookkeeper') return true;
+  if (role === 'manager') return farmSwitch('managerSeesPrices');
+  if (role === 'advisor') return farmSwitch('advisorSeesLoads') && farmSwitch('advisorSeesPrices');
+  return false;
+}

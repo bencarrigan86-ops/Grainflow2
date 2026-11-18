@@ -27,16 +27,16 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=411';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=411';
-import { cleanCottonTerms } from './cottonkinds.js?v=411';
-import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=411';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=411';
-import { cleanPicked } from './modulespicked.js?v=411';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=411';
-import { cleanHistory, hasHistory } from './pricehistory.js?v=411';
-import { cleanOffFarm } from './offfarm.js?v=411';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=411';
+import { cleanGradeOptions } from './gradeprice.js?v=412';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=412';
+import { cleanCottonTerms } from './cottonkinds.js?v=412';
+import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=412';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=412';
+import { cleanPicked } from './modulespicked.js?v=412';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=412';
+import { cleanHistory, hasHistory } from './pricehistory.js?v=412';
+import { cleanOffFarm } from './offfarm.js?v=412';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=412';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -380,6 +380,8 @@ export function stateToRows(state, farmId) {
         ...((f.property || f.__hasProperty) ? { property: orNull(String(f.property || '').trim()) } : {}),
         // modules picked on a cotton paddock. Optional the same way; deleting the last one sends an empty list.
         ...((cleanPicked(f.modulesPicked).length || f.__hasModulesPicked) ? { modules_picked: cleanPicked(f.modulesPicked) } : {}),
+        // the paddock's own gross margin cost ($/ha), replacing the crop's. Optional the same way; clearing it sends null.
+        ...((f.gmCostHa != null || f.__hasGmCostHa) ? { gm_cost_ha: f.gmCostHa == null ? null : n(f.gmCostHa) } : {}),
         // bales baled on a hay paddock. Optional the same way; deleting the last one sends an empty list.
         ...((cleanBaled(f.balesBaled).length || f.__hasBalesBaled) ? { bales_baled: cleanBaled(f.balesBaled) } : {}),
       });
@@ -806,6 +808,7 @@ export function rowsToState(rows) {
           ...(f.boundary != null ? { boundary: f.boundary, __hasBoundary: true } : {}),
           ...(f.property ? { property: f.property, __hasProperty: true } : {}),
           ...(Array.isArray(f.modules_picked) ? { modulesPicked: cleanPicked(f.modules_picked), __hasModulesPicked: true } : {}),
+          ...(f.gm_cost_ha != null ? { gmCostHa: n(f.gm_cost_ha), __hasGmCostHa: true } : {}),
           ...(Array.isArray(f.bales_baled) ? { balesBaled: cleanBaled(f.bales_baled), __hasBalesBaled: true } : {}),
           __agronomyId: a.id,
           yieldTHa: n(a.yield_t_ha),

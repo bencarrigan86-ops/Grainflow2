@@ -2473,3 +2473,13 @@ create policy movements_final_weight_update on movements as restrictive for upda
   with check (weight_status <> 'final' or app_may_finalise(farm_id));
 
 notify pgrst, 'reload schema';
+
+-- ===========================================================================
+-- A paddock's own gross margin cost (Gross margin report)
+-- ===========================================================================
+-- A paddock's own gross margin cost ($ per hectare), used by the Gross margin report in place of the crop's cost spread over its
+-- area. Empty means "use the crop's". Safe to run more than once. The same row security as the rest of the paddock applies.
+
+alter table fields add column if not exists gm_cost_ha numeric;
+
+notify pgrst, 'reload schema';
