@@ -3465,12 +3465,7 @@
           "status": "open",
           "notes": "Gate 3, 7am to 4pm.\nCarriers must follow the receival site rules and wear high-vis.",
           "detail": {
-            "packaging": "Bulk",
-            "transportMode": "Truck",
             "paymentTerms": "30 days end of week",
-            "pickupSite": "Kurrajong Downs",
-            "deliverySite": "Newbridge Receival Site",
-            "deliveryOrderNo": "B-1001",
             "deliveryInstructions": "Book the receival site before loading.",
             "deliverCompany": "Riverina Grain Traders",
             "bookingContact": "The receival site bookings office",

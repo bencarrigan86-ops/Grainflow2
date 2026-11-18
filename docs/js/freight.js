@@ -10,13 +10,13 @@
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { Pdf, wrapText } from './pdf.js?v=379';
-import { drawBrandLogo } from './brand.js?v=379';
-import { dmy } from './fmt.js?v=379';
-import { movementTonsToSale } from './derived.js?v=379';
-import { hasSignature, strokesInBox } from './signature.js?v=379';
-import { orderDelivery, orderGrade, bookingRows, orderIssuedText, nilToleranceLines, orderCommentLines, orderCommentText, freightDetailDefaults, showsRate } from './orderdetail.js?v=379';
-import { toleranceText } from './contractterms.js?v=379';
+import { Pdf, wrapText } from './pdf.js?v=380';
+import { drawBrandLogo } from './brand.js?v=380';
+import { dmy } from './fmt.js?v=380';
+import { movementTonsToSale } from './derived.js?v=380';
+import { hasSignature, strokesInBox } from './signature.js?v=380';
+import { orderDelivery, orderGrade, bookingRows, orderIssuedText, nilToleranceLines, orderCommentLines, orderCommentText, freightDetailDefaults, showsRate } from './orderdetail.js?v=380';
+import { toleranceText } from './contractterms.js?v=380';
 
 export const BASES = [
   { key: 'per_t', label: '$ per tonne' },
@@ -208,10 +208,12 @@ const LINE = 0.15;
 const GREEN = [0.18, 0.49, 0.196];    // the same green as the other documents
 const SHADE = [0.93, 0.96, 0.93];
 
-function labelled(pdf, x, y, labelW, valueW, label, value, lines = 1) {
+// A row of a box: its label and its value. Every other row has a band across the whole box (`band` is {x, w, on}), so the rows read
+// across instead of each value sitting in a shaded square. The band is the row's height, so the bands meet.
+function labelled(pdf, x, y, labelW, valueW, label, value, lines = 1, band = null) {
+  if (band?.on) pdf.rect(band.x, y - 2, band.w, 12 * lines + 4, { stroke: null, fill: SHADE });
   pdf.text(x, y + 1, label, { size: 8, bold: true });
   const vx = x + labelW;
-  pdf.rect(vx, y - 1, valueW, 12 * lines + 1, { stroke: null, fill: SHADE });
   wrapText(clean(value), valueW - 6, 9).slice(0, lines).forEach((l, i) => pdf.text(vx + 3, y + 1 + i * 12, l, { size: 9 }));
   return y + 12 * lines + 4;
 }
@@ -241,7 +243,7 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
   const party = (x, title, rows) => {
     box(pdf, x, top, colW, 112, title);
     let y = top + 24;
-    for (const [label, value] of rows) y = labelled(pdf, x + 8, y, 44, colW - 44 - 16, label, value);
+    rows.forEach(([label, value], i) => { y = labelled(pdf, x + 8, y, 44, colW - 44 - 16, label, value, 1, { x: x + 1, w: colW - 2, on: i % 2 === 0 }); });
   };
   party(M, 'FROM (WHO IS BOOKING THE TRUCKS)', [
     ['Name:', business.entityName || business.farmName || business.contactName],
@@ -257,36 +259,60 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
     ['Email:', fo.carrierEmail],
   ]);
 
+  // The freight order carries its own booking instructions and rejections, filled in from the grain order. One made before that
+  // (with neither) still reads them, and the buyer's other terms, from the grain order.
+  const legacy = !fo.detail?.ownTerms && !fo.detail?.deliveryInstructions && !fo.detail?.rejectedOnArrival && !fo.detail?.bookingContact && !fo.detail?.orderIssuedBy;
+  const od = order?.detail || {};
+  const dt = { ...(legacy ? { deliveryInstructions: od.booking, rejectedOnArrival: nilToleranceLines(od).join('\n'), deliverySitePhone: od.sitePhone, bookingContact: od.bookingContact, orderIssuedBy: orderIssuedText(order) } : {}), ...(fo.detail || {}) };
+
   // the job
   const jy = top + 124;
-  box(pdf, M, jy, W, 196, 'THE JOB');
-  let y = jy + 24;
-  const half = (W - 24) / 2;
-  y = labelled(pdf, M + 8, y, 60, W - 76, 'Commodity:', [commodityName, orderGrade(order, sale) ? `(${orderGrade(order, sale)})` : ''].filter(Boolean).join(' '));
-  y = labelled(pdf, M + 8, y, 60, W - 76, 'Contract no:', sale?.contractNo);
-  y = labelled(pdf, M + 8, y, 60, W - 76, "Buyer's order:", clean(fo.buyerOrderNo) || (order?.orderNo ? `${order.orderNo}` : ''));
-  labelled(pdf, M + 8, y, 60, half - 52, 'Tonnes:', num(fo.tons) ? `${num(fo.tons)} t` : '');
-  y = labelled(pdf, M + 20 + half, y, 56, half - 60, 'Dates:', windowText(fo));
-  y = labelled(pdf, M + 8, y, 60, W - 76, 'Pick up from:', fo.pickup, 2);
   // the company it goes to, then its address; one made before the company was kept takes the buyer on the contract
   const company = fo.detail?.ownTerms ? fo.detail.deliverCompany : (fo.detail?.deliverCompany || sale?.buyer);
-  y = labelled(pdf, M + 8, y, 60, W - 76, 'Deliver to:', company);
-  y = labelled(pdf, M + 8, y, 60, W - 76, '', fo.deliverTo, 2);
-  y = labelled(pdf, M + 8, y, 60, W - 76, 'Contact:', sale?.buyerContact);
+  // an address takes the lines it needs, up to two
+  const addrLines = (v) => Math.min(2, Math.max(1, wrapText(clean(v), W - 76 - 6, 9).length));
+  const tolerance = sale ? toleranceText(sale, 't') : '';
+  // a row is one label and value (and how many lines), or a pair of them side by side
+  const jobRows = [
+    { row: ['Commodity:', [commodityName, orderGrade(order, sale) ? `(${orderGrade(order, sale)})` : '', dt.variety].filter(Boolean).join(' '), 1] },
+    { pair: [['Contract no:', sale?.contractNo], ["Buyer's order:", clean(fo.buyerOrderNo) || (order?.orderNo ? `${order.orderNo}` : '')]] },
+    { pair: [['Tonnes:', num(fo.tons) ? `${num(fo.tons)} t` : ''], ['Dates:', windowText(fo)]] },
+    ...(clean(tolerance) || clean(dt.paymentTerms) ? [{ pair: [['Tolerance:', tolerance], ['Payment terms:', dt.paymentTerms]] }] : []),
+    { row: ['Pick up from:', fo.pickup, addrLines(fo.pickup)] },
+    ...(clean(dt.pickupPhone) ? [{ row: ['Phone:', dt.pickupPhone, 1] }] : []),
+    { row: ['Deliver to:', company, 1] },
+    { row: ['', fo.deliverTo, addrLines(fo.deliverTo)] },
+    ...(clean(dt.deliverySitePhone) ? [{ row: ['Phone:', dt.deliverySitePhone, 1] }] : []),
+    { row: ['Contact:', sale?.buyerContact, 1] },
+  ];
+  const linesOfRow = (r) => (r.row ? r.row[2] : 1);
+  const jobH = 24 + jobRows.reduce((s, r) => s + 12 * linesOfRow(r) + 4, 0) + 4;
+  box(pdf, M, jy, W, jobH, 'THE JOB');
+  let y = jy + 24;
+  const half = (W - 24) / 2;
+  jobRows.forEach((r, i) => {
+    const band = { x: M + 1, w: W - 2, on: i % 2 === 0 };
+    if (r.row) y = labelled(pdf, M + 8, y, 60, W - 76, r.row[0], r.row[1], r.row[2], band);
+    else {
+      const [[l1, v1], [l2, v2]] = r.pair;
+      labelled(pdf, M + 8, y, 60, half - 52, l1, v1, 1, band);
+      y = labelled(pdf, M + 20 + half, y, 64, half - 68, l2, v2);
+    }
+  });
 
   // the rate
   // (left off the carrier's copy when the freight order says so)
-  const ry = jy + 208;
+  const ry = jy + jobH + 12;
   if (showsRate(fo)) {
-    box(pdf, M, ry, W, 62, 'RATE');
+    box(pdf, M, ry, W, 54, 'RATE');
     pdf.text(M + 8, ry + 24, rateText(fo), { size: 11, bold: true, gray: GREEN });
     const est = estimatedTotal(fo);
-    pdf.text(M + 8, ry + 42, est > 0 ? `About ${money(est, 0)} for ${num(fo.tons)} t, paid on the tonnes actually delivered, per the receival ticket. Rates ex GST.` : 'Paid on the tonnes actually delivered, per the receival ticket. Rates ex GST.', { size: 8.5, gray: 0.25 });
+    pdf.text(M + 8, ry + 39, est > 0 ? `About ${money(est, 0)} for ${num(fo.tons)} t, paid on the tonnes actually delivered, per the receival ticket. Rates ex GST.` : 'Paid on the tonnes actually delivered, per the receival ticket. Rates ex GST.', { size: 8.5, gray: 0.25 });
   }
 
   // instructions, then what the buyer's order says about the receival and what is rejected there
-  let ny = showsRate(fo) ? ry + 74 : ry;
-  const room = (h) => { if (ny + h > pdf.height - 60) { pdf.addPage(); ny = M; } };
+  let ny = showsRate(fo) ? ry + 64 : ry;
+  const room = (h) => { if (ny + h > pdf.height - 48) { pdf.addPage(); ny = M; } };
   const section = (title, lines) => {
     const wrapped = lines.flatMap((l) => wrapText(l, W - 16, 9.5));
     const h = 24 + Math.min(wrapped.length, 40) * 12.5 + 6;
@@ -295,47 +321,34 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
     wrapped.slice(0, 40).forEach((l, i) => pdf.text(M + 8, ny + 24 + i * 12.5, l, { size: 9.5 }));
     ny += h + 10;
   };
-  // a box of labelled rows: only those with something in them
-  const rowsBox = (title, rows) => {
-    const live = rows.filter(([, v]) => clean(v));
-    if (!live.length) return;
-    const linesOf = (v) => Math.min(3, wrapText(clean(v), W - 16 - 104 - 6, 9).length);
-    const h = 24 + live.reduce((s, [, v]) => s + 12 * linesOf(v) + 4, 0) + 4;
+  // two boxes side by side, as tall as the longer
+  const sideBySide = (a, b) => {
+    const cw = (W - 12) / 2;
+    const wa = a[1].flatMap((l) => wrapText(l, cw - 16, 9.5)).slice(0, 30);
+    const wb = b[1].flatMap((l) => wrapText(l, cw - 16, 9.5)).slice(0, 30);
+    const h = 24 + Math.max(wa.length, wb.length) * 12.5 + 6;
     room(h);
-    box(pdf, M, ny, W, h, title);
-    let ry2 = ny + 24;
-    for (const [label, v] of live) ry2 = labelled(pdf, M + 8, ry2, 104, W - 16 - 104, label, v, linesOf(v));
+    [[a[0], wa, M], [b[0], wb, M + cw + 12]].forEach(([title, lines, x]) => {
+      box(pdf, x, ny, cw, h, title);
+      lines.forEach((l, i) => pdf.text(x + 8, ny + 24 + i * 12.5, l, { size: 9.5 }));
+    });
     ny += h + 10;
   };
-  // The freight order carries its own booking instructions and rejections, filled in from the grain order. One made before that
-  // (with neither) still reads them, and the buyer's other terms, from the grain order.
-  const legacy = !fo.detail?.ownTerms && !fo.detail?.deliveryInstructions && !fo.detail?.rejectedOnArrival && !fo.detail?.bookingContact && !fo.detail?.orderIssuedBy;
-  const od = order?.detail || {};
-  const dt = { ...(legacy ? { deliveryInstructions: od.booking, rejectedOnArrival: nilToleranceLines(od).join('\n'), deliverySite: od.destination, deliverySitePhone: od.sitePhone, deliveryOrderNo: od.deliveryRef, bookingContact: od.bookingContact, orderIssuedBy: orderIssuedText(order) } : {}), ...(fo.detail || {}) };
-  rowsBox('COMMODITY AND TERMS', [
-    ['Variety:', dt.variety], ['Season:', sale?.cropYear], ['Packaging:', dt.packaging],
-    ['Tolerance:', sale ? toleranceText(sale, 't') : ''], ['Transport:', dt.transportMode], ['Payment terms:', dt.paymentTerms],
-  ]);
-  rowsBox('SITES', [
-    ['Pick up site:', dt.pickupSite], ['Pick up phone:', dt.pickupPhone], ['Pick up order no:', dt.pickupOrderNo], ['Pick up instructions:', dt.pickupInstructions],
-    ['Delivery site:', dt.deliverySite], ['Delivery phone:', dt.deliverySitePhone], ['Delivery order no:', dt.deliveryOrderNo],
-  ]);
+  const pickupLines = clean(dt.pickupInstructions).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   // who to book with, and how: the buyer's booking instructions as the freight order has them
   const booking = [...[['Bookings', dt.bookingContact], ['Order issued by', dt.orderIssuedBy]].filter(([, v]) => clean(v)).map(([label, v]) => `${label}: ${clean(v)}`), ...clean(dt.deliveryInstructions).split(/\r?\n/).map((l) => l.trim()).filter(Boolean)];
-  if (booking.length) section('BOOKINGS', booking);
   const nil = nilToleranceLines({ nilTolerance: dt.rejectedOnArrival });
-  if (nil.length) section('REJECTED ON ARRIVAL', nil.map((l) => `- ${l}`));
+  if (booking.length && nil.length) sideBySide(['BOOKINGS', booking], ['REJECTED ON ARRIVAL', nil.map((l) => `- ${l}`)]);
+  else if (booking.length) section('BOOKINGS', booking);
+  else if (nil.length) section('REJECTED ON ARRIVAL', nil.map((l) => `- ${l}`));
   const terms = legacy ? orderCommentLines(order) : [];
   if (terms.length) section("OTHER TERMS ON THE BUYER'S ORDER", terms);
-  if (clean(fo.notes)) {
-    const lines = wrapText(fo.notes, W - 16, 9.5);
-    const h = 24 + Math.min(lines.length, 12) * 12.5 + 6;
-    room(h);
-    box(pdf, M, ny, W, h, 'INSTRUCTIONS');
-    pdf.paragraph(M + 8, ny + 24, lines.slice(0, 12).join('\n'), W - 16, { size: 9.5, lineHeight: 12.5 });
-    ny += h + 12;
-  }
-  room(96);   // the closing line and the signature stay together
+  const noteLines = clean(fo.notes).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (pickupLines.length && noteLines.length) sideBySide(['PICK UP INSTRUCTIONS', pickupLines], ['INSTRUCTIONS', noteLines]);
+  else if (pickupLines.length) section('PICK UP INSTRUCTIONS', pickupLines);
+  else if (noteLines.length) section('INSTRUCTIONS', noteLines);
+  const signedNow = !!signature && hasSignature(signature.strokes);
+  room(signedNow ? 96 : 60);   // the closing line and the signature stay together
   pdf.paragraph(M, ny, 'Please quote this freight order number on your tax invoice, and keep the weighbridge or receival ticket for each load. Contact us before loading if anything here does not match your booking.', W, { size: 8.5, lineHeight: 11, gray: 0.25 });
   const signed = !!signature && hasSignature(signature.strokes);
   if (signed) {
@@ -346,4 +359,15 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
   if (clean(issuedBy)) pdf.text(M, by, `Issued by ${issuedBy}${signed && date ? `, ${dmy(date)}` : ''}`, { size: 9, bold: true });
   pdf.text(pdf.width / 2, pdf.height - 28, 'Prepared in Commodity Mate.', { size: 7, align: 'center', gray: 0.5 });
   return pdf.bytes();
+}
+
+/**
+ * Where a load on this freight order is going, for the destination on its ticket: the company, then the address. The company is the
+ * freight order's own, or the buyer on the contract when it was never set.
+ */
+export function freightDestination(fo, sale) {
+  if (!fo) return '';
+  const place = clean(fo.deliverTo);
+  const company = fo.detail?.ownTerms ? clean(fo.detail?.deliverCompany) : clean(fo.detail?.deliverCompany) || clean(sale?.buyer);
+  return company && !place.toLowerCase().startsWith(company.toLowerCase()) ? [company, place].filter(Boolean).join(', ') : place;
 }

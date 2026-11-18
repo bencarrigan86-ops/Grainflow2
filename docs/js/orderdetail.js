@@ -5,8 +5,8 @@
 //
 // Pure: no screen and no storage in here.
 
-import { cleanParts, hasParts, joinAddress } from './address.js?v=379';
-import { splitContact } from './buyercontact.js?v=379';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=380';
+import { splitContact } from './buyercontact.js?v=380';
 
 const text = (v) => String(v ?? '').trim();
 const MAX = 4000;
@@ -76,8 +76,8 @@ export const orderCommentLines = (order) => text(order?.detail?.comments).split(
 export function cleanFreightDetail(d) {
   if (!d || typeof d !== 'object') return null;
   const out = {};
-  for (const k of ['carrierAbn', 'carrierContact', 'carrierPhone', 'variety', 'packaging', 'transportMode', 'paymentTerms',
-    'pickupSite', 'pickupPhone', 'pickupOrderNo', 'pickupInstructions', 'deliverySite', 'deliverySitePhone', 'deliveryOrderNo', 'deliveryInstructions', 'rejectedOnArrival', 'bookingContact', 'orderIssuedBy', 'deliverCompany']) {
+  for (const k of ['carrierAbn', 'carrierContact', 'carrierPhone', 'variety', 'paymentTerms',
+    'pickupPhone', 'pickupInstructions', 'deliverySitePhone', 'deliveryInstructions', 'rejectedOnArrival', 'bookingContact', 'orderIssuedBy', 'deliverCompany']) {
     const v = text(d[k]).slice(0, MAX);
     if (v) out[k] = v;
   }
@@ -101,11 +101,9 @@ export const showsRate = (fo) => !fo?.detail?.hideRate;
 export function freightDetailDefaults({ order = null, sale = null, business = {} } = {}) {
   const o = order?.detail || {};
   return cleanFreightDetail({
-    packaging: 'Bulk', transportMode: 'Truck',
     // the company the grain is delivered to: the buyer on the contract, before the address
     deliverCompany: sale?.buyer,
-    pickupSite: text(business.entityName) || text(business.farmName), pickupPhone: text(business.phone),
-    deliverySite: o.destination, deliverySitePhone: o.sitePhone, deliveryOrderNo: o.deliveryRef,
+    pickupPhone: text(business.phone), deliverySitePhone: o.sitePhone,
     // the buyer's booking instructions and what it rejects on arrival: the freight order's own copy, to change for the carrier
     deliveryInstructions: o.booking, rejectedOnArrival: nilToleranceLines(o).join('\n'),
     bookingContact: o.bookingContact, orderIssuedBy: orderIssuedText(order),

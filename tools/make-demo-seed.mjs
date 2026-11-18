@@ -700,7 +700,7 @@ const freightOrders = [
     deliverTo: 'Newbridge Receival Site, 1 Rail Rd, Newbridge NSW 2810',
     deliverToParts: { line1: '1 Rail Rd', line2: 'Newbridge Receival Site', town: 'Newbridge', state: 'NSW', postcode: '2810' },
     loadFrom: '2026-11-20', loadBy: '2026-12-05', status: 'open', notes: ['Gate 3, 7am to 4pm.', 'Carriers must follow the receival site rules and wear high-vis.'].join('\n'),
-    detail: { packaging: 'Bulk', transportMode: 'Truck', paymentTerms: '30 days end of week', pickupSite: 'Kurrajong Downs', deliverySite: 'Newbridge Receival Site', deliveryOrderNo: 'B-1001',
+    detail: { paymentTerms: '30 days end of week',
       deliveryInstructions: 'Book the receival site before loading.', deliverCompany: 'Riverina Grain Traders', bookingContact: 'The receival site bookings office', orderIssuedBy: 'Sample Trader, 17-11-2026', ownTerms: true, rejectedOnArrival: ['Any dead animals visible', 'Phosphine tablets', 'Urea: and proof of tipping elsewhere before re-entering', 'Live insects (depending on count)'].join('\n') } },
 ];
 

@@ -1,27 +1,27 @@
-import { db } from '../storage.js?v=379';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=379';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=379';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=379';
-import { withholdingClash } from '../fumigation.js?v=379';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=379';
-import { compressAndStampImage } from '../img.js?v=379';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=379';
-import { specText, extraSpecKey } from '../outload.js?v=379';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=379';
-import { pickableSilos } from '../silopick.js?v=379';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=379';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=379';
-import { activeSales } from '../paidsales.js?v=379';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=379';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=379';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=379';
-import { nowTime } from '../loadreport.js?v=379';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=379';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=379';
-import { openGinRunSheet } from './ginrun.js?v=379';
-import { openModuleMoveSheet } from './modulemove.js?v=379';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=379';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=379';
+import { db } from '../storage.js?v=380';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=380';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=380';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=380';
+import { withholdingClash } from '../fumigation.js?v=380';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=380';
+import { compressAndStampImage } from '../img.js?v=380';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=380';
+import { specText, extraSpecKey } from '../outload.js?v=380';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=380';
+import { pickableSilos } from '../silopick.js?v=380';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=380';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=380';
+import { activeSales } from '../paidsales.js?v=380';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=380';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=380';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=380';
+import { nowTime } from '../loadreport.js?v=380';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=380';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=380';
+import { openGinRunSheet } from './ginrun.js?v=380';
+import { openModuleMoveSheet } from './modulemove.js?v=380';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=380';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=380';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -568,7 +568,7 @@ export function openMovementSheet(existing, template) {
         </div>
         <div id="to-body" style="margin-top:8px"></div>
         <datalist id="dl-destinations">${[...new Set([...distinctOf(movements, 'destination'), ...distinctOf(db.get().sales, 'location')])].sort((a, b) => a.localeCompare(b)).map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
-        ${field({ label: 'Destination', id: 'destination', value: src?.destination, list: 'dl-destinations', placeholder: DEST_HINT, hint: "Shown on the load ticket. Blank uses the contract's delivery site." })}
+        ${field({ label: 'Destination', id: 'destination', value: src?.destination, list: 'dl-destinations', placeholder: DEST_HINT, hint: "Shown on the load ticket. Fills in from the freight order. Blank uses the contract's delivery site." })}
       </section>
 
       <section class="form-section">
@@ -759,6 +759,16 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
     // the freight order this load is carted on (see freight.js); `freightTouched` once the person has chosen
     let freightChoice = existing?.freightOrderId ?? null;
     let freightTouched = false;
+    // The destination on the ticket comes from the freight order chosen: the company, then the address. It only fills a blank
+    // box, or one it filled itself; what was typed stays. `destAuto` is what it last put there.
+    let destAuto = '';
+    const applyFreightDestination = (saleId) => {
+      const el = root.querySelector('#destination');
+      if (!el) return;
+      const fo = freightChoice ? db.getFreightOrders().find((x) => x.id === freightChoice) : null;
+      const want = fo ? freightDestination(fo, db.get().sales.find((s) => s.id === saleId)) : '';
+      if (el.value === '' || el.value === destAuto) { el.value = want; destAuto = want; }
+    };
     let toKind = existingUse ? 'use' : existingSaleTo ? 'sale' : 'silo';
 
     // What the chosen order says, under the box at the top: who is carting it, where it goes, by when.
@@ -836,6 +846,7 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
           if (!list.length) { freightWrap.innerHTML = ''; return; }
           if (!freightTouched && freightChoice === null && !existing && list.length === 1) freightChoice = list[0].id;
           if (freightChoice && !list.some((f) => f.id === freightChoice)) freightChoice = null;
+          if (!existing || freightTouched) applyFreightDestination(saleId);
           freightWrap.innerHTML = `
             <div class="field" style="margin-top:10px;margin-bottom:0">
               <label>Carted on</label>
@@ -844,7 +855,7 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
                 ${list.map((f) => `<option value="${esc(f.id)}" ${f.id === freightChoice ? 'selected' : ''}>${esc([freightTitle(f), `${num(freightState(f, movements).left, 0)} t left`].join(' · '))}</option>`).join('')}
               </select>
             </div>`;
-          freightWrap.querySelector('#to-freight-select').addEventListener('change', (e) => { freightChoice = e.target.value || null; freightTouched = true; });
+          freightWrap.querySelector('#to-freight-select').addEventListener('change', (e) => { freightChoice = e.target.value || null; freightTouched = true; applyFreightDestination(saleId); });
         };
         const drawOrders = () => {
           drawOrdersBody();
