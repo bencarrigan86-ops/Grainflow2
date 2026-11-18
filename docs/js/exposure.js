@@ -12,9 +12,9 @@
 // cannot be compared, so its tonnes are counted in "still to go" but left out of the gap, and the count of such contracts is kept.
 // Pure.
 
-import { buyerStatements } from './statement.js?v=393';
-import { deliveries } from './outstanding.js?v=393';
-import { saleEconomics } from './derived.js?v=393';
+import { buyerStatements } from './statement.js?v=394';
+import { deliveries } from './outstanding.js?v=394';
+import { saleEconomics } from './derived.js?v=394';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const round3 = (n) => Math.round(n * 1000) / 1000;

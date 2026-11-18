@@ -3,7 +3,7 @@
 // Pure: each function returns an <svg> string. The figures are illustrations of how a part of the app works, with made-up
 // numbers, not live data. The wording they carry is checked by tests/help.test.mjs along with the rest of the guide.
 
-import { TABS_BY_ROLE } from './nav.js?v=393';
+import { TABS_BY_ROLE } from './nav.js?v=394';
 
 const W = 340;
 const C = {
@@ -210,7 +210,6 @@ const FIGURES = {
   orders: () => flowSvg([['Order', 'from the buyer'], ['Delivery', 'loads to go'], ['Invoice', 'then paid']], { arrows: ['', ''], accent: C.blue, label: 'An order becomes deliveries, then an invoice' }),
   spray: () => flowSvg([['Tick paddocks', 'on the map'], ['Fill the form', 'product, rate'], ['Send the PDF', 'with the map']], { arrows: ['', ''], accent: C.green, label: 'Spray request: tick the paddocks, fill the form, send the PDF' }),
   inputs: () => flowSvg([['Buy', 'adds stock'], ['Use', 'takes it off'], ['Count', 'corrects it']], { arrows: ['', ''], accent: C.amber, label: 'Stock goes up with purchases, down with use, and a count corrects it' }),
-  attention: () => flowSvg([['Position', 'top of the page'], ['Tap a line', 'opens the screen'], ['Fix it', 'the line goes']], { arrows: ['', ''], accent: C.red, label: 'Needs attention: a list on Position, tap a line to deal with it' }),
   signing: () => flowSvg([['Draw it once', 'My signature'], ['Tick sign', 'on the document'], ['Print or send', 'signed']], { arrows: ['', ''], accent: C.green, label: 'Draw your signature once, tick sign on a document, print or send it' }),
   safety: () => flowSvg([['Export backup', 'a file'], ['Keep it', 'off the phone'], ['Import', 'if needed']], { arrows: ['', ''], accent: C.blue, label: 'Export a backup, keep it somewhere else, import it if needed' }),
   help: () => flowSvg([['Report', 'what went wrong'], ['Support', 'if you allow it'], ['Fixed', 'a new build']], { arrows: ['', ''], accent: C.amber, label: 'Report a problem; the owner can let support look, read only' }),

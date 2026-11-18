@@ -1406,3 +1406,20 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .sw-links { display: flex; gap: 8px; margin-top: 8px; }
 .sw-links .btn { flex: 1; margin: 0; }
 .pos-by .pos-season { font-size: 18px; font-weight: 800; color: var(--accent-summary); letter-spacing: .01em; }
+/* Traceability: the paddocks added up across the loads */
+.tr-sum { margin: 8px 0 10px; display: flex; flex-direction: column; gap: 6px; }
+.tr-line { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
+.tr-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.tr-bar { height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--accent-summary) 14%, var(--surface)); overflow: hidden; }
+.tr-bar i { display: block; height: 100%; background: var(--accent-summary); border-radius: 4px; }
+.tr-t { color: var(--text-dim); white-space: nowrap; font-size: 12px; }
+.tr-from { color: var(--text); font-weight: 600; }
+.tr-tick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 2px 0 10px; font-size: 14px; cursor: pointer; }
+.tr-tick input { width: 18px; height: 18px; }
+.tr-tick span { flex-basis: 100%; padding-left: 26px; font-size: 12px; color: var(--text-dim); }
+.tr-sale { margin: 12px 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.tr-sale-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: 14px; }
+.tr-sale-head span { color: var(--text-dim); font-size: 12.5px; white-space: nowrap; }
+/* How-to guide: a real screenshot at the top of a guide */
+.help-shot { display: flex; justify-content: center; margin: 10px 0 6px; }
+.help-shot img { width: 100%; max-width: 270px; height: auto; border-radius: 14px; border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,.14); }

@@ -11,7 +11,7 @@
 // named for the store, and a load that took more than the silo was recorded as holding says "Not recorded" for the
 // difference. Pure.
 
-import { inOrder, outloadEndOf } from './outload.js?v=393';
+import { inOrder, outloadEndOf } from './outload.js?v=394';
 
 const num = (v) => Number(v) || 0;
 const EPS = 1e-9;
@@ -34,6 +34,15 @@ const scaled = (map, to) => {
  *   'offfarm:<storage id>', 'unknown') and how many tonnes of the load came from each
  */
 export function traceLoads(storages, movements) {
+  return traceDetailed(storages, movements).loads;
+}
+
+/**
+ * The same replay, also keeping each source leg of a load apart: movement id -> [{ type, id, tons, from }], where `from` is what
+ * that leg's grain was made of (a silo leg is a mix of paddocks, a paddock leg is just itself).
+ * @returns {{ loads: Map<string, Map<string, number>>, legs: Map<string, {type: string, id: string, tons: number, from: Map<string, number>}[]> }}
+ */
+export function traceDetailed(storages, movements) {
   const stacks = new Map();     // silo id -> layers, bottom first: { tons, from: Map }
   const byId = new Map((storages || []).map((s) => [s.id, s]));
   for (const s of storages || []) {
@@ -44,15 +53,19 @@ export function traceLoads(storages, movements) {
   }
 
   const result = new Map();
+  const legsResult = new Map();
   for (const m of inOrder(movements || [])) {
     const pool = new Map();
+    const legList = [];
     for (const leg of m.froms || []) {
       const tons = num(leg.tons);
       if (tons <= EPS) continue;
-      if (leg.type === 'field') { add(pool, `field:${leg.id}`, tons); continue; }
+      const legPool = new Map();
+      legList.push({ type: leg.type, id: leg.id, tons, from: legPool });
+      if (leg.type === 'field') { add(pool, `field:${leg.id}`, tons); add(legPool, `field:${leg.id}`, tons); continue; }
       if (leg.type !== 'silo') continue;
       const store = byId.get(leg.id);
-      if (!store || store.offFarm) { add(pool, `offfarm:${leg.id}`, tons); continue; }
+      if (!store || store.offFarm) { add(pool, `offfarm:${leg.id}`, tons); add(legPool, `offfarm:${leg.id}`, tons); continue; }
       const layers = stacks.get(leg.id) || [];
       stacks.set(leg.id, layers);
       const fromBack = outloadEndOf(store) === 'first';
@@ -61,14 +74,16 @@ export function traceLoads(storages, movements) {
         const at = fromBack ? 0 : layers.length - 1;
         const layer = layers[at];
         const take = Math.min(layer.tons, want);
-        for (const [k, v] of scaled(layer.from, take)) add(pool, k, v);
+        for (const [k, v] of scaled(layer.from, take)) { add(pool, k, v); add(legPool, k, v); }
         for (const [k, v] of layer.from) layer.from.set(k, v * (1 - take / layer.tons));
         layer.tons -= take;
         want -= take;
         if (layer.tons <= EPS) layers.splice(at, 1);
       }
       add(pool, 'unknown', want);
+      add(legPool, 'unknown', want);
     }
+    legsResult.set(m.id, legList);
 
     const poolTotal = sum(pool);
     // what the grain arriving at each silo is made of: the load's pool, in proportion
@@ -85,12 +100,12 @@ export function traceLoads(storages, movements) {
     const loadTons = num(m.tons) || (m.tos || []).reduce((a, l) => a + num(l.tons), 0) || poolTotal;
     result.set(m.id, poolTotal > EPS ? scaled(pool, loadTons) : new Map());
   }
-  return result;
+  return { loads: result, legs: legsResult };
 }
 
-/** The words for one load: "Aralu A 1 62.3 t; Opening stock in Silo 2 5 t", biggest first; '' when nothing is known. */
-export function traceText(from, { fields = [], storages = [] } = {}) {
-  if (!from || !from.size) return '';
+/** One load's sources as named parts, biggest first: [{ name, tons }]; [] when nothing is known. */
+export function traceParts(from, { fields = [], storages = [] } = {}) {
+  if (!from || !from.size) return [];
   const nameOf = (key) => {
     const [kind, ...rest] = key.split(':');
     const id = rest.join(':');
@@ -106,6 +121,10 @@ export function traceText(from, { fields = [], storages = [] } = {}) {
   return [...from.entries()]
     .filter(([, t]) => round(t) > 0)
     .sort((a, b) => b[1] - a[1])
-    .map(([k, t]) => `${nameOf(k)} ${round(t)} t`)
-    .join('; ');
+    .map(([k, t]) => ({ name: nameOf(k), tons: round(t) }));
+}
+
+/** The words for one load: "Aralu A 1 62.3 t; Opening stock in Silo 2 5 t", biggest first; '' when nothing is known. */
+export function traceText(from, ctx = {}) {
+  return traceParts(from, ctx).map((p) => `${p.name} ${p.tons} t`).join('; ');
 }

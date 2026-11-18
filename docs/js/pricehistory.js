@@ -4,7 +4,7 @@
 // The week is the Monday it starts on. A spread is a $ a tonne on top of the commodity's price for that grade (negative below it),
 // the same shape a contract's grade list uses. Pure, with no imports but the grade list cleaner.
 
-import { cleanGradeOptions } from './gradeprice.js?v=393';
+import { cleanGradeOptions } from './gradeprice.js?v=394';
 
 const p2 = (n) => String(n).padStart(2, '0');
 const round2 = (n) => Math.round(n * 100) / 100;

@@ -3,12 +3,12 @@
 // The words are in helpcontent.js, checked against nav.js and the database policies by tests/help.test.mjs. This only lays
 // them out, and offers each guide only to the roles that have it.
 
-import { db } from '../storage.js?v=393';
-import { esc } from '../fmt.js?v=393';
-import { canOpen } from '../nav.js?v=393';
-import { ROLE_INFO, ACCESS, LEVELS, guidesForRole, startProgress } from '../helpcontent.js?v=393';
-import { openSetupWalk } from './setupwalk.js?v=393';
-import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=393';
+import { db } from '../storage.js?v=394';
+import { esc } from '../fmt.js?v=394';
+import { canOpen } from '../nav.js?v=394';
+import { ROLE_INFO, ACCESS, LEVELS, guidesForRole, startProgress } from '../helpcontent.js?v=394';
+import { openSetupWalk } from './setupwalk.js?v=394';
+import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=394';
 
 // a coloured chip for what a role can do, so a table of ticks and blanks reads at a glance
 const TINT = { full: 'var(--accent-summary)', view: 'var(--accent-report)', own: 'var(--accent-input)', used: 'var(--accent-input)', none: 'var(--text-dim)' };
@@ -24,7 +24,7 @@ export function renderHelp(root) {
   const guideHtml = (g) => `
     <details class="fold" id="guide-${esc(g.id)}">
       <summary><div><h2>${esc(g.title)}</h2><div class="sub">${esc(g.blurb)}</div></div></summary>
-      ${figureFor(g.id) ? `<div style="margin:10px 0 4px">${figureFor(g.id)}</div>` : ''}
+      ${g.shot ? `<div class="help-shot"><img src="${esc(g.shot)}" alt="${esc(g.shotAlt || '')}" loading="lazy" /></div>` : figureFor(g.id) ? `<div style="margin:10px 0 4px">${figureFor(g.id)}</div>` : ''}
       <ol style="margin:8px 0 8px 22px;padding:0;line-height:1.5">${g.steps.map((s) => `<li style="margin-bottom:6px">${esc(s)}</li>`).join('')}</ol>
       ${g.tips.length ? `<div class="hint" style="margin:6px 0 8px"><strong>Good to know</strong><br/>${g.tips.map(esc).join('<br/>')}</div>` : ''}
       ${g.open && canOpen(role, g.open) ? `<button type="button" class="btn secondary small" data-go="${esc(g.open)}">${esc(g.openLabel || 'Open')}</button>` : ''}
@@ -79,6 +79,8 @@ export function renderHelp(root) {
       </div>
     </div>`;
 
+  // a screenshot that is not there (offline, never opened online) is left out rather than shown broken
+  root.querySelectorAll('.help-shot img').forEach((img) => img.addEventListener('error', () => img.parentNode.remove()));
   root.querySelector('#help-walk')?.addEventListener('click', () => openSetupWalk());
   root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => { location.hash = `#/${b.dataset.go}`; }));
 }
