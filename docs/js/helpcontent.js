@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=401';
+import { ROLES, canOpen } from './nav.js?v=402';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -138,7 +138,7 @@ export const GUIDES = [
       'Tap a tile to open it. In All, tap a star to make a report a favourite.',
     ],
     tips: [
-      'Money owed, Delivery timeline, Silo room, Silo blending, the Silo calculator, Traceability and the exports are all here.',
+      'Invoices, Delivery timeline, Silo room, Silo blending, the Silo calculator, Traceability and the exports are all here.',
     ],
   },
   {
@@ -246,7 +246,7 @@ export const GUIDES = [
     ],
     tips: [
       'The gin invoice is taken off only when you pick it on a lint invoice, so the right amount comes off each contract.',
-      'Money owed (Reports) shows gin bills still open, and the lint invoices that have taken them off.',
+      'Invoices (Reports) shows gin bills still open, and the lint invoices that have taken them off.',
     ],
   },
   {
@@ -283,7 +283,7 @@ export const GUIDES = [
     steps: [
       'Grain orders and Freight orders are on Sales. A freight order can be signed before it goes to the carrier.',
       'Delivery timeline (Reports) shows tonnes still to deliver and how near each delivery period is to ending.',
-      'Money owed (Reports) shows invoices owed to you and bills you owe. By month shows when the money lands, with a forecast in italics.',
+      'Invoices (Reports) shows invoices owed to you and bills you owe. By month shows when the money lands, with a forecast in italics.',
     ],
     tips: [
       'The forecast uses each contract\'s delivery pattern. With none set, the grain shows as Not yet scheduled.',

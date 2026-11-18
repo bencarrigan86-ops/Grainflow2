@@ -6,15 +6,15 @@
 //   still to go    the tonnes left on their open contracts, and what those are worth at the contract price (the commitment)
 //   against MTM    the contract price less the commodity's MTM price, over those tonnes. Above zero, the contracts are worth more than
 //                  the market today, which is what the farm is out if the buyer does not take the grain; below zero the buyer holds
-//                  the better side. Not added to the money owed: it is a market view, not a debt.
+//                  the better side. Not added to the invoices owed: it is a market view, not a debt.
 //
 // Contracts are the current season's (the ones brought in from an earlier season are in it). A commodity with no MTM price set
 // cannot be compared, so its tonnes are counted in "still to go" but left out of the gap, and the count of such contracts is kept.
 // Pure.
 
-import { buyerStatements } from './statement.js?v=401';
-import { deliveries } from './outstanding.js?v=401';
-import { saleEconomics } from './derived.js?v=401';
+import { buyerStatements } from './statement.js?v=402';
+import { deliveries } from './outstanding.js?v=402';
+import { saleEconomics } from './derived.js?v=402';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const round3 = (n) => Math.round(n * 1000) / 1000;

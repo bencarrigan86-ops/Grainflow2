@@ -52,7 +52,7 @@ export function hubGroups({ mode = 'simple', role = '', showYield = true, hasCot
       title: 'Money',
       tiles: [
         can('position') && tile('position', 'Position', 'go', { simple: true, tab: 'position' }),
-        can('sales') && tile('owed', 'Money owed', 'sheet', { simple: true }),
+        can('sales') && tile('owed', 'Invoices', 'sheet', { simple: true }),
         BOOKS.includes(role) && tile('deliveries', 'Delivery timeline', 'sheet'),
         can('position') && tile('prices', 'Prices', 'sheet'),
         can('position') && tile('eofy', 'End of year', 'sheet'),

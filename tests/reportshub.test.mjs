@@ -16,7 +16,7 @@ const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const ids = (groups) => groups.flatMap((g) => g.tiles.map((t) => t.id));
 const owner = (extra = {}) => hubGroups({ role: 'owner', can: (tab) => canOpen('owner', tab), ...extra });
 
-check('Simple has Yield, Harvest progress, Fert, Seed, the map, Position, Money owed, Silo room and Load report', () => {
+check('Simple has Yield, Harvest progress, Fert, Seed, the map, Position, Invoices, Silo room and Load report', () => {
   const got = ids(owner({ mode: 'simple' }));
   for (const id of ['yield', 'harvest', 'fert', 'seed', 'map', 'position', 'owed', 'room', 'loads']) assert.ok(got.includes(id), id);
   for (const id of ['rotation', 'averages', 'eofy', 'excel', 'xero']) assert.ok(!got.includes(id), `${id} is Full only`);

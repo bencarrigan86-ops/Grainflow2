@@ -27,16 +27,16 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=401';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=401';
-import { cleanCottonTerms } from './cottonkinds.js?v=401';
-import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=401';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=401';
-import { cleanPicked } from './modulespicked.js?v=401';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=401';
-import { cleanHistory, hasHistory } from './pricehistory.js?v=401';
-import { cleanOffFarm } from './offfarm.js?v=401';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=401';
+import { cleanGradeOptions } from './gradeprice.js?v=402';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=402';
+import { cleanCottonTerms } from './cottonkinds.js?v=402';
+import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=402';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=402';
+import { cleanPicked } from './modulespicked.js?v=402';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=402';
+import { cleanHistory, hasHistory } from './pricehistory.js?v=402';
+import { cleanOffFarm } from './offfarm.js?v=402';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=402';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
