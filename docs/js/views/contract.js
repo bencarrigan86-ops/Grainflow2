@@ -18,17 +18,17 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=373';
-import { openSheet, toast, notify, askConfirm } from '../ui.js?v=373';
-import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=373';
-import { addressLinesOf } from '../address.js?v=373';
-import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=373';
-import { contactLines, splitContact } from '../buyercontact.js?v=373';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=373';
-import { DASH, longDate, termRows, confirmationPdf, CONFIRMATION_FOOTING } from '../contractpdf.js?v=373';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=373';
-import { fileSentCopy } from '../sentcopy.js?v=373';
-import { docBandHTML } from '../docband.js?v=373';
+import { db } from '../storage.js?v=375';
+import { openSheet, toast, notify, askConfirm } from '../ui.js?v=375';
+import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=375';
+import { addressLinesOf } from '../address.js?v=375';
+import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=375';
+import { contactLines, splitContact } from '../buyercontact.js?v=375';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=375';
+import { DASH, longDate, termRows, confirmationPdf, confirmationFooting } from '../contractpdf.js?v=375';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=375';
+import { fileSentCopy } from '../sentcopy.js?v=375';
+import { docBandHTML } from '../docband.js?v=375';
 
 /** One term, its value on one line or on several (an array). Omitted entirely when empty — a blank line invites a pen. */
 const term = (label, value) => {
@@ -87,7 +87,7 @@ export function contractDocHTML(sale, business, commodity, signed = null, { show
         ${termRows(sale, commodity, { showFreight, showComments }).map(([label, lines]) => term(label, lines)).join('')}
       </div>
 
-      <div class="line" style="margin:14px 0 0;font-size:12px;color:#555">${esc(CONFIRMATION_FOOTING)}</div>
+      <div class="line" style="margin:14px 0 0;font-size:12px;color:#555">${esc(confirmationFooting(commodity))}</div>
 
       <div class="invoice-parties" style="margin-top:18px">
         <div class="invoice-block">

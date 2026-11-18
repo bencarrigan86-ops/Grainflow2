@@ -27,7 +27,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ringsAreaHa, simplifyRing } from '../docs/js/farmmap.js';
 import { invoiceLineItems, invoiceTotals } from '../docs/js/derived.js';
-import { ginPrepaid, cleanGin, allocateLint } from '../docs/js/ginning.js';
+import { ginPrepaid, cleanGin, allocateLint, ginInvoice, contractShare } from '../docs/js/ginning.js';
 import { sprayDefaults } from '../docs/js/spray.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -257,9 +257,9 @@ const sales = [
 
 sales.push(...[
   { id: 'sale-ct1', commodityId: 'cotton', buyer: 'Wattle Cotton Merchants', contractNo: 'WCM-2610', grade: '', tons: 600, price: 570, date: '2025-10-30',
-    location: 'Delivered gin', deliveryStart: '2026-04-01', deliveryEnd: '2026-09-30', freight: 0, leviesPct: 0 },
+    location: 'Delivered gin', deliveryStart: '2026-04-01', deliveryEnd: '2026-09-30', freight: 0, leviesPct: 0, deliveryPattern: 'ginrun', tolerancePct: 0, toleranceCapTons: 1 },
   { id: 'sale-ct2', commodityId: 'cotton', buyer: 'Wattle Cotton Merchants', contractNo: 'WCM-2611', grade: '', tons: 500, price: 585, date: '2025-11-12',
-    location: 'Delivered gin', deliveryStart: '2026-04-01', deliveryEnd: '2026-09-30', freight: 0, leviesPct: 0 },
+    location: 'Delivered gin', deliveryStart: '2026-04-01', deliveryEnd: '2026-09-30', freight: 0, leviesPct: 0, deliveryPattern: 'ginrun', tolerancePct: 0, toleranceCapTons: 1 },
   { id: 'sale-hay1', commodityId: 'lucerne', buyer: 'Valley Stockfeeds', contractNo: 'VS-3310', grade: 'Premium', tons: 150, price: 395, date: '2026-09-20',
     location: 'Ex farm', deliveryStart: '2026-12-01', deliveryEnd: '2027-02-28', freight: 0, leviesPct: 0 },
   { id: 'sale-hay2', commodityId: 'wheatstraw', buyer: 'Hillcrest Dairy Co-op', contractNo: 'HD-0412', grade: '', tons: 80, price: 82, date: '2026-10-08',
@@ -457,7 +457,7 @@ const run = {
     { to: 'silo:bale-shed', baleFrom: 'KG101001', baleTo: 'KG101340', bales: 340, kg: 78500, location: 'Shed bay 2' },
   ],
 };
-const ginRun = cleanGin(run);
+const ginRun = { ...cleanGin(run), payableId: 'pay-gin' };
 const lots = allocateLint(ginRun);
 const ginMovement = {
   id: `mv-${ticket}`, ticketNo: ticket, date: '2026-05-02', commodityId: 'cotton', status: 'closed',
@@ -538,6 +538,8 @@ const payables = [
   { id: 'pay-1', kind: 'brokerage', supplier: 'Sample Grain Brokers', reference: 'BR-0231', invoiceDate: '2026-12-19', dueDate: '2027-01-18', amount: 1824, gst: 182.4, saleId: 'sale-1', storageId: '', tons: '', rate: '', status: 'unpaid', paidDate: '', notes: '' },
   { id: 'pay-2', kind: 'freight', supplier: 'Ace Haulage', reference: 'AH-5530', invoiceDate: '2026-12-05', dueDate: '2026-12-19', amount: 1290, gst: 129, saleId: 'sale-1', storageId: '', tons: 60, rate: 21.5, status: 'paid', paidDate: '2026-12-17', notes: '' },
   { id: 'pay-3', kind: 'storage', supplier: 'Newbridge Storage Co', reference: 'NS-118', invoiceDate: '2026-12-10', dueDate: '2027-01-09', amount: 960, gst: 96, saleId: '', storageId: 'bunker-1', tons: 320, rate: 3, status: 'unpaid', paidDate: '', notes: 'Wheat, December' },
+  // the gin's invoice, paid by the lint buyer and taken off the lint payment: marked paid when invoice 3 is
+  (() => { const gi = ginInvoice(ginRun); const part = contractShare(ginRun); return { id: 'pay-gin', kind: 'other', supplier: ginRun.ginName, reference: ginRun.invoiceNo, invoiceDate: '2026-05-02', dueDate: '', amount: round(gi.exGst * part, 2), gst: round(gi.gst * part, 2), saleId: '', storageId: '', tons: round(gi.bales * part, 3), rate: ginRun.ginRate, status: 'unpaid', paidDate: '', payer: 'buyer', notes: 'Paid by the lint buyer and taken off the lint payment' }; })(),
   { id: 'pay-4', kind: 'other', supplier: 'Sample Ag Services', reference: 'AS-2204', invoiceDate: '2026-11-22', dueDate: '2026-12-22', amount: 540, gst: 54, saleId: '', storageId: '', tons: '', rate: '', status: 'unpaid', paidDate: '', notes: 'Weighbridge calibration' },
 ];
 const inputStock = [

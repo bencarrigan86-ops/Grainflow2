@@ -11,8 +11,8 @@
 // remapIds() reissues every one on import and two trial accounts never collide
 // on a primary key.
 
-import { DEFAULT_BUSINESS_DETAILS, prepareImport, newId } from './import.js?v=373';
-import { APP_VERSION } from './version.js?v=373';
+import { DEFAULT_BUSINESS_DETAILS, prepareImport, newId } from './import.js?v=375';
+import { APP_VERSION } from './version.js?v=375';
 
 const WANTED_KEY = 'grainflow.seedSample';
 
@@ -193,6 +193,9 @@ export function sampleCottonHayFrom(seed, farm = {}) {
     if (mine) ids.set(c.id, mine); else { ids.set(c.id, newId()); added.push(c); }
   }
   for (const k of ['fields', 'storages', 'sales', 'movements']) for (const r of own[k]) ids.set(r.id, newId());
+  // the gin's bill, which the lint buyer pays: it belongs with the ginning run, so it comes whatever bills the farm already has
+  const ginBills = (y.payables || []).filter((p) => p.payer === 'buyer');
+  const ginBillIds = new Map(ginBills.map((p) => [p.id, newId()]));
   // the seed's wheat paddocks, matched to the farm's by name
   const farmFieldByName = new Map((farm.fields || []).map((f) => [String(f.name).toLowerCase(), f.id]));
   const seedFieldName = new Map(y.fields.map((f) => [f.id, String(f.name).toLowerCase()]));
@@ -229,7 +232,7 @@ export function sampleCottonHayFrom(seed, farm = {}) {
     if (froms.includes(null) || tos.includes(null)) continue;   // a load from a paddock this farm does not have
     movements.push({
       ...m, id: ids.get(m.id), commodityId: ref(m.commodityId), froms, tos,
-      ...(m.gin ? { gin: { ...m.gin, allocations: (m.gin.allocations || []).map((a) => ({ ...a, to: refTyped(a.to) })), ...(m.gin.seedTo ? { seedTo: refTyped(m.gin.seedTo) } : {}) } } : {}),
+      ...(m.gin ? { gin: { ...m.gin, allocations: (m.gin.allocations || []).map((a) => ({ ...a, to: refTyped(a.to) })), ...(m.gin.seedTo ? { seedTo: refTyped(m.gin.seedTo) } : {}), ...(m.gin.payableId ? { payableId: ginBillIds.get(m.gin.payableId) || '' } : {}) } } : {}),
     });
   }
   const kept = new Set(movements.map((m) => m.id));
@@ -243,7 +246,10 @@ export function sampleCottonHayFrom(seed, farm = {}) {
 
   // bills, inputs and the spray request: only for a farm that has none, and with no link to a contract or silo it may not have
   const none = (k) => !(farm[k] || []).length;
-  const payables = none('payables') ? (y.payables || []).map((p) => ({ ...p, id: newId(), saleId: '', storageId: '', freightOrderId: null })) : [];
+  const payables = [
+    ...ginBills.map((p) => ({ ...p, id: ginBillIds.get(p.id), saleId: '', storageId: '', freightOrderId: null })),
+    ...(none('payables') ? (y.payables || []).filter((p) => p.payer !== 'buyer').map((p) => ({ ...p, id: newId(), saleId: '', storageId: '', freightOrderId: null })) : []),
+  ];
   const inputStock = none('inputStock') ? (y.inputStock || []).map((m) => ({ ...m, id: newId() })) : [];
   const sprayJobs = none('sprayJobs') ? (y.sprayJobs || []).map((j) => ({
     ...j, id: newId(),

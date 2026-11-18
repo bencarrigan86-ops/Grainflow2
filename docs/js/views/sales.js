@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=373';
+import { db } from '../storage.js?v=375';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=373';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS } from '../derived.js?v=373';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=373';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=373';
-import { PATTERNS } from '../deliveryplan.js?v=373';
-import { INVOICING } from '../invoicing.js?v=373';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=373';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=373';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=373';
-import { renderRelatedMovements } from './movements.js?v=373';
-import { openInvoiceListSheet } from './invoice.js?v=373';
-import { openContractDocSheet } from './contract.js?v=373';
-import { wireJumps } from '../jump.js?v=373';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=373';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=373';
-import { freightState } from '../freight.js?v=373';
-import { activeSales, paidSales } from '../paidsales.js?v=373';
-import { openVendorDecSheet } from './vendordec.js?v=373';
-import { summarise as summariseOrders } from '../orders.js?v=373';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=373';
-import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=373';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=373';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=373';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=373';
-import { standardFor } from '../grades.js?v=373';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=373';
+} from '../documents.js?v=375';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=375';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=375';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=375';
+import { patternsFor } from '../deliveryplan.js?v=375';
+import { INVOICING } from '../invoicing.js?v=375';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=375';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=375';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=375';
+import { renderRelatedMovements } from './movements.js?v=375';
+import { openInvoiceListSheet } from './invoice.js?v=375';
+import { openContractDocSheet } from './contract.js?v=375';
+import { wireJumps } from '../jump.js?v=375';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=375';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=375';
+import { freightState } from '../freight.js?v=375';
+import { activeSales, paidSales } from '../paidsales.js?v=375';
+import { openVendorDecSheet } from './vendordec.js?v=375';
+import { summarise as summariseOrders } from '../orders.js?v=375';
+import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=375';
+import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=375';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=375';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=375';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=375';
+import { standardFor } from '../grades.js?v=375';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=375';
 
 let unsub = null;
 
@@ -367,6 +367,7 @@ function openSaleSheet(existing) {
   // The oil section is for canola; it shows for any contract that already prices oil, whatever it is called.
   const openOil = oilPricingOn(existing);
   const isCanola = (c) => standardFor(c?.name)?.key === 'canola';
+  const cottonFirst = commodities.find((c) => c.id === (existing?.commodityId ?? commodities[0]?.id))?.unit === 'bale';
   const showOil = openOil || isCanola(commodities.find((c) => c.id === (existing?.commodityId ?? commodities[0]?.id)));
   // Comments. The old Broker note box is gone (Broker and Broker reference cover it), so a contract that has one
   // keeps it: it is brought into the comments, and cleared from its own field when the contract is saved.
@@ -415,13 +416,13 @@ function openSaleSheet(existing) {
         ${field({ label: 'Price ($/t)', id: 'price', type: 'number', step: '0.01', value: existing?.price })}
       </div>
       <div class="grid-2">
-        ${field({ label: 'Tolerance (%)', id: 'tolPct', type: 'number', step: '0.1', value: existing?.tolerancePct ?? DEFAULT_TOLERANCE_PCT })}
-        ${field({ label: 'or (t)', id: 'tolCap', type: 'number', step: '0.1', value: existing?.toleranceCapTons ?? DEFAULT_TOLERANCE_CAP_TONS, hint: 'Whichever is less' })}
+        ${field({ label: 'Tolerance (%)', id: 'tolPct', type: 'number', step: '0.1', value: existing?.tolerancePct ?? (cottonFirst ? COTTON_TOLERANCE_PCT : DEFAULT_TOLERANCE_PCT) })}
+        ${field({ label: 'or (t)', id: 'tolCap', type: 'number', step: '0.1', value: existing?.toleranceCapTons ?? (cottonFirst ? COTTON_TOLERANCE_CAP_BALES : DEFAULT_TOLERANCE_CAP_TONS), hint: cottonFirst ? 'Cotton is one bale either way' : 'Whichever is less' })}
       </div>
       <div class="field"><label>Tolerance range</label><div class="readout" id="tol-preview">—</div></div>
       <label class="row" style="gap:10px;align-items:center;justify-content:flex-start;cursor:pointer;margin:0 0 12px">
         <input type="checkbox" id="tol-transfer" ${existing && !Number(existing.tolerancePct) && !Number(existing.toleranceCapTons) ? 'checked' : ''} style="width:18px;height:18px" />
-        <span>Transfer contract: no tolerance</span></label>
+        <span id="tol-transfer-label">${cottonFirst ? 'Balance of crop: no tolerance' : 'Transfer contract: no tolerance'}</span></label>
       <div class="row"><span class="label">Contract value</span><span class="value" id="value-preview">—</span></div>
       </section>
 
@@ -432,7 +433,7 @@ function openSaleSheet(existing) {
         ${field({ label: 'Delivery start', id: 'deliveryStart', type: 'date', value: existing?.deliveryStart })}
         ${field({ label: 'Delivery finish', id: 'deliveryEnd', type: 'date', value: existing?.deliveryEnd })}
       </div>
-      ${field({ label: 'How it is delivered', id: 'deliveryPattern', type: 'select', value: existing?.deliveryPattern ?? '', options: PATTERNS, hint: 'An even spread shows tonnes a week or a month on Deliveries to go and in the cash flow. If the buyer calls it, the grain orders give the dates.' })}
+      ${field({ label: 'How it is delivered', id: 'deliveryPattern', type: 'select', value: existing?.deliveryPattern ?? (cottonFirst ? 'ginrun' : ''), options: patternsFor(cottonFirst, existing?.deliveryPattern), hint: 'An even spread shows tonnes a week or a month on Deliveries to go and in the cash flow. If the buyer calls it, the grain orders give the dates. Cotton goes by gin run order.' })}
       ${field({ label: 'Weights and quality to govern', id: 'weightsToGovern', type: 'select', value: existing?.weightsToGovern ?? '', options: [
         { value: '', label: '—' },
         { value: 'destination', label: 'Destination' },
@@ -488,7 +489,7 @@ function openSaleSheet(existing) {
         </div>
         ${field({ label: 'Pricing point', id: 'pricingPoint', value: existing?.pricingPoint, placeholder: 'e.g. Goondiwindi - 45km S/W', hint: 'Where the price is struck' })}
         ${field({ label: 'Delivery terms', id: 'deliveryTerms', value: existing?.deliveryTerms, placeholder: 'e.g. 5 business days notice' })}
-        ${field({ label: 'Trade rules', id: 'tradeRules', value: existing?.tradeRules, placeholder: 'e.g. GTA contract 3' })}
+        ${field({ label: 'Trade rules', id: 'tradeRules', value: existing?.tradeRules, placeholder: 'e.g. GTA contract 3, or ICA for cotton' })}
       </details>
 
       <details class="fold" ${openAdjust ? 'open' : ''}>
@@ -597,9 +598,11 @@ function openSaleSheet(existing) {
       recomputeTolerance();
     }));
     // a transfer contract is normally delivered to the tonne: both boxes go to nothing, and back to the usual 5% or 20 t
+    const isBalesNow = () => commodities.find((cc) => cc.id === getVal(root, 'commodity'))?.unit === 'bale';
     transferBox.addEventListener('change', () => {
-      root.querySelector('#tolPct').value = transferBox.checked ? '0' : String(DEFAULT_TOLERANCE_PCT);
-      root.querySelector('#tolCap').value = transferBox.checked ? '0' : String(DEFAULT_TOLERANCE_CAP_TONS);
+      const bales = isBalesNow();
+      root.querySelector('#tolPct').value = transferBox.checked ? '0' : String(bales ? COTTON_TOLERANCE_PCT : DEFAULT_TOLERANCE_PCT);
+      root.querySelector('#tolCap').value = transferBox.checked ? '0' : String(bales ? COTTON_TOLERANCE_CAP_BALES : DEFAULT_TOLERANCE_CAP_TONS);
       recomputeTolerance();
     });
 
@@ -813,7 +816,24 @@ function openSaleSheet(existing) {
     };
     // the grade dropdown follows the commodity: its published grades and the farm's own
     const gradeCtl = wireGradeField(root, 'grade', () => commodities.find((cc) => cc.id === getVal(root, 'commodity')));
-    root.querySelector('#commodity').addEventListener('change', () => { syncUnitLabels(); gradeCtl.refresh(); goCtls.forEach((r) => r.ctl.refresh()); syncOilVisibility(); });
+    // cotton is delivered by gin run order, every other crop by the rest
+    const patternEl = root.querySelector('#deliveryPattern');
+    const syncPatterns = () => {
+      const bales = commodities.find((cc) => cc.id === getVal(root, 'commodity'))?.unit === 'bale';
+      // the tolerance follows the crop too: one bale for cotton, the usual 5% or 20 t for the rest, unless it has been changed
+      const pctEl = root.querySelector('#tolPct'); const capEl = root.querySelector('#tolCap');
+      const usual = bales ? [DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS] : [COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES];
+      if (Number(pctEl.value) === usual[0] && Number(capEl.value) === usual[1]) {
+        pctEl.value = String(bales ? COTTON_TOLERANCE_PCT : DEFAULT_TOLERANCE_PCT); capEl.value = String(bales ? COTTON_TOLERANCE_CAP_BALES : DEFAULT_TOLERANCE_CAP_TONS);
+        transferBox.checked = false;
+      }
+      root.querySelector('#tol-transfer-label').textContent = bales ? 'Balance of crop: no tolerance' : 'Transfer contract: no tolerance';
+      const was = patternEl.value;
+      const next = bales ? (was === '' ? 'ginrun' : was) : (was === 'ginrun' ? '' : was);
+      patternEl.innerHTML = patternsFor(bales, next).map((p) => `<option value="${p.value}">${esc(p.label)}</option>`).join('');
+      patternEl.value = next;
+    };
+    root.querySelector('#commodity').addEventListener('change', () => { syncPatterns(); syncUnitLabels(); gradeCtl.refresh(); goCtls.forEach((r) => r.ctl.refresh()); syncOilVisibility(); });
     syncUnitLabels();
 
     // --- documents -------------------------------------------------------

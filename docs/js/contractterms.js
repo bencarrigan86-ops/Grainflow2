@@ -1,8 +1,8 @@
 // The wording of a confirmation of sale's terms that has some working in it: the quantity tolerance and what each grade of a
 // multigrade contract is paid. Pure, so the confirmation (views/contract.js) and its tests share it.
 
-import { num, money } from './fmt.js?v=373';
-import { cleanGradeOptions } from './gradeprice.js?v=373';
+import { num, money } from './fmt.js?v=375';
+import { cleanGradeOptions } from './gradeprice.js?v=375';
 
 /**
  * Tolerance in the words the trade uses.
@@ -18,7 +18,7 @@ export function toleranceText(sale, unit) {
   if (!pct && !cap) return '';
   if (pct && cap) return `+/- ${num(cap, 0)} ${unit} or ${+pct.toFixed(1)}%, whichever is the lesser`;
   if (pct) return `+/- ${+pct.toFixed(1)}%`;
-  return `+/- ${num(cap, 0)} ${unit}`;
+  return `+/- ${num(cap, 0)} ${cap === 1 && unit === 'bales' ? 'bale' : unit}`;
 }
 
 

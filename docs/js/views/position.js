@@ -1,31 +1,36 @@
-import { db } from '../storage.js?v=373';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=373';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=373';
-import { payablesCost } from '../payables.js?v=373';
-import { openEofySheet } from './eofy.js?v=373';
-import { startProgress } from '../helpcontent.js?v=373';
-import { attentionItems } from '../attention.js?v=373';
-import { lastBackup } from '../backup.js?v=373';
-import { todayLocal, dmy } from '../fmt.js?v=373';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=373';
-import { openSheet, closeSheet } from '../ui.js?v=373';
-import { positionPdf } from '../positionpdf.js?v=373';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=373';
+import { db } from '../storage.js?v=375';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=375';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=375';
+import { payablesCost } from '../payables.js?v=375';
+import { openEofySheet } from './eofy.js?v=375';
+import { startProgress } from '../helpcontent.js?v=375';
+import { attentionItems } from '../attention.js?v=375';
+import { lastBackup } from '../backup.js?v=375';
+import { todayLocal, dmy } from '../fmt.js?v=375';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=375';
+import { openSheet, closeSheet } from '../ui.js?v=375';
+import { positionPdf } from '../positionpdf.js?v=375';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=375';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
+
+// Needs attention opens by default and stays as the person left it: shut, it shows how many there are and the worst of them
+const ATTN_KEY = 'grainflow.attention.open';
+const attentionOpen = () => { try { return localStorage.getItem(ATTN_KEY) !== '0'; } catch { return true; } };
 
 /** The things that need looking at today, a line each; empty when there is nothing. */
 function attentionCard() {
   const { invoices, sales, movements } = db.get();
   const items = attentionItems({ role: db.getRole(), today: todayLocal(), invoices, sales, movements, orders: db.getOrders(), payables: db.getPayables(), lastBackup: lastBackup() });
   if (!items.length) return '';
-  return `<div class="card" id="attention-card">
-        <h2>Needs attention</h2>
+  const worst = items.some((i) => i.tone === 'bad') ? 'bad' : items.some((i) => i.tone === 'warn') ? 'warn' : 'info';
+  return `<div class="card" id="attention-card"><details class="fold" id="attention-fold" ${attentionOpen() ? 'open' : ''}>
+        <summary><div><div style="display:flex;align-items:center;gap:8px"><span aria-hidden="true" style="width:10px;height:10px;border-radius:50%;flex:none;background:${TONE[worst]}"></span><h2 style="margin:0">Needs attention &middot; ${items.length}</h2></div><div class="sub" id="attn-sub" ${attentionOpen() ? "hidden" : ""}>${esc(items[0].title)}${items.length > 1 ? ` and ${items.length - 1} more` : ''}</div></div></summary>
         ${items.map((i) => `<div class="list-item" data-attn="${esc(i.action)}" style="cursor:pointer">
           <div style="display:flex;align-items:flex-start;gap:10px"><span aria-hidden="true" style="width:10px;height:10px;border-radius:50%;flex:none;margin-top:6px;background:${TONE[i.tone]}"></span>
             <div><div class="main">${esc(i.title)}</div><div class="meta">${esc(i.detail)}</div></div></div>
         </div>`).join('')}
-      </div>`;
+      </details></div>`;
 }
 
 let unsub = null;
@@ -117,6 +122,7 @@ function paint(root) {
   root.querySelector('#open-eofy').addEventListener('click', openEofySheet);
   root.querySelector('#position-pdf')?.addEventListener('click', () => openPdfSheet({ rows, totals, overheads, pl, cost }));
   root.querySelectorAll('[data-start-go]').forEach((el) => el.addEventListener('click', () => { location.hash = `#/${el.dataset.startGo}`; }));
+  root.querySelector('#attention-fold')?.addEventListener('toggle', (e) => { root.querySelector('#attn-sub').hidden = e.target.open; try { localStorage.setItem(ATTN_KEY, e.target.open ? '1' : '0'); } catch { /* opens again next time */ } });
   root.querySelectorAll('[data-attn]').forEach((el) => el.addEventListener('click', () => {
     const go = el.dataset.attn;
     if (go === 'money') openMoneySheet();

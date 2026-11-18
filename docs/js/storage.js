@@ -18,31 +18,61 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=373';
-import { setBrandLogo } from './brand.js?v=373';
+import { hydrate } from './hydrate.js?v=375';
+import { setBrandLogo } from './brand.js?v=375';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=373';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=373';
-import { isLegacyDirty } from './dirty.js?v=373';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=373';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=373';
-import { hasDeductions } from './deductions.js?v=373';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=373';
-import { hasHay, hasHayLoad } from './hay.js?v=373';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=373';
-import { settleLegs, dedupeLegs } from './legs.js?v=373';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=373';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=373';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=373';
-import { setCommodityOrder } from './commodityorder.js?v=373';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=373';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=373';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=373';
-import { schedulePush, pushOnReconnect } from './sync.js?v=373';
-import { hasParts as hasAddressParts } from './address.js?v=373';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=373';
+} from './local.js?v=375';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=375';
+import { isLegacyDirty } from './dirty.js?v=375';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=375';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=375';
+import { hasDeductions } from './deductions.js?v=375';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=375';
+import { hasHay, hasHayLoad } from './hay.js?v=375';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=375';
+import { settleLegs, dedupeLegs } from './legs.js?v=375';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=375';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=375';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=375';
+import { setCommodityOrder } from './commodityorder.js?v=375';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=375';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=375';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=375';
+import { schedulePush, pushOnReconnect } from './sync.js?v=375';
+import { hasParts as hasAddressParts } from './address.js?v=375';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=375';
+
+/**
+ * A gin bill the lint buyer pays is paid when the lint payment is: each paid invoice that carries a prepaid line for a ginning run
+ * counts toward that run's bill, and the bill is marked paid (on the date that invoice was paid) once they cover it. An invoice put
+ * back to unpaid, or deleted, reopens a bill it had settled. A bill no invoice carries is left as the person set it.
+ */
+function syncGinBills(c, reopen = []) {
+  const paid = new Map();       // bill id -> money from paid invoices, and the latest paid date
+  const carried = new Set(reopen);    // bills some invoice has a prepaid line for, or had one that has just been deleted
+  for (const inv of c.invoices || []) {
+    for (const l of inv.lines || []) {
+      if (!l.isGinPrepaid || !l.ginRunId) continue;
+      const pid = (c.movements || []).find((m) => m.id === l.ginRunId)?.gin?.payableId;
+      if (!pid) continue;
+      carried.add(pid);
+      if (inv.status !== 'paid') continue;
+      const e = paid.get(pid) || { sum: 0, date: '' };
+      e.sum += Number(l.amount) || 0;
+      if ((inv.paidDate || '') > e.date) e.date = inv.paidDate || '';
+      paid.set(pid, e);
+    }
+  }
+  for (const p of c.payables || []) {
+    if (p.payer !== 'buyer' || !carried.has(p.id)) continue;
+    const e = paid.get(p.id);
+    const settled = !!e && e.sum >= Math.round(((Number(p.amount) || 0) + (Number(p.gst) || 0)) * 100) / 100 - 0.05;
+    if (settled && p.status !== 'paid') { p.status = 'paid'; p.paidDate = e.date || new Date().toISOString().slice(0, 10); touch('payable', p.id); }
+    else if (!settled && p.status === 'paid') { p.status = 'unpaid'; p.paidDate = ''; touch('payable', p.id); }
+  }
+}
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -1175,6 +1205,7 @@ export const db = {
   },
   setInvoiceStatus(id, status) {
     const c = current();
+    const settleGin = () => syncGinBills(c);
     const idx = c.invoices.findIndex((inv) => inv.id === id);
     if (idx < 0) return;
     c.invoices[idx] = {
@@ -1182,6 +1213,7 @@ export const db = {
       paidDate: status === 'paid' ? new Date().toISOString().slice(0, 10) : null,
     };
     touch('invoice', id);
+    settleGin();
     persist();
   },
   updateInvoice(id, patch) {
@@ -1211,6 +1243,7 @@ export const db = {
     tombstone('invoices', id);
     const drop = new Set([id, ...notes.map((n) => n.id)]);
     current().invoices = current().invoices.filter((inv) => !drop.has(inv.id));
+    syncGinBills(current(), (gone?.lines || []).filter((l) => l.isGinPrepaid && l.ginRunId).map((l) => (current().movements || []).find((m) => m.id === l.ginRunId)?.gin?.payableId).filter(Boolean));
     persist();
   },
 

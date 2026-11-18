@@ -1293,8 +1293,8 @@
           "premiumDiscount": 0,
           "ginning": 0,
           "paymentTermsDays": 14,
-          "tolerancePct": 5,
-          "toleranceCapTons": 20,
+          "tolerancePct": 0,
+          "toleranceCapTons": 1,
           "brokerNote": "",
           "buyerAbn": "",
           "buyerAddress": "",
@@ -1313,14 +1313,15 @@
           "deliveryStart": "2026-04-01",
           "deliveryEnd": "2026-09-30",
           "freight": 0,
-          "leviesPct": 0
+          "leviesPct": 0,
+          "deliveryPattern": "ginrun"
         },
         {
           "premiumDiscount": 0,
           "ginning": 0,
           "paymentTermsDays": 14,
-          "tolerancePct": 5,
-          "toleranceCapTons": 20,
+          "tolerancePct": 0,
+          "toleranceCapTons": 1,
           "brokerNote": "",
           "buyerAbn": "",
           "buyerAddress": "",
@@ -1339,7 +1340,8 @@
           "deliveryStart": "2026-04-01",
           "deliveryEnd": "2026-09-30",
           "freight": 0,
-          "leviesPct": 0
+          "leviesPct": 0,
+          "deliveryPattern": "ginrun"
         },
         {
           "premiumDiscount": 0,
@@ -2692,7 +2694,8 @@
                 "kg": 78500
               }
             ],
-            "seedTo": ""
+            "seedTo": "",
+            "payableId": "pay-gin"
           }
         },
         {
@@ -3318,6 +3321,24 @@
           "status": "unpaid",
           "paidDate": "",
           "notes": "Wheat, December"
+        },
+        {
+          "id": "pay-gin",
+          "kind": "other",
+          "supplier": "Bimbi Ginning",
+          "reference": "I021/26",
+          "invoiceDate": "2026-05-02",
+          "dueDate": "",
+          "amount": 78923.45,
+          "gst": 7516.52,
+          "saleId": "",
+          "storageId": "",
+          "tons": 1002.203,
+          "rate": 75,
+          "status": "unpaid",
+          "paidDate": "",
+          "payer": "buyer",
+          "notes": "Paid by the lint buyer and taken off the lint payment"
         },
         {
           "id": "pay-4",

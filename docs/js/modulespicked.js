@@ -6,7 +6,7 @@
 //
 // Pure functions, no screen: the sheets that use them are in views/modulespicked.js.
 
-import { cleanCotton, hasModules, SEED_FACTOR_DEFAULT } from './ginning.js?v=373';
+import { cleanCotton, hasModules, moduleLegs, SEED_FACTOR_DEFAULT } from './ginning.js?v=375';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
@@ -34,7 +34,7 @@ export function pickedTotals(field, movements, moduleKg = 0) {
   let moved = 0;
   for (const m of movements || []) {
     if (!hasModules(m)) continue;
-    if ((m.froms || []).some((l) => l.type === 'field' && l.id === field?.id)) moved += num(m.modules.count);
+    for (const leg of moduleLegs(m)) if (leg.fieldId === field?.id) moved += leg.count;
   }
   const inField = Math.max(0, picked - moved);
   const share = picked > 0 ? Math.min(1, inField / picked) : 0;

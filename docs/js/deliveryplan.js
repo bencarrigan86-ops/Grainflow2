@@ -10,14 +10,22 @@
 // The same plan gives the money: each tonne is paid the contract's payment terms after it is delivered. Everything here
 // is a forecast at the contract price plus GST, before freight, levies and grade adjustments. Pure.
 
-import { daysBetween } from './orders.js?v=373';
+import { daysBetween } from './orders.js?v=375';
 
 export const PATTERNS = [
   { value: '', label: 'Not set' },
   { value: 'call', label: "Buyer's call (loads ordered as needed)" },
   { value: 'sellers', label: "Seller's option (you choose when it goes)" },
   { value: 'even', label: 'Even spread over the delivery period' },
+  { value: 'ginrun', label: 'Gin run order' },
 ];
+/**
+ * The delivery options a contract offers. Cotton goes by gin run order, so a cotton contract is offered that and Not set; every
+ * other crop is offered the rest. Whatever the contract already carries stays on the list, so it is never lost from view.
+ */
+export function patternsFor(isCotton, current = '') {
+  return PATTERNS.filter((p) => p.value === (current || '') || (isCotton ? ['', 'ginrun'].includes(p.value) : p.value !== 'ginrun'));
+}
 /** The delivery option as a contract confirmation words it: the contract's choice, without the note in brackets. */
 export const PATTERN_ON_CONTRACT = Object.fromEntries(PATTERNS.filter((p) => p.value).map((p) => [p.value, p.label.replace(/\s*\(.*\)\s*$/, '')]));
 /** The pattern values the farm's records keep. */

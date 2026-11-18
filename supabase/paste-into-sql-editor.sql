@@ -2011,3 +2011,8 @@ notify pgrst, 'reload schema';
 alter table movements add column if not exists hay_load jsonb;
 
 notify pgrst, 'reload schema';
+
+-- Gin bills the lint buyer pays: who settles a bill
+alter table payables add column if not exists payer text;
+
+notify pgrst, 'reload schema';

@@ -119,8 +119,8 @@ check('the confirmation prints the contact as name, number and email lines', () 
 
 console.log('\n=== how it is delivered ===');
 check("Seller's option is a delivery option, kept with the contract, and printed on the confirmation", () => {
-  assert.deepEqual(PATTERNS.map((p) => p.value), ['', 'call', 'sellers', 'even']);
-  assert.deepEqual(PATTERN_ON_CONTRACT, { call: "Buyer's call", sellers: "Seller's option", even: 'Even spread over the delivery period' });
+  assert.deepEqual(PATTERNS.map((p) => p.value), ['', 'call', 'sellers', 'even', 'ginrun']);
+  assert.deepEqual(PATTERN_ON_CONTRACT, { call: "Buyer's call", sellers: "Seller's option", even: 'Even spread over the delivery period', ginrun: 'Gin run order' });
   const sale = { id: 's', deliveryPattern: 'sellers' };
   const rows = stateToRows({ currentYear: '2026', years: { 2026: { sales: [sale], commodities: [], fields: [], storages: [], movements: [] } }, businessDetails: {} }, 'farm1');
   assert.equal(rows.sales[0].delivery_pattern, 'sellers');

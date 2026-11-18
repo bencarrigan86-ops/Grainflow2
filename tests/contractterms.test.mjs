@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { toleranceText, gradeTermsLines, gradeNamesText } from '../docs/js/contractterms.js';
+import { contractTolerance } from '../docs/js/derived.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -16,6 +17,15 @@ const check = (name, fn) => {
 const view = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs', 'js', 'contractpdf.js'), 'utf8');
 
 console.log('\n=== quantity and tolerance ===');
+check('cotton is one bale either way; the balance of the crop has none; other crops keep the lesser of the two', () => {
+  assert.equal(contractTolerance(600, 0, 1).toleranceTons, 1);
+  assert.equal(contractTolerance(600, 0, 1).maxTons, 601);
+  assert.equal(contractTolerance(600, 0, 0).toleranceTons, 0);
+  assert.equal(contractTolerance(1200, 5, 20).toleranceTons, 20);
+  assert.equal(contractTolerance(100, 5, 20).toleranceTons, 5);
+  assert.equal(toleranceText({ tolerancePct: 0, toleranceCapTons: 1 }, 'bales'), '+/- 1 bale');
+  assert.equal(toleranceText({ tolerancePct: 0, toleranceCapTons: 2 }, 'bales'), '+/- 2 bales');
+});
 check('a tonnes cap and a percentage read together, the lesser binding', () => {
   assert.equal(toleranceText({ toleranceCapTons: 20, tolerancePct: 5 }, 't'), '+/- 20 t or 5%, whichever is the lesser');
 });

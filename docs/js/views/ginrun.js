@@ -6,16 +6,16 @@
 // contract or a storage, which should add up to the bales pressed. The gin's invoice is saved as a bill when we pay it
 // (see ginning.js).
 
-import { db } from '../storage.js?v=373';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=373';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=373';
-import { activeSales } from '../paidsales.js?v=373';
-import { storageLedgerStock } from '../derived.js?v=373';
-import { offerGinYard } from './modulemove.js?v=373';
+import { db } from '../storage.js?v=375';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=375';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=375';
+import { activeSales } from '../paidsales.js?v=375';
+import { storageLedgerStock } from '../derived.js?v=375';
+import { offerGinYard } from './modulemove.js?v=375';
 import {
-  STD_BALE_KG, cleanGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice,
+  STD_BALE_KG, cleanGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, contractShare,
   baleRangeCount, allocateLint, allocationProblems, padOffBy,
-} from '../ginning.js?v=373';
+} from '../ginning.js?v=375';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -198,7 +198,7 @@ export function openGinRunSheet(existing = null) {
       const buyerPays = g.paidBy === 'buyer';
       const toContract = readAllocs().some((a) => parseTarget(a.to)?.type === 'sale');
       root.querySelector('#g-paid-note').innerHTML = !buyerPays ? ''
-        : toContract ? `Taken off the lint payment on the contract, for the bales that go there. Ex GST ${money(inv.exGst, 2)} for the whole run. No bill is saved.`
+        : toContract ? `Taken off the lint payment on the contract, for the bales that go there. Ex GST ${money(inv.exGst, 2)} for the whole run. A bill is saved in Payables and marked paid when that lint invoice is.`
           : 'Choose the contract the lint goes to above, so the charges can be taken off its payment.';
     };
 
@@ -263,17 +263,19 @@ export function openGinRunSheet(existing = null) {
       // the gin's invoice, kept as a bill when we pay it, so what ginning cost is in the books
       const inv = ginInvoice(g);
       let payableId = g.payableId;
-      if (g.paidBy === 'us' && inv.bales > 0) {
+      if (inv.bales > 0) {
+        // a run the lint buyer pays is billed for the part that goes to contracts: the rest is not on any buyer's invoice
+        const part = g.paidBy === 'buyer' ? contractShare(g) : 1;
         const bill = {
+          payer: g.paidBy === 'buyer' ? 'buyer' : null, ...(g.paidBy === 'buyer' ? {} : { __hasPayer: true }),
           kind: 'other', supplier: g.ginName || 'Gin', reference: g.invoiceNo, invoiceDate: getVal(root, 'g-date'),
-          amount: inv.exGst, gst: inv.gst, tons: round3(inv.bales), rate: g.ginRate,
-          notes: `Ginning run: ${num(inv.bales, 2)} standard bales. Ginning ${money(inv.ginning, 2)}, levies ${money(inv.levies, 2)}.`,
+          amount: Math.round(inv.exGst * part * 100) / 100, gst: Math.round(inv.gst * part * 100) / 100, tons: round3(inv.bales * part), rate: g.ginRate,
+          notes: `Ginning run: ${num(inv.bales, 2)} standard bales${part < 1 ? `, ${num(part * 100, 1)}% of them to contracts` : ''}. Ginning ${money(inv.ginning, 2)}, levies ${money(inv.levies, 2)}.`,
         };
         const same = payableId && db.getPayables().find((p) => p.id === payableId);
         payableId = db.upsertPayable(same ? { ...bill, id: payableId } : bill);
       }
 
-      if (g.paidBy === 'buyer' && payableId) notify('This run was saved as a bill before. The bill is still in Payables: delete it there so the gin is not counted twice.');
       db.upsertMovement({
         id: existing?.id,
         date: getVal(root, 'g-date'),

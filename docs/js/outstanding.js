@@ -8,9 +8,9 @@
 //
 // Pure: the screens use it; it touches neither storage nor the page.
 
-import { saleEconomics, invoicedMovementIds, movementsForEndpoint, invoiceLineItems } from './derived.js?v=373';
-import { orderState, daysBetween } from './orders.js?v=373';
-import { billTotal } from './payables.js?v=373';
+import { saleEconomics, invoicedMovementIds, movementsForEndpoint, invoiceLineItems } from './derived.js?v=375';
+import { orderState, daysBetween } from './orders.js?v=375';
+import { billTotal, paidByBuyer } from './payables.js?v=375';
 
 // A contract whose window ends within this many days is flagged as ending soon.
 export const ENDING_SOON_DAYS = 30;
@@ -94,7 +94,7 @@ function gather(rows) {
  */
 export function payablesDue(payables, today) {
   const rows = (payables || [])
-    .filter((p) => p.status !== 'paid')
+    .filter((p) => p.status !== 'paid' && !paidByBuyer(p))   // a gin bill the lint buyer pays is not the farm's to pay
     .map((bill) => {
       const daysOver = bill.dueDate ? daysBetween(bill.dueDate, today) : null;
       return {

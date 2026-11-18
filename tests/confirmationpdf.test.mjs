@@ -48,6 +48,17 @@ check('the page and the PDF say the same thing: one list of terms, leaving out w
   assert.deepEqual(termRows(sale, commodity, { showFreight: false }).map(([l]) => l).includes('Freight'), false);
 });
 
+check('a cotton contract is under the International Cotton Association, grain under Grain Trade Australia', () => {
+  const cotton = { id: 'c2', name: 'Cotton', unit: 'bale' };
+  const rows = Object.fromEntries(termRows({ ...sale, tolerancePct: 0, toleranceCapTons: 1 }, cotton));
+  assert.deepEqual(rows.Quality, ['As per International Cotton Association (ICA) standards']);
+  assert.deepEqual(rows['Trade rules'], ['International Cotton Association (ICA) Bylaws and Rules apply']);
+  assert.deepEqual(Object.fromEntries(termRows(sale, commodity)).Quality, ['As per Grain Trade Australia standards']);
+  const pdf = asText(confirmationPdf({ sale, business, commodity: cotton, date: when }));
+  assert.ok(pdf.includes('International Cotton Association') && !pdf.includes('Grain Trade Australia'));
+  assert.ok(asText(confirmationPdf({ sale, business, commodity, date: when })).includes('Grain Trade Australia'));
+  assert.equal(rows['Trade rules'].length, 1);
+});
 check('a long contract runs onto a second page rather than off the bottom', () => {
   const long = { ...sale, notes: 'A long condition that goes on. '.repeat(120), deliveryTerms: 'Delivered into the buyers site by the seller. '.repeat(30) };
   const t = asText(confirmationPdf({ sale: long, business, commodity, date: when }));

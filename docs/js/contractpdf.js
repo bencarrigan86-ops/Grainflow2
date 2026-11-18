@@ -3,17 +3,17 @@
 // The same terms, in the same order, as the page on screen (views/contract.js reads its rows from here too, so the two can
 // never say different things). Pure: it builds bytes from the sale and the farm's details and touches nothing else.
 
-import { Pdf, wrapText } from './pdf.js?v=373';
-import { drawBrandLogo } from './brand.js?v=373';
-import { letterheadLine } from './docband.js?v=373';
-import { addressLinesOf } from './address.js?v=373';
-import { num, money, dmy } from './fmt.js?v=373';
-import { PATTERN_ON_CONTRACT } from './deliveryplan.js?v=373';
-import { INVOICING_ON_CONTRACT } from './invoicing.js?v=373';
-import { contactLines } from './buyercontact.js?v=373';
-import { signerName } from './signdoc.js?v=373';
-import { toleranceText, gradeTermsLines, gradeNamesText } from './contractterms.js?v=373';
-import { hasSignature, strokesInBox } from './signature.js?v=373';
+import { Pdf, wrapText } from './pdf.js?v=375';
+import { drawBrandLogo } from './brand.js?v=375';
+import { letterheadLine } from './docband.js?v=375';
+import { addressLinesOf } from './address.js?v=375';
+import { num, money, dmy } from './fmt.js?v=375';
+import { PATTERN_ON_CONTRACT } from './deliveryplan.js?v=375';
+import { INVOICING_ON_CONTRACT } from './invoicing.js?v=375';
+import { contactLines } from './buyercontact.js?v=375';
+import { signerName } from './signdoc.js?v=375';
+import { toleranceText, gradeTermsLines, gradeNamesText } from './contractterms.js?v=375';
+import { hasSignature, strokesInBox } from './signature.js?v=375';
 
 export const DASH = '—';
 
@@ -59,14 +59,15 @@ export function carryText(sale) {
  * (a blank line invites a pen).
  */
 export function termRows(sale, commodity, { showFreight = true, showComments = true } = {}) {
-  const unit = commodity?.unit === 'bale' ? 'bales' : 't';
+  const cotton = commodity?.unit === 'bale';
+  const unit = cotton ? 'bales' : 't';
   const perUnit = commodity?.unit === 'bale' ? 'bale' : 'tonne';
   const gradeLines = gradeTermsLines(sale, perUnit);
   const rows = [
     ['Commodity', commodity?.name || DASH],
     ['Season', sale.cropYear],
     [gradeLines.length ? 'Grades' : 'Grade', gradeLines.length ? gradeNamesText(sale) : sale.grade],
-    ['Quality', 'As per Grain Trade Australia standards'],
+    ['Quality', cotton ? `As per ${ICA_NAME} standards` : 'As per Grain Trade Australia standards'],
     ['Quantity', [`${num(sale.tons, 0)} ${unit}`, toleranceText(sale, unit)]],
     ['Price', sale.price ? `${money(sale.price, 2)} per ${perUnit}, exclusive of GST` : ''],
     ['Freight', showFreight && sale.freight ? `${money(sale.freight, 2)} per ${perUnit}` : ''],
@@ -83,7 +84,7 @@ export function termRows(sale, commodity, { showFreight = true, showComments = t
     ['Payment terms', paymentText(sale)],
     ['Carry', carryText(sale)],
     ['Broker', brokerText(sale)],
-    ['Trade rules', sale.tradeRules || 'Grain Trade Australia Trade Rules apply'],
+    ['Trade rules', sale.tradeRules || (cotton ? `${ICA_NAME} Bylaws and Rules apply` : 'Grain Trade Australia Trade Rules apply')],
     ['Comments', showComments ? sale.notes : ''],
   ];
   return rows
@@ -91,7 +92,12 @@ export function termRows(sale, commodity, { showFreight = true, showComments = t
     .filter(([, lines]) => lines.length);
 }
 
+/** Cotton is traded under the International Cotton Association's standards and rules, where grain is traded under Grain Trade Australia's. */
+export const ICA_NAME = 'International Cotton Association (ICA)';
+
 /** The words under the terms, as on the page. */
+export const CONFIRMATION_FOOTING_COTTON = `This confirmation records the agreement between the parties named above. Unless stated otherwise, the ${ICA_NAME} Bylaws and Rules in force at the date of this contract apply. Failure to sign and return this confirmation does not affect its validity.`;
+export const confirmationFooting = (commodity) => (commodity?.unit === 'bale' ? CONFIRMATION_FOOTING_COTTON : CONFIRMATION_FOOTING);
 export const CONFIRMATION_FOOTING = 'This confirmation records the agreement between the parties named above. Unless stated otherwise, the Grain Trade Australia Trade Rules in force at the date of this contract apply. Failure to sign and return this confirmation does not affect its validity.';
 
 const M = 40;
@@ -164,9 +170,10 @@ export function confirmationPdf({ sale, business = {}, commodity = null, signatu
   y += 12;
 
   // the footing and the signatures
-  const footLines = wrapText(CONFIRMATION_FOOTING, W, 8.5);
+  const footing = confirmationFooting(commodity);
+  const footLines = wrapText(footing, W, 8.5);
   room(footLines.length * 11 + 130);
-  y = pdf.paragraph(M, y, CONFIRMATION_FOOTING, W, { size: 8.5, lineHeight: 11, gray: 0.3 }) + 16;
+  y = pdf.paragraph(M, y, footing, W, { size: 8.5, lineHeight: 11, gray: 0.3 }) + 16;
   const sigW = (W - 24) / 2;
   const lineFor = (x, yy, label) => { pdf.text(x, yy, label, { size: 9 }); pdf.line(x + 38, yy + 9, x + sigW, yy + 9, { width: 0.5, gray: 0.5 }); };
   pdf.text(M, y, 'SELLER', { size: 8.5, bold: true, gray: GREEN });

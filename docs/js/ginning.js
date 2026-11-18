@@ -194,6 +194,17 @@ export function allocateLint(gin) {
   });
 }
 
+/**
+ * The share of a run that goes to contracts, 0 to 1, by standard bales: what the lint buyer can take off its payment. The rest (the
+ * bale shed, a store) is not on any buyer's invoice.
+ */
+export function contractShare(gin) {
+  const lots = allocateLint(gin);
+  const all = lots.reduce((s, a) => s + a.std, 0);
+  const sold = lots.filter((a) => String(a.to).startsWith('sale:')).reduce((s, a) => s + a.std, 0);
+  return all > 0 ? Math.min(1, Math.round((sold / all) * 1e6) / 1e6) : 0;
+}
+
 /** Things wrong with how a run's bales were allocated, in words; none when it adds up. */
 export function allocationProblems(gin) {
   const g = cleanGin(gin) || cleanGin({});
@@ -306,10 +317,48 @@ export const DEFAULT_TURNOUT = 40;
 /** What a module move is as saved: the modules, their weight, the turnout used, and the bales that gives. */
 export function cleanModules(x) {
   if (!x || typeof x !== 'object') return null;
-  return { count: num(x.count), kg: num(x.kg), turnoutPct: num(x.turnoutPct), estBales: num(x.estBales) };
+  // a load from more than one paddock says how many modules, how much weight and how many bales came from each
+  const fields = Array.isArray(x.fields)
+    ? x.fields.filter((f) => f && f.id && num(f.count) > 0).map((f) => ({ id: String(f.id), count: num(f.count), kg: num(f.kg), bales: num(f.bales) }))
+    : [];
+  return { count: num(x.count), kg: num(x.kg), turnoutPct: num(x.turnoutPct), estBales: num(x.estBales), ...(fields.length > 1 ? { fields } : {}) };
 }
 
 export const hasModules = (m) => !!m?.modules && typeof m.modules === 'object';
+
+/**
+ * The paddocks a load of modules came from, one entry each: modules, weight and estimated bales. A load from one paddock is the
+ * whole load; a load from several says how it was shared (modules.fields). A load with no paddock leg is none.
+ * @returns {{fieldId: string, count: number, kg: number, bales: number}[]}
+ */
+export function moduleLegs(m) {
+  if (!hasModules(m)) return [];
+  const list = Array.isArray(m.modules.fields) ? m.modules.fields.filter((f) => f && f.id && num(f.count) > 0) : [];
+  if (list.length > 1) return list.map((f) => ({ fieldId: String(f.id), count: num(f.count), kg: num(f.kg), bales: num(f.bales) }));
+  const from = (m.froms || []).find((l) => l.type === 'field')?.id;
+  return from ? [{ fieldId: from, count: num(m.modules.count), kg: num(m.modules.kg), bales: num(m.modules.estBales) }] : [];
+}
+
+/**
+ * Share a load's modules, weight and bales between the paddocks it came from. The weight goes by what each paddock's modules are
+ * estimated to weigh (its kilograms a module), so a weighbridge weight typed for the whole load is split the way the estimate would
+ * have been; where no module weights are known it goes by the number of modules. The shares add back to the load.
+ * @param {{id: string, count: number}[]} rows one entry for each paddock
+ * @param {(fieldId: string) => number} avgKgFor kilograms a module on that paddock, 0 when not known
+ * @returns {{id: string, count: number, kg: number, bales: number}[]}
+ */
+export function shareLoad(rows, totalKg, totalBales, avgKgFor) {
+  const merged = [];
+  for (const r of rows) {
+    const same = merged.find((m) => m.id === r.id);
+    if (same) same.count += r.count; else merged.push({ id: r.id, count: r.count });
+  }
+  const est = merged.map((m) => m.count * (avgKgFor(m.id) || 0));
+  const estTotal = est.reduce((s, v) => s + v, 0);
+  const countTotal = merged.reduce((s, m) => s + m.count, 0);
+  const shares = merged.map((m, i) => (estTotal > 0 ? est[i] / estTotal : countTotal > 0 ? m.count / countTotal : 0));
+  return merged.map((m, i) => ({ id: m.id, count: m.count, kg: Math.round(totalKg * shares[i]), bales: Math.round(totalBales * shares[i] * 1000) / 1000 }));
+}
 
 /** Standard bales the picked cotton will gin out to: its weight, times the turnout, over the standard bale. */
 export function estimateBales(kg, turnoutPct, stdBaleKg = STD_BALE_KG) {

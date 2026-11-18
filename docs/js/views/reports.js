@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=373';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=373';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=373';
-import { fertPdf } from '../fertpdf.js?v=373';
-import { seedPdf } from '../seedpdf.js?v=373';
-import { yieldPdf } from '../yieldpdf.js?v=373';
-import { harvestPdf } from '../harvestpdf.js?v=373';
-import { modulesPdf } from '../modulespdf.js?v=373';
-import { modulesReport } from '../modulesreport.js?v=373';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=373';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=373';
-import { field, getVal, getNum } from '../ui.js?v=373';
-import { canSeeYield } from '../nav.js?v=373';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=373';
-import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=373';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=373';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=373';
+import { db } from '../storage.js?v=375';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=375';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=375';
+import { fertPdf } from '../fertpdf.js?v=375';
+import { seedPdf } from '../seedpdf.js?v=375';
+import { yieldPdf } from '../yieldpdf.js?v=375';
+import { harvestPdf } from '../harvestpdf.js?v=375';
+import { modulesPdf } from '../modulespdf.js?v=375';
+import { modulesReport } from '../modulesreport.js?v=375';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=375';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=375';
+import { field, getVal, getNum } from '../ui.js?v=375';
+import { canSeeYield } from '../nav.js?v=375';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=375';
+import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=375';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=375';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=375';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -132,19 +132,29 @@ function paintModules(root) {
       </div>
       <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Weight is the weighbridge weight for the loads weighed at the gin yard, and the estimate for modules still in the field or not yet weighed. Bales follow the weight, until the ginning runs give the real lint.</div>
     </div>
-    ${report.ginned.rows.length ? `<div class="card report">
-      <h2><span class="dot report"></span>Already ginned</h2>
+    ${report.grower.length ? `<div class="card report">
+      <h2><span class="dot report"></span>Grower position</h2>
       <div class="table-scroll tight-wrap">
         <table class="tight wrap-first">
-          <colgroup><col style="width:28%"><col style="width:16%"><col style="width:15%"><col style="width:21%"><col style="width:20%"></colgroup>
-          <thead><tr><th>Field</th><th>Modules</th><th>Bales</th><th>Avg kg</th><th>Turnout</th></tr></thead>
+          <colgroup><col style="width:30%"><col style="width:13%"><col style="width:14%"><col style="width:13%"><col style="width:15%"><col style="width:15%"></colgroup>
+          <thead><tr><th>Field</th><th>Ha</th><th>Picked</th><th>Loads</th><th>To gin</th><th>Ginned</th></tr></thead>
           <tbody>
-            ${report.ginned.rows.map((r) => `<tr><td><span class="fname">${r.field ? esc(r.field.name) : 'Not from a recorded move'}</span></td><td>${num(r.modules, 0)}</td><td>${num(r.bales, 0)}</td><td>${num(r.avgKg, 0)}</td><td>${r.turnoutPct > 0 ? `${num(r.turnoutPct, 1)}%` : '-'}</td></tr>`).join('')}
+            ${report.grower.map((r) => `<tr><td><span class="fname" title="${esc(r.field.name)}">${esc(r.field.name)}</span>${r.variety ? `<br><span class="meta">${esc(r.variety)}</span>` : ''}</td><td>${num(r.ha, 0)}</td><td>${num(r.picked, 0)}</td><td>${num(r.loads, 0)}</td><td>${num(r.moved, 0)}</td><td>${num(r.ginnedModules, 0)}</td></tr>`).join('')}
           </tbody>
-          <tfoot><tr><td>Total</td><td>${num(report.ginned.totals.modules, 0)}</td><td>${num(report.ginned.totals.bales, 0)}</td><td>${num(report.ginned.totals.avgKg, 0)}</td><td>${report.ginned.totals.turnoutPct > 0 ? `${num(report.ginned.totals.turnoutPct, 1)}%` : '-'}</td></tr></tfoot>
+          <tfoot><tr><td>Total</td><td>${num(report.growerTotals.ha, 0)}</td><td>${num(report.growerTotals.picked, 0)}</td><td>${num(report.growerTotals.loads, 0)}</td><td>${num(report.growerTotals.moved, 0)}</td><td>${num(report.growerTotals.ginnedModules, 0)}</td></tr></tfoot>
         </table>
       </div>
-      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">From the ginning runs. Modules come out of the yard in the order they arrived, so a run that mixed paddocks is shared between them by module weight.</div>
+      <div class="table-scroll tight-wrap" style="margin-top:10px">
+        <table class="tight wrap-first">
+          <colgroup><col style="width:30%"><col style="width:20%"><col style="width:20%"><col style="width:15%"><col style="width:15%"></colgroup>
+          <thead><tr><th>Field</th><th>Avg module kg</th><th>227 kg bales</th><th>Turnout</th><th>Yield</th></tr></thead>
+          <tbody>
+            ${report.grower.map((r) => `<tr><td><span class="fname">${esc(r.field.name)}</span></td><td>${num(r.avgKg, 0)}</td><td>${r.bales > 0 ? num(r.bales, 1) : '-'}</td><td>${r.turnoutPct > 0 ? `${num(r.turnoutPct, 1)}%` : '-'}</td><td>${r.yieldBalesHa > 0 ? num(r.yieldBalesHa, 1) : '-'}</td></tr>`).join('')}
+          </tbody>
+          <tfoot><tr><td>Total</td><td>${num(report.growerTotals.avgKg, 0)}</td><td>${report.growerTotals.bales > 0 ? num(report.growerTotals.bales, 1) : '-'}</td><td>${report.growerTotals.turnoutPct > 0 ? `${num(report.growerTotals.turnoutPct, 1)}%` : '-'}</td><td>${report.growerTotals.yieldBalesHa > 0 ? num(report.growerTotals.yieldBalesHa, 1) : '-'}</td></tr></tfoot>
+        </table>
+      </div>
+      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Laid out as the gin's grower position summary, to check against it. Yield is ginned standard bales a hectare, so it grows as the ginning does. Modules come out of the yard in the order they arrived, so a run that mixed paddocks is shared between them by module weight.</div>
     </div>` : ''}
     ${report.yards.length || report.pending.loads ? `<div class="card report">
       <h2><span class="dot report"></span>Gin yard</h2>

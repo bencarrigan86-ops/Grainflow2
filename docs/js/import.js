@@ -76,6 +76,7 @@ export function remapIds(input) {
         const ref = (v) => { const i = typeof v === 'string' ? v.indexOf(':') : -1; return i < 0 ? v : `${v.slice(0, i)}:${idFor(v.slice(i + 1))}`; };
         for (const a of m.gin.allocations || []) a.to = ref(a.to);
         if (m.gin.seedTo) m.gin.seedTo = ref(m.gin.seedTo);
+        if (m.gin.payableId) m.gin.payableId = idFor(m.gin.payableId);
       }
     }
 

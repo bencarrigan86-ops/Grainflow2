@@ -11,7 +11,7 @@
 //
 // Bills count at their amount ex GST: the GST on a bill is claimed back, so it is owed but is not a cost.
 
-import { saleEconomics } from './derived.js?v=373';
+import { saleEconomics } from './derived.js?v=375';
 
 export const KINDS = [
   { key: 'brokerage', label: 'Brokerage' },
@@ -29,6 +29,9 @@ const num = (v) => {
 };
 const round2 = (n) => Math.round(n * 100) / 100;
 
+/** A gin bill the buyer of the lint pays and takes off the lint payment: it is on the books but is not the farm's to pay. */
+export const paidByBuyer = (p) => p?.payer === 'buyer';
+
 /** What a bill comes to, GST included: what is paid. */
 export const billTotal = (p) => round2(num(p?.amount) + num(p?.gst));
 
@@ -45,6 +48,7 @@ export const isOverdue = (p, today) => p?.status !== 'paid' && !!p?.dueDate && S
 export function summarise(payables, today) {
   const out = { unpaid: { count: 0, total: 0 }, overdue: { count: 0, total: 0 }, paid: { count: 0, total: 0 } };
   for (const p of payables || []) {
+    if (paidByBuyer(p) && p.status !== 'paid') continue;   // not the farm's to pay: it comes off the lint payment
     const bucket = p.status === 'paid' ? out.paid : out.unpaid;
     bucket.count += 1;
     bucket.total += billTotal(p);
@@ -110,6 +114,7 @@ export function payablesCost(sales, movements, payables) {
   let storage = 0;
   let other = 0;
   for (const p of payables || []) {
+    if (paidByBuyer(p)) continue;   // the ginning is already taken off the contract's payment: counting the bill too would count it twice
     const amount = num(p.amount);
     const onAContract = linked.has(p.saleId);
     if (p.kind === 'brokerage' && !onAContract) brokerage += amount;

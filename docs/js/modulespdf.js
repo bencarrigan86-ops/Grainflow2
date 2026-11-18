@@ -1,18 +1,26 @@
 // The Modules report as a PDF: where the picked modules are, paddock by paddock. The report's own figures (modulesreport.js) go in;
 // nothing is worked out again here. Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=373';
+import { createReport, fixed } from './reportpdf.js?v=375';
 
 const n0 = (v) => fixed(v, 0);
 
-const fieldName = (r) => (r.field ? r.field.name : 'Not from a recorded move');
 
-export const GINNED_COLUMNS = [
-  { head: 'Field', w: 0.3, left: true, cell: (r) => fieldName(r) },
-  { head: 'Modules', w: 0.14, cell: (r) => n0(r.modules) },
-  { head: 'Bales', w: 0.14, cell: (r) => n0(r.bales) },
-  { head: 'Avg module kg', w: 0.24, cell: (r) => n0(r.avgKg) },
-  { head: 'Turnout', w: 0.18, cell: (r) => (r.turnoutPct > 0 ? fixed(r.turnoutPct, 1) + '%' : '-') },
+/** The grower position, as the gin prints it, in two tables so each fits the page. */
+export const GROWER_COLUMNS = [
+  { head: 'Field', w: 0.3, left: true, cell: (r) => (r.field ? r.field.name + (r.variety ? ' (' + r.variety + ')' : '') : 'Total') },
+  { head: 'Ha', w: 0.12, cell: (r) => n0(r.ha) },
+  { head: 'Picked', w: 0.14, cell: (r) => n0(r.picked) },
+  { head: 'Loads', w: 0.12, cell: (r) => n0(r.loads) },
+  { head: 'To gin', w: 0.16, cell: (r) => n0(r.moved) },
+  { head: 'Ginned', w: 0.16, cell: (r) => n0(r.ginnedModules) },
+];
+export const GROWER_COLUMNS_2 = [
+  { head: 'Field', w: 0.3, left: true, cell: (r) => (r.field ? r.field.name : 'Total') },
+  { head: 'Avg module kg', w: 0.22, cell: (r) => n0(r.avgKg) },
+  { head: '227 kg bales', w: 0.22, cell: (r) => (r.bales > 0 ? fixed(r.bales, 1) : '-') },
+  { head: 'Turnout', w: 0.13, cell: (r) => (r.turnoutPct > 0 ? fixed(r.turnoutPct, 1) + '%' : '-') },
+  { head: 'Yield', w: 0.13, cell: (r) => (r.yieldBalesHa > 0 ? fixed(r.yieldBalesHa, 1) : '-') },
 ];
 
 export const MODULES_COLUMNS = [
@@ -36,10 +44,12 @@ export function modulesPdf({ report, business = '', season = '', today = '' } = 
   const t = report.totals;
   pdf.heading('Where the modules are');
   pdf.table(MODULES_COLUMNS, report.rows, { total: { field: { name: 'Total' }, ...t }, name: 'Modules' });
-  if (report.ginned && report.ginned.rows.length) {
-    pdf.heading('Already ginned');
-    pdf.table(GINNED_COLUMNS, report.ginned.rows, { total: { field: { name: 'Total' }, ...report.ginned.totals }, name: 'Ginned' });
-    pdf.note('Modules are taken from the yard in the order they arrived, so a run that mixed paddocks is shared between them by module weight.');
+  if (report.grower && report.grower.length) {
+    pdf.heading('Grower position');
+    pdf.table(GROWER_COLUMNS, report.grower, { total: { field: null, ...report.growerTotals }, name: 'Grower position' });
+    pdf.gap(6);
+    pdf.table(GROWER_COLUMNS_2, report.grower, { total: { field: null, ...report.growerTotals }, name: 'Grower position, bales' });
+    pdf.note('Laid out as the grower position summary the gin prints. Yield is ginned standard bales a hectare. Modules are taken from the yard in the order they arrived, so a run that mixed paddocks is shared between them by module weight.');
   }
   if (report.yards.length) {
     pdf.heading('Gin yard');

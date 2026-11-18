@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PATTERNS, payDate, evenDays, deliveryPlan, expectedReceipts, periodKey, periodLabel, addDays } from '../docs/js/deliveryplan.js';
+import { PATTERNS, patternsFor, payDate, evenDays, deliveryPlan, expectedReceipts, periodKey, periodLabel, addDays } from '../docs/js/deliveryplan.js';
 import { deliveries, uninvoiced } from '../docs/js/outstanding.js';
 import { cashflow } from '../docs/js/cashflow.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
@@ -159,10 +159,18 @@ check('clearing it still reaches the server, and anything else is not stored', (
 });
 
 console.log('\n=== on the screens ===');
+check('cotton contracts are offered gin run order, other crops the rest, and what a contract already carries stays on the list', () => {
+  const v = (list) => list.map((p) => p.value);
+  assert.deepEqual(v(patternsFor(true)), ['', 'ginrun']);
+  assert.deepEqual(v(patternsFor(false)), ['', 'call', 'sellers', 'even']);
+  assert.deepEqual(v(patternsFor(true, 'call')), ['', 'call', 'ginrun']);
+  assert.deepEqual(v(patternsFor(false, 'ginrun')), ['', 'call', 'sellers', 'even', 'ginrun']);
+  assert.equal(PATTERNS.find((p) => p.value === 'ginrun').label, 'Gin run order');
+});
 check('the contract form asks how it is delivered, and saves the answer', () => {
   const s = read('docs/js/views/sales.js');
-  assert.ok(s.includes("id: 'deliveryPattern'") && s.includes("deliveryPattern: getVal(root, 'deliveryPattern') || ''") && s.includes('options: PATTERNS'));
-  assert.deepEqual(PATTERNS.map((p) => p.value), ['', 'call', 'sellers', 'even']);
+  assert.ok(s.includes("id: 'deliveryPattern'") && s.includes("deliveryPattern: getVal(root, 'deliveryPattern') || ''") && s.includes('options: patternsFor('));
+  assert.deepEqual(PATTERNS.map((p) => p.value), ['', 'call', 'sellers', 'even', 'ginrun']);
 });
 check('Delivery timeline has the weekly and monthly schedule, and Receivables & payables feeds the forecast to the cash flow', () => {
   const o = read('docs/js/views/outstanding.js');

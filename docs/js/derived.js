@@ -1,14 +1,17 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=373';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=373';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=373';
-import { ginDeduction, cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=373';
-import { commoditySort } from './commodityorder.js?v=373';
-import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=373';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=375';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=375';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=375';
+import { ginDeduction, cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=375';
+import { commoditySort } from './commodityorder.js?v=375';
+import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=375';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
+/** Cotton is delivered within one bale either way, unless the contract is the balance of the crop (no tolerance). */
+export const COTTON_TOLERANCE_PCT = 0;
+export const COTTON_TOLERANCE_CAP_BALES = 1;
 
 /**
  * Contract delivery tolerance: buyers typically accept delivery within
@@ -20,7 +23,8 @@ export function contractTolerance(tons, tolerancePct = DEFAULT_TOLERANCE_PCT, to
   const t = Number(tons) || 0;
   const pctAmount = t * ((Number(tolerancePct) || 0) / 100);
   const capAmount = Number(toleranceCapTons) || 0;
-  const toleranceTons = Math.min(pctAmount, capAmount);
+  // the lesser of the two when both are set; a contract with only one of them (cotton: one bale) has that one
+  const toleranceTons = pctAmount > 0 && capAmount > 0 ? Math.min(pctAmount, capAmount) : pctAmount > 0 ? pctAmount : capAmount;
   const minTons = Math.max(0, t - toleranceTons);
   const maxTons = t + toleranceTons;
   return { toleranceTons, minTons, maxTons };

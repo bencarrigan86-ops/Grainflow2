@@ -27,13 +27,13 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=373';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=373';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=373';
-import { cleanPicked } from './modulespicked.js?v=373';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=373';
-import { cleanOffFarm } from './offfarm.js?v=373';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=373';
+import { cleanGradeOptions } from './gradeprice.js?v=375';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=375';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=375';
+import { cleanPicked } from './modulespicked.js?v=375';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=375';
+import { cleanOffFarm } from './offfarm.js?v=375';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=375';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -458,7 +458,7 @@ export function stateToRows(state, farmId) {
         // Marked paid and finished with. Sent once it has been marked, and kept after that so un-marking reaches the server.
         ...((sale.paid || sale.__hasPaid) ? { is_paid: !!sale.paid } : {}),
         // How the contract is delivered: 'call' (the buyer orders it) or 'even' (spread over the window). Optional like the other later columns.
-        ...((sale.deliveryPattern || sale.__hasDeliveryPattern) ? { delivery_pattern: ['even', 'call', 'sellers'].includes(sale.deliveryPattern) ? sale.deliveryPattern : null } : {}),
+        ...((sale.deliveryPattern || sale.__hasDeliveryPattern) ? { delivery_pattern: ['even', 'call', 'sellers', 'ginrun'].includes(sale.deliveryPattern) ? sale.deliveryPattern : null } : {}),
         // Who invoices: 'seller' (the farm) or 'rcti' (the buyer, by a recipient created tax invoice). Optional like the other later columns.
         ...((sale.invoicing || sale.__hasInvoicing) ? { invoicing: ['seller', 'rcti'].includes(sale.invoicing) ? sale.invoicing : null } : {}),
       });
@@ -614,6 +614,8 @@ export function stateToRows(state, farmId) {
         notes: orNull(p.notes),
         // The freight order a carrier's bill is for (optional: only sent once a bill has one).
         ...((p.freightOrderId || p.__hasFreightOrderId) ? { freight_order_id: orNull(p.freightOrderId) } : {}),
+        // who settles it: the buyer of the lint, for a gin bill taken off the lint payment (sent once a bill has one, or has had one)
+        ...((p.payer || p.__hasPayer) ? { payer: orNull(p.payer) } : {}),
       });
       out.record_documents.push(...recordDocRows(farmId, 'payable', p));
     }
@@ -909,6 +911,7 @@ export function rowsToState(rows) {
         tons: p.tons == null ? '' : n(p.tons), rate: p.rate == null ? '' : n(p.rate),
         status: p.status, paidDate: p.paid_date ?? '', notes: p.notes ?? '',
         ...(p.freight_order_id ? { freightOrderId: p.freight_order_id, __hasFreightOrderId: true } : {}),
+        ...(p.payer ? { payer: p.payer, __hasPayer: true } : {}),
         ...docsOf(p.id),
       })),
 

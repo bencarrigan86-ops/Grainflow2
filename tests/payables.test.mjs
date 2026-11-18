@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed, freightEffect, payablesCost,
+  KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed, freightEffect, payablesCost, paidByBuyer,
 } from '../docs/js/payables.js';
 import { farmProfitLoss } from '../docs/js/derived.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
@@ -222,6 +222,36 @@ check('the database table and column are in the paste-in file, and the delete fu
   assert.match(sql, /create table if not exists payables/);
   assert.match(sql, /brokerage_rate numeric/);
   assert.match(sql, /'invoices', 'overheads', 'payables'/);
+});
+
+console.log('\n=== a gin bill the lint buyer pays ===');
+const ginBill = (o = {}) => bill({ kind: 'other', supplier: 'Bimbi Ginning', amount: 1000, gst: 100, payer: 'buyer', ...o });
+check('it is left out of what the farm owes, and out of what comes off profit', () => {
+  const s = summarise([ginBill({ dueDate: '2026-01-01' }), bill({ amount: 500, gst: 50 })], '2026-11-13');
+  assert.deepEqual(s.unpaid, { count: 1, total: 550 });
+  assert.deepEqual(s.overdue, { count: 0, total: 0 });
+  assert.equal(payablesCost([], [], [ginBill(), bill({ kind: 'other', amount: 200 })]).total, 200);
+});
+check('once the lint payment settles it, it shows as paid', () => {
+  const s = summarise([ginBill({ status: 'paid', paidDate: '2026-12-01' })], '2026-12-02');
+  assert.deepEqual(s.paid, { count: 1, total: 1100 });
+  assert.equal(paidByBuyer({ payer: 'buyer' }), true);
+  assert.equal(paidByBuyer({}), false);
+});
+check('who settles it is saved only once a bill has one, and cleared when it goes back to the farm', () => {
+  const plain = stateToRows(stateWith([full]), FARM).payables[0];
+  assert.ok(!('payer' in plain), 'an ordinary bill sends no column');
+  const via = stateToRows(stateWith([{ ...full, payer: 'buyer' }]), FARM);
+  assert.equal(via.payables[0].payer, 'buyer');
+  assert.equal(rowsToState(via).years[2026].payables[0].payer, 'buyer');
+  assert.equal(stateToRows(stateWith([{ ...full, payer: null, __hasPayer: true }]), FARM).payables[0].payer, null);
+});
+check('the lint invoice settles the bill, the gin run saves it, and the SQL adds the column', () => {
+  const st = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs/js/storage.js'), 'utf8');
+  assert.ok(st.includes('function syncGinBills') && st.includes('const settleGin = () => syncGinBills(c);') && st.includes('syncGinBills(current(), '));
+  const run = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs/js/views/ginrun.js'), 'utf8');
+  assert.ok(run.includes("payer: g.paidBy === 'buyer' ? 'buyer' : null"));
+  assert.ok(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'supabase/migrations/20261203000000_payable_payer.sql'), 'utf8').includes('add column if not exists payer text'));
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }

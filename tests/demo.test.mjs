@@ -461,7 +461,7 @@ check('every reference points at something that comes with it, or at the farm\'s
 check('a farm with none of the paddocks keeps the straw loads out, and one with bills keeps its own', () => {
   const bare = sampleCottonHayFrom(seed, { fields: [], payables: [{ id: 'x' }], inputStock: [{ id: 'y' }], sprayJobs: [{ id: 'z' }] });
   assert.ok(!bare.movements.some((m) => m.commodityId === bare.commodities.find((c) => c.name === 'Wheat straw').id && m.froms.some((l) => l.type === 'field')));
-  assert.deepEqual([bare.payables.length, bare.inputStock.length, bare.sprayJobs.length, bare.strawBaled.length], [0, 0, 0, 0]);
+  assert.ok(bare.payables.every((p) => p.payer === 'buyer'), 'only the gin bill, which belongs with the ginning run'); assert.deepEqual([bare.payables.length, bare.inputStock.length, bare.sprayJobs.length, bare.strawBaled.length], [1, 0, 0, 0]);
 });
 check('a seed without cotton and hay gives nothing', () => {
   assert.equal(sampleCottonHayFrom({ currentYear: 'x', years: { x: { commodities: [], fields: [] } } }, {}), null);

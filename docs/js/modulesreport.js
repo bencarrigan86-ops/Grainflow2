@@ -2,9 +2,9 @@
 //
 // Pure functions over the farm's records. The screen (views/reports.js) and the PDF (modulespdf.js) both draw from this.
 
-import { hasGin, hasModules, cleanGin, stdBales, estimateBales, DEFAULT_TURNOUT } from './ginning.js?v=373';
-import { pickedTotals, cleanPicked } from './modulespicked.js?v=373';
-import { storageLedgerStock } from './derived.js?v=373';
+import { hasGin, hasModules, moduleLegs, cleanGin, stdBales, estimateBales, DEFAULT_TURNOUT } from './ginning.js?v=375';
+import { pickedTotals, cleanPicked } from './modulespicked.js?v=375';
+import { storageLedgerStock } from './derived.js?v=375';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
@@ -32,9 +32,11 @@ export function modulesReport({ fields = [], movements = [], storages = [], comm
     let weighedKg = 0;
     let loadKg = 0;
     for (const m of movements) {
-      if (!hasModules(m) || !(m.froms || []).some((l) => l.type === 'field' && l.id === f.id)) continue;
-      const loadWeight = num(m.modules.kg) > 0 ? num(m.modules.kg) : num(m.modules.count) * avgPick;
-      if (m.weightStatus === 'final' && num(m.modules.kg) > 0) weighedKg += loadWeight; else loadKg += loadWeight;
+      for (const leg of moduleLegs(m)) {
+        if (leg.fieldId !== f.id) continue;
+        const loadWeight = leg.kg > 0 ? leg.kg : leg.count * avgPick;
+        if (m.weightStatus === 'final' && leg.kg > 0) weighedKg += loadWeight; else loadKg += loadWeight;
+      }
     }
     const kg = weighedKg + loadKg + avgPick * t.inField;
     // the turnout the modules were picked at (by their weight), else the commodity's, else the usual
@@ -75,7 +77,41 @@ export function modulesReport({ fields = [], movements = [], storages = [], comm
   const ginned = ginnedByField({ fields, movements });
   const waiting = movements.filter((m) => hasModules(m) && m.weightStatus !== 'final');
   const pending = { loads: waiting.length, modules: waiting.reduce((s, m) => s + num(m.modules.count), 0), ids: waiting.map((m) => m.id) };
-  return { rows, totals, yards, pending, ginned };
+
+  // the grower position, laid out as the gin prints it: paddock, variety, hectares, picked, loads, delivered, ginned, bales, turnout, yield
+  const ginnedBy = new Map(ginned.rows.filter((r) => r.field).map((r) => [r.field.id, r]));
+  const loadsBy = new Map();
+  for (const m of movements) {
+    if (!hasModules(m)) continue;
+    for (const leg of moduleLegs(m)) loadsBy.set(leg.fieldId, (loadsBy.get(leg.fieldId) || 0) + 1);
+  }
+  const grower = rows.map((r) => {
+    const g = ginnedBy.get(r.field.id);
+    const ha = num(r.field.areaHa);
+    const bales = g ? g.bales : 0;
+    return {
+      field: r.field, variety: String(r.field.seedVariety || ''), ha, picked: r.picked, loads: loadsBy.get(r.field.id) || 0, moved: r.moved,
+      ginnedModules: g ? g.modules : 0, inYard: Math.max(0, r.moved - (g ? g.modules : 0)), avgKg: g && g.avgKg > 0 ? g.avgKg : r.avgKg,
+      bales, turnoutPct: g ? g.turnoutPct : 0, yieldBalesHa: ha > 0 && bales > 0 ? bales / ha : 0,
+    };
+  });
+  const gsum = grower.reduce((s, r) => ({
+    ha: s.ha + r.ha, picked: s.picked + r.picked, loads: s.loads + r.loads, moved: s.moved + r.moved, ginnedModules: s.ginnedModules + r.ginnedModules,
+    bales: s.bales + r.bales, ginnedHa: s.ginnedHa + (r.bales > 0 ? r.ha : 0),
+  }), { ha: 0, picked: 0, loads: 0, moved: 0, ginnedModules: 0, bales: 0, ginnedHa: 0 });
+  const growerTotals = {
+    ...gsum, avgKg: ginned.totals.avgKg > 0 ? ginned.totals.avgKg : totals.avgKg, turnoutPct: ginned.totals.turnoutPct,
+    yieldBalesHa: gsum.ginnedHa > 0 ? gsum.bales / gsum.ginnedHa : 0,
+  };
+
+  // the cotton on hand, as expected bales: modules in the field, modules in the gin yards at the average weight and turnout, and the
+  // bales in the bale shed (a tally kept in bales). A module is in one place at a time, so these do not overlap.
+  const turnoutAvg = totals.kg > 0 ? rows.reduce((s, r) => s + r.turnoutPct * r.kg, 0) / totals.kg : DEFAULT_TURNOUT;
+  const inYard = yards.reduce((s, y) => s + y.inYard, 0);
+  const yardBales = estimateBales((totals.avgKg || 0) * inYard, turnoutAvg);
+  const inShed = storages.filter((s) => s.kind === 'tally' && !s.deleted && !ids.has(s.id) && s.unitLabel === 'bales').reduce((s, x) => s + storageLedgerStock(x, movements), 0);
+  const onHand = { inField: totals.inField, inFieldBales: totals.inFieldBales, inYard, yardBales, inShed, total: totals.inFieldBales + yardBales + inShed };
+  return { rows, totals, yards, pending, ginned, grower, growerTotals, onHand };
 }
 
 /**
@@ -95,11 +131,12 @@ export function ginnedByField({ fields = [], movements = [] } = {}) {
   const queues = new Map();   // yard id -> [{ fieldId, left, kgEach }]
   for (const { m } of loads) {
     const yard = (m.tos || []).find((l) => l.type === 'silo')?.id;
-    const from = (m.froms || []).find((l) => l.type === 'field')?.id || null;
-    const count = num(m.modules.count);
-    if (!yard || !(count > 0)) continue;
+    if (!yard) continue;
     if (!queues.has(yard)) queues.set(yard, []);
-    queues.get(yard).push({ fieldId: from, left: count, kgEach: num(m.modules.kg) / count });
+    const legs = moduleLegs(m);
+    // a load with no paddock leg still counts its modules, from no recorded paddock
+    if (!legs.length && num(m.modules.count) > 0) legs.push({ fieldId: null, count: num(m.modules.count), kg: num(m.modules.kg) });
+    for (const leg of legs) if (leg.count > 0) queues.get(yard).push({ fieldId: leg.fieldId, left: leg.count, kgEach: leg.kg / leg.count });
   }
   const acc = new Map();   // field id (or '') -> totals
   const add = (fieldId, d) => {

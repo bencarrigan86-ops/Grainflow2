@@ -6,7 +6,7 @@
 //
 // A storage with no volume keeps the tonnes figure typed on it, as before. Nothing here touches the farm: it only reads.
 
-import { harvestSeasonOf } from './harvestseason.js?v=373';
+import { harvestSeasonOf } from './harvestseason.js?v=375';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 

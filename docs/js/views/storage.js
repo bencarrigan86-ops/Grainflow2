@@ -1,27 +1,28 @@
-import { db } from '../storage.js?v=373';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=373';
-import { isHay, balesInStorage, describeBales } from '../hay.js?v=373';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=373';
-import { isTransit } from '../transit.js?v=373';
-import { isOffFarm } from '../offfarm.js?v=373';
-import { paintOffFarmCard } from './offfarm.js?v=373';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=373';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=373';
-import { hasStorageQuality } from '../mapping.js?v=373';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=373';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=373';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=373';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=373';
-import { renderRelatedMovements } from './movements.js?v=373';
-import { openOptimiserSheet } from './optimiser.js?v=373';
-import { openSiloSetupSheet } from './silosetup.js?v=373';
-import { commodityFills } from '../commodityfill.js?v=373';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=373';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=373';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=373';
+import { db } from '../storage.js?v=375';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=375';
+import { isHay, balesInStorage, describeBales } from '../hay.js?v=375';
+import { modulesReport } from '../modulesreport.js?v=375';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=375';
+import { isTransit } from '../transit.js?v=375';
+import { isOffFarm } from '../offfarm.js?v=375';
+import { paintOffFarmCard } from './offfarm.js?v=375';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=375';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=375';
+import { hasStorageQuality } from '../mapping.js?v=375';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=375';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=375';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=375';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=375';
+import { renderRelatedMovements } from './movements.js?v=375';
+import { openOptimiserSheet } from './optimiser.js?v=375';
+import { openSiloSetupSheet } from './silosetup.js?v=375';
+import { commodityFills } from '../commodityfill.js?v=375';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=375';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=375';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=375';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=373';
+} from '../silolayers.js?v=375';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -263,7 +264,7 @@ function paintStorageParts(root) {
   } else chipsEl.innerHTML = '';
 
   // ---- the list ----
-  root.querySelector('#storage-list').innerHTML = transitCards(transits, commodities, movements) + (shown.length
+  root.querySelector('#storage-list').innerHTML = (searchText.trim() ? '' : cottonOnHandCard()) + transitCards(transits, commodities, movements) + (shown.length
     ? renderStorageList(shown, commodities, movements)
     : `<div class="empty">No silos match &ldquo;${esc(searchText.trim())}&rdquo;.</div>`);
 }
@@ -290,6 +291,30 @@ function tabTotalLine(silos, commodities, movements, name) {
   return `<div class="tab-total"><strong>${esc(name)} total</strong> · ${counted} silo${counted === 1 ? '' : 's'}
     <div class="tab-total-fig"><span><b>${num(held, 1)} t</b> held</span><span><b>${num(room, 0)} t</b> room when full${asNote}</span>${room > 0 ? `<span${spare < 0 ? ' class="short"' : ''}><b>${num(Math.abs(spare), 0)} t</b> ${spare < 0 ? 'short' : 'spare'}</span>` : ''}</div>
     ${unknown ? `<div class="meta">${unknown} silo${unknown === 1 ? ' has' : 's have'} no volume or tonnes set, so no room is counted for ${unknown === 1 ? 'it' : 'them'}.</div>` : ''}</div>`;
+}
+
+/**
+ * Cotton on hand: modules still in the field, modules in the gin yard and bales in the bale shed, with the bales expected from them
+ * all. The field is not a store, so this sits above the stores rather than among them. A module is in one place at a time (carting
+ * it to the yard takes it off the field), so the three do not overlap. Shown only while the farm has cotton on hand.
+ */
+function cottonOnHandCard() {
+  const { fields, movements, storages, commodities } = db.get();
+  if (!commodities.some((c) => c.unit === 'bale')) return '';
+  const report = modulesReport({ fields, movements, storages, commodities });
+  const h = report.onHand;
+  if (!(h.inField > 0 || h.inYard > 0 || h.inShed > 0)) return '';
+  const inFields = report.rows.filter((r) => r.inField > 0);
+  const line = (label, value) => `<div class="row"><span class="label">${label}</span><span class="value">${value}</span></div>`;
+  return `<div class="card report">
+    <h2><span class="dot report"></span>Cotton on hand</h2>
+    ${line('In the field', `${num(h.inField, 0)} modules &middot; ${num(h.inFieldBales, 0)} bales`)}
+    ${inFields.map((r) => `<div class="row" style="padding-left:14px"><span class="label meta">${esc(r.field.name)}</span><span class="value meta">${num(r.inField, 0)} modules &middot; ${num(r.inFieldBales, 0)} bales</span></div>`).join('')}
+    ${h.inYard > 0 ? line('In the gin yard', `${num(h.inYard, 0)} modules &middot; ${num(h.yardBales, 0)} bales`) : ''}
+    ${h.inShed > 0 ? line('In the bale shed', `${num(h.inShed, 0)} bales`) : ''}
+    ${line('<strong>Expected bales on hand</strong>', `<strong>${num(h.total, 0)}</strong>`)}
+    <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Modules in the field are listed by paddock, so you can see where they are. Moving them to the gin yard takes them off the paddock.</div>
+  </div>`;
 }
 
 /**
