@@ -203,6 +203,13 @@ check('the commodity for silos with no commodity sits where those silos are, not
   assert.ok(src.includes("e.target.id !== 'storage-assume-sel'"), 'the change is heard on the list');
 });
 
+check('on a commodity tab, cotton on hand only shows for All and the cotton tabs', () => {
+  const src = fs.readFileSync(new URL('../docs/js/views/storage.js', import.meta.url), 'utf8');
+  assert.ok(src.includes("const cottonHere = !tab || tabName.startsWith('cotton');"), 'cotton card follows the tab');
+  assert.ok(src.includes("searchText.trim() || !cottonHere ? '' : cottonOnHandCard()"), 'the card is left out off the cotton tabs');
+  assert.ok(src.includes('transits.filter((x) => !x.commodityId || x.commodityId === tab)'), 'grain on trucks follows its commodity tab');
+});
+
 console.log('');
 if (failures) { console.log(`${failures} FAILURES`); process.exit(1); }
 console.log('ALL PASS');

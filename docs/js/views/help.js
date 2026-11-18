@@ -3,12 +3,12 @@
 // The words are in helpcontent.js, checked against nav.js and the database policies by tests/help.test.mjs. This only lays
 // them out, and offers each guide only to the roles that have it.
 
-import { db } from '../storage.js?v=396';
-import { esc } from '../fmt.js?v=396';
-import { canOpen } from '../nav.js?v=396';
-import { ROLE_INFO, ACCESS, LEVELS, guidesForRole, startProgress } from '../helpcontent.js?v=396';
-import { openSetupWalk } from './setupwalk.js?v=396';
-import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=396';
+import { db } from '../storage.js?v=397';
+import { esc } from '../fmt.js?v=397';
+import { canOpen } from '../nav.js?v=397';
+import { ROLE_INFO, ACCESS, LEVELS, guidesForRole, startProgress } from '../helpcontent.js?v=397';
+import { openSetupWalk } from './setupwalk.js?v=397';
+import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=397';
 
 // a coloured chip for what a role can do, so a table of ticks and blanks reads at a glance
 const TINT = { full: 'var(--accent-summary)', view: 'var(--accent-report)', own: 'var(--accent-input)', used: 'var(--accent-input)', none: 'var(--text-dim)' };
