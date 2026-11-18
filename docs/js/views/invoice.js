@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=378';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=378';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=378';
-import { addressLinesOf } from '../address.js?v=378';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=378';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=378';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=378';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=378';
-import { docBandHTML } from '../docband.js?v=378';
-import { deductionNotes } from '../deductions.js?v=378';
-import { ginPrepaid } from '../ginning.js?v=378';
-import { cottonInvoiceModel } from '../cottoninvoice.js?v=378';
-import { openMovementSheet } from './movements.js?v=378';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=378';
+import { db } from '../storage.js?v=379';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=379';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=379';
+import { addressLinesOf } from '../address.js?v=379';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=379';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=379';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=379';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=379';
+import { docBandHTML } from '../docband.js?v=379';
+import { deductionNotes } from '../deductions.js?v=379';
+import { ginPrepaid } from '../ginning.js?v=379';
+import { cottonInvoiceModel } from '../cottoninvoice.js?v=379';
+import { openMovementSheet } from './movements.js?v=379';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=379';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {

@@ -10,13 +10,13 @@
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { Pdf, wrapText } from './pdf.js?v=378';
-import { drawBrandLogo } from './brand.js?v=378';
-import { dmy } from './fmt.js?v=378';
-import { movementTonsToSale } from './derived.js?v=378';
-import { hasSignature, strokesInBox } from './signature.js?v=378';
-import { orderDelivery, orderGrade, receivalRows, nilToleranceLines, orderCommentLines, freightDetailDefaults } from './orderdetail.js?v=378';
-import { toleranceText } from './contractterms.js?v=378';
+import { Pdf, wrapText } from './pdf.js?v=379';
+import { drawBrandLogo } from './brand.js?v=379';
+import { dmy } from './fmt.js?v=379';
+import { movementTonsToSale } from './derived.js?v=379';
+import { hasSignature, strokesInBox } from './signature.js?v=379';
+import { orderDelivery, orderGrade, bookingRows, orderIssuedText, nilToleranceLines, orderCommentLines, orderCommentText, freightDetailDefaults, showsRate } from './orderdetail.js?v=379';
+import { toleranceText } from './contractterms.js?v=379';
 
 export const BASES = [
   { key: 'per_t', label: '$ per tonne' },
@@ -171,8 +171,9 @@ export function freightDefaults({ sale, order = null, freightOrders = [], carrie
     loadFrom: (order && order.deliverFrom) || sale?.deliveryStart || '',
     loadBy: (order && order.deliverBy) || sale?.deliveryEnd || '',
     status: 'open',
-    notes: clean(order?.notes),
-    ...(withCarrier(freightDetailDefaults({ order, business }), hist) ? { detail: withCarrier(freightDetailDefaults({ order, business }), hist) } : {}),
+    // the order's own note, then the other terms the buyer put on it: the carrier's instructions, to change
+    notes: [clean(order?.notes), orderCommentText(order)].filter(Boolean).join('\n'),
+    ...(withCarrier(freightDetailDefaults({ order, sale, business }), hist) ? { detail: withCarrier(freightDetailDefaults({ order, sale, business }), hist) } : {}),
   };
 }
 
@@ -267,18 +268,24 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
   labelled(pdf, M + 8, y, 60, half - 52, 'Tonnes:', num(fo.tons) ? `${num(fo.tons)} t` : '');
   y = labelled(pdf, M + 20 + half, y, 56, half - 60, 'Dates:', windowText(fo));
   y = labelled(pdf, M + 8, y, 60, W - 76, 'Pick up from:', fo.pickup, 2);
-  y = labelled(pdf, M + 8, y, 60, W - 76, 'Deliver to:', fo.deliverTo, 2);
-  y = labelled(pdf, M + 8, y, 60, W - 76, 'Receiver:', [sale?.buyer, sale?.buyerContact].filter(Boolean).join(' - '), 2);
+  // the company it goes to, then its address; one made before the company was kept takes the buyer on the contract
+  const company = fo.detail?.ownTerms ? fo.detail.deliverCompany : (fo.detail?.deliverCompany || sale?.buyer);
+  y = labelled(pdf, M + 8, y, 60, W - 76, 'Deliver to:', company);
+  y = labelled(pdf, M + 8, y, 60, W - 76, '', fo.deliverTo, 2);
+  y = labelled(pdf, M + 8, y, 60, W - 76, 'Contact:', sale?.buyerContact);
 
   // the rate
+  // (left off the carrier's copy when the freight order says so)
   const ry = jy + 208;
-  box(pdf, M, ry, W, 62, 'RATE');
-  pdf.text(M + 8, ry + 24, rateText(fo), { size: 11, bold: true, gray: GREEN });
-  const est = estimatedTotal(fo);
-  pdf.text(M + 8, ry + 42, est > 0 ? `About ${money(est, 0)} for ${num(fo.tons)} t, paid on the tonnes actually delivered, per the receival ticket. Rates ex GST.` : 'Paid on the tonnes actually delivered, per the receival ticket. Rates ex GST.', { size: 8.5, gray: 0.25 });
+  if (showsRate(fo)) {
+    box(pdf, M, ry, W, 62, 'RATE');
+    pdf.text(M + 8, ry + 24, rateText(fo), { size: 11, bold: true, gray: GREEN });
+    const est = estimatedTotal(fo);
+    pdf.text(M + 8, ry + 42, est > 0 ? `About ${money(est, 0)} for ${num(fo.tons)} t, paid on the tonnes actually delivered, per the receival ticket. Rates ex GST.` : 'Paid on the tonnes actually delivered, per the receival ticket. Rates ex GST.', { size: 8.5, gray: 0.25 });
+  }
 
   // instructions, then what the buyer's order says about the receival and what is rejected there
-  let ny = ry + 74;
+  let ny = showsRate(fo) ? ry + 74 : ry;
   const room = (h) => { if (ny + h > pdf.height - 60) { pdf.addPage(); ny = M; } };
   const section = (title, lines) => {
     const wrapped = lines.flatMap((l) => wrapText(l, W - 16, 9.5));
@@ -300,20 +307,25 @@ export function freightOrderPdf({ fo, sale, order = null, commodityName = '', bu
     for (const [label, v] of live) ry2 = labelled(pdf, M + 8, ry2, 104, W - 16 - 104, label, v, linesOf(v));
     ny += h + 10;
   };
-  const dt = fo.detail || {};
+  // The freight order carries its own booking instructions and rejections, filled in from the grain order. One made before that
+  // (with neither) still reads them, and the buyer's other terms, from the grain order.
+  const legacy = !fo.detail?.ownTerms && !fo.detail?.deliveryInstructions && !fo.detail?.rejectedOnArrival && !fo.detail?.bookingContact && !fo.detail?.orderIssuedBy;
+  const od = order?.detail || {};
+  const dt = { ...(legacy ? { deliveryInstructions: od.booking, rejectedOnArrival: nilToleranceLines(od).join('\n'), deliverySite: od.destination, deliverySitePhone: od.sitePhone, deliveryOrderNo: od.deliveryRef, bookingContact: od.bookingContact, orderIssuedBy: orderIssuedText(order) } : {}), ...(fo.detail || {}) };
   rowsBox('COMMODITY AND TERMS', [
     ['Variety:', dt.variety], ['Season:', sale?.cropYear], ['Packaging:', dt.packaging],
     ['Tolerance:', sale ? toleranceText(sale, 't') : ''], ['Transport:', dt.transportMode], ['Payment terms:', dt.paymentTerms],
   ]);
   rowsBox('SITES', [
     ['Pick up site:', dt.pickupSite], ['Pick up phone:', dt.pickupPhone], ['Pick up order no:', dt.pickupOrderNo], ['Pick up instructions:', dt.pickupInstructions],
-    ['Delivery site:', dt.deliverySite], ['Delivery phone:', dt.deliverySitePhone], ['Delivery order no:', dt.deliveryOrderNo], ['Delivery instructions:', dt.deliveryInstructions],
+    ['Delivery site:', dt.deliverySite], ['Delivery phone:', dt.deliverySitePhone], ['Delivery order no:', dt.deliveryOrderNo],
   ]);
-  const receival = receivalRows(order);
-  if (receival.length) section('RECEIVAL', receival.flatMap(([label, lines]) => lines.map((l, i) => (i === 0 && lines.length === 1 ? `${label}: ${l}` : l))));
-  const nil = nilToleranceLines(order?.detail);
+  // who to book with, and how: the buyer's booking instructions as the freight order has them
+  const booking = [...[['Bookings', dt.bookingContact], ['Order issued by', dt.orderIssuedBy]].filter(([, v]) => clean(v)).map(([label, v]) => `${label}: ${clean(v)}`), ...clean(dt.deliveryInstructions).split(/\r?\n/).map((l) => l.trim()).filter(Boolean)];
+  if (booking.length) section('BOOKINGS', booking);
+  const nil = nilToleranceLines({ nilTolerance: dt.rejectedOnArrival });
   if (nil.length) section('REJECTED ON ARRIVAL', nil.map((l) => `- ${l}`));
-  const terms = orderCommentLines(order);
+  const terms = legacy ? orderCommentLines(order) : [];
   if (terms.length) section("OTHER TERMS ON THE BUYER'S ORDER", terms);
   if (clean(fo.notes)) {
     const lines = wrapText(fo.notes, W - 16, 9.5);

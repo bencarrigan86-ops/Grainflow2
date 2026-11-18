@@ -5,8 +5,8 @@
 //
 // Pure: no screen and no storage in here.
 
-import { cleanParts, hasParts, joinAddress } from './address.js?v=378';
-import { splitContact } from './buyercontact.js?v=378';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=379';
+import { splitContact } from './buyercontact.js?v=379';
 
 const text = (v) => String(v ?? '').trim();
 const MAX = 4000;
@@ -55,21 +55,19 @@ export function orderDelivery(order) {
 /** The grade on the buyer's order, or the contract's when the order does not say. */
 export const orderGrade = (order, sale) => text(order?.detail?.grade) || text(sale?.grade);
 
-/** What a carrier needs for the receival, as [label, lines] pairs: the delivery reference, who issued it, how to book. */
-export function receivalRows(order) {
+/** Who the carrier books with and who issued the buyer's order, as [label, lines] pairs. (The site, its phone and the delivery reference are the freight order's own.) */
+export function bookingRows(order) {
   const d = order?.detail;
   if (!d) return [];
   const by = [d.issuedBy, d.issuedOn ? d.issuedOn.split('-').reverse().join('-') : ''].filter(Boolean).join(', ');
   return [
-    ['Delivery reference', d.deliveryRef ? [d.deliveryRef] : []],
-    ['Order issued by', by ? [by] : []],
-    ['Site phone', d.sitePhone ? [d.sitePhone] : []],
     ['Bookings', d.bookingContact ? [d.bookingContact] : []],
-    ['Booking instructions', text(d.booking).split(/\r?\n/).map((l) => l.trim()).filter(Boolean)],
+    ['Order issued by', by ? [by] : []],
   ].filter(([, lines]) => lines.length);
 }
 
 /** Other terms the buyer put on the order, one to a line. */
+export const orderCommentText = (order) => orderCommentLines(order).join('\n');
 export const orderCommentLines = (order) => text(order?.detail?.comments).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 
 // --- the freight order's own detail: what the carrier's copy carries beyond the job itself --------------------------------------
@@ -79,23 +77,38 @@ export function cleanFreightDetail(d) {
   if (!d || typeof d !== 'object') return null;
   const out = {};
   for (const k of ['carrierAbn', 'carrierContact', 'carrierPhone', 'variety', 'packaging', 'transportMode', 'paymentTerms',
-    'pickupSite', 'pickupPhone', 'pickupOrderNo', 'pickupInstructions', 'deliverySite', 'deliverySitePhone', 'deliveryOrderNo', 'deliveryInstructions']) {
+    'pickupSite', 'pickupPhone', 'pickupOrderNo', 'pickupInstructions', 'deliverySite', 'deliverySitePhone', 'deliveryOrderNo', 'deliveryInstructions', 'rejectedOnArrival', 'bookingContact', 'orderIssuedBy', 'deliverCompany']) {
     const v = text(d[k]).slice(0, MAX);
     if (v) out[k] = v;
   }
+  // the rate is on the carrier's copy unless this is set
+  if (d.hideRate) out.hideRate = true;
+  // set once the freight order has been saved with its own terms: from then on what is blank is blank, never read from the grain order
+  if (d.ownTerms) out.ownTerms = true;
   return Object.keys(out).length ? out : null;
 }
+
+/** Who issued the buyer's order, and when, as one line. */
+export const orderIssuedText = (order) => [order?.detail?.issuedBy, order?.detail?.issuedOn ? order.detail.issuedOn.split('-').reverse().join('-') : ''].filter(Boolean).join(', ');
+
+/** Does the carrier's copy show the rate? It does, unless the freight order says not to. */
+export const showsRate = (fo) => !fo?.detail?.hideRate;
 
 /**
  * What a new freight order starts with in its detail: the delivery site, its phone and the delivery reference come from the
  * buyer's order; the pick up site and phone are the farm's. Bulk by truck, which is nearly always the job.
  */
-export function freightDetailDefaults({ order = null, business = {} } = {}) {
+export function freightDetailDefaults({ order = null, sale = null, business = {} } = {}) {
   const o = order?.detail || {};
   return cleanFreightDetail({
     packaging: 'Bulk', transportMode: 'Truck',
+    // the company the grain is delivered to: the buyer on the contract, before the address
+    deliverCompany: sale?.buyer,
     pickupSite: text(business.entityName) || text(business.farmName), pickupPhone: text(business.phone),
     deliverySite: o.destination, deliverySitePhone: o.sitePhone, deliveryOrderNo: o.deliveryRef,
+    // the buyer's booking instructions and what it rejects on arrival: the freight order's own copy, to change for the carrier
+    deliveryInstructions: o.booking, rejectedOnArrival: nilToleranceLines(o).join('\n'),
+    bookingContact: o.bookingContact, orderIssuedBy: orderIssuedText(order),
   });
 }
 

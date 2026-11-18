@@ -5,7 +5,7 @@
 // rejected on arrival), and how the freight order made from it carries it to the carrier.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { cleanOrderDetail, nilToleranceLines, orderDelivery, orderGrade, receivalRows, contractMismatch, cleanFreightDetail, orderDefaults } from '../docs/js/orderdetail.js';
+import { cleanOrderDetail, nilToleranceLines, orderDelivery, orderGrade, bookingRows, contractMismatch, cleanFreightDetail, orderDefaults } from '../docs/js/orderdetail.js';
 import { freightDefaults, freightOrderPdf } from '../docs/js/freight.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
@@ -65,7 +65,7 @@ check('the carrier\'s copy has the delivery reference, how to book and what is r
     fo: { freightNo: 'ADM106256-01', carrier: 'Ace Haulage', tons: 110, rate: 40, rateBasis: 'per_t', pickup: 'Home farm', deliverTo: 'x', loadFrom: '2026-11-18', loadBy: '2026-11-30' },
     sale, order, commodityName: 'Chickpeas', business: {}, date: '2026-11-17',
   }));
-  assert.ok(pdf.includes('RECEIVAL') && pdf.includes('CMO0000656') && pdf.includes('Jodie Koczwara'));
+  assert.ok(pdf.includes('BOOKINGS') && pdf.includes('CMO0000656') && pdf.includes('Jodie Koczwara'));
   assert.ok(pdf.includes('Monday to Friday'));
   assert.ok(pdf.includes('REJECTED ON ARRIVAL') && pdf.includes('Phosphine tablets'));
   assert.ok(pdf.includes('CHKP1'), 'the grade on the order');
@@ -75,8 +75,8 @@ check('an order with no detail leaves the carrier\'s copy as it was', () => {
     fo: { freightNo: 'F-1', carrier: 'Ace', tons: 10, rate: 20, rateBasis: 'per_t' },
     sale, order: { ...order, detail: null }, commodityName: 'Chickpeas', business: {}, date: '2026-11-17',
   }));
-  assert.ok(!pdf.includes('RECEIVAL') && !pdf.includes('REJECTED ON ARRIVAL'));
-  assert.deepEqual(receivalRows({}), []);
+  assert.ok(!pdf.includes('BOOKINGS') && !pdf.includes('REJECTED ON ARRIVAL'));
+  assert.deepEqual(bookingRows({}), []);
 });
 
 console.log('\n=== saved ===');
@@ -196,6 +196,51 @@ check('the order sheet fills from the contract, and the freight sheet keeps what
   const o = src('views/orders.js'), f = src('views/freightorders.js');
   assert.ok(o.includes('orderDefaults(') && o.includes('o-filled'));
   assert.ok(f.includes('freightDetailDefaults('));
+});
+
+console.log('\n=== booking, rejections and other terms on the freight order; the rate ===');
+const pdfOf = (fo, o = order) => latin1(freightOrderPdf({ fo: { freightNo: 'F-1', carrier: 'Ace', tons: 10, rate: 40, rateBasis: 'per_t', pickup: 'Home', deliverTo: 'x', ...fo }, sale, order: o, commodityName: 'Chickpeas', business: {}, date: '2026-11-17' }));
+check('a new freight order takes the grain order\'s booking instructions, rejections and other terms', () => {
+  const f = freightDefaults({ sale, order: { ...order, detail: { ...detail, comments: 'Chain of responsibility applies.' } } });
+  assert.ok(f.detail.deliveryInstructions.includes('Monday to Friday'));
+  assert.equal(f.detail.rejectedOnArrival.split('\n')[1], 'Phosphine tablets');
+  assert.ok(f.notes.includes('Chain of responsibility applies.'));
+});
+check('the carrier\'s copy prints the freight order\'s own wording, not the grain order\'s', () => {
+  const p = pdfOf({ detail: { deliveryInstructions: 'Ring the gate first.', rejectedOnArrival: 'Wet grain' }, notes: 'Call on arrival.' });
+  assert.ok(p.includes('Ring the gate first.') && p.includes('Wet grain') && p.includes('Call on arrival.'));
+  assert.ok(!p.includes('Phosphine tablets') && !p.includes('Monday to Friday'));
+});
+check('the rate is on the carrier\'s copy unless it is turned off, and then it is not in the email either', () => {
+  assert.ok(pdfOf({}).includes('RATE'));
+  const p = pdfOf({ detail: { hideRate: true, packaging: 'Bulk' } });
+  assert.ok(!p.includes('RATE') && !p.includes('per tonne'));
+  assert.deepEqual(cleanFreightDetail({ hideRate: true }), { hideRate: true });
+  assert.equal(cleanFreightDetail({ hideRate: false }), null);
+  const f = src('views/freightorders.js');
+  assert.ok(f.includes('id="fo-showrate"') && f.includes('hideRate: !root.querySelector'));
+  assert.ok(f.includes('showsRate(d) ? ` at ${rateText(d)}`'));
+});
+
+check('bookings contact and who issued the order are the freight order\'s own to change or clear', () => {
+  const f = freightDefaults({ sale, order });
+  assert.equal(f.detail.bookingContact, 'Bookings by email or on the terminal number');
+  assert.equal(f.detail.orderIssuedBy, 'Jodie Koczwara, 17-11-2026');
+  const p = pdfOf({ detail: { ownTerms: true, bookingContact: 'Ring Sam first', deliveryInstructions: 'Gate 2' } });
+  assert.ok(p.includes('Ring Sam first') && !p.includes('Jodie Koczwara') && !p.includes('Bookings by email'));
+});
+check('once a freight order has its own terms, clearing them leaves them off, and does not read the grain order again', () => {
+  const p = pdfOf({ detail: { ownTerms: true, packaging: 'Bulk' } });
+  assert.ok(!p.includes('BOOKINGS') && !p.includes('REJECTED ON ARRIVAL') && !p.includes('Phosphine tablets'));
+  assert.ok(src('views/freightorders.js').includes('ownTerms: true'));
+});
+
+check('deliver to is the company, then the address; the company starts as the buyer and is the freight order\'s own to change', () => {
+  assert.equal(freightDefaults({ sale, order }).detail.deliverCompany, 'ADM');
+  const p = pdfOf({ deliverTo: 'Dock 4, 1 Rail Rd, Murarrie QLD 4170', detail: { ownTerms: true, deliverCompany: 'Port Services Pty Ltd' } });
+  assert.ok(p.includes('Port Services Pty Ltd') && p.includes('1 Rail Rd'));
+  assert.ok(!pdfOf({ deliverTo: 'x', detail: { ownTerms: true } }).includes('(ADM)'), 'cleared stays cleared');
+  assert.ok(src('views/freightorders.js').includes("id: 'fd-dco'"));
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
