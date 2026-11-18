@@ -1260,3 +1260,10 @@ details.inner-fold .hint, details.inner-fold .field.hint { font-size: 11.5px; co
 .al-count:empty { display: none; }
 .invoice-doc tr.ded-note td { font-size: 11.5px; font-style: italic; color: #8a3b12; border-top: none; padding-top: 0; text-align: left; }
 .invoice-doc .ded-note-text { white-space: normal; width: min(36em, calc(100vw - 90px)); }
+
+/* By month: five columns that fit a phone without scrolling sideways */
+table.cf th, table.cf td { padding-left: 4px; padding-right: 4px; font-size: 13px; }
+table.cf th:first-child, table.cf td:first-child { padding-left: 0; }
+table.cf td:first-child .meta { font-size: 11px; }
+table.cf td:first-child { white-space: normal; }
+table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }

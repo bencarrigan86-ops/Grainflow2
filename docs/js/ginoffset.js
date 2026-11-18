@@ -5,7 +5,7 @@
 // of each, so the right amount comes off each contract. What is taken off is a line on the lint invoice (isGinPrepaid, with the
 // bill's id), and a bill is open for whatever its invoices have not yet taken.
 
-import { ginInvoice, hasGin, cleanGin, lotsForSale } from './ginning.js?v=383';
+import { ginInvoice, hasGin, cleanGin, lotsForSale } from './ginning.js?v=384';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -90,4 +90,12 @@ export function ginTakenOff(invoices = []) {
     }
   }
   return { total: round2(ex), totalInclGst: round2(incl), lines: count };
+}
+
+/** Has lint invoices taken the whole of a gin bill off? Then the farm owes the gin nothing, whether or not those invoices are paid yet. */
+export function ginBillTakenOff(bill, invoices = [], movements = []) {
+  if (bill?.payer !== 'buyer') return false;
+  let taken = 0;
+  for (const inv of invoices) for (const l of inv.lines || []) if (l.isGinPrepaid && linePayableId(l, movements) === bill.id) taken += num(l.amount);
+  return taken > 0 && taken >= ginBillTotal(bill) - 0.05;
 }

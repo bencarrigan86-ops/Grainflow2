@@ -18,37 +18,38 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=383';
-import { setBrandLogo } from './brand.js?v=383';
+import { hydrate } from './hydrate.js?v=384';
+import { setBrandLogo } from './brand.js?v=384';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=383';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=383';
-import { isLegacyDirty } from './dirty.js?v=383';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=383';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=383';
-import { hasDeductions } from './deductions.js?v=383';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=383';
-import { hasHay, hasHayLoad } from './hay.js?v=383';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=383';
-import { settleLegs, dedupeLegs } from './legs.js?v=383';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=383';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=383';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=383';
-import { setCommodityOrder } from './commodityorder.js?v=383';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=383';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=383';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=383';
-import { schedulePush, pushOnReconnect } from './sync.js?v=383';
-import { hasParts as hasAddressParts } from './address.js?v=383';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=383';
-import { linePayableId } from './ginoffset.js?v=383';
+} from './local.js?v=384';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=384';
+import { isLegacyDirty } from './dirty.js?v=384';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=384';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=384';
+import { hasDeductions } from './deductions.js?v=384';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=384';
+import { hasHay, hasHayLoad } from './hay.js?v=384';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=384';
+import { settleLegs, dedupeLegs } from './legs.js?v=384';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=384';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=384';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=384';
+import { setCommodityOrder } from './commodityorder.js?v=384';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=384';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=384';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=384';
+import { schedulePush, pushOnReconnect } from './sync.js?v=384';
+import { hasParts as hasAddressParts } from './address.js?v=384';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=384';
+import { linePayableId } from './ginoffset.js?v=384';
 
 /**
- * A gin bill the lint buyer pays is paid when the lint payment is: each paid invoice that carries a prepaid line for a ginning run
- * counts toward that run's bill, and the bill is marked paid (on the date that invoice was paid) once they cover it. An invoice put
- * back to unpaid, or deleted, reopens a bill it had settled. A bill no invoice carries is left as the person set it.
+ * A gin bill the lint buyer pays is settled once lint invoices have taken all of it off: the farm owes the gin nothing, the buyer settles
+ * it and keeps the money back from the lint payment. Each invoice line for the bill counts toward it (paid or not), and the bill is marked
+ * paid once they cover it, on the date of the last invoice that took part of it (the day it was paid, else the day it was issued). An invoice
+ * edited to take less, or deleted, reopens a bill it had settled. A bill no invoice carries is left as the person set it.
  */
 function syncGinBills(c, reopen = []) {
   const paid = new Map();       // bill id -> money from paid invoices, and the latest paid date
@@ -59,10 +60,10 @@ function syncGinBills(c, reopen = []) {
       const pid = linePayableId(l, c.movements);
       if (!pid) continue;
       carried.add(pid);
-      if (inv.status !== 'paid') continue;
       const e = paid.get(pid) || { sum: 0, date: '' };
       e.sum += Number(l.amount) || 0;
-      if ((inv.paidDate || '') > e.date) e.date = inv.paidDate || '';
+      const when = (inv.status === 'paid' && inv.paidDate) || inv.issueDate || '';
+      if (when > e.date) e.date = when;
       paid.set(pid, e);
     }
   }
@@ -1189,6 +1190,7 @@ export const db = {
     data.nextInvoiceNo += 1;
     current().invoices.push(inv);
     touch('invoice', inv.id);
+    syncGinBills(current());   // gin bills this invoice takes off may now be taken off in full
     persist();
     return inv;
   },
@@ -1223,8 +1225,11 @@ export const db = {
     const c = current();
     const idx = c.invoices.findIndex((inv) => inv.id === id);
     if (idx < 0) return;
+    // the gin bills this invoice took off before the change: one it no longer takes off is reopened
+    const before = (c.invoices[idx].lines || []).filter((l) => l.isGinPrepaid).map((l) => linePayableId(l, c.movements)).filter(Boolean);
     c.invoices[idx] = { ...c.invoices[idx], ...patch };
     touch('invoice', id);
+    syncGinBills(c, before);
     persist();
   },
   /** A file taken off a contract, an order, an invoice or a bill: the row goes, so it does not come back on refresh. */

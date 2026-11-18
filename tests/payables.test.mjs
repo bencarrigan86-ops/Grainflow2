@@ -10,6 +10,7 @@ import {
   KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed, freightEffect, payablesCost, paidByBuyer,
 } from '../docs/js/payables.js';
 import { farmProfitLoss } from '../docs/js/derived.js';
+import { matchesAll, amountText } from '../docs/js/listsearch.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
 let failures = 0;
@@ -252,6 +253,38 @@ check('the lint invoice settles the bill, the gin run saves it, and the SQL adds
   const run = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs/js/views/ginrun.js'), 'utf8');
   assert.ok(run.includes("payer: g.paidBy === 'buyer' ? 'buyer' : null"));
   assert.ok(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'supabase/migrations/20261203000000_payable_payer.sql'), 'utf8').includes('add column if not exists payer text'));
+});
+
+check('receivables has the same pills as payables (not invoiced, unpaid, paid, all) and chips to narrow it to a commodity', () => {
+  const v = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs/js/views/outstanding.js'), 'utf8');
+  assert.ok(v.includes('id="rec-view"') && v.includes("['notinvoiced', 'Not invoiced'], ['unpaid', 'Unpaid'], ['paid', 'Paid'], ['all', 'All']"));
+  assert.ok(v.includes('data-rec-com') && v.includes('All commodities') && v.includes('const keep = (sale) => !recCommodity || comOf(sale) === recCommodity;'));
+});
+check('by month says which columns are money in and which is money out', () => {
+  const v = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs/js/views/outstanding.js'), 'utf8');
+  assert.ok(v.includes('Money in') && v.includes('Money out') && v.includes('<th>Bills</th>'));
+});
+
+check('search: every word must be in the row, in any order, amounts with or without commas and cents', () => {
+  assert.equal(matchesAll('Wattle Cotton Merchants Cotton #WCM-2611', ''), true);
+  assert.equal(matchesAll('Wattle Cotton Merchants Cotton #WCM-2611', 'cotton wattle'), true);
+  assert.equal(matchesAll('Wattle Cotton Merchants Cotton #WCM-2611', 'wheat'), false);
+  assert.equal(matchesAll('Bimbi ' + amountText(159066), '159,066'), true);
+  assert.equal(matchesAll('Bimbi ' + amountText(1250.5), '1250.50'), true);
+  assert.equal(matchesAll('Bimbi ' + amountText(1250.5), '1,250'), true);
+});
+check('receivables and payables each have a search box, banded rows, and the buyer leads each receivables row', () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'docs/js/views/');
+  const o = readFileSync(root + 'outstanding.js', 'utf8');
+  const p = readFileSync(root + 'payables.js', 'utf8');
+  assert.ok(o.includes('id="rec-q"') && p.includes('id="pay-q"'));
+  assert.ok(o.includes('<div class="filterbar"') && p.includes('<div class="filterbar"'));
+  assert.ok(o.includes('const buyerOf = ') && o.includes('esc(buyerOf(r.sale))'));
+  assert.ok(o.includes('band(i)') && p.includes('band ${i % 2'));
+});
+check('by month table fits a phone: tight columns, group headers smaller', () => {
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs/css/styles.css'), 'utf8');
+  assert.ok(css.includes('table.cf th, table.cf td') && css.includes('table.cf td:first-child { white-space: normal; }'));
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }

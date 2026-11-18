@@ -4,20 +4,22 @@
 // what is unpaid and overdue, and the brokerage that has run up on contracts but has not been billed yet. Each
 // bill is recorded in a form of its own. The arithmetic is in payables.js.
 
-import { db } from '../storage.js?v=383';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=383';
-import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=383';
+import { db } from '../storage.js?v=384';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=384';
+import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=384';
 import {
   KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed, paidByBuyer,
-} from '../payables.js?v=383';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=383';
-import { activeSales } from '../paidsales.js?v=383';
-import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=383';
-import { ginOffsetOptions, ginBillTotal } from '../ginoffset.js?v=383';
+} from '../payables.js?v=384';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=384';
+import { activeSales } from '../paidsales.js?v=384';
+import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=384';
+import { ginOffsetOptions, ginBillTotal, ginBillTakenOff } from '../ginoffset.js?v=384';
+import { matchesAll, amountText } from '../listsearch.js?v=384';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'unpaid';   // unpaid | paid | all
 let filterKind = '';
+let filterQ = '';              // the search box
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const round3 = (n) => Math.round(n * 1000) / 1000;
@@ -57,7 +59,9 @@ export function renderPayables(root, opts = {}) {
   {
     const draw = () => {
       const { sales, movements, storages, commodities } = db.get();
-      const payables = db.getPayables();
+      // a gin bill the lint invoices have taken off in full is settled, even if it has not been marked so yet
+      const { invoices: allInvoices, movements: allMovements } = db.get();
+      const payables = db.getPayables().map((p) => (p.status !== 'paid' && ginBillTakenOff(p, allInvoices, allMovements) ? { ...p, status: 'paid' } : p));
       const today = todayLocal();
       const sum = summarise(payables, today);
       const unbilled = sales
@@ -70,18 +74,20 @@ export function renderPayables(root, opts = {}) {
         .filter((x) => x.o.unbilled > 0.005);
       const freightUnbilledTotal = round2(freightUnbilled.reduce((a, x) => a + x.o.unbilled, 0));
 
-      const shown = payables
-        .filter((p) => filterStatus === 'all' || (filterStatus === 'paid' ? p.status === 'paid' : p.status !== 'paid'))
-        .filter((p) => !filterKind || p.kind === filterKind)
-        .sort((a, b) => (filterStatus === 'paid'
-          ? String(b.paidDate || b.invoiceDate || '').localeCompare(String(a.paidDate || a.invoiceDate || ''))
-          : String(a.dueDate || '9999').localeCompare(String(b.dueDate || '9999'))));
-
-      const place = (p) => {
+      const placeOf = (p) => {
         const s = p.saleId ? sales.find((x) => x.id === p.saleId) : null;
         const loc = p.storageId ? storages.find((x) => x.id === p.storageId) : null;
         return [s ? contractLabel(s, commodities) : '', loc?.name || ''].filter(Boolean).join(' · ');
       };
+      const shown = payables
+        .filter((p) => filterStatus === 'all' || (filterStatus === 'paid' ? p.status === 'paid' : p.status !== 'paid'))
+        .filter((p) => !filterKind || p.kind === filterKind)
+        .filter((p) => matchesAll([p.supplier, kindLabel(p.kind), p.reference, p.notes, placeOf(p), amountText(billTotal(p))].join(' '), filterQ))
+        .sort((a, b) => (filterStatus === 'paid'
+          ? String(b.paidDate || b.invoiceDate || '').localeCompare(String(a.paidDate || a.invoiceDate || ''))
+          : String(a.dueDate || '9999').localeCompare(String(b.dueDate || '9999'))));
+
+      const place = placeOf;
 
       root.innerHTML = `
         ${opts.stats === false ? '' : `<div class="stat-grid">
@@ -117,6 +123,7 @@ export function renderPayables(root, opts = {}) {
         <div class="row" style="margin:4px 0 8px"><span class="label">Freight not yet billed</span><span class="value">${money(freightUnbilledTotal, 0)}</span></div>` : ''}
 
         <div class="subhead">Bills</div>
+        <div class="filterbar" style="margin-bottom:8px"><input type="search" id="pay-q" placeholder="Search supplier, reference, contract, amount" value="${esc(filterQ)}" aria-label="Search bills" /></div>
         <div class="segmented" id="pay-status" style="margin-bottom:8px">
           ${[['unpaid', 'Unpaid'], ['paid', 'Paid'], ['all', 'All']].map(([k, l]) => `<button data-status="${k}" class="${filterStatus === k ? 'active' : ''}">${l}</button>`).join('')}
         </div>
@@ -124,20 +131,26 @@ export function renderPayables(root, opts = {}) {
           <button type="button" class="chip ${filterKind ? '' : 'active'}" data-kind="">All types</button>
           ${KINDS.map((k) => `<button type="button" class="chip ${filterKind === k.key ? 'active' : ''}" data-kind="${k.key}">${k.label}</button>`).join('')}
         </div>
-        ${shown.length === 0 ? `<div class="empty" style="padding:10px 0">${payables.length ? 'No bills match.' : 'No bills recorded yet.'}</div>` : shown.map((p) => {
+        ${shown.length === 0 ? `<div class="empty" style="padding:10px 0">${payables.length ? 'No bills match.' : 'No bills recorded yet.'}</div>` : shown.map((p, i) => {
           const viaBuyer = paidByBuyer(p);
           const over = !viaBuyer && isOverdue(p, today);
           return `
-          <div class="list-item stack" data-edit-bill="${esc(p.id)}">
+          <div class="list-item stack band ${i % 2 ? 'alt' : ''}" data-edit-bill="${esc(p.id)}">
             <div class="li-top"><div class="main">${esc(p.supplier || kindLabel(p.kind))}</div><div class="main">${money(billTotal(p), 2)}</div></div>
             <div class="meta">${[kindLabel(p.kind), p.reference ? `#${p.reference}` : '', p.invoiceDate ? shortDate(p.invoiceDate) : ''].filter(Boolean).map(esc).join(' · ')}</div>
             ${place(p) ? `<div class="meta">${esc(place(p))}</div>` : ''}
-            <div class="li-foot"><span class="meta">${p.status === 'paid' ? `Paid ${p.paidDate ? shortDate(p.paidDate) : ''}${viaBuyer ? ' by the lint buyer' : ''}` : viaBuyer ? takenOffText(p) : (p.dueDate ? `Due ${shortDate(p.dueDate)}` : 'No due date')}</span>
-              <span class="badges"><span class="badge ${p.status === 'paid' ? 'pos' : over ? 'neg' : 'warn'}">${p.status === 'paid' ? 'Paid' : over ? 'Overdue' : viaBuyer ? 'Buyer pays' : 'Unpaid'}</span></span></div>
+            <div class="li-foot"><span class="meta">${p.status === 'paid' ? viaBuyer ? `Taken off the lint invoices${p.paidDate ? ` · ${shortDate(p.paidDate)}` : ''}` : `Paid ${p.paidDate ? shortDate(p.paidDate) : ''}` : viaBuyer ? takenOffText(p) : (p.dueDate ? `Due ${shortDate(p.dueDate)}` : 'No due date')}</span>
+              <span class="badges"><span class="badge ${p.status === 'paid' ? 'pos' : over ? 'neg' : 'warn'}">${p.status === 'paid' ? (viaBuyer ? 'Taken off' : 'Paid') : over ? 'Overdue' : viaBuyer ? 'Buyer pays' : 'Unpaid'}</span></span></div>
           </div>`;
         }).join('')}
         <button type="button" class="btn" id="add-bill" style="margin-top:10px">+ Add a bill</button>`;
 
+      root.querySelector('#pay-q')?.addEventListener('input', (e) => {
+        const at = e.target.selectionStart;
+        filterQ = e.target.value; draw();
+        const box = root.querySelector('#pay-q');
+        if (box) { box.focus(); try { box.setSelectionRange(at, at); } catch { /* a search box has no caret in some browsers */ } }
+      });
       root.querySelector('#pay-status').addEventListener('click', (e) => { const b = e.target.closest('[data-status]'); if (b) { filterStatus = b.dataset.status; draw(); } });
       root.querySelectorAll('.chips [data-kind]').forEach((b) => b.addEventListener('click', () => { filterKind = b.dataset.kind; draw(); }));
       root.querySelectorAll('[data-edit-bill]').forEach((el) => el.addEventListener('click', () => openBillSheet(payables.find((p) => p.id === el.dataset.editBill))));

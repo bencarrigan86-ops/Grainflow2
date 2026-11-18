@@ -15,13 +15,13 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=383';
-import { stateToRows } from './mapping.js?v=383';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=383';
-import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=383';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=383';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=383';
-import { readAllIn } from './pages.js?v=383';
+import { supabase } from './supabase.js?v=384';
+import { stateToRows } from './mapping.js?v=384';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=384';
+import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=384';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=384';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=384';
+import { readAllIn } from './pages.js?v=384';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -187,6 +187,45 @@ export async function push(state, farmId, role = 'owner') {
       }
     }
 
+    // Deletes go first. A farm that was reset, or had a season imported over it, holds new rows that reuse the numbers of the
+    // old ones (ticket 1001, invoice 1), and the old ones are still on the server until their delete is sent: sent after the
+    // new rows, the new rows were refused for the number, the push stopped there, and the deletes never went. (A deleted row
+    // no longer holds its number: see 20261206000000_numbers_free_when_deleted.sql.)
+    //
+    // Deletes are sent one at a time and settled one at a time. A delete the server
+    // will not take must not hold back the uploads that already went, nor the
+    // deletes that did — only it stays queued, and is named, so what is waiting
+    // is exactly what is stuck.
+    //
+    // Stamping deleted_at with a plain update is refused by the SELECT policy
+    // (the new row is no longer one the reader may see), so when it is, the
+    // soft_delete_row function — which applies the same ownership rule as the
+    // definer — does it instead. See 20261111150000_soft_delete_function.sql.
+    const stuck = new Set();
+    for (const d of deletes) {
+      let { error } = await supabase
+        .from(d.table)
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', d.id);
+      if (error) {
+        ({ error } = await supabase.rpc('soft_delete_row', { p_table: d.table, p_id: d.id }));
+      }
+      if (error) {
+        stuck.add(d.seq);
+        result.errors.push({
+          table: d.table,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          refused: [{ id: d.id, name: 'a delete of a record', hidden: null, message: error.message }],
+        });
+        continue;
+      }
+      result.deleted += 1;
+    }
+
+
     for (const table of ORDER) {
       if (!tables.includes(table)) { result.skippedTables.push(table); continue; }
       const list = pushRowsFor(table, role, rows[table] || []);
@@ -222,43 +261,12 @@ export async function push(state, farmId, role = 'owner') {
             // One refused row stops the whole push, so say which one it is.
             refused: await findRefusedRows(table, part, onConflict),
           });
+          // the deletes already settled are done, whatever stopped the uploads: they are not sent again
+          await clearOutboxItems(deletes.filter((d) => !stuck.has(d.seq)).map((d) => d.seq)).catch(() => {});
           return result;
         }
       }
       result.tables[table] = list.length;
-    }
-
-    // Deletes are sent one at a time and settled one at a time. A delete the server
-    // will not take must not hold back the uploads that already went, nor the
-    // deletes that did — only it stays queued, and is named, so what is waiting
-    // is exactly what is stuck.
-    //
-    // Stamping deleted_at with a plain update is refused by the SELECT policy
-    // (the new row is no longer one the reader may see), so when it is, the
-    // soft_delete_row function — which applies the same ownership rule as the
-    // definer — does it instead. See 20261111150000_soft_delete_function.sql.
-    const stuck = new Set();
-    for (const d of deletes) {
-      let { error } = await supabase
-        .from(d.table)
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', d.id);
-      if (error) {
-        ({ error } = await supabase.rpc('soft_delete_row', { p_table: d.table, p_id: d.id }));
-      }
-      if (error) {
-        stuck.add(d.seq);
-        result.errors.push({
-          table: d.table,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-          refused: [{ id: d.id, name: 'a delete of a record', hidden: null, message: error.message }],
-        });
-        continue;
-      }
-      result.deleted += 1;
     }
 
     await clearOutboxItems(sentSeqs.filter((q) => !stuck.has(q)));
@@ -311,7 +319,9 @@ async function findRefusedRows(table, part, onConflict) {
         const { data } = await supabase.from(table).select('id').eq('id', row.id).limit(1);
         hidden = !(data && data.length);
       } catch { /* leave unknown */ }
-      refused.push({ id: row.id, name: row.name ?? row.ticket_no ?? '', hidden, message: error.message });
+      // a ticket or invoice number another record on the server already holds: the row itself is new, so it is not "hidden"
+      const clash = /unique constraint/i.test(error.message || '') && /ticket_no|invoice_no/.test(error.message || '');
+      refused.push({ id: row.id, name: row.name ?? row.ticket_no ?? row.invoice_no ?? '', hidden: clash ? null : hidden, clash, message: error.message });
       if (refused.length >= 10) break;
     }
   } catch (e) { console.warn('Could not narrow down the refused row', e); }

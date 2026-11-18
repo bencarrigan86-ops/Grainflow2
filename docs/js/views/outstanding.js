@@ -4,23 +4,24 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { db } from '../storage.js?v=383';
-import { openSheet, openOver } from '../ui.js?v=383';
-import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=383';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText } from '../outstanding.js?v=383';
-import { windowText } from '../orders.js?v=383';
-import { openOrderSheet } from './orders.js?v=383';
-import { openInvoiceListSheet } from './invoice.js?v=383';
-import { renderPayables, returnToAfterBill } from './payables.js?v=383';
-import { openXeroSheet } from './xero.js?v=383';
-import { cashflow } from '../cashflow.js?v=383';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=383';
-import { buyerStatements, statementPdf } from '../statement.js?v=383';
-import { buyerExposure } from '../exposure.js?v=383';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=383';
-import { exposurePdf } from '../exposurepdf.js?v=383';
-import { emailIn } from '../vendordec.js?v=383';
-import { invoiceLabel } from '../adjustment.js?v=383';
+import { db } from '../storage.js?v=384';
+import { openSheet, openOver } from '../ui.js?v=384';
+import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=384';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=384';
+import { windowText } from '../orders.js?v=384';
+import { openOrderSheet } from './orders.js?v=384';
+import { openInvoiceListSheet } from './invoice.js?v=384';
+import { renderPayables, returnToAfterBill } from './payables.js?v=384';
+import { openXeroSheet } from './xero.js?v=384';
+import { cashflow } from '../cashflow.js?v=384';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=384';
+import { buyerStatements, statementPdf } from '../statement.js?v=384';
+import { buyerExposure } from '../exposure.js?v=384';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=384';
+import { exposurePdf } from '../exposurepdf.js?v=384';
+import { emailIn } from '../vendordec.js?v=384';
+import { invoiceLabel } from '../adjustment.js?v=384';
+import { matchesAll, amountText } from '../listsearch.js?v=384';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -35,6 +36,9 @@ let scheduleGrain = 'month';     // week | month
 let moneySide = 'in';          // in | out | month | buyer
 let deliveriesFilter = '';     // '' | ended | soon
 let deliveriesView = 'timeline'; // timeline | list
+let recView = 'unpaid';        // receivables: notinvoiced | unpaid | paid | all
+let recCommodity = '';         // receivables: '' (every commodity) or a commodity id
+let recQ = '';                 // receivables: the search box
 
 /** The Gantt-style chart: a bar per contract on one time axis, filled by what has been delivered. */
 function timelineHtml(shown, commodities, today) {
@@ -143,31 +147,17 @@ export function openMoneySheet(side = null) {
         </div>
         <div class="row" style="margin-top:8px"><span class="label"><strong>Net, once both are settled</strong></span><span class="value"><span class="badge ${pos.net >= 0 ? 'pos' : 'neg'}">${money(pos.net, 0)}</span></span></div>
         <div class="row" style="margin-bottom:10px"><span class="label">Overdue to you / overdue by you</span><span class="value"><span ${pos.owedToYou.overdue.count ? 'style="color:var(--danger)"' : ''}>${money(pos.owedToYou.overdue.total, 0)}</span> / <span ${pos.youOwe.overdue.count ? 'style="color:var(--danger)"' : ''}>${money(pos.youOwe.overdue.total, 0)}</span></span></div>
-        ${moneySide === 'month' ? cashflowHtml(cashflow(invoices, sales, db.getPayables(), today, 6, expectedReceipts(deliveries(sales, movements, db.getOrders(), today).rows, unb.rows, today))) : moneySide === 'buyer' ? buyersHtml(buyerExposure(invoices, sales, movements, commodities, today), commodities) : moneySide === 'out' ? '<div id="money-bills"></div>' : `
-        <div class="subhead">Delivered, not yet invoiced</div>
-        ${unb.rows.length === 0 ? '<div class="empty" style="padding:6px 0">Every delivery is on an invoice.</div>' : `
-        <div class="hint" style="margin-bottom:6px">${num(unb.total.tons, 1)} t worth about ${money(unb.total.value, 0)} has gone to buyers with no invoice yet. Tap a contract to invoice it.</div>
-        ${unb.rows.map((r) => `
-          <div class="list-item stack" data-invoice-sale="${esc(r.sale.id)}">
-            <div class="li-top"><div class="main">${esc(contractLabel(r.sale, commodities))}</div><div class="main">${money(r.value, 0)}</div></div>
-            <div class="meta">${r.loads.length} load${r.loads.length === 1 ? '' : 's'} &middot; ${num(r.tons, 1)} t not invoiced</div>
-            <div class="li-foot"><span class="meta">${r.oldest ? `Oldest ${esc(shortDate(r.oldest))}` : 'No load dates'}</span><span class="badges">${r.days !== null && r.days >= 0 ? `<span class="badge ${r.days > 30 ? 'neg' : r.days > 7 ? 'warn' : 'muted'}">${r.days === 0 ? 'Today' : `${r.days} day${r.days === 1 ? '' : 's'} waiting`}</span>` : ''}</span></div>
-          </div>`).join('')}`}
-        <div class="subhead" style="margin-top:12px">By age</div>
-        ${AGE_BUCKETS.filter((b) => side.buckets[b.key].count).map((b) => `
-          <div class="row"><span class="label">${esc(b.label)} (${side.buckets[b.key].count})</span><span class="value" ${b.key.startsWith('d') ? 'style="color:var(--danger)"' : ''}>${money(side.buckets[b.key].total, 0)}</span></div>`).join('') || '<div class="empty" style="padding:6px 0">Nothing outstanding.</div>'}
-        <div class="subhead" style="margin-top:12px">Invoices to be paid, oldest due first</div>
-        ${side.rows.length === 0 ? '<div class="empty" style="padding:6px 0">None.</div>' : side.rows.map((r) => {
-          const badge = r.daysOver === null ? 'muted' : r.overdue ? 'neg' : 'warn';
-          return `
-          <div class="list-item stack" ${r.sale ? `data-open-invoices="${esc(r.sale.id)}"` : ''}>
-            <div class="li-top"><div class="main">${esc(r.sale ? contractLabel(r.sale, commodities) : 'Unknown contract')}</div><div class="main">${money(r.amount, 2)}</div></div>
-            <div class="meta">${esc(invoiceLabel(r.invoice))}${r.invoice.issueDate ? ` · issued ${esc(shortDate(r.invoice.issueDate))}` : ''}</div>
-            <div class="li-foot"><span class="meta">${r.dueDate ? `Due ${esc(shortDate(r.dueDate))}` : 'No due date'}</span><span class="badges"><span class="badge ${badge}">${esc(dueText(r.daysOver))}</span></span></div>
-          </div>`;
-        }).join('')}`}
+        ${moneySide === 'month' ? cashflowHtml(cashflow(invoices, sales, db.getPayables(), today, 6, expectedReceipts(deliveries(sales, movements, db.getOrders(), today).rows, unb.rows, today))) : moneySide === 'buyer' ? buyersHtml(buyerExposure(invoices, sales, movements, commodities, today), commodities) : moneySide === 'out' ? '<div id="money-bills"></div>' : receivablesHtml({ unb, unpaidRows: side.rows, paidInvoices: invoices.filter((i) => i.status === 'paid' && !i.appliedToInvoice), sales, commodities })}
         ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? '<button type="button" class="btn secondary" id="open-xero" style="margin-top:14px">Export for Xero</button>' : ''}`;
 
+      root.querySelector('#rec-q')?.addEventListener('input', (e) => {
+        const at = e.target.selectionStart;
+        recQ = e.target.value; draw();
+        const box = root.querySelector('#rec-q');
+        if (box) { box.focus(); try { box.setSelectionRange(at, at); } catch { /* no caret in some browsers */ } }
+      });
+      root.querySelector('#rec-view')?.addEventListener('click', (e) => { const b = e.target.closest('[data-rec]'); if (b) { recView = b.dataset.rec; draw(); } });
+      root.querySelectorAll('[data-rec-com]').forEach((b) => b.addEventListener('click', () => { recCommodity = b.dataset.recCom; draw(); }));
       root.querySelector('#money-side').addEventListener('click', (e) => { const b = e.target.closest('[data-side]'); if (b) { moneySide = b.dataset.side; draw(); } });
       root.querySelectorAll('[data-invoice-sale]').forEach((el) => el.addEventListener('click', () => openOver(() => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.invoiceSale)), draw)));
       root.querySelectorAll('[data-open-invoices]').forEach((el) => el.addEventListener('click', () => openOver(() => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.openInvoices)), draw)));
@@ -181,23 +171,106 @@ export function openMoneySheet(side = null) {
   });
 }
 
+/**
+ * What buyers owe, as Payables lays out its bills: pills for what to see (delivered and not invoiced, unpaid, paid, all), and chips to
+ * narrow it to one commodity.
+ */
+function receivablesHtml({ unb, unpaidRows, paidInvoices, sales, commodities }) {
+  const comOf = (sale) => sale?.commodityId || '';
+  const paid = paidInvoices
+    .map((invoice) => ({ invoice, sale: sales.find((s) => s.id === invoice.saleId) }))
+    .sort((a, b) => String(b.invoice.paidDate || b.invoice.issueDate || '').localeCompare(String(a.invoice.paidDate || a.invoice.issueDate || '')));
+  const showNot = recView === 'notinvoiced' || recView === 'all';
+  const showUnpaid = recView === 'unpaid' || recView === 'all';
+  const showPaid = recView === 'paid' || recView === 'all';
+
+  // the commodities there is something to show for, in the pills chosen
+  const present = new Set([
+    ...(showNot ? unb.rows.map((r) => comOf(r.sale)) : []),
+    ...(showUnpaid ? unpaidRows.map((r) => comOf(r.sale)) : []),
+    ...(showPaid ? paid.map((r) => comOf(r.sale)) : []),
+  ]);
+  const chips = commodities.filter((c) => present.has(c.id));
+  if (recCommodity && !present.has(recCommodity)) recCommodity = '';
+  const keep = (sale) => !recCommodity || comOf(sale) === recCommodity;
+  // what a row can be found by: the buyer, the commodity and contract, the invoice, and the amount
+  const textOf = (sale, extra = '') => [sale?.buyer, commodities.find((c) => c.id === sale?.commodityId)?.name, sale?.contractNo, sale?.grade, extra].join(' ');
+  const notInvoiced = unb.rows.filter((r) => keep(r.sale) && matchesAll(textOf(r.sale, amountText(r.value)), recQ));
+  const unpaid = unpaidRows.filter((r) => keep(r.sale) && matchesAll(textOf(r.sale, [invoiceLabel(r.invoice), amountText(r.amount)].join(' ')), recQ));
+  const paidShown = paid.filter((r) => keep(r.sale) && matchesAll(textOf(r.sale, [invoiceLabel(r.invoice), amountText(r.invoice.totalPayable)].join(' ')), recQ));
+  // each row names the buyer first, then the commodity and contract
+  const buyerOf = (sale) => (sale ? (sale.buyer || 'No buyer') : 'Unknown contract');
+  const aboutOf = (sale) => (sale ? [commodities.find((c) => c.id === sale.commodityId)?.name, sale.contractNo ? `#${sale.contractNo}` : ''].filter(Boolean).join(' · ') : '');
+  const band = (i) => `band ${i % 2 ? 'alt' : ''}`;
+  const age = gather(unpaid);
+  const sub = (text) => (recView === 'all' ? `<div class="subhead" style="margin-top:12px">${text}</div>` : '');
+  const none = (text) => `<div class="empty" style="padding:6px 0">${text}</div>`;
+
+  const notHtml = !showNot ? '' : `${sub('Delivered, not yet invoiced')}
+    ${notInvoiced.length === 0 ? none('Every delivery is on an invoice.') : `
+    <div class="hint" style="margin-bottom:6px">${num(notInvoiced.reduce((s, r) => s + r.tons, 0), 1)} t worth about ${money(notInvoiced.reduce((s, r) => s + r.value, 0), 0)} has gone to buyers with no invoice yet. Tap a contract to invoice it.</div>
+    ${notInvoiced.map((r, i) => `
+      <div class="list-item stack ${band(i)}" data-invoice-sale="${esc(r.sale.id)}">
+        <div class="li-top"><div class="main">${esc(buyerOf(r.sale))}</div><div class="main">${money(r.value, 0)}</div></div>
+        <div class="meta">${esc(aboutOf(r.sale))} &middot; ${r.loads.length} load${r.loads.length === 1 ? '' : 's'} &middot; ${num(r.tons, 1)} t not invoiced</div>
+        <div class="li-foot"><span class="meta">${r.oldest ? `Oldest ${esc(shortDate(r.oldest))}` : 'No load dates'}</span><span class="badges">${r.days !== null && r.days >= 0 ? `<span class="badge ${r.days > 30 ? 'neg' : r.days > 7 ? 'warn' : 'muted'}">${r.days === 0 ? 'Today' : `${r.days} day${r.days === 1 ? '' : 's'} waiting`}</span>` : ''}</span></div>
+      </div>`).join('')}`}`;
+
+  const unpaidHtml = !showUnpaid ? '' : `${sub('Invoices to be paid, oldest due first')}
+    ${recView === 'unpaid' && unpaid.length ? `<div class="subhead">By age</div>
+    ${AGE_BUCKETS.filter((b) => age.buckets[b.key].count).map((b) => `
+      <div class="row"><span class="label">${esc(b.label)} (${age.buckets[b.key].count})</span><span class="value" ${b.key.startsWith('d') ? 'style="color:var(--danger)"' : ''}>${money(age.buckets[b.key].total, 0)}</span></div>`).join('')}
+    <div class="subhead" style="margin-top:12px">Invoices to be paid, oldest due first</div>` : ''}
+    ${unpaid.length === 0 ? none('No unpaid invoices.') : unpaid.map((r, i) => {
+      const badge = r.daysOver === null ? 'muted' : r.overdue ? 'neg' : 'warn';
+      return `
+      <div class="list-item stack ${band(i)}" ${r.sale ? `data-open-invoices="${esc(r.sale.id)}"` : ''}>
+        <div class="li-top"><div class="main">${esc(buyerOf(r.sale))}</div><div class="main">${money(r.amount, 2)}</div></div>
+        <div class="meta">${esc([aboutOf(r.sale), invoiceLabel(r.invoice)].filter(Boolean).join(' · '))}${r.invoice.issueDate ? ` · issued ${esc(shortDate(r.invoice.issueDate))}` : ''}</div>
+        <div class="li-foot"><span class="meta">${r.dueDate ? `Due ${esc(shortDate(r.dueDate))}` : 'No due date'}</span><span class="badges"><span class="badge ${badge}">${esc(dueText(r.daysOver))}</span></span></div>
+      </div>`;
+    }).join('')}`;
+
+  const paidHtml = !showPaid ? '' : `${sub('Paid invoices')}
+    ${paidShown.length === 0 ? none('No paid invoices.') : paidShown.map((r, i) => `
+      <div class="list-item stack ${band(i)}" ${r.sale ? `data-open-invoices="${esc(r.sale.id)}"` : ''}>
+        <div class="li-top"><div class="main">${esc(buyerOf(r.sale))}</div><div class="main">${money(r.invoice.totalPayable, 2)}</div></div>
+        <div class="meta">${esc([aboutOf(r.sale), invoiceLabel(r.invoice)].filter(Boolean).join(' · '))}${r.invoice.issueDate ? ` · issued ${esc(shortDate(r.invoice.issueDate))}` : ''}</div>
+        <div class="li-foot"><span class="meta">${r.invoice.paidDate ? `Paid ${esc(shortDate(r.invoice.paidDate))}` : 'Paid'}</span><span class="badges"><span class="badge pos">Paid</span></span></div>
+      </div>`).join('')}`;
+
+  return `
+    <div class="filterbar" style="margin-bottom:8px"><input type="search" id="rec-q" placeholder="Search buyer, commodity, contract, invoice, amount" value="${esc(recQ)}" aria-label="Search receivables" /></div>
+    <div class="segmented" id="rec-view" style="margin-bottom:8px">
+      ${[['notinvoiced', 'Not invoiced'], ['unpaid', 'Unpaid'], ['paid', 'Paid'], ['all', 'All']].map(([k, l]) => `<button data-rec="${k}" class="${recView === k ? 'active' : ''}">${l}</button>`).join('')}
+    </div>
+    ${chips.length > 1 ? `<div class="chips" style="margin-bottom:10px">
+      <button type="button" class="chip ${recCommodity ? '' : 'active'}" data-rec-com="">All commodities</button>
+      ${chips.map((c) => `<button type="button" class="chip ${recCommodity === c.id ? 'active' : ''}" data-rec-com="${esc(c.id)}">${esc(c.name)}</button>`).join('')}
+    </div>` : ''}
+    ${notHtml}${unpaidHtml}${paidHtml}`;
+}
+
 /** The next months' money in and out, by the month each falls due, with a running balance. */
 function cashflowHtml(cf) {
   const neg = (n) => (n < 0 ? 'style="color:var(--danger)"' : '');
   return `
-    <div class="hint" style="margin-bottom:8px">Invoiced is money already owed to you; Out is bills. Expected is a forecast for grain not yet invoiced: what is delivered, what is due to go, and what is ordered, paid on each contract’s terms at the contract price plus GST, before freight, levies and grade adjustments.</div>
-    <div class="table-scroll"><table>
-      <thead><tr><th style="text-align:left">When</th><th>Invoiced</th><th>Expected</th><th>Out</th><th>Running</th></tr></thead>
+    <div class="table-scroll"><table class="tight cf">
+      <thead>
+        <tr><th></th><th colspan="2" style="text-align:center;color:var(--accent-summary);border-bottom:2px solid var(--accent-summary)">Money in</th><th style="text-align:center;color:var(--danger);border-bottom:2px solid var(--danger)">Money out</th><th></th></tr>
+        <tr><th style="text-align:left">When</th><th>Invoiced</th><th>Expected</th><th>Bills</th><th>Running</th></tr>
+      </thead>
       <tbody>${cf.rows.map((r) => `
         <tr>
           <td style="text-align:left;${r.key === 'overdue' ? 'color:var(--danger);font-weight:600' : ''}">${esc(r.label)}${r.inCount + r.outCount ? `<div class="meta" style="font-size:11px">${r.inCount ? `${r.inCount} invoice${r.inCount === 1 ? '' : 's'}` : ''}${r.inCount && r.outCount ? ', ' : ''}${r.outCount ? `${r.outCount} bill${r.outCount === 1 ? '' : 's'}` : ''}</div>` : ''}</td>
-          <td>${r.in ? money(r.in, 0) : '&ndash;'}</td>
-          <td style="font-style:italic">${r.expected ? money(r.expected, 0) : '&ndash;'}</td>
-          <td>${r.out ? money(r.out, 0) : '&ndash;'}</td>
+          <td>${r.in ? `<span class="mtm pos">${money(r.in, 0)}</span>` : '&ndash;'}</td>
+          <td style="font-style:italic">${r.expected ? `<span class="mtm pos">${money(r.expected, 0)}</span>` : '&ndash;'}</td>
+          <td>${r.out ? `<span class="mtm neg">${money(r.out, 0)}</span>` : '&ndash;'}</td>
           <td ${neg(r.balance)}>${money(r.balance, 0)}</td>
         </tr>`).join('')}</tbody>
       <tfoot><tr><td style="text-align:left">Total</td><td>${money(cf.totalIn, 0)}</td><td style="font-style:italic">${money(cf.totalExpected, 0)}</td><td>${money(cf.totalOut, 0)}</td><td ${neg(cf.net)}>${money(cf.net, 0)}</td></tr></tfoot>
-    </table></div>`;
+    </table></div>
+    <div class="hint" style="margin-top:8px">Money in (green) is what buyers pay you: invoiced is already owed to you. Money out (red) is your bills. Expected is a forecast for grain not yet invoiced: what is delivered, what is due to go, and what is ordered, paid on each contract’s terms at the contract price plus GST, before freight, levies and grade adjustments.</div>`;
 }
 
 /** The MTM gap in colour: green above zero, red with a minus sign below, plain at zero. */

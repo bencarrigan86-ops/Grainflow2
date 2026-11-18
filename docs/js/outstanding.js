@@ -8,9 +8,9 @@
 //
 // Pure: the screens use it; it touches neither storage nor the page.
 
-import { saleEconomics, invoicedMovementIds, movementsForEndpoint, invoiceLineItems } from './derived.js?v=383';
-import { orderState, daysBetween } from './orders.js?v=383';
-import { billTotal, paidByBuyer } from './payables.js?v=383';
+import { saleEconomics, invoicedMovementIds, movementsForEndpoint, invoiceLineItems } from './derived.js?v=384';
+import { orderState, daysBetween } from './orders.js?v=384';
+import { billTotal, paidByBuyer } from './payables.js?v=384';
 
 // A contract whose window ends within this many days is flagged as ending soon.
 export const ENDING_SOON_DAYS = 30;
@@ -72,7 +72,7 @@ export function receivables(invoices, sales, today) {
 }
 
 /** What is outstanding and what is overdue in a list of {amount, bucket, overdue} rows, and the money by age. */
-function gather(rows) {
+export function gather(rows) {
   const buckets = Object.fromEntries(AGE_BUCKETS.map((b) => [b.key, { count: 0, total: 0 }]));
   const outstanding = { count: 0, total: 0 };
   const overdue = { count: 0, total: 0 };

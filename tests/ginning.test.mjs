@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems, cleanCotton, hasCotton, cottonComponents, cottonRunTotals, SEED_FACTOR_DEFAULT, lotsForSale, padOffBy, cleanModules, hasModules, moduleLegs, shareLoad, estimateBales, describeModules, DEFAULT_TURNOUT } from '../docs/js/ginning.js';
-import { ginOffsetOptions, ginOffsetLine, ginTakenOff, ginBillTotal, linePayableId } from '../docs/js/ginoffset.js';
+import { ginOffsetOptions, ginOffsetLine, ginTakenOff, ginBillTotal, linePayableId, ginBillTakenOff } from '../docs/js/ginoffset.js';
 import { avgModuleKg } from '../docs/js/modulespicked.js';
 import { modulesReport, ginnedByField } from '../docs/js/modulesreport.js';
 import { modulesPdf } from '../docs/js/modulespdf.js';
@@ -780,6 +780,17 @@ check('what one lint invoice takes off a gin invoice is no longer open for the n
   const old = { id: 'i0', saleId: 's1', lines: [{ isGinPrepaid: true, ginRunId: 'm1', amount: 5000 }] };
   assert.equal(linePayableId(old.lines[0], [offRun]), 'b1');
   assert.equal(ginOffsetOptions({ payables: [bill], invoices: [old], movements: [offRun], sale: { id: 's2' } })[0].outstanding, 24925.31);
+});
+check('a gin bill the lint invoices take off in full is settled at once, paid or not; one taken off in part is not', () => {
+  const bill = offBill();
+  const line = (amount) => ginOffsetLine({ bill, amount, movements: [offRun], sale: { id: 's1' } });
+  assert.equal(ginBillTakenOff(bill, [], [offRun]), false, 'no invoice has taken it');
+  assert.equal(ginBillTakenOff(bill, [{ id: 'i1', status: 'outstanding', lines: [line(20000)] }], [offRun]), false, 'part of it');
+  assert.equal(ginBillTakenOff(bill, [{ id: 'i1', status: 'outstanding', lines: [line(20000)] }, { id: 'i2', status: 'outstanding', lines: [line(9925.31)] }], [offRun]), true, 'two invoices between them take all of it');
+  assert.equal(ginBillTakenOff({ ...bill, payer: null }, [{ lines: [line(29925.31)] }], [offRun]), false, 'a bill the farm pays is its own to settle');
+  const st = read('docs/js/storage.js');
+  assert.ok(st.includes("const when = (inv.status === 'paid' && inv.paidDate) || inv.issueDate"), 'an unpaid invoice counts too');
+  assert.ok(st.includes('syncGinBills(current());   // gin bills this invoice takes off') && st.includes('syncGinBills(c, before)'), 'on creating and editing an invoice');
 });
 check('the ginning run sheet keeps the whole gin invoice as the bill, and the bill is settled by the invoices that take it off', () => {
   const v = read('docs/js/views/ginrun.js');

@@ -1,7 +1,7 @@
 // How the contracts on the Sales tab are ordered within each commodity. Pure apart from the remembered choice, which is a
 // per-device convenience and never needed (the list works without it).
 
-import { saleEconomics } from './derived.js?v=383';
+import { saleEconomics } from './derived.js?v=384';
 
 export const SALE_SORTS = [
   { value: 'newest', label: 'Newest first' },
