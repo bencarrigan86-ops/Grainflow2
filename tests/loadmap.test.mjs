@@ -182,10 +182,8 @@ check('a semicolon file with a ticket number and month-first dates is read as as
   assert.equal(loads[0].synthetic, true, 'a file with only a ticket number has no platform number, so one is worked out');
 });
 check('a site ticket number goes in Their ticket no.; the platform movement number stays in the notes', () => {
-  const csv = 'Movement No,Ticket No,Date,Paddock,Silo,Crop,Net t
-M123,T555,01/11/2026,North,S1,Wheat,30';
-  const setup = chooseSetup(csv.split('
-')[0].split(','), {}).setup;
+  const csv = 'Movement No,Ticket No,Date,Paddock,Silo,Crop,Net t\nM123,T555,01/11/2026,North,S1,Wheat,30';
+  const setup = chooseSetup(csv.split('\n')[0].split(','), {}).setup;
   const { loads } = readFreightExport(csv, setup);
   assert.equal(loads[0].ref, 'M123'); assert.equal(loads[0].siteTicket, 'T555');
   const { movements: made } = buildMovements(loads, { fields: { North: 'f1' }, silos: { S1: 's1' }, commodities: { Wheat: 'w' } }, { existing: [], include: new Set() });

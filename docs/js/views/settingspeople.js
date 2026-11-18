@@ -1,9 +1,10 @@
-import { db } from '../storage.js?v=409';
-import { esc } from '../fmt.js?v=409';
-import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm } from '../ui.js?v=409';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=409';
-import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=409';
-import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=409';
+import { db } from '../storage.js?v=410';
+import { esc } from '../fmt.js?v=410';
+import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=410';
+import { switchGroups, readSwitches, withSwitch } from '../farmswitches.js?v=410';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=410';
+import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=410';
+import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=410';
 
 // ---------------------------------------------------------------------------
 // People
@@ -22,6 +23,7 @@ import { createInvitation, listMembers, listPendingInvitations, revokeInvitation
 let people = null;          // { members, pending } once fetched
 let peopleLoading = false;
 let peopleError = null;
+let switchesOpen = false;   // the switches fold stays open while a switch is tapped (the card repaints on every change)
 let peopleNode = null;      // the live card, so an async load can repaint it
 
 async function loadPeople() {
@@ -83,9 +85,16 @@ export function paintPeople(card) {
       ${pending.map(pendingRow).join('')}` : ''}
     <hr class="sep" />
     <button class="btn" id="invite-someone">Invite someone&hellip;</button>
+    ${switchesFoldHtml()}
   `;
 
   card.querySelector('#invite-someone').addEventListener('click', () => openInviteSheet());
+
+  card.querySelector('#switch-fold').addEventListener('toggle', (e) => { switchesOpen = e.target.open; });
+  card.querySelectorAll('[data-switch]').forEach((box) => box.addEventListener('change', () => {
+    db.updateBusinessDetails({ switches: withSwitch(db.getBusinessDetails().switches, box.dataset.switch, box.checked) });
+    toast(box.checked ? 'Switched on for this farm' : 'Switched off');
+  }));
 
   card.querySelectorAll('[data-edit-member]').forEach((el) => {
     el.addEventListener('click', () => {
@@ -109,6 +118,21 @@ export function paintPeople(card) {
     });
   });
 
+}
+
+/**
+ * What each role can see on this farm: a switch for each, all off until the owner turns one on. A fold, closed, so the people
+ * above stay the first thing on the card. The database enforces them (see farmswitches.js), so a person is never sent what a
+ * switch keeps from them.
+ */
+function switchesFoldHtml() {
+  const on = readSwitches(db.getBusinessDetails().switches);
+  return `<details class="fold" id="switch-fold" ${switchesOpen ? 'open' : ''} style="margin-top:14px">
+    <summary><div><h2>What each role can see</h2><div class="sub">Switches for managers, workers and drivers</div></div></summary>
+    <div class="field hint" style="margin:8px 0">Everything starts off, the standard rules. A switch changes this farm only, and takes effect the next time each person's app refreshes.</div>
+    ${switchGroups().map((g) => `<div class="subhead">${esc(g.role)}</div>
+      ${g.items.map((x) => `<label class="sw-row"><input type="checkbox" data-switch="${x.key}" ${on[x.key] ? 'checked' : ''} /><span><strong>${esc(x.label)}</strong><span class="meta" style="display:block">${esc(x.hint)}</span></span></label>`).join('')}`).join('')}
+  </details>`;
 }
 
 /**

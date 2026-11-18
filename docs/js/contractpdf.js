@@ -3,18 +3,18 @@
 // The same terms, in the same order, as the page on screen (views/contract.js reads its rows from here too, so the two can
 // never say different things). Pure: it builds bytes from the sale and the farm's details and touches nothing else.
 
-import { Pdf, wrapText } from './pdf.js?v=409';
-import { drawBrandLogo } from './brand.js?v=409';
-import { letterheadLine } from './docband.js?v=409';
-import { addressLinesOf } from './address.js?v=409';
-import { num, money, dmy } from './fmt.js?v=409';
-import { PATTERN_ON_CONTRACT } from './deliveryplan.js?v=409';
-import { INVOICING_ON_CONTRACT } from './invoicing.js?v=409';
-import { contactLines } from './buyercontact.js?v=409';
-import { signerName } from './signdoc.js?v=409';
-import { toleranceText, gradeTermsLines, gradeNamesText } from './contractterms.js?v=409';
-import { cottonKind, cleanCottonTerms, netPerBale } from './cottonkinds.js?v=409';
-import { hasSignature, strokesInBox } from './signature.js?v=409';
+import { Pdf, wrapText } from './pdf.js?v=410';
+import { drawBrandLogo } from './brand.js?v=410';
+import { letterheadLine } from './docband.js?v=410';
+import { addressLinesOf } from './address.js?v=410';
+import { num, money, dmy } from './fmt.js?v=410';
+import { PATTERN_ON_CONTRACT } from './deliveryplan.js?v=410';
+import { INVOICING_ON_CONTRACT } from './invoicing.js?v=410';
+import { contactLines } from './buyercontact.js?v=410';
+import { signerName } from './signdoc.js?v=410';
+import { toleranceText, gradeTermsLines, gradeNamesText } from './contractterms.js?v=410';
+import { cottonKind, cleanCottonTerms, netPerBale } from './cottonkinds.js?v=410';
+import { hasSignature, strokesInBox } from './signature.js?v=410';
 
 export const DASH = '—';
 

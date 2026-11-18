@@ -118,7 +118,7 @@ check('a farm row with no column leaves the order automatic', () => {
 
 check('it is wired: the data hands the list to the sorts, Settings has the card, and the SQL adds the column', () => {
   const st = read('docs/js/storage.js');
-  assert.ok(st.includes('const shareOrder = () => setCommodityOrder(data.businessDetails?.commodityOrder)'));
+  assert.ok(st.includes('const shareOrder = () => { setCommodityOrder(data.businessDetails?.commodityOrder)'));
   assert.ok((st.match(/shareOrder\(\)/g) || []).length >= 7, 'after every swap of the data and every change to the details');
   assert.ok(st.includes('data.businessDetails.__hasCommodityOrder = true'));
   const se = read('docs/js/views/settings.js');

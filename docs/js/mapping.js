@@ -27,16 +27,16 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=409';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=409';
-import { cleanCottonTerms } from './cottonkinds.js?v=409';
-import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=409';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=409';
-import { cleanPicked } from './modulespicked.js?v=409';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=409';
-import { cleanHistory, hasHistory } from './pricehistory.js?v=409';
-import { cleanOffFarm } from './offfarm.js?v=409';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=409';
+import { cleanGradeOptions } from './gradeprice.js?v=410';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=410';
+import { cleanCottonTerms } from './cottonkinds.js?v=410';
+import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=410';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=410';
+import { cleanPicked } from './modulespicked.js?v=410';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=410';
+import { cleanHistory, hasHistory } from './pricehistory.js?v=410';
+import { cleanOffFarm } from './offfarm.js?v=410';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=410';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -304,6 +304,8 @@ export function stateToRows(state, farmId) {
     ...((b.signers || b.__hasSigners) ? { signers: orNull(b.signers) } : {}),
     // Whether Aircair's own form is offered on a spray request. Off unless switched on, so a farm that never has it needs no column.
     ...((b.showAircair || b.__hasAircair) ? { show_aircair: !!b.showAircair } : {}),
+    // The switches the owner has turned on or off for what each role can see (farmswitches.js). Sent once there is any, kept after that.
+    ...((Object.keys(b.switches || {}).length || b.__hasSwitches) ? { switches: b.switches && typeof b.switches === 'object' ? b.switches : {} } : {}),
     // The order the commodities are listed in on every screen: their names, in order. Optional in the same way: left out until
     // a list has been set, kept once one has, so going back to the automatic order (an empty list) reaches the server.
     // The farm's saved layouts for the files a receiving site sends back. Optional in the same way.
@@ -1009,6 +1011,7 @@ export function rowsToState(rows) {
       ...(farm.logo_off != null ? { logoOff: !!farm.logo_off, __hasLogoOff: true } : {}),
       ...(farm.signers != null ? { signers: farm.signers, __hasSigners: true } : {}),
       ...(farm.show_aircair != null ? { showAircair: !!farm.show_aircair, __hasAircair: true } : {}),
+      ...(farm.switches && typeof farm.switches === 'object' && !Array.isArray(farm.switches) && Object.keys(farm.switches).length ? { switches: farm.switches, __hasSwitches: true } : {}),
       ...(Array.isArray(farm.import_formats) ? { importFormats: farm.import_formats, __hasImportFormats: true } : {}),
       ...(Array.isArray(farm.commodity_order) ? { commodityOrder: farm.commodity_order.map(String), __hasCommodityOrder: true } : {}),
       ...(farm.address_parts != null ? { __hasAddressParts: true, ...(partsIn(farm.address_parts, farm.address) ? { addressParts: partsIn(farm.address_parts, farm.address) } : {}) } : {}),

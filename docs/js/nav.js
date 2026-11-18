@@ -72,22 +72,31 @@ export const OFF_BAR_BY_ROLE = {
   support:     ['settings', 'account', 'help'],
 };
 
+// The farm's own switches (see farmswitches.js), handed over by storage.js whenever the farm is loaded or they change.
+let switches = {};
+export function setFarmSwitches(obj) { switches = obj && typeof obj === 'object' && !Array.isArray(obj) ? { ...obj } : {}; }
+export const farmSwitch = (key) => switches[key] === true;
+
 const known = (role) => (ROLES.includes(role) || role === 'support' ? role : 'driver');
 
 /** Tab ids for the bar, in order. Unknown roles get the narrowest bar there is. */
 export function tabsForRole(role) {
-  return [...TABS_BY_ROLE[known(role)]];
+  const r = known(role);
+  const bar = [...TABS_BY_ROLE[r]];
+  // a farm that has switched it on gives its workers Position as well, first in the bar like everyone else's
+  if (r === 'farm_worker' && farmSwitch('workerSeesPosition') && !bar.includes('position')) bar.unshift('position');
+  return bar;
 }
 
 /** Everything the role may open, bar or not. */
 export function routesForRole(role) {
   const r = known(role);
-  return [...TABS_BY_ROLE[r], ...OFF_BAR_BY_ROLE[r]];
+  return [...tabsForRole(r), ...OFF_BAR_BY_ROLE[r]];
 }
 
 /** Where this role lands with no route in the address bar. */
 export function landingTabFor(role) {
-  return TABS_BY_ROLE[known(role)][0];
+  return tabsForRole(role)[0];
 }
 
 /**
@@ -133,5 +142,6 @@ export function canOpen(role, routeId) {
  * what would make this a control rather than a courtesy.
  */
 export function canSeeYield(role) {
-  return canOpen(role, 'position');
+  // a farm can also let its workers see yields without giving them the Position tab
+  return canOpen(role, 'position') || (role === 'farm_worker' && farmSwitch('workerSeesYields'));
 }

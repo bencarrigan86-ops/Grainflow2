@@ -1442,3 +1442,5 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .mp-foot { padding: 6px 12px 10px; border-top: 1px solid var(--border); }
 /* a table with a few narrow columns that has to fit a phone without sliding sideways */
 .table-scroll table.tight th, .table-scroll table.tight td { padding-left: 4px; padding-right: 4px; }
+.sw-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; cursor: pointer; }
+.sw-row input { width: 20px; height: 20px; flex: none; margin: 2px 0 0; }
