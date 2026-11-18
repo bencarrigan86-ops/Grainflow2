@@ -3,7 +3,7 @@
 // Pure: each function returns an <svg> string. The figures are illustrations of how a part of the app works, with made-up
 // numbers, not live data. The wording they carry is checked by tests/help.test.mjs along with the rest of the guide.
 
-import { TABS_BY_ROLE } from './nav.js?v=394';
+import { TABS_BY_ROLE } from './nav.js?v=395';
 
 const W = 340;
 const C = {
@@ -198,8 +198,39 @@ function peopleSvg() {
   return svg(66, 'An owner sends an invitation link and chooses what the person can do', b);
 }
 
+/** Cotton from the field to the money: modules, the gin yard, the ginning run, and the three things a run gives (lint, seed, a gin invoice). */
+function cottonSvg() {
+  const bw = 100; const gap = 17; const x = (i) => 6 + i * (bw + gap); const cx = (i) => x(i) + bw / 2;
+  const box = (i, y, h, title, sub, accent) => rect(x(i), y, bw, h, { fill: C.card, stroke: accent, sw: 1.5 })
+    + text(cx(i), y + h / 2 - (sub ? 2 : -4), title, { size: 10.5, bold: true })
+    + (sub ? text(cx(i), y + h / 2 + 12, sub, { size: 8.5, fill: C.dim }) : '');
+  const down = (xx, y1, y2, stroke = C.green) => `${line(xx, y1, xx, y2 - 3, { stroke, sw: 2 })}<path d="M${f1(xx - 5)} ${f1(y2 - 8)} L${f1(xx)} ${f1(y2)} L${f1(xx + 5)} ${f1(y2 - 8)}" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  let b = '';
+  // field to gin
+  [['Modules picked', 'paddock sheet'], ['Gin yard', 'Move modules'], ['Ginning run', 'Log ginning']].forEach(([t, sub], i) => {
+    b += box(i, 8, 52, t, sub, C.green);
+    if (i < 2) b += arrow(x(i) + bw + 3, 34, x(i) + bw + gap - 2, { stroke: C.green });
+  });
+  // the run gives three things
+  b += line(cx(2), 60, cx(2), 80, { stroke: C.green, sw: 2 }) + line(cx(0), 80, cx(2), 80, { stroke: C.green, sw: 2 });
+  b += text(W / 2, 75, 'each run gives', { size: 8.5, fill: C.dim });
+  [['Lint bales', 'lint kg \u00f7 227'], ['Cottonseed', 'kg off the gin'], ['Gin invoice', 'ginning + levies']].forEach(([t, sub], i) => {
+    b += down(cx(i), 80, 96);
+    b += box(i, 96, 52, t, sub, C.blue);
+  });
+  // and where each goes
+  [['Lint sale', 'Sales, in bales'], ['Seed sale', 'or Gin for seed'], ['Who pays?', 'you, or the lint buyer']].forEach(([t, sub], i) => {
+    b += down(cx(i), 148, 166, C.amber);
+    b += box(i, 166, 52, t, sub, C.amber);
+  });
+  b += text(W / 2, 238, 'A standard bale is 227 kg. Contracts and gin charges count standard bales.', { size: 9, fill: C.dim });
+  return svg(250, 'Cotton from the field to the sale: modules are picked and moved to a gin yard, a ginning run gives lint bales, seed and a gin invoice, and each goes to a lint sale, a seed sale or the person who pays the gin', b);
+}
+
 const FIGURES = {
   start: () => flowSvg([['Paddock', 'Production'], ['Silo', 'Storage'], ['Contract', 'Sales'], ['Invoice', 'Sales'], ['Paid', 'money in']], { arrows: ['load', 'load', '', ''], label: 'How it fits together: grain goes from a paddock to a silo to a contract, then is invoiced and paid' }),
+  cotton: cottonSvg,
+  cottonsell: () => flowSvg([['Ginning run', 'lint buyer pays'], ['Lint invoice', 'take the gin bill off'], ['Gin paid', 'you get the net']], { arrows: ['', ''], label: 'How a gin invoice the lint buyer pays is settled' }),
   load: loadSvg,
   ticket: ticketSvg,
   paddocks: paddockSvg,

@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=394';
+import { ROLES, canOpen } from './nav.js?v=395';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -217,6 +217,36 @@ export const GUIDES = [
     tips: [
       'Search, Sort by and More (measured view, grouping, the Silo calculator) are at the top.',
       'Grain held by a third party is an off-farm store, with storage fees worked out for you.',
+    ],
+  },
+  {
+    id: 'cotton', title: 'Cotton: modules to bales', roles: ['owner', 'manager', 'farm_worker'], open: 'movement', openLabel: 'Open Movement',
+    blurb: 'From picking to lint bales and seed, step by step.',
+    steps: [
+      'Set up Cotton as a commodity sold in Bales, and Cottonseed as one sold in tonnes (Settings).',
+      'As modules are picked, open the paddock and tap Modules picked: the count, estimated weight and turnout. Reports, Modules lists them by paddock.',
+      'Truck them to the gin: Movement, More, Move modules, to a gin yard named after the gin. They come off the paddock.',
+      'When the gin runs them: Movement, More, Log ginning. Enter the modules ginned, the bales pressed and their numbers, the lint kg and the seed kg, and the gin\'s rates.',
+      'Say where each lot of bales goes (a store or a bale contract) and where the seed goes. The run makes the gin invoice.',
+    ],
+    tips: [
+      'A standard bale is 227 kg. Contracts and gin charges count standard bales (lint kg divided by 227), not the bales pressed.',
+      'Cotton on hand (Storage) adds up the modules in the field by paddock, in the gin yard, and the bales in the shed.',
+    ],
+  },
+  {
+    id: 'cottonsell', title: 'Cotton: selling and the gin invoice', roles: ['owner', 'manager', 'bookkeeper'], open: 'sales', openLabel: 'Open Sales',
+    blurb: 'Lint, seed and ginning each have their own contract.',
+    steps: [
+      'Lint: an ordinary contract on Cotton, in bales. On Sales tap +, choose Lint sale as the contract type.',
+      'Seed sold outright: a contract on Cottonseed, in tonnes.',
+      'If the gin buys your seed, choose Gin for seed. The price is the seed value per bale and the ginning and levies come off it. Log ginning picks up its rates. Ginning only just records the gin\'s rates.',
+      'In Log ginning, say who pays the gin invoice: you, or the lint buyer. If the lint buyer pays, the invoice waits in Payables.',
+      'When you invoice the lint buyer, pick the gin invoices to take off. That line is how the gin is paid out of the lint payment.',
+    ],
+    tips: [
+      'The gin invoice is taken off only when you pick it on a lint invoice, so the right amount comes off each contract.',
+      'Money owed (Reports) shows gin bills still open, and the lint invoices that have taken them off.',
     ],
   },
   {
