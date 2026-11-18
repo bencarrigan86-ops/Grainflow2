@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=403';
-import { esc } from '../fmt.js?v=403';
-import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm } from '../ui.js?v=403';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=403';
-import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=403';
-import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=403';
+import { db } from '../storage.js?v=404';
+import { esc } from '../fmt.js?v=404';
+import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm } from '../ui.js?v=404';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=404';
+import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=404';
+import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=404';
 
 // ---------------------------------------------------------------------------
 // People

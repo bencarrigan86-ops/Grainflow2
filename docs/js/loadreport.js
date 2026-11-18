@@ -3,10 +3,10 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=403';
-import { drawBrandLogo } from './brand.js?v=403';
-import { dmy } from './fmt.js?v=403';
-import { SPECS, specOf } from './outload.js?v=403';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=404';
+import { drawBrandLogo } from './brand.js?v=404';
+import { dmy } from './fmt.js?v=404';
+import { SPECS, specOf } from './outload.js?v=404';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -56,23 +56,44 @@ export function endName(leg, { fields = [], storages = [], sales = [] } = {}) {
 }
 
 const same = (a, b) => String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase();
+/** A filter as a list: the list if there is one, else the single value if there is one, else nothing (so no filter). */
+const asList = (many, one) => (Array.isArray(many) ? many : many ? [many] : one ? [one] : []).filter((v) => String(v ?? '').trim() !== '');
 
 /**
- * The loads for the report, oldest first (date, then time, then ticket). `from` and `to` are inclusive dates,
- * `commodityId` and `saleId` narrow it to one commodity or to the loads going to one contract. Also: `fieldId` (loads that came from
- * that paddock), `storageId` (loads into or out of that silo), `grade`, `truck` (the rego) and `driver`, each ignoring capitals.
+ * The loads for the report, oldest first (date, then time, then ticket). `from` and `to` are inclusive dates. Every other filter takes
+ * one value or a list, and a load stays when it matches ANY value in a list (so two trucks give both trucks' loads); the filters
+ * together all have to match (a paddock AND a truck). Ignoring capitals for grade, truck and driver.
+ *   commodityId(s)  the load's commodity            saleId(s)    loads going to a contract
+ *   fieldId(s)      loads that came from a paddock  storageId(s) loads into or out of a silo
+ *   storageDir      'in' (loads into storage), 'out' (loads out of storage) or '' for both; with no silo ticked it means any silo
+ *   grade(s)  truck(es)  driver(s)  what was written on the load
  */
-export function loadReportRows(movements, ctx, { from = '', to = '', commodityId = '', saleId = '', fieldId = '', storageId = '', grade = '', truck = '', driver = '' } = {}) {
+export function loadReportRows(movements, ctx, opts = {}) {
+  const { from = '', to = '' } = opts;
   const commodities = ctx.commodities || [];
+  const com = asList(opts.commodityIds, opts.commodityId);
+  const sales = asList(opts.saleIds, opts.saleId);
+  const flds = asList(opts.fieldIds, opts.fieldId);
+  const stos = asList(opts.storageIds, opts.storageId);
+  const dir = opts.storageDir === 'in' || opts.storageDir === 'out' ? opts.storageDir : '';   // '' = in or out
+  const grd = asList(opts.grades, opts.grade);
+  const trk = asList(opts.trucks, opts.truck);
+  const drv = asList(opts.drivers, opts.driver);
+  const anyOf = (list, test) => !list.length || list.some(test);
   return (movements || [])
     .filter((m) => (!from || (m.date || '') >= from) && (!to || (m.date || '') <= to))
-    .filter((m) => !commodityId || m.commodityId === commodityId)
-    .filter((m) => !saleId || (m.tos || []).some((t) => t.type === 'sale' && t.id === saleId))
-    .filter((m) => !fieldId || (m.froms || []).some((l) => l.type === 'field' && l.id === fieldId))
-    .filter((m) => !storageId || [...(m.froms || []), ...(m.tos || [])].some((l) => l.type === 'silo' && l.id === storageId))
-    .filter((m) => !grade || same(m.grade, grade))
-    .filter((m) => !truck || same(m.truckRego, truck))
-    .filter((m) => !driver || same(m.driver, driver))
+    .filter((m) => anyOf(com, (id) => m.commodityId === id))
+    .filter((m) => anyOf(sales, (id) => (m.tos || []).some((t) => t.type === 'sale' && t.id === id)))
+    .filter((m) => anyOf(flds, (id) => (m.froms || []).some((l) => l.type === 'field' && l.id === id)))
+    .filter((m) => {
+      const legs = dir === 'in' ? (m.tos || []) : dir === 'out' ? (m.froms || []) : [...(m.froms || []), ...(m.tos || [])];
+      const silos = legs.filter((l) => l.type === 'silo' && l.id !== '__transit__');
+      if (!stos.length) return !dir || silos.length > 0;   // a direction on its own: any load into (or out of) any silo
+      return stos.some((id) => silos.some((l) => l.id === id));
+    })
+    .filter((m) => anyOf(grd, (g) => same(m.grade, g)))
+    .filter((m) => anyOf(trk, (g) => same(m.truckRego, g)))
+    .filter((m) => anyOf(drv, (g) => same(m.driver, g)))
     .map((m) => ({
       id: m.id,
       date: m.date || '',
@@ -118,14 +139,26 @@ export function loadFilterChoices(movements, ctx = {}) {
   return { fields: named(fieldIds, ctx.fields || []), storages: named(storageIds, ctx.storages || []), grades: words(grades), trucks: words(trucks), drivers: words(drivers) };
 }
 
-/** The narrowing in words, for under the heading of the PDF and the line in the sheet: "Paddock North · Truck ABC123"; '' when nothing is chosen. */
-export function filterText({ fieldId = '', storageId = '', grade = '', truck = '', driver = '' } = {}, ctx = {}) {
+/** "Storage Silo 1", "Storage out of Silo 1", "Loads into storage": what the storage filter says; '' when it is not used. */
+function storageText(opts, ctx) {
+  const dir = opts.storageDir === 'in' || opts.storageDir === 'out' ? opts.storageDir : '';
+  const names = asList(opts.storageIds, opts.storageId).map((id) => (ctx.storages || []).find((x) => x.id === id)?.name).filter(Boolean).join(', ');
+  if (!names) return dir === 'in' ? 'Loads into storage' : dir === 'out' ? 'Loads out of storage' : '';
+  return `Storage ${dir === 'in' ? 'into ' : dir === 'out' ? 'out of ' : ''}${names}`;
+}
+
+/** The narrowing in words, for under the heading of the PDF and the line in the sheet: "Paddock North, South · Truck ABC123"; '' when nothing is chosen. */
+export function filterText(opts = {}, ctx = {}) {
+  const names = (list, find) => list.map((v) => find(v)).filter(Boolean).join(', ');
+  const part = (label, text) => (text ? `${label} ${text}` : '');
   return [
-    fieldId ? `Paddock ${(ctx.fields || []).find((x) => x.id === fieldId)?.name || ''}`.trim() : '',
-    storageId ? `Storage ${(ctx.storages || []).find((x) => x.id === storageId)?.name || ''}`.trim() : '',
-    grade ? `Grade ${grade}` : '',
-    truck ? `Truck ${truck}` : '',
-    driver ? `Driver ${driver}` : '',
+    part('Commodity', names(asList(opts.commodityIds, opts.commodityId), (id) => (ctx.commodities || []).find((x) => x.id === id)?.name)),
+    part('Contract', names(asList(opts.saleIds, opts.saleId), (id) => { const s = (ctx.sales || []).find((x) => x.id === id); return s ? [s.buyer, s.contractNo ? `#${s.contractNo}` : ''].filter(Boolean).join(' ') || 'Contract' : ''; })),
+    part('Paddock', names(asList(opts.fieldIds, opts.fieldId), (id) => (ctx.fields || []).find((x) => x.id === id)?.name)),
+    storageText(opts, ctx),
+    part('Grade', asList(opts.grades, opts.grade).join(', ')),
+    part('Truck', asList(opts.trucks, opts.truck).join(', ')),
+    part('Driver', asList(opts.drivers, opts.driver).join(', ')),
   ].filter(Boolean).join(' · ');
 }
 

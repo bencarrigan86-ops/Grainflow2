@@ -297,11 +297,45 @@ check('the quick date ranges: today, yesterday, weeks from Monday, months, and a
   assert.deepEqual(by('2026-03-01').lastmonth, ['2026-02-01', '2026-02-28']);
   assert.deepEqual(by('2026-11-15').week, ['2026-11-09', '2026-11-15'], 'a Sunday is the end of its week');
 });
-check('the sheet has the Narrow it down fold and sends the choice to the report', () => {
+check('more than one tick in a filter keeps the loads that match any of them; different filters must all match', () => {
+  assert.deepEqual(loadReportRows(all, ctx, { fieldIds: ['f1'], storageIds: ['s1'] }).map((r) => r.id).sort(), ['e'], 'a paddock AND a silo both have to match: only e came from the paddock into the silo');
+  assert.deepEqual(loadReportRows(all, ctx, { saleIds: ['k1', 'k2'] }).map((r) => r.id).sort(), ['a', 'b', 'c', 'g'], 'two contracts give the loads of both');
+  assert.deepEqual(loadReportRows(all, ctx, { trucks: ['abc123', 'xyz 9'] }).map((r) => r.id).sort(), ['a', 'b', 'c', 'd', 'e', 'g'], 'two trucks');
+  assert.deepEqual(loadReportRows(all, ctx, { grades: ['APW1', 'ASW1'] }).map((r) => r.id).sort(), ['e', 'g'], 'two grades');
+  assert.deepEqual(loadReportRows(all, ctx, { commodityIds: ['w', 'b'] }).length, all.length, 'every commodity ticked is every load');
+  assert.deepEqual(loadReportRows(all, ctx, { fieldIds: [], trucks: [] }).length, all.length, 'nothing ticked means no filter');
+});
+check('a load into a silo is a load too: the report is not only for contracts', () => {
+  assert.deepEqual(loadReportRows(all, ctx, { storageIds: ['s1'], saleIds: [] }).map((r) => r.id).includes('d'), true);
+});
+check('the words for several ticks', () => {
+  assert.equal(filterText({ saleIds: ['k1', 'k2'], trucks: ['ABC123', 'XYZ 9'] }, ctx), 'Contract Graincorp #C-77, Louis Dreyfus · Truck ABC123, XYZ 9');
+  assert.equal(filterText({ commodityIds: ['w'], fieldIds: ['f1'], storageIds: ['s1'] }, ctx), 'Commodity Wheat · Paddock River Block · Storage Silo 3');
+});
+check('storage in, out or both: in is loads into a silo, out is loads out of one, with or without a silo picked', () => {
+  const ids = (o) => loadReportRows(all, ctx, o).map((r) => r.id).sort();
+  assert.deepEqual(ids({ storageIds: ['s1'] }), ['a', 'c', 'd', 'e', 'g'], 'no direction is in or out, as before');
+  assert.deepEqual(ids({ storageIds: ['s1'], storageDir: 'in' }), ['d', 'e']);
+  assert.deepEqual(ids({ storageIds: ['s1'], storageDir: 'out' }), ['a', 'c', 'd', 'g']);
+  assert.deepEqual(ids({ storageDir: 'in' }), ['d', 'e'], 'in, with no silo picked, is a load into any silo');
+  assert.deepEqual(ids({ storageDir: 'out' }), ['a', 'c', 'd', 'g'], 'out, with no silo picked, is a load out of any silo (the paddock load b is not)');
+  assert.deepEqual(ids({ storageDir: '' }).length, all.length, 'both with nothing picked is every load');
+  assert.deepEqual(ids({ storageDir: 'in', commodityIds: ['b'] }), ['d'], 'it narrows with the other filters');
+  assert.equal(filterText({ storageIds: ['s1'], storageDir: 'in' }, ctx), 'Storage into Silo 3');
+  assert.equal(filterText({ storageIds: ['s1'], storageDir: 'out' }, ctx), 'Storage out of Silo 3');
+  assert.equal(filterText({ storageDir: 'in' }, ctx), 'Loads into storage');
+  assert.equal(filterText({ storageDir: 'out' }, ctx), 'Loads out of storage');
   const v = read('docs/js/views/loadreport.js');
-  assert.ok(v.includes('id="lr-more"') && v.includes("'lr-field'") && v.includes("'lr-storage'") && v.includes("'lr-grade'") && v.includes("'lr-truck'") && v.includes("'lr-driver'"));
+  assert.ok(v.includes('id="lr-dir"') && v.includes("'In and out'") && v.includes("'Loads in'") && v.includes("'Loads out'") && v.includes("storageDir: ''"), 'the sheet has the selector');
+});
+check('the sheet has a tick list for each filter, a Clear for each, and sends the ticks to the report', () => {
+  const v = read('docs/js/views/loadreport.js');
+  for (const k of ['commodityIds', 'saleIds', 'fieldIds', 'storageIds', 'grades', 'trucks', 'drivers']) assert.ok(v.includes("key: '" + k + "'"), k + ' is a filter');
+  assert.ok(v.includes('data-mp-box') && v.includes('data-mp-clear') && v.includes('type="checkbox"'), 'ticks and a Clear');
   assert.ok(v.includes('id="lr-presets"') && v.includes('data-preset') && v.includes('datePresets(todayLocal())'), 'the quick ranges sit above the dates');
   assert.ok(v.includes('filters: filterText(d, ctx)') && v.includes('loadReportRows(movements, ctx, d)'));
+  assert.ok(v.includes("from: '', to: ''"), 'the dates start blank, for people who do not want dates');
+  assert.ok(!v.includes('id="lr-commodity"') && !v.includes('id="lr-sale"'), 'the one-choice drop-downs are gone');
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }

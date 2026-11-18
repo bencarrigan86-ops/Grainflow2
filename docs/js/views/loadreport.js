@@ -1,10 +1,11 @@
-// The load report sheet: pick the dates (and a commodity or contract if wanted), then send the list of loads on as a PDF.
+// The load report sheet: pick the dates, tick what to narrow the loads by (any number of commodities, contracts, paddocks, silos,
+// grades, trucks or drivers), then send the list of loads on as a PDF.
 
-import { db } from '../storage.js?v=403';
-import { num, todayLocal, dmy } from '../fmt.js?v=403';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=403';
-import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=403';
-import { loadReportRows, loadReportTotals, loadFilterChoices, filterText, datePresets, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=403';
+import { db } from '../storage.js?v=404';
+import { num, todayLocal, dmy, esc } from '../fmt.js?v=404';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=404';
+import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=404';
+import { loadReportRows, loadReportTotals, loadFilterChoices, filterText, datePresets, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=404';
 
 // what was chosen last time, remembered on this device
 const KEY = 'grainflow.loadreport';
@@ -42,17 +43,50 @@ Thanks`;
   if (result !== 'cancelled') toast(result === 'shared' ? 'Sent' : 'Downloaded. Attach it to the email that opened.');
 }
 
+/** The filters, in the order they are on the sheet: the name in the draft, what it is called, and which list of choices feeds it. */
+const FILTERS = [
+  { key: 'commodityIds', label: 'Commodity', list: 'commodities' },
+  { key: 'saleIds', label: 'Contract', list: 'sales' },
+  { key: 'fieldIds', label: 'Paddock', list: 'fields' },
+  { key: 'storageIds', label: 'Storage', list: 'storages' },
+  { key: 'grades', label: 'Grade', list: 'grades' },
+  { key: 'trucks', label: 'Truck', list: 'trucks' },
+  { key: 'drivers', label: 'Driver', list: 'drivers' },
+];
+
+/** What a filter says on its closed row: "All", the names when one or two are ticked, else how many. */
+const pickedText = (labels) => (!labels.length ? 'All' : labels.length <= 2 ? labels.join(', ') : `${labels.length} picked`);
+
 export function openLoadReportSheet() {
   const { fields, storages, sales, commodities, movements } = db.get();
   const ctx = { fields, storages, sales, commodities };
   const saved = read();
-  const d = { from: todayLocal(), to: todayLocal(), commodityId: '', saleId: '', fieldId: '', storageId: '', grade: '', truck: '', driver: '', showOrigin: saved.showOrigin !== false, showDestination: saved.showDestination !== false, showQuality: saved.showQuality !== false, email: saved.email || '' };
-  const inUse = commodities.filter((c) => movements.some((m) => m.commodityId === c.id));
-  const toSales = sales.filter((s) => movements.some((m) => (m.tos || []).some((t) => t.type === 'sale' && t.id === s.id)));
+  const d = {
+    from: '', to: '',   // opens on all dates; the buttons or the boxes narrow it
+    commodityIds: [], saleIds: [], fieldIds: [], storageIds: [], storageDir: '', grades: [], trucks: [], drivers: [],
+    showOrigin: saved.showOrigin !== false, showDestination: saved.showDestination !== false, showQuality: saved.showQuality !== false, email: saved.email || '',
+  };
   const presets = datePresets(todayLocal());
   const choices = loadFilterChoices(movements, ctx);
-  const pickOf = (label, id, list) => (list.length ? field({ label, id, type: 'select', value: '', options: [{ value: '', label: 'All' }, ...list] }) : '');
   const saleLabel = (s) => [commodities.find((c) => c.id === s.commodityId)?.name, s.buyer, s.contractNo ? `#${s.contractNo}` : ''].filter(Boolean).join(' · ') || 'Contract';
+  // what each filter can be: only things that are on a load
+  const options = {
+    commodities: commodities.filter((c) => movements.some((m) => m.commodityId === c.id)).map((c) => ({ value: c.id, label: c.name })),
+    sales: sales.filter((s) => movements.some((m) => (m.tos || []).some((x) => x.type === 'sale' && x.id === s.id))).map((s) => ({ value: s.id, label: saleLabel(s) })),
+    fields: choices.fields.map((x) => ({ value: x.id, label: x.name })),
+    storages: choices.storages.map((x) => ({ value: x.id, label: x.name })),
+    grades: choices.grades.map((g) => ({ value: g, label: g })),
+    trucks: choices.trucks.map((g) => ({ value: g, label: g })),
+    drivers: choices.drivers.map((g) => ({ value: g, label: g })),
+  };
+  const shown = FILTERS.filter((x) => options[x.list].length);
+  const dirChips = (x) => x.key !== 'storageIds' ? '' : `<div class="chips" id="lr-dir" role="group" aria-label="Loads in or out" style="margin:0 0 8px">${[['', 'In and out'], ['in', 'Loads in'], ['out', 'Loads out']].map(([v, t]) => `<button type="button" class="chip" data-dir="${v}">${t}</button>`).join('')}</div>`;
+  const pickRow = (x) => `<details class="mp" data-mp="${x.key}">
+      <summary><span>${x.label}</span><span class="mp-val" data-mp-val="${x.key}">All</span></summary>
+      ${dirChips(x)}
+      <div class="mp-list">${options[x.list].map((o) => `<label><input type="checkbox" data-mp-box="${x.key}" value="${esc(o.value)}" /> <span>${esc(o.label)}</span></label>`).join('')}</div>
+      <div class="mp-foot"><button type="button" class="btn secondary small" data-mp-clear="${x.key}" style="width:auto;margin:0">Clear</button></div>
+    </details>`;
 
   openSheet('Send a load report', (root) => {
     root.innerHTML = `
@@ -62,18 +96,9 @@ export function openLoadReportSheet() {
         ${field({ label: 'From', id: 'lr-from', type: 'date', value: d.from })}
         ${field({ label: 'To', id: 'lr-to', type: 'date', value: d.to })}
       </div>
-      ${inUse.length > 1 ? field({ label: 'Commodity', id: 'lr-commodity', type: 'select', value: d.commodityId, options: [{ value: '', label: 'All commodities' }, ...inUse.map((c) => ({ value: c.id, label: c.name }))] }) : ''}
-      ${toSales.length ? field({ label: 'Contract', id: 'lr-sale', type: 'select', value: d.saleId, options: [{ value: '', label: 'All contracts and silos' }, ...toSales.map((s) => ({ value: s.id, label: saleLabel(s) }))] }) : ''}
-      <details class="fold" id="lr-more">
-        <summary><div><h2>Narrow it down</h2><div class="sub" id="lr-more-sub">Paddock, storage, grade, truck, driver</div></div></summary>
-        <div class="grid-2">
-          ${pickOf('Paddock', 'lr-field', choices.fields.map((x) => ({ value: x.id, label: x.name })))}
-          ${pickOf('Storage (in or out)', 'lr-storage', choices.storages.map((x) => ({ value: x.id, label: x.name })))}
-          ${pickOf('Grade', 'lr-grade', choices.grades.map((g) => ({ value: g, label: g })))}
-          ${pickOf('Truck', 'lr-truck', choices.trucks.map((g) => ({ value: g, label: g })))}
-          ${pickOf('Driver', 'lr-driver', choices.drivers.map((g) => ({ value: g, label: g })))}
-        </div>
-      </details>
+      ${shown.length ? `<div class="subhead" style="margin-top:4px">Only loads that match</div>
+      <div class="hint" style="margin:0 0 8px">Tick one or more in any of these. A load has to match one tick in each filter you use.</div>
+      <div id="lr-filters">${shown.map(pickRow).join('')}</div>` : ''}
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:10px 0 10px"><input type="checkbox" id="lr-origin" ${d.showOrigin ? 'checked' : ''} style="width:18px;height:18px" /> Show where each load came from (storage or paddock)</label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="lr-dest" ${d.showDestination ? 'checked' : ''} style="width:18px;height:18px" /> Show the destination when a load is going to a contract</label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="lr-quality" ${d.showQuality ? 'checked' : ''} style="width:18px;height:18px" /> Show quality results where a load was tested</label>
@@ -84,9 +109,7 @@ export function openLoadReportSheet() {
 
     const collect = () => {
       d.from = getVal(root, 'lr-from') || ''; d.to = getVal(root, 'lr-to') || '';
-      d.commodityId = getVal(root, 'lr-commodity') || ''; d.saleId = getVal(root, 'lr-sale') || '';
-      d.fieldId = getVal(root, 'lr-field') || ''; d.storageId = getVal(root, 'lr-storage') || ''; d.grade = getVal(root, 'lr-grade') || '';
-      d.truck = getVal(root, 'lr-truck') || ''; d.driver = getVal(root, 'lr-driver') || '';
+      for (const x of FILTERS) d[x.key] = [...root.querySelectorAll(`[data-mp-box="${x.key}"]:checked`)].map((b) => b.value);
       d.showOrigin = root.querySelector('#lr-origin').checked;
       d.showDestination = root.querySelector('#lr-dest').checked;
       d.showQuality = root.querySelector('#lr-quality').checked;
@@ -98,8 +121,15 @@ export function openLoadReportSheet() {
       const t = loadReportTotals(rows());
       root.querySelector('#lr-count').textContent = `${t.loads} load${t.loads === 1 ? '' : 's'}, ${num(t.tons, 1)} t`;
       // the button for the range on the screen is lit; a range typed by hand lights none
+      root.querySelectorAll('[data-dir]').forEach((b) => b.classList.toggle('active', b.dataset.dir === d.storageDir));
       root.querySelectorAll('[data-preset]').forEach((b) => { const p = presets.find((x) => x.key === b.dataset.preset); b.classList.toggle('active', !!p && p.from === d.from && p.to === d.to); });
-      root.querySelector('#lr-more-sub').textContent = filterText(d, ctx) || 'Paddock, storage, grade, truck, driver';
+      // each filter's closed row says what is ticked
+      for (const x of shown) {
+        const labels = options[x.list].filter((o) => d[x.key].includes(o.value)).map((o) => o.label);
+        const word = x.key === 'storageIds' && d.storageDir ? (d.storageDir === 'in' ? 'Loads in' : 'Loads out') : '';
+        root.querySelector(`[data-mp="${x.key}"]`).classList.toggle('on', labels.length > 0 || !!word);
+        root.querySelector(`[data-mp-val="${x.key}"]`).textContent = word ? (labels.length ? `${word}: ${pickedText(labels)}` : word) : pickedText(labels);
+      }
     };
     root.querySelector('#lr-presets').addEventListener('click', (e) => {
       const b = e.target.closest('[data-preset]'); if (!b) return;
@@ -107,13 +137,22 @@ export function openLoadReportSheet() {
       root.querySelector('#lr-from').value = p.from; root.querySelector('#lr-to').value = p.to;
       calc();
     });
+    root.querySelector('#lr-dir')?.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-dir]'); if (!b) return;
+      d.storageDir = b.dataset.dir; calc();
+    });
+    root.querySelectorAll('[data-mp-clear]').forEach((b) => b.addEventListener('click', () => {
+      root.querySelectorAll(`[data-mp-box="${b.dataset.mpClear}"]`).forEach((c) => { c.checked = false; });
+      if (b.dataset.mpClear === 'storageIds') d.storageDir = '';
+      calc();
+    }));
     root.addEventListener('input', calc); root.addEventListener('change', calc);
     calc();
 
     const make = async (andSend) => {
       collect();
       const r = rows();
-      if (!r.length) { notify('No loads fall in those dates. Widen the dates or clear a filter.'); return; }
+      if (!r.length) { notify('No loads match. Widen the dates or clear a filter.'); return; }
       save({ showOrigin: d.showOrigin, showDestination: d.showDestination, showQuality: d.showQuality, email: d.email });
       const business = db.getBusinessDetails();
       const btns = [...root.querySelectorAll('button')]; btns.forEach((b) => { b.disabled = true; });

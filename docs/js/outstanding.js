@@ -8,9 +8,9 @@
 //
 // Pure: the screens use it; it touches neither storage nor the page.
 
-import { saleEconomics, invoicedMovementIds, movementsForEndpoint, invoiceLineItems } from './derived.js?v=403';
-import { orderState, daysBetween } from './orders.js?v=403';
-import { billTotal, paidByBuyer } from './payables.js?v=403';
+import { saleEconomics, invoicedMovementIds, movementsForEndpoint, invoiceLineItems } from './derived.js?v=404';
+import { orderState, daysBetween } from './orders.js?v=404';
+import { billTotal, paidByBuyer } from './payables.js?v=404';
 
 // A contract whose window ends within this many days is flagged as ending soon.
 export const ENDING_SOON_DAYS = 30;
