@@ -344,7 +344,7 @@ check('the paddock form, the save, the CSV and the SQL all have it', () => {
   assert.ok(prod.includes("id: 'harvestLeftYield'") && prod.includes("harvestLeftYield: String(getVal(root, 'harvestLeftYield')"));
   assert.ok(prod.includes('id="cut-so-far"') && prod.includes('Cut so far:'), 'what the cut part is yielding, to go by');
   const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-  assert.ok(readFileSync(join(root, 'docs/js/views/settings.js'), 'utf8').includes('Yield for hectares left (t/ha)'));
+  assert.ok(readFileSync(join(root, 'docs/js/views/settingsexport.js'), 'utf8').includes('Yield for hectares left (t/ha)'));
   assert.ok(readFileSync(join(root, 'supabase/paste-into-sql-editor.sql'), 'utf8').includes('add column if not exists harvest_left_yield numeric'));
   assert.ok(readFileSync(join(root, 'supabase/migrations/20261118970000_harvest_left_yield.sql'), 'utf8').includes('harvest_left_yield'));
 });

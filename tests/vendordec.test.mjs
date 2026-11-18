@@ -361,7 +361,7 @@ check('the database columns and the signature table are in the paste-in file, on
   assert.match(sql, /add column if not exists qa_program text/);
   assert.match(sql, /add column if not exists qa_number text/);
   assert.match(sql, /add column if not exists our_ref text/);
-  assert.match(sql, /check \(kind in \('contract', 'broker_note', 'vendor_dec', 'other'\)\)/);
+  assert.match(sql, /check \(kind in \('contract', 'broker_note', 'vendor_dec', 'freight_order', 'confirmation', 'other'\)\)/);   // the list the script starts on as well as ends on, so it can be run again over a farm that has confirmations
   assert.match(sql, /create table if not exists user_signatures/);
   assert.match(sql, /user_signatures_select on user_signatures\s+for select to authenticated using \(user_id = auth\.uid\(\)\)/);
 });

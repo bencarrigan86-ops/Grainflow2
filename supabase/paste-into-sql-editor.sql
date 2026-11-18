@@ -435,7 +435,7 @@ alter table sale_documents
   drop constraint if exists sale_documents_kind_check;
 alter table sale_documents
   add constraint sale_documents_kind_check
-  check (kind in ('contract', 'broker_note', 'vendor_dec', 'other'));
+  check (kind in ('contract', 'broker_note', 'vendor_dec', 'freight_order', 'confirmation', 'other'));
 
 create table if not exists user_signatures (
   user_id      uuid primary key references auth.users (id) on delete cascade,
@@ -524,7 +524,7 @@ alter table sale_documents
   drop constraint if exists sale_documents_kind_check;
 alter table sale_documents
   add constraint sale_documents_kind_check
-  check (kind in ('contract', 'broker_note', 'vendor_dec', 'freight_order', 'other'));
+  check (kind in ('contract', 'broker_note', 'vendor_dec', 'freight_order', 'confirmation', 'other'));
 
 -- Deleting a freight order: the delete function has to know the new table.
 create or replace function soft_delete_row(p_table text, p_id uuid)
@@ -2022,5 +2022,19 @@ alter table sales add column if not exists cotton_terms jsonb;
 -- The buyer's detail on a grain order: issuer, destination, address, booking and site rules
 alter table orders add column if not exists detail jsonb;
 alter table freight_orders add column if not exists detail jsonb;
+
+notify pgrst, 'reload schema';
+
+-- ===========================================================================
+-- A deleted ticket or invoice no longer holds its number
+-- ===========================================================================
+-- The numbers must still be unique among the records that are live, so the plain unique constraints on (farm_id, ticket_no) and
+-- (farm_id, invoice_no) become unique indexes over the rows that are not deleted.
+
+alter table movements drop constraint if exists movements_farm_id_ticket_no_key;
+create unique index if not exists movements_farm_ticket_no_live on movements (farm_id, ticket_no) where deleted_at is null;
+
+alter table invoices drop constraint if exists invoices_farm_id_invoice_no_key;
+create unique index if not exists invoices_farm_invoice_no_live on invoices (farm_id, invoice_no) where deleted_at is null;
 
 notify pgrst, 'reload schema';

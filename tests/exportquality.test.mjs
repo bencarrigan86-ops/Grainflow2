@@ -106,7 +106,7 @@ check('a silo is what is in it now: the opening stock and the loads, less what w
 
 console.log('\n=== a comments column on every export ===');
 
-const settingsSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs', 'js', 'views', 'settings.js'), 'utf8');
+const settingsSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs', 'js', 'views', 'settingsexport.js'), 'utf8');
 const exportsIn = [...settingsSrc.matchAll(/exportRowsAsCSV\(`grainflow-(\w+)-[\s\S]*?\n  \]\);/g)].map((m) => ({ name: m[1], src: m[0] }));
 
 check('all seven exports were found', () => {

@@ -316,7 +316,7 @@ check('it is wired: the load form, the data layer, boot, People and the SQL', ()
   assert.ok(st.includes('nextOutloadNo()') && st.includes('__hasOutloadNo') && st.includes('__hasImportFormats'));
   const mn = read('docs/js/main.js');
   assert.ok(mn.includes('loadMySeries(myId, membership.farmId)') && mn.includes('rememberedSeries(myId, membership.farmId)'));
-  const se = read('docs/js/views/settings.js');
+  const se = read('docs/js/views/settings.js') + read('docs/js/views/settingspeople.js');
   assert.ok(se.includes('listSeries(farmId)') && se.includes("id: 'mem-series'") && se.includes('setMemberSeries'));
   assert.ok(se.includes('id="import-deliveries"'), 'Settings opens the delivery import');
   const sql = read('supabase/migrations/20261118600000_outload_numbers.sql');

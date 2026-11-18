@@ -83,7 +83,7 @@ check('it is wired: the form, the list, the picture, the harvest room, the expor
   assert.ok(v.includes('id="s-tw-line"') && v.includes('tw.placeholder'), 'the test weight in use is drawn into the storage');
   assert.ok(v.includes('capacityInfo(s, c || assume)') && v.includes('formCapacity(root, existing).tons'), 'list and picture follow it');
   assert.ok(read('docs/js/views/reports.js').includes('siloSpace(storages, movements, { minRoom, commodities, assume, season: scope ? pick : null })'));
-  assert.ok(read('docs/js/views/settings.js').includes("label: 'Volume (m³)'"));
+  assert.ok(read('docs/js/views/settingsexport.js').includes("label: 'Volume (m³)'"));
   assert.ok(read('docs/js/storage.js').includes('volumeM3: s.volumeM3'), 'carried into the next season');
   assert.ok(read('docs/js/storage.js').includes('merged.__hasVolume = true'));
   const sql = read('supabase/migrations/20261118900000_storage_volume.sql');

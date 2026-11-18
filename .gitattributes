@@ -1,0 +1,8 @@
+# Keep the repository and every checkout on LF, whatever the machine; stops the LF/CRLF warnings and whole-file diffs
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary
+*.ico binary
+*.woff2 binary

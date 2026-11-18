@@ -228,7 +228,7 @@ check('the database has the table (owner, manager, bookkeeper only), the two lin
   assert.match(sql, /alter table movements\s+add column if not exists freight_order_id/);
   assert.match(sql, /alter table payables\s+add column if not exists freight_order_id/);
   assert.match(sql, /'payables', 'orders', 'freight_orders'\s*\) then/);
-  assert.match(sql, /'vendor_dec', 'freight_order', 'other'/);
+  assert.match(sql, /'vendor_dec', 'freight_order', 'confirmation', 'other'/);
 });
 check('freight orders are reached from Orders and from an order, loads pick one, and Payables shows what is not billed', () => {
   const orders = read('docs/js/views/orders.js');

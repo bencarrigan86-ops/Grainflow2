@@ -141,7 +141,7 @@ check('the data layer, the invoice screens and the lists all know about notes', 
   assert.ok(v.includes('if (isAdjustment(invoice)) { openAdjustmentDocSheet(sale, invoice); return; }'), 'a note opens as a note');
   assert.ok(read('docs/js/views/outstanding.js').includes('invoiceLabel(r.invoice)'));
   assert.ok(read('docs/js/eofy.js').includes('refLabel(r.invoice)'));
-  assert.ok(read('docs/js/views/settings.js').includes("label: 'Adjustment note'"));
+  assert.ok(read('docs/js/views/settingsexport.js').includes("label: 'Adjustment note'"));
   assert.ok(/'kind', 'adjustsInvoiceId', 'adjustsInvoiceNo', 'noteNo', 'reason'/.test(read('docs/js/mapping.js')));
 });
 
