@@ -30,7 +30,10 @@ export function baleRangeCount(from, to) {
   return b.n - a.n + 1;
 }
 
-/** The lint allocations as saved: where to, the first and last bale, and how many; blank ones dropped. */
+/**
+ * The lint allocations as saved: where to (a contract or a storage), where in the storage, the first and last bale, how many
+ * bales and how many kg; blank ones dropped.
+ */
 export function cleanAllocations(list) {
   if (!Array.isArray(list)) return [];
   return list
@@ -38,8 +41,10 @@ export function cleanAllocations(list) {
       to: String(a?.to ?? '').trim(),
       baleFrom: String(a?.baleFrom ?? '').trim(), baleTo: String(a?.baleTo ?? '').trim(),
       bales: Math.max(0, Math.round(Number(a?.bales) || 0)),
+      location: String(a?.location ?? '').trim(),
+      kg: Math.max(0, num(a?.kg)),
     }))
-    .filter((a) => a.to || a.baleFrom || a.baleTo || a.bales);
+    .filter((a) => a.to || a.baleFrom || a.baleTo || a.bales || a.kg);
 }
 
 export function cleanGin(g) {
@@ -172,19 +177,20 @@ export const allocationBales = (a) => baleRangeCount(a?.baleFrom, a?.baleTo) ?? 
 /**
  * Split a run's lint between its destinations. Each allocation's weight is the run's lint weight in proportion to its bales
  * (the gin weighs the run, not every bale; the classing file's own bale weights can replace this later). One allocation with no
- * range takes the whole run.
+ * range takes the whole run. A lot with its own weight typed in (the gin's weight for those bales) uses that instead.
  *
- * @returns {{to: string, bales: number, kg: number, std: number, baleFrom: string, baleTo: string}[]}
+ * @returns {{to: string, bales: number, kg: number, std: number, baleFrom: string, baleTo: string, location: string, weighed: boolean}[]}
  */
 export function allocateLint(gin) {
   const g = cleanGin(gin) || cleanGin({});
-  const list = g.allocations.length ? g.allocations : [{ to: '', baleFrom: '', baleTo: '', bales: 0 }];
+  const list = g.allocations.length ? g.allocations : [{ to: '', baleFrom: '', baleTo: '', bales: 0, location: '', kg: 0 }];
   const pressed = g.physicalBales || baleRangeCount(g.baleFrom, g.baleTo) || 0;
   return list.map((a) => {
     const whole = list.length === 1 && !allocationBales(a);
     const bales = whole ? pressed : allocationBales(a);
-    const kg = pressed > 0 ? g.lintKg * (bales / pressed) : 0;
-    return { to: a.to, baleFrom: whole ? g.baleFrom : a.baleFrom, baleTo: whole ? g.baleTo : a.baleTo, bales, kg, std: stdBales(kg, g.stdBaleKg) };
+    const weighed = num(a.kg) > 0;
+    const kg = weighed ? num(a.kg) : whole ? g.lintKg : pressed > 0 ? g.lintKg * (bales / pressed) : 0;
+    return { to: a.to, location: a.location || '', baleFrom: whole ? g.baleFrom : a.baleFrom, baleTo: whole ? g.baleTo : a.baleTo, bales, kg, std: stdBales(kg, g.stdBaleKg), weighed };
   });
 }
 
@@ -213,7 +219,23 @@ export function allocationProblems(gin) {
   for (let i = 1; i < sorted.length; i += 1) if (sorted[i].a <= sorted[i - 1].b) out.push(`${sorted[i - 1].label} and ${sorted[i].label} overlap.`);
   const sum = allocateLint(g).reduce((s, a) => s + a.bales, 0);
   if (pressed && g.allocations.length && sum !== pressed) out.push(`${sum} of the ${pressed} bales are allocated.`);
+  // when lots have their own weights, they should add up to the run's lint weight (a few kg either way is rounding)
+  if (g.lintKg > 0 && g.allocations.some((a) => num(a.kg) > 0)) {
+    const kg = allocateLint(g).reduce((s, a) => s + a.kg, 0);
+    if (Math.abs(kg - g.lintKg) > 5) out.push(`${Math.round(kg).toLocaleString('en-AU')} kg of the ${Math.round(g.lintKg).toLocaleString('en-AU')} kg of lint is allocated.`);
+  }
   return out;
+}
+
+/** Cotton comes off the gin pad within this many days of ginning. */
+export const PAD_DAYS = 7;
+
+/** The date (YYYY-MM-DD) the bales of a run should be off the gin pad by: seven days after it was ginned. '' when there is no date. */
+export function padOffBy(date, days = PAD_DAYS) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(date ?? ''));
+  if (!m) return '';
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // --- The cotton position: lint, seed and ginning as three values ---------------------------------------------------------

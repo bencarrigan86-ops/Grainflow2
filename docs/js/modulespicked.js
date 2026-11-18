@@ -6,7 +6,7 @@
 //
 // Pure functions, no screen: the sheets that use them are in views/modulespicked.js.
 
-import { cleanCotton, hasModules, SEED_FACTOR_DEFAULT } from './ginning.js?v=368';
+import { cleanCotton, hasModules, SEED_FACTOR_DEFAULT } from './ginning.js?v=369';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
@@ -21,11 +21,15 @@ export function cleanPicked(list) {
     }));
 }
 
-/** Modules picked, moved to the yard and still in the paddock; and the weight and bales those picked come to. */
-export function pickedTotals(field, movements) {
+/**
+ * Modules picked, moved to the yard and still in the paddock; and the weight and bales those picked come to.
+ * An entry logged with no weight is taken at `moduleKg` a module (the commodity's average module weight), so its modules are
+ * not counted as weighing nothing.
+ */
+export function pickedTotals(field, movements, moduleKg = 0) {
   const list = cleanPicked(field?.modulesPicked);
   const picked = list.reduce((s, p) => s + p.count, 0);
-  const kg = list.reduce((s, p) => s + p.kg, 0);
+  const kg = list.reduce((s, p) => s + (p.kg > 0 ? p.kg : p.count * num(moduleKg)), 0);
   const estBales = list.reduce((s, p) => s + p.estBales, 0);
   let moved = 0;
   for (const m of movements || []) {
@@ -42,9 +46,10 @@ export function pickedTotals(field, movements) {
  * cotton setting (which every paddock starts from). 0 when neither is set.
  */
 export function avgModuleKg(field, commodity) {
-  const t = pickedTotals(field, []);
+  const std = num(commodity?.cotton?.moduleKg);
+  const t = pickedTotals(field, [], std);
   if (t.picked > 0 && t.kg > 0) return t.kg / t.picked;
-  return num(commodity?.cotton?.moduleKg);
+  return std;
 }
 
 /** The seed and the ginning that `bales` standard bales will bring, at the commodity's cotton settings. */

@@ -2,9 +2,9 @@
 //
 // Pure functions over the farm's records. The screen (views/reports.js) and the PDF (modulespdf.js) both draw from this.
 
-import { hasGin, hasModules, cleanGin, stdBales } from './ginning.js?v=368';
-import { pickedTotals } from './modulespicked.js?v=368';
-import { storageLedgerStock } from './derived.js?v=368';
+import { hasGin, hasModules, cleanGin, stdBales, estimateBales, DEFAULT_TURNOUT } from './ginning.js?v=369';
+import { pickedTotals, cleanPicked } from './modulespicked.js?v=369';
+import { storageLedgerStock } from './derived.js?v=369';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
@@ -15,28 +15,37 @@ const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
  * `kg` and `bales` are the best weight and bales known for the paddock's modules: the weighbridge weight of the loads weighed at the
  * gin yard, the estimate for loads not yet weighed, and the estimate entered at picking for the modules still in the field.
  * `weighedKg` is the part of `kg` that has been weighed.
+ *
+ * A paddock's average module weight is what was picked on it, otherwise the commodity's average module weight, and that stands in for
+ * any modules (picked, or on a load) that have no weight of their own. The expected bales are worked from the paddock's whole weight
+ * of modules picked, at its turnout, not added up from the loads.
  */
-export function modulesReport({ fields = [], movements = [], storages = [] } = {}) {
+export function modulesReport({ fields = [], movements = [], storages = [], commodities = [] } = {}) {
   const rows = [];
   for (const f of fields) {
     if (f.deleted) continue;
-    const t = pickedTotals(f, movements);
+    const cotton = commodities.find((c) => c.id === f.commodityId)?.cotton;
+    const stdKg = num(cotton?.moduleKg);
+    const t = pickedTotals(f, movements, stdKg);
     if (!(t.picked > 0) && !(t.moved > 0)) continue;
+    const avgPick = t.picked > 0 && t.kg > 0 ? t.kg / t.picked : stdKg;
     let weighedKg = 0;
     let loadKg = 0;
-    let loadBales = 0;
     for (const m of movements) {
       if (!hasModules(m) || !(m.froms || []).some((l) => l.type === 'field' && l.id === f.id)) continue;
-      if (m.weightStatus === 'final') weighedKg += num(m.modules.kg); else loadKg += num(m.modules.kg);
-      loadBales += num(m.modules.estBales);
+      const loadWeight = num(m.modules.kg) > 0 ? num(m.modules.kg) : num(m.modules.count) * avgPick;
+      if (m.weightStatus === 'final' && num(m.modules.kg) > 0) weighedKg += loadWeight; else loadKg += loadWeight;
     }
-    const avgKg = t.picked > 0 ? t.kg / t.picked : 0;
-    const kg = weighedKg + loadKg + avgKg * t.inField;
+    const kg = weighedKg + loadKg + avgPick * t.inField;
+    // the turnout the modules were picked at (by their weight), else the commodity's, else the usual
+    const picks = cleanPicked(f.modulesPicked).filter((p) => p.turnoutPct > 0);
+    const pickWeight = picks.reduce((s, p) => s + (p.kg > 0 ? p.kg : p.count * avgPick), 0);
+    const turnout = pickWeight > 0 ? picks.reduce((s, p) => s + p.turnoutPct * (p.kg > 0 ? p.kg : p.count * avgPick), 0) / pickWeight : (num(cotton?.turnout) > 0 ? num(cotton.turnout) : DEFAULT_TURNOUT);
     rows.push({
       field: f, picked: t.picked, inField: t.inField, moved: t.moved,
       kg, weighedKg, weighedPct: kg > 0 ? weighedKg / kg : 0, pickedKg: t.kg,
       avgKg: t.inField + t.moved > 0 ? kg / (t.inField + t.moved) : 0,
-      estBales: loadBales + t.inFieldBales, inFieldBales: t.inFieldBales,
+      turnoutPct: turnout, estBales: estimateBales(kg, turnout), inFieldBales: estimateBales(avgPick * t.inField, turnout),
     });
   }
   rows.sort((a, b) => String(a.field.name).localeCompare(String(b.field.name), 'en', { numeric: true }));

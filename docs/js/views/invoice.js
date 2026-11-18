@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=368';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=368';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=368';
-import { addressLinesOf } from '../address.js?v=368';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=368';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=368';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=368';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=368';
-import { docBandHTML } from '../docband.js?v=368';
-import { deductionNotes } from '../deductions.js?v=368';
-import { ginPrepaid } from '../ginning.js?v=368';
-import { cottonInvoiceModel } from '../cottoninvoice.js?v=368';
-import { openMovementSheet } from './movements.js?v=368';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=368';
+import { db } from '../storage.js?v=369';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=369';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=369';
+import { addressLinesOf } from '../address.js?v=369';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=369';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=369';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=369';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=369';
+import { docBandHTML } from '../docband.js?v=369';
+import { deductionNotes } from '../deductions.js?v=369';
+import { ginPrepaid } from '../ginning.js?v=369';
+import { cottonInvoiceModel } from '../cottoninvoice.js?v=369';
+import { openMovementSheet } from './movements.js?v=369';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=369';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -93,6 +93,7 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
   const existingLineFreight = new Map((existingInvoice?.lines || []).filter((l) => l.movementId && l.freightRate != null).map((l) => [l.movementId, l.freightRate]));
   const existingManual = (existingInvoice?.lines || []).find((l) => l.isManual);
   const existingCustoms = (existingInvoice?.lines || []).filter((l) => l.isCustom);
+  const isCotton = db.get().commodities.find((c) => c.id === sale.commodityId)?.unit === 'bale';
   // adjustment notes applied to this invoice: lines of their own, kept as they are, whose amounts go on top of the totals
   const adjustmentLines = (existingInvoice?.lines || []).filter((l) => l.isAdjustmentLine);
 
@@ -104,9 +105,10 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
       ${field({ label: 'Manual line (optional — tons not linked to a load)', id: 'manual-tons', type: 'number', step: '0.01', value: existingManual?.tons })}
       <hr class="sep" />
       <div class="field">
-        <label>Custom items (premium / deduction)</label>
+        <label>${isCotton ? 'Premiums and discounts' : 'Custom items (premium / deduction)'}</label>
+        ${isCotton ? '<div class="hint" style="margin-bottom:6px">From the merchant classing statement. Give a bale range or a note, then either the total, or the bales and the $ a bale (a discount is negative).</div>' : ''}
         <div id="custom-items"></div>
-        <button type="button" class="btn secondary small" id="add-custom-item" style="margin-top:6px">+ Add custom item</button>
+        <button type="button" class="btn secondary small" id="add-custom-item" style="margin-top:6px">${isCotton ? '+ Add premium or discount' : '+ Add custom item'}</button>
       </div>
       <hr class="sep" />
       <div class="field">
@@ -122,8 +124,11 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
     `;
 
     const customContainer = root.querySelector('#custom-items');
-    existingCustoms.forEach((c) => addCustomItemRow(customContainer, recomputeTotals, c));
-    root.querySelector('#add-custom-item').addEventListener('click', () => addCustomItemRow(customContainer, recomputeTotals));
+    // a cotton premium or discount with a $ a bale and no bale count is worked on all the standard bales on this invoice
+    const invoiceBales = () => buildLines().filter((l) => l.movementId && l.tons != null).reduce((s, l) => s + (Number(l.tons) || 0), 0);
+    const cottonOpts = isCotton ? { cotton: true, defaultBales: () => invoiceBales() } : null;
+    existingCustoms.forEach((c) => addCustomItemRow(customContainer, recomputeTotals, c, cottonOpts));
+    root.querySelector('#add-custom-item').addEventListener('click', () => addCustomItemRow(customContainer, recomputeTotals, null, cottonOpts));
 
     // One row a load: tick it on or off, set its freight, or open the load itself to correct it (a quality figure, a typo in the
     // weight). The load opens over this sheet; saving it or closing it brings this back with the loads and totals up to date.
@@ -189,7 +194,8 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
       }
       readCustomItems(customContainer).forEach((item) => {
         if (item.amount === 0) return;
-        lines.push({ date: sale.date, rego: item.description || 'Adjustment', tons: null, movementId: null, rate: null, subtotal: item.amount, description: item.description, isCustom: true });
+        lines.push({ date: sale.date, rego: item.description || 'Adjustment', tons: null, movementId: null, rate: null, subtotal: item.amount, description: item.description, isCustom: true,
+          ...(item.perBale ? { perBale: item.perBale, ...(item.bales ? { bales: item.bales } : {}) } : {}) });
       });
       // a cotton buyer that pays the gin takes each prepaid gin invoice off the total due: one line for each run on this invoice
       ginPrepaid(sale, selectedMovements).forEach((p) => {
@@ -202,6 +208,7 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
     }
 
     function recomputeTotals() {
+      customContainer.querySelectorAll('.ci-row').forEach((r) => r.dispatchEvent(new Event('ci-refresh')));
       const lines = buildLines();
       // the levies and the GST are worked out on the grain and the items; an applied adjustment moves the totals by its own amounts
       const totals = invoiceTotals(sale, lines.filter((l) => !l.isAdjustmentLine));
@@ -267,8 +274,40 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
   return body;
 }
 
-function addCustomItemRow(container, onChange, existing) {
+function addCustomItemRow(container, onChange, existing, cottonOpts = null) {
   const row = document.createElement('div');
+  if (cottonOpts?.cotton) {
+    row.className = 'ci-row';
+    row.style.cssText = 'margin-bottom:10px';
+    row.innerHTML = `
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <input type="text" class="ci-desc" placeholder="e.g. BG027234 to BG027626 classing" value="${existing ? esc(existing.description || '') : ''}" style="flex:1;min-width:0" />
+        <button type="button" class="btn danger small ci-remove" style="width:auto" aria-label="Remove">&times;</button>
+      </div>
+      <div class="ci-cotton" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <input type="number" step="1" class="ci-bales" placeholder="Bales" aria-label="Standard bales" value="${existing?.bales || ''}" />
+        <input type="number" step="0.01" class="ci-perbale" placeholder="$ a bale (+/-)" aria-label="Dollars a bale" value="${existing?.perBale || ''}" />
+        <input type="number" step="0.01" class="ci-amount" placeholder="Total (+/-)" aria-label="Total" value="${existing ? existing.subtotal : ''}" />
+      </div>
+      <div class="hint ci-note" style="margin-top:4px"></div>`;
+    container.appendChild(row);
+    const amount = row.querySelector('.ci-amount');
+    const work = () => {
+      const perBale = parseFloat(row.querySelector('.ci-perbale').value) || 0;
+      const bales = parseFloat(row.querySelector('.ci-bales').value) || cottonOpts.defaultBales();
+      const note = row.querySelector('.ci-note');
+      if (perBale) {
+        amount.value = (Math.round(perBale * bales * 100) / 100).toFixed(2);
+        note.textContent = `${num(bales, 2)} bales at ${money(perBale, 2)} a bale${row.querySelector('.ci-bales').value ? '' : ' (all the bales on this invoice)'}`;
+      } else note.textContent = '';
+    };
+    row.querySelector('.ci-bales').addEventListener('input', () => { work(); onChange(); });
+    row.querySelector('.ci-perbale').addEventListener('input', () => { work(); onChange(); });
+    amount.addEventListener('input', () => { row.querySelector('.ci-perbale').value = ''; work(); onChange(); });
+    row.querySelector('.ci-remove').addEventListener('click', () => { row.remove(); onChange(); });
+    row.addEventListener('ci-refresh', work);   // ticking a load on or off changes the bales a $ a bale is worked on
+    return;
+  }
   row.className = 'grid-2 ci-row';
   row.style.marginBottom = '6px';
   row.innerHTML = `
@@ -287,6 +326,8 @@ function readCustomItems(container) {
   return Array.from(container.querySelectorAll('.ci-row')).map((row) => ({
     description: row.querySelector('.ci-desc').value.trim(),
     amount: parseFloat(row.querySelector('.ci-amount').value) || 0,
+    perBale: parseFloat(row.querySelector('.ci-perbale')?.value) || 0,
+    bales: parseFloat(row.querySelector('.ci-bales')?.value) || 0,
   }));
 }
 
@@ -358,7 +399,7 @@ function cottonInvoiceDocHTML(sale, invoice, business, commodity, signed = null)
       ${m.premiums.length || m.adjustments.length ? `
       <h3 style="margin:14px 0 6px">Premiums and discounts</h3>
       <div class="table-scroll"><table>
-        <tbody>${[...m.premiums, ...m.adjustments].map((l) => `<tr><td>${esc(l.description || l.rego || 'Premium / discount')}</td><td>${money(l.subtotal, 2)}</td></tr>`).join('')}</tbody>
+        <tbody>${[...m.premiums, ...m.adjustments].map((l) => `<tr><td>${esc(l.description || l.rego || 'Premium / discount')}${l.perBale ? `<small style="display:block;font-size:11.5px;color:var(--text-dim)">${l.bales ? `${num(l.bales, 2)} bales at ` : ''}${money(l.perBale, 2)} a bale</small>` : ''}</td><td>${money(l.subtotal, 2)}</td></tr>`).join('')}</tbody>
         <tfoot><tr><td>Total premiums and discounts</td><td>${money(m.premiumTotal + m.adjustmentTotal, 2)}</td></tr></tfoot>
       </table></div>` : ''}
       <div class="invoice-totals">

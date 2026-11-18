@@ -6,23 +6,23 @@
 // contract or a storage, which should add up to the bales pressed. The gin's invoice is saved as a bill when we pay it
 // (see ginning.js).
 
-import { db } from '../storage.js?v=368';
-import { num, money, esc, todayLocal } from '../fmt.js?v=368';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=368';
-import { activeSales } from '../paidsales.js?v=368';
-import { storageLedgerStock } from '../derived.js?v=368';
-import { offerGinYard } from './modulemove.js?v=368';
+import { db } from '../storage.js?v=369';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=369';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=369';
+import { activeSales } from '../paidsales.js?v=369';
+import { storageLedgerStock } from '../derived.js?v=369';
+import { offerGinYard } from './modulemove.js?v=369';
 import {
   STD_BALE_KG, cleanGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice,
-  baleRangeCount, allocateLint, allocationProblems,
-} from '../ginning.js?v=368';
+  baleRangeCount, allocateLint, allocationProblems, padOffBy,
+} from '../ginning.js?v=369';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
 /** The storages and contracts a run's lint or seed can go to, as one pick list. */
 function targetOptions({ storages, sales, commodities }, unit) {
   const unitOf = (id) => commodities.find((c) => c.id === id)?.unit === 'bale' ? 'bale' : 't';
-  const stores = storages.filter((s) => !s.deleted).map((s) => ({ value: `silo:${s.id}`, label: s.name }));
+  const stores = storages.filter((s) => !s.deleted && s.kind !== 'tally').map((s) => ({ value: `silo:${s.id}`, label: s.name }));
   const contracts = activeSales(sales)
     .filter((s) => unitOf(s.commodityId) === unit)
     .map((s) => ({ value: `sale:${s.id}`, label: `Contract: ${s.buyer || 'No buyer'}${s.contractNo ? ` #${s.contractNo}` : ''}` }));
@@ -45,23 +45,42 @@ export function openGinRunSheet(existing = null) {
   const lintOpts = targetOptions(data, 'bale');
   const yardLeg = existing?.froms?.[0];
   // a run saved with allocations has them; an older one had its lint leg first and its seed leg second
-  const startAllocs = gin.allocations.length ? gin.allocations : [{ to: legValue(existing?.tos?.[0]), baleFrom: '', baleTo: '', bales: 0 }];
+  const startAllocs = gin.allocations.length ? gin.allocations : [{ to: legValue(existing?.tos?.[0]), baleFrom: '', baleTo: '', bales: 0, location: '', kg: 0 }];
   const seedStart = gin.seedTo || legValue(existing?.tos?.[1]);
 
-  const allocRow = (a) => `
+  const kindOf = (to) => (String(to).startsWith('sale:') ? 'sale' : String(to).startsWith('silo:') ? 'silo' : '');
+  const optionsFor = (kind, to) => {
+    const list = kind === 'sale' ? lintOpts.filter((o) => o.value.startsWith('sale:'))
+      : kind === 'silo' ? lintOpts.filter((o) => o.value.startsWith('silo:'))
+        : [];
+    const head = kind === 'sale' ? 'Choose a contract…' : 'Choose a storage…';
+    return [{ value: '', label: head }, ...list].map((o) => `<option value="${esc(o.value)}" ${o.value === to ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
+  };
+  const allocRow = (a) => {
+    const kind = kindOf(a.to);
+    return `
     <div class="field al-row">
-      <select class="al-to" aria-label="Lint goes to">${lintOpts.map((o) => `<option value="${esc(o.value)}" ${o.value === a.to ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select>
+      <select class="al-kind" aria-label="Lint goes to a contract or a storage">
+        <option value="" ${kind === '' ? 'selected' : ''}>Not allocated yet</option>
+        <option value="silo" ${kind === 'silo' ? 'selected' : ''}>To a storage</option>
+        <option value="sale" ${kind === 'sale' ? 'selected' : ''}>To a contract</option>
+      </select>
+      <select class="al-to" aria-label="Which one" style="${kind ? '' : 'display:none'}">${optionsFor(kind, a.to)}</select>
+      <input class="al-loc" type="text" value="${esc(a.location || '')}" placeholder="Location in the storage, e.g. Bay 3" aria-label="Location in the storage" style="${kind === 'silo' ? '' : 'display:none'}" />
       <div class="al-range">
         <input class="al-from" type="text" value="${esc(a.baleFrom)}" placeholder="First bale" aria-label="First bale number" autocapitalize="characters" />
         <input class="al-last" type="text" value="${esc(a.baleTo)}" placeholder="Last bale" aria-label="Last bale number" autocapitalize="characters" />
         <button type="button" class="btn ghost-danger small al-del" aria-label="Remove this lot">&times;</button>
       </div>
+      <label class="al-lab" style="display:block;font-size:12px;color:var(--text-dim);margin:0 0 4px">Weight of these bales (kg)</label>
+      <input class="al-kg" type="number" step="1" inputmode="decimal" value="${a.kg ? esc(String(a.kg)) : ''}" placeholder="Weight of these bales (kg)" aria-label="Weight of these bales in kg" />
       <div class="meta al-count"></div>
     </div>`;
+  };
 
   openSheet(existing ? 'Edit ginning run' : 'Log ginning', (root) => {
     if (!tally.length) {
-      offerGinYard(root, 'The modules are moved to a gin yard from the paddock, then ginned from it. Create it here, or add a Tally storage in Storage.', () => openGinRunSheet(existing));
+      offerGinYard(root, 'The modules are moved to a gin yard from the paddock, then ginned from it. Name it after the gin, or add a Tally storage in Storage.', () => openGinRunSheet(existing));
       return;
     }
     root.innerHTML = `
@@ -91,7 +110,8 @@ export function openGinRunSheet(existing = null) {
       <div class="field"><div class="hint" id="g-std-line"></div></div>
 
       <h3 style="margin:14px 0 6px">Lint goes to</h3>
-      <div class="field" style="margin-bottom:8px"><div class="hint">A storage or a bale contract. To split the run, give each lot its first and last bale: the range should match the count.</div></div>
+      <div class="field" style="margin-bottom:8px"><div class="hint">Each lot goes to a storage (say where in it) or to a bale contract. Give its bale numbers and its weight. To split the run, add a lot for each place.</div></div>
+      <div class="field" style="margin:-2px 0 8px"><div class="hint" id="g-pad-note"></div></div>
       <div id="g-allocs">${startAllocs.map(allocRow).join('')}</div>
       <button type="button" class="btn secondary small" id="g-al-add" style="width:auto">+ Split to another lot</button>
       <div class="hint" id="g-al-problems" style="color:var(--danger);margin-top:8px"></div>
@@ -120,7 +140,9 @@ export function openGinRunSheet(existing = null) {
 
     const allocsEl = root.querySelector('#g-allocs');
     const readAllocs = () => Array.from(allocsEl.querySelectorAll('.al-row')).map((row) => ({
-      to: row.querySelector('.al-to').value,
+      to: row.querySelector('.al-kind').value ? row.querySelector('.al-to').value : '',
+      location: row.querySelector('.al-kind').value === 'silo' ? row.querySelector('.al-loc').value : '',
+      kg: Number(row.querySelector('.al-kg').value) || 0,
       baleFrom: row.querySelector('.al-from').value, baleTo: row.querySelector('.al-last').value,
       bales: baleRangeCount(row.querySelector('.al-from').value, row.querySelector('.al-last').value) ?? 0,
     }));
@@ -157,14 +179,17 @@ export function openGinRunSheet(existing = null) {
       let k = 0;
       rows.forEach((row) => {
         // blank lots are dropped when saved, so they have no share to show
-        const blank = !row.querySelector('.al-to').value && !row.querySelector('.al-from').value && !row.querySelector('.al-last').value;
+        const blank = !row.querySelector('.al-to').value && !row.querySelector('.al-from').value && !row.querySelector('.al-last').value && !row.querySelector('.al-kg').value;
         const a = blank && rows.length > 1 ? null : split[Math.min(k++, split.length - 1)];
-        row.querySelector('.al-count').textContent = a && a.bales ? `${a.bales} bales · ${num(a.std, 2)} standard` : '';
+        row.querySelector('.al-count').textContent = a && (a.bales || a.kg) ? [a.bales ? `${a.bales} bales` : '', a.kg ? `${num(a.kg, 0)} kg${a.weighed ? '' : ' (share of the run)'}` : '', `${num(a.std, 2)} × 227 kg bales`].filter(Boolean).join(' · ') : '';
+        row.querySelector('.al-kg').placeholder = rows.length === 1 && g.lintKg ? `${num(g.lintKg, 0)} kg (the whole run)` : 'Weight of these bales (kg)';
         row.querySelector('.al-from').placeholder = rows.length === 1 && g.baleFrom ? g.baleFrom : 'First bale';
         row.querySelector('.al-last').placeholder = rows.length === 1 && g.baleTo ? g.baleTo : 'Last bale';
         row.querySelector('.al-del').style.display = rows.length > 1 ? '' : 'none';
       });
       root.querySelector('#g-al-problems').textContent = allocationProblems(g).join(' ');
+      const off = padOffBy(getVal(root, 'g-date'), 7);
+      root.querySelector('#g-pad-note').textContent = off ? `Cotton should be off the gin pad by ${dmy(off)}, seven days after ginning.` : '';
 
       const inv = ginInvoice(g);
       root.querySelector('#g-invoice-line').innerHTML = inv.bales > 0
@@ -180,14 +205,24 @@ export function openGinRunSheet(existing = null) {
     let paidByChosen = !!existing;
     root.querySelector('#g-paid-by').addEventListener('change', () => { paidByChosen = true; });
     root.addEventListener('change', (e) => {
-      if (!paidByChosen && e.target.classList?.contains('al-to')) {
+      if (e.target.classList?.contains('al-kind')) {
+        const row = e.target.closest('.al-row');
+        const kind = e.target.value;
+        const to = row.querySelector('.al-to');
+        to.innerHTML = optionsFor(kind, '');
+        to.style.display = kind ? '' : 'none';
+        row.querySelector('.al-loc').style.display = kind === 'silo' ? '' : 'none';
+        // a contract is the likely place when there is only one
+        if (kind === 'sale' && to.options.length === 2) to.selectedIndex = 1;
+      }
+      if (!paidByChosen && (e.target.classList?.contains('al-to') || e.target.classList?.contains('al-kind'))) {
         root.querySelector('#g-paid-by').value = readAllocs().some((a) => parseTarget(a.to)?.type === 'sale') ? 'buyer' : 'us';
       }
       paint();
     });
     root.addEventListener('input', paint);
     root.querySelector('#g-al-add').addEventListener('click', () => {
-      allocsEl.insertAdjacentHTML('beforeend', allocRow({ to: '', baleFrom: '', baleTo: '' }));
+      allocsEl.insertAdjacentHTML('beforeend', allocRow({ to: '', baleFrom: '', baleTo: '', location: '', kg: 0 }));
       paint();
       allocsEl.lastElementChild.querySelector('.al-from').focus();
     });

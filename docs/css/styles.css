@@ -1252,8 +1252,8 @@ details.inner-fold .hint, details.inner-fold .field.hint { font-size: 11.5px; co
 .ded-row input { margin: 0; min-width: 0; }
 /* a lot of lint in a ginning run: where it goes, then its first and last bale */
 .al-row { margin-bottom: 12px; }
-.al-row select { margin: 0 0 8px; }
-.al-range { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
+.al-row select, .al-row > input { margin: 0 0 8px; }
+.al-range { margin-bottom: 8px; display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
 .al-range input { margin: 0; min-width: 0; }
 .al-range .al-del { width: auto; margin: 0; padding: 0 16px; height: 47px; min-height: 0; }
 .al-count { margin-top: 4px; font-size: 12.5px; color: var(--text-dim); }

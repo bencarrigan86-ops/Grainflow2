@@ -1,29 +1,38 @@
-import { db } from '../storage.js?v=368';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=368';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=368';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=368';
-import { withholdingClash } from '../fumigation.js?v=368';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=368';
-import { compressAndStampImage } from '../img.js?v=368';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=368';
-import { specText, extraSpecKey } from '../outload.js?v=368';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=368';
-import { pickableSilos } from '../silopick.js?v=368';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=368';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=368';
-import { activeSales } from '../paidsales.js?v=368';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=368';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=368';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=368';
-import { nowTime } from '../loadreport.js?v=368';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=368';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=368';
-import { openGinRunSheet } from './ginrun.js?v=368';
-import { openModuleMoveSheet } from './modulemove.js?v=368';
-import { hasGin, describeGin, stdBales, hasModules, describeModules } from '../ginning.js?v=368';
+import { db } from '../storage.js?v=369';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=369';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=369';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=369';
+import { withholdingClash } from '../fumigation.js?v=369';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=369';
+import { compressAndStampImage } from '../img.js?v=369';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=369';
+import { specText, extraSpecKey } from '../outload.js?v=369';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=369';
+import { pickableSilos } from '../silopick.js?v=369';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=369';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=369';
+import { activeSales } from '../paidsales.js?v=369';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=369';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=369';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=369';
+import { nowTime } from '../loadreport.js?v=369';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=369';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=369';
+import { openGinRunSheet } from './ginrun.js?v=369';
+import { openModuleMoveSheet } from './modulemove.js?v=369';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=369';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
+
+/** A ginning run's gin pad deadline: seven days after ginning. Red when it has passed and some of its lint is still not allocated. */
+function ginPadLine(m) {
+  const off = padOffBy(m.date);
+  if (!off) return '';
+  const unallocated = (cleanGin(m.gin)?.allocations || []).length === 0 || cleanGin(m.gin).allocations.some((a) => !a.to);
+  const late = unallocated && off < todayLocal();
+  return `<div class="meta"${late ? ' style="color:var(--danger)"' : ''}>${late ? 'Lint not allocated, was due off the gin pad by ' : 'Off the gin pad by '}${shortDate(off)}</div>`;
+}
 
 export function renderMovements(root) {
   if (unsub) unsub();
@@ -295,7 +304,7 @@ export function movementRow(m, ctx) {
         <span class="badges"><span class="badge ${stage ? 'warn' : 'pos'}">${stage ? STAGES[stage] : 'Final'}</span>${m.photoDataUrl ? '<span aria-label="Photo waiting to upload" title="Photo waiting to upload">📷⏳</span>' : (m.photoPath ? '<span aria-label="Has photo">📷</span>' : '')}</span>
       </div>
       ${specText(m) ? `<div class="meta">${esc(specText(m))}</div>` : ''}
-      ${hasGin(m) ? `<div class="meta">Ginning${m.gin.ginName ? `, ${esc(m.gin.ginName)}` : ''}: ${esc(describeGin(m.gin))}</div>` : ''}
+      ${hasGin(m) ? `<div class="meta">Ginning${m.gin.ginName ? `, ${esc(m.gin.ginName)}` : ''}: ${esc(describeGin(m.gin))}</div>${ginPadLine(m)}` : ''}
       ${hasModules(m) ? `<div class="meta">Modules: ${esc(describeModules(m.modules))}${m.weightStatus === 'final' ? '' : ' (weight estimated)'}</div>` : ''}
       ${!hasGin(m) && !hasModules(m) && fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
       ${!hasGin(m) && !hasModules(m) && toBreakdown ? `<div class="meta">${esc(toBreakdown)}</div>` : ''}

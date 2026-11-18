@@ -5,7 +5,7 @@
 // I053/23 (90,273 kg of lint, 393 bales pressed): $65.00 a bale to gin, $2.25 research levy, GST on the ginning only.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems, cleanCotton, hasCotton, cottonComponents, cottonRunTotals, SEED_FACTOR_DEFAULT, ginPrepaid, lotsForSale, cleanModules, hasModules, estimateBales, describeModules, DEFAULT_TURNOUT } from '../docs/js/ginning.js';
+import { STD_BALE_KG, cleanGin, hasGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, describeGin, ginDeduction, parseBale, baleRangeCount, cleanAllocations, allocateLint, allocationProblems, cleanCotton, hasCotton, cottonComponents, cottonRunTotals, SEED_FACTOR_DEFAULT, ginPrepaid, lotsForSale, padOffBy, cleanModules, hasModules, estimateBales, describeModules, DEFAULT_TURNOUT } from '../docs/js/ginning.js';
 import { avgModuleKg } from '../docs/js/modulespicked.js';
 import { modulesReport, ginnedByField } from '../docs/js/modulesreport.js';
 import { modulesPdf } from '../docs/js/modulespdf.js';
@@ -485,7 +485,7 @@ check('the Modules report: each paddock picked, in the field, moved to the gin, 
   const r = modulesReport({ fields, movements: [leg('f1', 10, 'final'), leg('f1', 2, 'estimate'), ginned], storages: [yard] });
   assert.deepEqual(r.rows.map((x) => [x.field.name, x.picked, x.inField, x.moved]), [['Cotton 1', 18, 6, 12], ['Cotton 2', 6, 6, 0]], 'only paddocks with modules, by name');
   assert.deepEqual([r.totals.picked, r.totals.inField, r.totals.moved], [24, 12, 12]);
-  assert.ok(Math.abs(r.totals.kg - (2 + 222230 * 6 / 18 + 74000)) < 0.001 && Math.abs(r.totals.estBales - (2 + 391.6 * 6 / 18 + 130.4)) < 0.001, 'weighed and estimated loads, plus the estimate for what is still in the field');
+  assert.ok(Math.abs(r.totals.kg - (2 + 222230 * 6 / 18 + 74000)) < 0.001 && Math.abs(r.totals.estBales - (2 + 222230 * 6 / 18 + 74000) * 0.4 / 227) < 0.001, 'bales follow the whole weight of modules picked, at the turnout');
   assert.deepEqual([r.yards[0].inYard, r.yards[0].ginned], [8, 4], '12 carted in, 4 ginned out');
   assert.deepEqual([r.pending.loads, r.pending.modules], [1, 2], 'one load still on an estimated weight');
   assert.equal(modulesReport({ fields: [{ id: 'x', name: 'Wheat' }], movements: [], storages: [] }).rows.length, 0);
@@ -493,12 +493,12 @@ check('the Modules report: each paddock picked, in the field, moved to the gin, 
   assert.ok(bytes.length > 500 && String.fromCharCode(...bytes.slice(0, 4)) === '%PDF');
   assert.ok(modulesPdf({ report: modulesReport({}) }).length > 500, 'an empty report still makes a page');
   const v = read('docs/js/views/reports.js');
-  assert.ok(v.includes('data-view="modules"') && v.includes("view === 'modules'") && v.includes('modulesReport({ fields, movements, storages })') && v.includes('id="modules-pdf"'));
+  assert.ok(v.includes('data-view="modules"') && v.includes("view === 'modules'") && v.includes('modulesReport({ fields, movements, storages, commodities })') && v.includes('id="modules-pdf"'));
 });
 
 check('a farm with no gin yard can make one in a tap, from the move sheet or the ginning sheet', () => {
   const m = read('docs/js/views/modulemove.js');
-  assert.ok(m.includes('export function offerGinYard') && m.includes("kind: 'tally', unitLabel: 'modules'") && m.includes('Create "Gin yard"'));
+  assert.ok(m.includes('export function offerGinYard') && m.includes("kind: 'tally', unitLabel: 'modules'") && m.includes('Create gin yard') && m.includes('id: ' + "'mk-name'") && m.includes('+ Add another gin yard'));
   assert.ok(m.includes('offerGinYard(root,') && read('docs/js/views/ginrun.js').includes('offerGinYard(root,'));
 });
 
@@ -538,7 +538,7 @@ check('the Modules report weight is the estimate until a load is weighed at the 
   assert.equal(row.kg, 48000 + 38100 + 3 * 12000, 'estimated load, weighed load and the three modules still in the field');
   assert.equal(row.weighedKg, 38100);
   assert.ok(Math.abs(row.weighedPct - 38100 / 122100) < 1e-9);
-  assert.ok(Math.abs(row.estBales - (84.6 + 67.1 + 211.45 * 3 / 10)) < 1e-9);
+  assert.ok(Math.abs(row.estBales - 122100 * 0.4 / 227) < 1e-9, 'expected bales are the paddock\'s whole weight of modules at its turnout');
   // once every load is weighed the weight is all weighbridge weight
   const done = modulesReport({ fields, movements: [load('l1', 4, 49000, 86, 'final'), load('l2', 6, 74000, 130, 'final')], storages: [] }).rows[0];
   assert.equal(done.kg, 123000); assert.equal(done.weighedPct, 1); assert.equal(done.inField, 0);
@@ -568,6 +568,71 @@ check('the cotton Position shows the seed and the ginning in dollars a bale as w
   const c = cottonComponents({ seedMtm: 500, seedFactor: 0.25, ginRate: 65, levies: 3.75 }, 400);
   assert.equal(c.seedValue / c.bales, 125, 'seed is $125 a bale: 0.25 t a bale at $500 a tonne');
   assert.equal(c.ginningCost / c.bales, 68.75, 'ginning and levies come to $68.75 a bale');
+});
+
+check('the commodity average module weight stands in for any modules with no weight, and expected bales come from all the modules picked', () => {
+  const commodities = [{ id: 'c1', cotton: { moduleKg: 2400, turnout: 40 } }];
+  // 20 modules logged with no weight (the setting was not there yet), 8 carted on loads with no weight either
+  const fields = [{ id: 'f1', name: 'Cotton 1', commodityId: 'c1', modulesPicked: [{ id: 'a', count: 20, kg: 0, turnoutPct: 0, estBales: 0 }] }];
+  const load = { id: 'l1', weightStatus: 'estimate', froms: [{ type: 'field', id: 'f1', tons: 1 }], tos: [{ type: 'silo', id: 'yard', tons: 8 }], modules: { count: 8, kg: 0, turnoutPct: 40, estBales: 0 } };
+  const row = modulesReport({ fields, movements: [load], storages: [], commodities }).rows[0];
+  assert.equal(row.avgKg, 2400, 'the average is the commodity setting, not a low figure from modules counted as weighing nothing');
+  assert.equal(row.kg, 20 * 2400);
+  assert.ok(Math.abs(row.estBales - 20 * 2400 * 0.4 / 227) < 1e-9, 'expected bales from all 20 modules picked');
+  assert.equal(row.weighedPct, 0);
+  // picked at their own weight, the paddock's average is theirs; moved weighed loads use the weighbridge
+  const own = { id: 'f1', name: 'Cotton 1', commodityId: 'c1', modulesPicked: [{ id: 'a', count: 10, kg: 26000, turnoutPct: 42, estBales: 0 }] };
+  const weighed = { ...load, weightStatus: 'final', modules: { count: 4, kg: 10400, turnoutPct: 42, estBales: 0 } };
+  const r2 = modulesReport({ fields: [own], movements: [weighed], storages: [], commodities }).rows[0];
+  assert.equal(r2.kg, 10400 + 6 * 2600); assert.equal(r2.avgKg, 2600); assert.equal(r2.turnoutPct, 42);
+  assert.ok(Math.abs(r2.estBales - 26000 * 0.42 / 227) < 1e-9);
+  assert.equal(avgModuleKg({ id: 'f1', modulesPicked: [{ count: 10, kg: 0 }] }, commodities[0]), 2400, 'a paddock with modules logged at no weight starts from the setting');
+  assert.ok(read('docs/js/views/reports.js').includes('modulesReport({ fields, movements, storages, commodities })'));
+});
+
+check('each lot of lint goes to a contract or a storage, with its location, bale numbers and its own weight', () => {
+  const g = { ...split, allocations: [
+    { to: 'sale:s1', baleFrom: 'BG027234', baleTo: 'BG027400', kg: 38500 },
+    { to: 'silo:st1', location: ' Bay 3 ', baleFrom: 'BG027401', baleTo: 'BG027626', kg: split.lintKg - 38500 },
+  ] };
+  const c = cleanGin(g).allocations;
+  assert.equal(c[1].location, 'Bay 3'); assert.equal(c[0].kg, 38500);
+  const a = allocateLint(g);
+  assert.equal(a[0].kg, 38500); assert.equal(a[0].weighed, true);
+  assert.ok(Math.abs(a[0].std - 38500 / 227) < 1e-9, 'standard bales are the lot weight over 227');
+  assert.equal(a[1].location, 'Bay 3');
+  assert.deepEqual(allocationProblems(g), []);
+  const short = allocationProblems({ ...g, allocations: [{ ...g.allocations[0] }, { ...g.allocations[1], kg: 1000 }] }).join(' ');
+  assert.match(short, /kg of the .* kg of lint is allocated/);
+  // no weights typed: the run's lint is shared by bales, as before
+  const shared = allocateLint({ ...split, allocations: [lot('sale:s1', 'BG027234', 'BG027400'), lot('silo:st1', 'BG027401', 'BG027626')] });
+  assert.equal(shared[0].weighed, false);
+  assert.ok(Math.abs(shared[0].kg + shared[1].kg - split.lintKg) < 1e-6);
+  assert.equal(cleanAllocations([{ to: '', kg: 500 }]).length, 1, 'a lot with only a weight is kept');
+});
+
+check('cotton is due off the gin pad seven days after ginning', () => {
+  assert.equal(padOffBy('2026-05-18'), '2026-05-25');
+  assert.equal(padOffBy('2026-05-28'), '2026-06-04', 'across a month end');
+  assert.equal(padOffBy('2026-12-28'), '2027-01-04', 'across a year end');
+  assert.equal(padOffBy(''), '');
+  const g = read('docs/js/views/ginrun.js');
+  assert.ok(g.includes('class="al-kind"') && g.includes('class="al-loc"') && g.includes('class="al-kg"') && g.includes('To a contract') && g.includes('To a storage') && g.includes('off the gin pad by'));
+  assert.ok(read('docs/js/views/movements.js').includes('padOffBy(m.date)'));
+});
+
+check('classing premiums and discounts go on a cotton invoice by total or by dollars a bale, and show on it', () => {
+  const inv = { subtotalExGST: 100000 + 1800 - 450, gst: 0, levies: 0, freightTotal: 0, lines: [
+    { movementId: 'm1', tons: 100, rate: 1000, subtotal: 100000 },
+    { isCustom: true, description: 'BG027234 to BG027400 classing', perBale: 18, bales: 100, subtotal: 1800 },
+    { isCustom: true, description: 'Short staple', subtotal: -450 },
+  ] };
+  const m = cottonInvoiceModel(inv);
+  assert.equal(m.premiums.length, 2);
+  assert.equal(m.premiumTotal, 1350);
+  const v = read('docs/js/views/invoice.js');
+  assert.ok(v.includes("isCotton ? 'Premiums and discounts'") && v.includes('class="ci-perbale"') && v.includes('class="ci-bales"') && v.includes("'ci-refresh'"));
+  assert.ok(v.includes('perBale: item.perBale') && v.includes('a bale</small>'), 'the dollars a bale is kept on the line and shown on the invoice');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

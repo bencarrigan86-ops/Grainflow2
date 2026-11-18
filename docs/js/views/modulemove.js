@@ -7,11 +7,11 @@
 // One move is one truck load. The driver gives the number of modules and the weight is estimated from what was picked on the
 // paddock (its kilograms a module); when the load is weighed at the gin the weighbridge weight is typed over it and the load is final.
 
-import { db } from '../storage.js?v=368';
-import { num, esc, todayLocal } from '../fmt.js?v=368';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=368';
-import { cleanModules, estimateBales, describeModules, DEFAULT_TURNOUT } from '../ginning.js?v=368';
-import { pickedTotals, moduleEstimate, describeEstimate, avgModuleKg } from '../modulespicked.js?v=368';
+import { db } from '../storage.js?v=369';
+import { num, esc, todayLocal } from '../fmt.js?v=369';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=369';
+import { cleanModules, estimateBales, describeModules, DEFAULT_TURNOUT } from '../ginning.js?v=369';
+import { pickedTotals, moduleEstimate, describeEstimate, avgModuleKg } from '../modulespicked.js?v=369';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -20,10 +20,14 @@ const round3 = (n) => Math.round(n * 1000) / 1000;
  * the sheet again.
  */
 export function offerGinYard(root, text, reopen) {
-  root.innerHTML = `<div class="empty">${text}</div><button class="btn" id="mk-yard" style="margin-top:12px">Create "Gin yard"</button>`;
+  root.innerHTML = `<div class="empty">${text}</div>
+    ${field({ label: 'Gin yard name', id: 'mk-name', value: '', placeholder: 'e.g. Brighann gin yard', hint: 'Named after the gin, so each gin you use has its own yard' })}
+    <button class="btn" id="mk-yard" style="margin-top:12px">Create gin yard</button>`;
   root.querySelector('#mk-yard').addEventListener('click', () => {
+    const name = getVal(root, 'mk-name')?.trim();
+    if (!name) { root.querySelector('#mk-name').focus(); return; }
     const cotton = db.get().commodities.find((c) => c.unit === 'bale');
-    db.upsertStorage({ name: 'Gin yard', kind: 'tally', unitLabel: 'modules', openingStock: 0, ...(cotton ? { commodityId: cotton.id } : {}) });
+    db.upsertStorage({ name, kind: 'tally', unitLabel: 'modules', openingStock: 0, ...(cotton ? { commodityId: cotton.id } : {}) });
     closeSheet();
     reopen();
   });
@@ -42,7 +46,7 @@ export function openModuleMoveSheet(existing = null) {
 
   openSheet(existing ? 'Edit module move' : 'Move modules', (root) => {
     if (!yards.length || !paddocks.length) {
-      if (!yards.length) { offerGinYard(root, 'The modules are counted in a gin yard between the paddock and the gin. Create it here, or add a Tally storage in Storage.', () => openModuleMoveSheet(existing)); return; }
+      if (!yards.length) { offerGinYard(root, 'The modules are counted in a gin yard between the paddock and the gin. Name it after the gin, or add a Tally storage in Storage.', () => openModuleMoveSheet(existing)); return; }
       root.innerHTML = `<div class="empty">Add the cotton paddocks first.</div>`;
       return;
     }
@@ -50,7 +54,7 @@ export function openModuleMoveSheet(existing = null) {
       ${field({ label: 'Date', id: 'mm-date', type: 'date', value: existing?.date || todayLocal() })}
       ${field({ label: 'From paddock', id: 'mm-from', type: 'select', value: fromLeg?.id || '', options: [{ value: '', label: 'Select…' }, ...paddocks.map((f) => ({ value: f.id, label: f.name }))] })}
       <div class="field"><div class="hint" id="mm-field-note"></div></div>
-      ${field({ label: 'To gin yard', id: 'mm-to', type: 'select', value: toLeg?.id || (yards.length === 1 ? yards[0].id : ''), options: [{ value: '', label: 'Select…' }, ...yards.map((s) => ({ value: s.id, label: s.name }))] })}
+      ${field({ label: 'To gin yard', id: 'mm-to', type: 'select', value: toLeg?.id || (yards.length === 1 ? yards[0].id : ''), options: [{ value: '', label: 'Select…' }, ...yards.map((s) => ({ value: s.id, label: s.name })), { value: '__new', label: '+ Add another gin yard…' }] })}
       <div class="grid-2">
         ${field({ label: 'Modules', id: 'mm-count', type: 'number', step: '1', value: mod.count || '' })}
         ${field({ label: 'Weight (kg)', id: 'mm-kg', type: 'number', step: '1', value: mod.kg || '', hint: 'Weighbridge weight' })}
@@ -124,7 +128,10 @@ export function openModuleMoveSheet(existing = null) {
       }
     };
     root.querySelector('#mm-from').addEventListener('change', () => sync('from'));
-    root.querySelector('#mm-to').addEventListener('change', () => sync('to'));
+    root.querySelector('#mm-to').addEventListener('change', () => {
+      if (getVal(root, 'mm-to') === '__new') { offerGinYard(root, 'Name the gin yard for the other gin.', () => openModuleMoveSheet(existing)); return; }
+      sync('to');
+    });
     root.querySelector('#mm-count').addEventListener('input', () => sync('count'));
     root.querySelector('#mm-kg').addEventListener('input', () => sync('kg'));
     root.querySelector('#mm-turnout').addEventListener('input', () => sync('turnout'));

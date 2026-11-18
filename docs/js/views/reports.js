@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=368';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=368';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=368';
-import { fertPdf } from '../fertpdf.js?v=368';
-import { seedPdf } from '../seedpdf.js?v=368';
-import { yieldPdf } from '../yieldpdf.js?v=368';
-import { harvestPdf } from '../harvestpdf.js?v=368';
-import { modulesPdf } from '../modulespdf.js?v=368';
-import { modulesReport } from '../modulesreport.js?v=368';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=368';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=368';
-import { field, getVal, getNum } from '../ui.js?v=368';
-import { canSeeYield } from '../nav.js?v=368';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=368';
-import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=368';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=368';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=368';
+import { db } from '../storage.js?v=369';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=369';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=369';
+import { fertPdf } from '../fertpdf.js?v=369';
+import { seedPdf } from '../seedpdf.js?v=369';
+import { yieldPdf } from '../yieldpdf.js?v=369';
+import { harvestPdf } from '../harvestpdf.js?v=369';
+import { modulesPdf } from '../modulespdf.js?v=369';
+import { modulesReport } from '../modulesreport.js?v=369';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=369';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=369';
+import { field, getVal, getNum } from '../ui.js?v=369';
+import { canSeeYield } from '../nav.js?v=369';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=369';
+import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=369';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=369';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=369';
 
 let unsub = null;
 let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
@@ -91,8 +91,8 @@ function dockPdf(root) {
 const weighedText = (p) => (p >= 0.995 ? 'All' : (p > 0 ? `${Math.round(p * 100)}%` : 'None'));
 
 function paintModules(root) {
-  const { fields, movements, storages } = db.get();
-  const report = modulesReport({ fields, movements, storages });
+  const { fields, movements, storages, commodities } = db.get();
+  const report = modulesReport({ fields, movements, storages, commodities });
   const t = report.totals;
   const body = root.querySelector('#reports-body');
   if (!report.rows.length) {
