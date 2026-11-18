@@ -1,23 +1,34 @@
-import { db } from '../storage.js?v=387';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=387';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=387';
-import { fertPdf } from '../fertpdf.js?v=387';
-import { seedPdf } from '../seedpdf.js?v=387';
-import { yieldPdf } from '../yieldpdf.js?v=387';
-import { harvestPdf } from '../harvestpdf.js?v=387';
-import { modulesPdf } from '../modulespdf.js?v=387';
-import { modulesReport } from '../modulesreport.js?v=387';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=387';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=387';
-import { field, getVal, getNum } from '../ui.js?v=387';
-import { canSeeYield } from '../nav.js?v=387';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=387';
-import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=387';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=387';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=387';
+import { db } from '../storage.js?v=388';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=388';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=388';
+import { fertPdf } from '../fertpdf.js?v=388';
+import { seedPdf } from '../seedpdf.js?v=388';
+import { yieldPdf } from '../yieldpdf.js?v=388';
+import { harvestPdf } from '../harvestpdf.js?v=388';
+import { modulesPdf } from '../modulespdf.js?v=388';
+import { modulesReport } from '../modulesreport.js?v=388';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=388';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=388';
+import { field, getVal, getNum } from '../ui.js?v=388';
+import { canSeeYield, canOpen } from '../nav.js?v=388';
+import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=388';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=388';
+import { openOptimiserSheet } from './optimiser.js?v=388';
+import { openEofySheet } from './eofy.js?v=388';
+import { openPricesSheet } from './prices.js?v=388';
+import { openRotationSheet } from './rotation.js?v=388';
+import { openAveragesSheet } from './averages.js?v=388';
+import { openLoadReportSheet } from './loadreport.js?v=388';
+import { openXeroSheet } from './xero.js?v=388';
+import { openMapSheet } from './farmmap.js?v=388';
+import { openExportCsvSheet } from './settingsexport.js?v=388';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=388';
+import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=388';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=388';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=388';
 
 let unsub = null;
-let view = 'yield';   // Yield first; anyone who cannot see yields is moved to Fert below
+let view = null;   // null is the screen of tiles; otherwise the report that is open
 
 export function renderReports(root) {
   if (unsub) unsub();
@@ -25,37 +36,42 @@ export function renderReports(root) {
   unsub = db.subscribe(() => paint(root));
 }
 
+/** The sheets a tile opens over this screen; a person closing one is back at the tiles. */
+const SHEETS = {
+  owed: () => openMoneySheet(),
+  eofy: () => openEofySheet(),
+  prices: () => openPricesSheet(),
+  deliveries: () => openDeliveriesSheet(),
+  optimiser: () => openOptimiserSheet(),
+  rotation: () => openRotationSheet(),
+  averages: () => openAveragesSheet(),
+  loads: () => openLoadReportSheet(),
+  xero: () => openXeroSheet(),
+  excel: () => openExportCsvSheet(),
+  map: () => openMapSheet(),
+};
+
 function paint(root) {
   const showYield = canSeeYield(db.getRole());
   const { commodities: cs, fields: fs0, movements: ms0 } = db.get();
   const hasCotton = cs.some((c) => c.unit === 'bale') || fs0.some((f) => (f.modulesPicked || []).length) || ms0.some((m) => m.modules);
-  if (view === 'modules' && !hasCotton) view = 'fert';
-  if (view === 'yield' && !showYield) view = 'fert';   // harvest is for everyone, but shows no tonnes or yields to a role that is not shown them
+  if (view === 'modules' && !hasCotton) view = null;
+  if (view === 'yield' && !showYield) view = null;   // harvest is for everyone, but shows no tonnes or yields to a role that is not shown them
+  if (!view) { paintHub(root, { showYield, hasCotton, hasFields: fs0.length > 0 }); return; }
   root.innerHTML = `
     <div class="topbar">
       <div>
         <h1>Reports</h1>
-        <div class="sub">Fertiliser &amp; seed requirements, by commodity &amp; field</div>
+        <div class="sub">${esc(reportTitle(view))}</div>
       </div>
     </div>
     <div class="view">
-      <div class="reports-bar"><div class="segmented" id="reports-view">
-        ${showYield ? `<button data-view="yield" class="${view === 'yield' ? 'active' : ''}">Yield</button>` : ''}
-        <button data-view="harvest" class="${view === 'harvest' ? 'active' : ''}">Harvest</button>
-        <button data-view="fert" class="${view === 'fert' ? 'active' : ''}">Fert</button>
-        <button data-view="seed" class="${view === 'seed' ? 'active' : ''}">Seed</button>
-        ${hasCotton ? `<button data-view="modules" class="${view === 'modules' ? 'active' : ''}">Modules</button>` : ''}
-      </div><div id="reports-pdf-slot"></div></div>
+      <div class="reports-bar"><button type="button" class="btn secondary small" id="reports-back">&lsaquo; All reports</button><div class="reports-gap"></div><div id="reports-pdf-slot"></div></div>
       <div id="reports-body" style="margin-top:12px"></div>
     </div>
   `;
 
-  root.querySelector('#reports-view').addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-view]');
-    if (!btn) return;
-    view = btn.dataset.view;
-    paint(root);
-  });
+  root.querySelector('#reports-back').addEventListener('click', () => { view = null; paint(root); window.scrollTo(0, 0); });
 
   if (view === 'seed') {
     paintSeed(root);
@@ -69,6 +85,60 @@ function paint(root) {
     paintFert(root);
   }
   dockPdf(root);
+  if (scrollToRoom) {
+    scrollToRoom = false;
+    root.querySelector('[data-fold="room"]')?.scrollIntoView({ block: 'start' });
+  }
+}
+
+// The Silo room tile opens Harvest progress with the room in the silos open and in view
+let scrollToRoom = false;
+
+/** The screen of tiles: Simple shows the reports most people open, Full adds the rest. */
+function paintHub(root, { showYield, hasCotton, hasFields }) {
+  const role = db.getRole();
+  const mode = readMode();
+  const favs = readFavs();
+  const groups = hubGroups({ mode, role, showYield, hasCotton, hasFields, can: (tab) => canOpen(role, tab), favs });
+  const full = mode === 'full';
+  root.innerHTML = `
+    <div class="topbar">
+      <div>
+        <h1>Reports</h1>
+        <div class="sub">Pick a report</div>
+      </div>
+    </div>
+    <div class="view">
+      <div class="segmented" id="reports-mode" style="margin-bottom:4px">
+        <button type="button" data-mode="simple" class="${mode === 'simple' ? 'active' : ''}">Simple</button>
+        <button type="button" data-mode="full" class="${mode === 'full' ? 'active' : ''}">Full</button>
+      </div>
+      ${groups.map((g) => `<div class="rep-group">${esc(g.title)}</div>
+        <div class="rep-tiles">${g.tiles.map((t) => `<div class="rep-cell"><button type="button" class="rep-tile" data-tile="${esc(t.id)}"><svg class="rep-ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TILE_ICONS[t.id] || ''}</svg><span class="rep-name">${esc(t.label)}</span></button>${full ? `<button type="button" class="rep-star ${t.fav ? 'on' : ''}" data-star="${esc(t.id)}" aria-pressed="${t.fav}" aria-label="${t.fav ? 'Take' : 'Put'} ${esc(t.label)} ${t.fav ? 'out of' : 'in'} Simple">${t.fav ? '&#9733;' : '&#9734;'}</button>` : ''}</div>`).join('')}</div>`).join('')}
+      ${groups.length === 0 ? '<div class="empty">Nothing starred. Tap Full, then the star on the reports you want here.</div>' : ''}
+      <div class="rep-foot">${full ? 'Tap a star to put a report in Simple.' : 'More reports, and the stars that choose these, are under Full.'}</div>
+    </div>
+  `;
+  root.querySelector('#reports-mode').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-mode]');
+    if (!btn) return;
+    saveMode(btn.dataset.mode);
+    paint(root);
+  });
+  root.querySelectorAll('[data-star]').forEach((el) => el.addEventListener('click', () => {
+    saveFavs(toggledFavs(groups, favs, el.dataset.star));
+    paint(root);
+  }));
+  root.querySelectorAll('[data-tile]').forEach((el) => el.addEventListener('click', () => {
+    const t = groups.flatMap((g) => g.tiles).find((x) => x.id === el.dataset.tile);
+    if (!t) return;
+    if (t.kind === 'go') { location.hash = `#/${t.tab}`; return; }
+    if (t.kind === 'sheet') { SHEETS[t.id]?.(); return; }
+    if (t.id === 'room') { harvestOpen.set('room', true); scrollToRoom = true; }
+    view = t.view || t.id;
+    window.scrollTo(0, 0);
+    paint(root);   // the Silo room tile scrolls itself to the room once it is drawn
+  }));
 }
 
 /**

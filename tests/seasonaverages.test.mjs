@@ -86,9 +86,8 @@ check('the Excel file has a row per crop per season, then one for the whole span
 });
 
 console.log('\n=== the screen ===');
-check('Production offers it to roles that see yields, and the sheet remembers the seasons ticked', () => {
-  const p = read('docs/js/views/production.js');
-  assert.ok(p.includes('id="open-averages"') && p.includes('openAveragesSheet()') && p.includes('openReportsSheet(fields.length > 0, showYield)') && /showYield \? '<button[^']*open-averages/.test(p));
+check('Reports offers it to roles that see yields, and the sheet remembers the seasons ticked', () => {
+  assert.ok(read('docs/js/reportshub.js').includes("showYield && can('production') && tile('averages'") && read('docs/js/views/reports.js').includes('averages: () => openAveragesSheet()'));
   const v = read('docs/js/views/averages.js');
   assert.ok(v.includes('canSeeYield(') && v.includes('finishedSeasons(') && v.includes('grainflow.averages.seasons') && v.includes('exportRowsAsCSV('));
 });

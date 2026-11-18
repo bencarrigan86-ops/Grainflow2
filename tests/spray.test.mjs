@@ -257,9 +257,12 @@ check('only owners and managers are given writes to it', () => {
   assert.ok(!/spray_jobs/.test(line('bookkeeper')) && !/spray_jobs/.test(line('farm_worker')), 'not bookkeeper or farm worker');
   assert.ok(/spray_jobs/.test(s));
 });
-check('wired in: the Production button, picking on the map, and sending as a PDF', () => {
+check('wired in: Spray requests inside Inputs and spraying, picking on the map, and sending as a PDF', () => {
   const p = read('docs/js/views/production.js');
-  for (const t of ['open-spray', 'openSprayJobsSheet', 'openSprayFormSheet', 'onSpray']) assert.ok(p.includes(t), t);
+  for (const t of ['openSprayFormSheet', 'onSpray']) assert.ok(p.includes(t), t);
+  assert.ok(!p.includes('id="open-spray"') && !p.includes('openSprayJobsSheet'), 'no Spray requests button at the top of Production');
+  const inp = read('docs/js/views/inputs.js');
+  assert.ok(inp.includes('id="open-spray"') && inp.includes('openSprayJobsSheet') && inp.includes('canSpray(db.getRole())'), 'Spray requests is in the Inputs sheet, for owners and managers');
   const m = read('docs/js/views/farmmap.js');
   for (const t of ['pick', 'fm-pickdone', 'fm-spray', 'onSpray']) assert.ok(m.includes(t), t);
   const v = read('docs/js/views/spray.js');

@@ -1,19 +1,20 @@
-// Inputs and stock: seed, fertiliser, fuel and chemical. What came in, what went out, what is left.
+// Inputs and spraying: seed, fertiliser, fuel and chemical, what came in, what went out, what is left, and the spray requests.
 //
 // Opened from the top of Production. The list is each product with its stock on hand; a product opens to its history,
 // and Bought, Used and Count record an entry. Seed and fertiliser also show what this season's paddocks call for
 // against what is in the shed. The arithmetic is in inputs.js.
 
-import { db } from '../storage.js?v=387';
-import { openSheet, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=387';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=387';
-import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=387';
-import { isTransit } from '../transit.js?v=387';
-import { isOffFarm } from '../offfarm.js?v=387';
+import { db } from '../storage.js?v=388';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=388';
+import { openSprayJobsSheet, canSpray } from './spray.js?v=388';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=388';
+import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=388';
+import { isTransit } from '../transit.js?v=388';
+import { isOffFarm } from '../offfarm.js?v=388';
 import {
   KINDS, UNITS, MOVE_TYPES, kindLabel, defaultUnit, productKey, stockLevels, productMoves, stockValue,
   plannedNeeds, planVsStock, inputProblems, adjustmentFor, moveDelta, qtyText, onHandAt,
-} from '../inputs.js?v=387';
+} from '../inputs.js?v=388';
 
 // A farm worker sees what is on hand and records what is used and counts. The prices are not sent to their phone
 // at all (see the migration); this keeps the screens from showing blanks where a price would be, and from offering a delivery.
@@ -42,7 +43,7 @@ function newButtons(priced) {
 
 /** The stock screen: every product with what is on hand. */
 export function openInputsSheet() {
-  openSheet('Inputs and stock', (root) => {
+  openSheet('Inputs and spraying', (root) => {
     const moves = db.getInputMoves();
     const levels = stockLevels(moves);
     const { fields } = db.get();
@@ -53,7 +54,9 @@ export function openInputsSheet() {
     const value = stockValue(levels);
     const priced = seesPrices();
 
+    const sprayOpen = canSpray(db.getRole()) ? db.getSprayJobs().filter((j) => j.status !== 'done').length : 0;
     root.innerHTML = `
+      ${canSpray(db.getRole()) && fields.length ? `<div class="tile-grid" style="grid-template-columns:1fr;margin-bottom:12px"><button type="button" class="btn secondary tool-tile" id="open-spray"><b>Spray requests</b><span>${sprayOpen ? `${sprayOpen} open` : 'make a job, tick the paddocks, send it'}</span></button></div>` : ''}
       ${levels.length ? `<div class="stat-grid">
         <div class="stat"><div class="n">${levels.length}</div><div class="l">Product${levels.length === 1 ? '' : 's'} in stock</div></div>
         ${priced ? `<div class="stat"><div class="n">${value > 0 ? money(value, 0) : '-'}</div><div class="l">Stock value${value > 0 ? '' : ' (add prices to see it)'}</div></div>` : ''}
@@ -79,6 +82,7 @@ export function openInputsSheet() {
             <span class="value">${qtyText(p.tons, 't')}${p.shortT > 0 ? ` <span class="badge neg">${qtyText(p.shortT, 't')} short</span>` : ' <span class="badge pos">Covered</span>'}</span></div>`).join('')}
       </div>` : ''}`;
 
+    root.querySelector('#open-spray')?.addEventListener('click', () => openOver(() => openSprayJobsSheet()));
     root.querySelectorAll('[data-new]').forEach((b) => b.addEventListener('click', () => openMoveSheet(null, { type: b.dataset.new })));
     root.querySelectorAll('[data-product]').forEach((el) => el.addEventListener('click', () => {
       const l = levels.find((x) => x.key === el.dataset.product);

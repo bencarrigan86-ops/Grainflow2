@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=387';
+import { ROLES, canOpen } from './nav.js?v=388';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -77,7 +77,7 @@ export const ACCESS = [
     owner: 'view', manager: 'view', bookkeeper: 'view', farm_worker: 'view', driver: 'none' },
   { area: 'Spray requests', hint: 'Spray form and map for a contractor',
     owner: 'full', manager: 'full', bookkeeper: 'none', farm_worker: 'none', driver: 'none' },
-  { area: 'Inputs and stock', hint: 'Seed, fertiliser, fuel and chemical on hand',
+  { area: 'Inputs and spraying', hint: 'Seed, fertiliser, fuel and chemical on hand',
     owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'used', driver: 'none',
     note: 'A worker sees what is on hand and records what is used and counts. Prices are never sent to their phone.' },
   { area: 'Settings', hint: 'Commodities, seasons, grades, business details',
@@ -256,10 +256,10 @@ export const GUIDES = [
     ],
   },
   {
-    id: 'inputs', title: 'Inputs and stock', roles: [...OFFICE, 'farm_worker'], open: 'production', openLabel: 'Open Production',
+    id: 'inputs', title: 'Inputs and spraying', roles: [...OFFICE, 'farm_worker'], open: 'production', openLabel: 'Open Production',
     blurb: 'Seed, fertiliser, fuel and chemical on hand.',
     steps: [
-      'On Production, open Inputs and stock.',
+      'On Production, open Inputs and spraying.',
       'Record what you buy, what you use, and counts that adjust the stock. Say which shed or silo it is in.',
       'Stock is added up across all seasons, and compared with what the paddock plans need.',
     ],

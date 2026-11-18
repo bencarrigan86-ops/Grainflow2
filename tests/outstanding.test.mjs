@@ -322,13 +322,14 @@ console.log('\n=== wired in ===');
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
-check('Sales has buttons for both reports, for the roles that may see them', () => {
+check('the two reports are Reports tiles, not buttons at the top of Sales, and Sales keeps the two it works in', () => {
   const src = read('docs/js/views/sales.js');
-  assert.ok(src.includes("['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div class=\"tile-grid\">"), 'one role gate for the three tiles');
-  assert.match(src, /class="btn secondary tool-tile" id="open-deliveries"/);
-  assert.match(src, /class="btn secondary tool-tile" id="open-money"/);
-  assert.match(src, /openDeliveriesSheet\(\)/);
-  assert.match(src, /openMoneySheet\('in'\)/);
+  assert.ok(src.includes("['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div class=\"tile-grid\">"), 'one role gate for the tiles');
+  assert.ok(!src.includes('id="open-deliveries"') && !src.includes('id="open-money"'), 'no report buttons at the top of Sales');
+  const rep = read('docs/js/views/reports.js');
+  assert.ok(rep.includes('deliveries: () => openDeliveriesSheet()') && rep.includes('owed: () => openMoneySheet()'));
+  assert.ok(read('docs/js/reportshub.js').includes("tile('deliveries', 'Delivery timeline', 'sheet')"));
+  assert.match(src, /id="open-orders"/);
   assert.match(src, /id="open-freight"/);
   assert.ok(!src.includes('id="open-payables"'), 'receivables and payables are one tile');
   assert.match(src, /openFreightOrdersSheet\(\)/);

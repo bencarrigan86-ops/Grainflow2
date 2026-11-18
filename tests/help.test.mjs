@@ -67,7 +67,7 @@ check('what the money tables send is what the guide says can see them', () => {
   assert.deepEqual(sees('payables').sort(), who(area('Bills'), 'full', 'view').sort());
   assert.deepEqual(sees('sale_terms').sort(), ['bookkeeper', 'owner'], 'prices are owner and bookkeeper only');
   assert.deepEqual(sees('spray_jobs').sort(), who(area('Spray requests'), 'full', 'view').sort());
-  assert.deepEqual(sees('input_stock').sort(), who(area('Inputs and stock'), 'full', 'view', 'used').sort());
+  assert.deepEqual(sees('input_stock').sort(), who(area('Inputs and spraying'), 'full', 'view', 'used').sort());
   assert.deepEqual(sees('freight_orders').sort(), who(area('Grain orders and freight orders'), 'full', 'view').sort());
 });
 check('who can add things is who the guide says can add and change', () => {
@@ -75,7 +75,7 @@ check('who can add things is who the guide says can add and change', () => {
   assert.deepEqual(ins.get('invoices').sort(), who(area('Invoices'), 'full').sort());
   assert.deepEqual(ins.get('payables').sort(), who(area('Bills'), 'full').sort());
   assert.deepEqual(ins.get('spray_jobs').sort(), who(area('Spray requests'), 'full').sort());
-  assert.deepEqual(ins.get('input_stock').sort(), who(area('Inputs and stock'), 'full', 'used').sort());
+  assert.deepEqual(ins.get('input_stock').sort(), who(area('Inputs and spraying'), 'full', 'used').sort());
   assert.deepEqual(ins.get('storages').sort(), who(area('Storage'), 'full').sort());
   assert.deepEqual(ins.get('freight_orders').sort(), who(area('Grain orders and freight orders'), 'full').sort());
   assert.deepEqual(ins.get('movements').sort(), who(area('Loads and tickets'), 'full', 'own').sort());

@@ -113,7 +113,7 @@ check('managers see and record invoices and bills as well', () => {
     assert.ok(flat.includes(`create policy ${t}_insert on ${t} for insert with check (app_role(farm_id) in ('owner', 'manager', 'bookkeeper')`), t);
   }
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('managers see invoices and bills'));
-  assert.ok(read('docs/js/views/sales.js').includes("['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div class=\"tile-grid\">") && read('docs/js/views/sales.js').includes('id="open-money"'));
+  assert.ok(read('docs/js/views/sales.js').includes("['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div class=\"tile-grid\">") && read('docs/js/views/sales.js').includes('id="open-orders"') && read('docs/js/reportshub.js').includes("tile('owed'"));
 });
 check('the kinds the app offers are kinds the table accepts', () => {
   const sql = read('supabase/migrations/20261114190000_record_documents.sql');

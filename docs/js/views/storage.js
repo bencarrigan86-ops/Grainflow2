@@ -1,28 +1,27 @@
-import { db } from '../storage.js?v=387';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=387';
-import { isHay, balesInStorage, describeBales } from '../hay.js?v=387';
-import { modulesReport } from '../modulesreport.js?v=387';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=387';
-import { isTransit } from '../transit.js?v=387';
-import { isOffFarm } from '../offfarm.js?v=387';
-import { paintOffFarmCard } from './offfarm.js?v=387';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=387';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=387';
-import { hasStorageQuality } from '../mapping.js?v=387';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=387';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=387';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=387';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=387';
-import { renderRelatedMovements } from './movements.js?v=387';
-import { openOptimiserSheet } from './optimiser.js?v=387';
-import { openSiloSetupSheet } from './silosetup.js?v=387';
-import { commodityFills } from '../commodityfill.js?v=387';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=387';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=387';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=387';
+import { db } from '../storage.js?v=388';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=388';
+import { isHay, balesInStorage, describeBales } from '../hay.js?v=388';
+import { modulesReport } from '../modulesreport.js?v=388';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=388';
+import { isTransit } from '../transit.js?v=388';
+import { isOffFarm } from '../offfarm.js?v=388';
+import { paintOffFarmCard } from './offfarm.js?v=388';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=388';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=388';
+import { hasStorageQuality } from '../mapping.js?v=388';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=388';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=388';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=388';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=388';
+import { renderRelatedMovements } from './movements.js?v=388';
+import { openSiloSetupSheet } from './silosetup.js?v=388';
+import { commodityFills } from '../commodityfill.js?v=388';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=388';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=388';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=388';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=387';
+} from '../silolayers.js?v=388';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -107,7 +106,6 @@ function paint(root) {
       <h2>Saved silos &amp; bunkers</h2>
       <div class="storage-tools-bar">
         <button type="button" class="chip ${showMeasured ? 'active' : ''}" id="toggle-measured" aria-pressed="${showMeasured}">Measured: ${showMeasured ? 'shown' : 'hidden'}</button>
-        <button type="button" class="chip" id="open-optimiser">Outload optimiser</button>
         ${canSetUp ? `<button type="button" class="chip" id="toggle-tools" aria-expanded="${toolsOpen}">Tools ${toolsOpen ? '&#9652;' : '&#9662;'}</button>` : ''}
       </div>
       ${canSetUp && toolsOpen ? `<div class="storage-tools">
@@ -191,7 +189,6 @@ function paint(root) {
     toast(`${fills.length} silo${fills.length === 1 ? '' : 's'} updated`);
     paint(root);
   });
-  root.querySelector('#open-optimiser')?.addEventListener('click', () => openOptimiserSheet());
   root.querySelector('#toggle-tools')?.addEventListener('click', () => { toolsOpen = !toolsOpen; paint(root); });
   root.querySelector('#toggle-measured')?.addEventListener('click', () => { setShowMeasured(!showMeasured); paint(root); });
 }

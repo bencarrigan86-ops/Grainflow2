@@ -193,9 +193,10 @@ check('the paddock sheet has the history, and a paddock or a contract can start 
   const m = read('docs/js/views/movements.js');
   assert.ok(m.includes('data-new-movement') && m.includes("tos: [{ type: 'sale', id, tons: '' }]") && m.includes("froms: [{ type: 'field', id, tons: '' }]"));
 });
-check('Production opens the rotation report whenever there are paddocks, even for one season', () => {
-  const p = read('docs/js/views/production.js');
-  assert.ok(p.includes('id="open-rotation"') && p.includes('openRotationSheet()'));
+check('Reports opens the rotation report whenever there are paddocks, even for one season', () => {
+  const p = read('docs/js/views/reports.js');
+  assert.ok(read('docs/js/reportshub.js').includes("hasFields && can('production') && tile('rotation'") && p.includes('rotation: () => openRotationSheet()'));
+  assert.ok(!read('docs/js/views/production.js').includes('id="open-reports"'), 'the Reports button is gone from the top of Production');
   const v = read('docs/js/views/rotation.js');
   assert.ok(v.includes('rotationGrid(years)') && v.includes('areaSummary(grid)') && v.includes('canSeeYield'), 'yields are shown only to roles that may see them');
 });

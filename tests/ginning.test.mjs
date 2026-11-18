@@ -492,7 +492,7 @@ check('the Modules report: each paddock picked, in the field, moved to the gin, 
   assert.ok(bytes.length > 500 && String.fromCharCode(...bytes.slice(0, 4)) === '%PDF');
   assert.ok(modulesPdf({ report: modulesReport({}) }).length > 500, 'an empty report still makes a page');
   const v = read('docs/js/views/reports.js');
-  assert.ok(v.includes('data-view="modules"') && v.includes("view === 'modules'") && v.includes('modulesReport({ fields, movements, storages, commodities })') && v.includes('id="modules-pdf"'));
+  assert.ok(read('docs/js/reportshub.js').includes("tile('modules'") && v.includes("view === 'modules'") && v.includes('modulesReport({ fields, movements, storages, commodities })') && v.includes('id="modules-pdf"'));
 });
 
 check('a farm with no gin yard can make one in a tap, from the move sheet or the ginning sheet', () => {
@@ -807,6 +807,19 @@ check('a module move is cotton: the paddock\'s cotton, else cotton, else the yar
   const mv = read('docs/js/views/movements.js');
   assert.ok(mv.includes('const moveCommodity = (m, commodities) => m.commodityId || (hasModules(m)'));
   assert.ok(mv.includes('moveCommodity(m, commodities) === listFilter.commodityId') && mv.includes('moveCommodity(m, ctx.commodities)'));
+});
+
+check('the Movement tab opens calm: a summary line, the search with a More menu holding the four tools, the commodity chips, and a labelled Add load button', () => {
+  const m = read('docs/js/views/movements.js');
+  assert.ok(m.includes('class="mv-summary" id="move-stats"') && !m.includes('class="stat-grid" id="move-stats"'));
+  assert.ok(m.includes('id="mv-tools-btn"') && m.includes('id="mv-tools" hidden'));
+  const menu = m.slice(m.indexOf('id="mv-tools" hidden'), m.indexOf('class="chips"'));
+  for (const id of ['move-modules', 'log-ginning', 'load-report', 'get-outload']) assert.ok(menu.includes(`id="${id}"`), `${id} is in the menu`);
+  assert.ok(!m.includes('class="move-tools"'), 'no row of tool buttons above the list');
+  assert.ok(m.includes('data-chip="${esc(c.id)}"') && !m.includes('id="mv-crop"'), 'the commodities stay as chips');
+  assert.ok(m.includes('id="add-movement" aria-label="Add a load">+ Add load</button>'));
+  assert.ok(m.includes("totalTons > 0 ? `${num(totalTons, 1)} t` : ''"), 'no 0.0 t for a list that is all modules or ginning');
+  assert.ok(m.includes("ctx.grouped && commodity ?"), 'a row on the Movement list leads with its commodity');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

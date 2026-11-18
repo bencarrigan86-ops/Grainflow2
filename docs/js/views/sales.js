@@ -1,33 +1,32 @@
-import { db } from '../storage.js?v=387';
+import { db } from '../storage.js?v=388';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=387';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=387';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=387';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=387';
-import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=387';
-import { patternsFor } from '../deliveryplan.js?v=387';
-import { INVOICING } from '../invoicing.js?v=387';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=387';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=387';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=387';
-import { renderRelatedMovements } from './movements.js?v=387';
-import { openInvoiceListSheet } from './invoice.js?v=387';
-import { openContractDocSheet } from './contract.js?v=387';
-import { wireJumps } from '../jump.js?v=387';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=387';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=387';
-import { freightState } from '../freight.js?v=387';
-import { activeSales, paidSales } from '../paidsales.js?v=387';
-import { openVendorDecSheet } from './vendordec.js?v=387';
-import { summarise as summariseOrders } from '../orders.js?v=387';
-import { openDeliveriesSheet, openMoneySheet } from './outstanding.js?v=387';
-import { deliveries, moneyPosition, uninvoiced } from '../outstanding.js?v=387';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=387';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=387';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=387';
-import { standardFor } from '../grades.js?v=387';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=387';
+} from '../documents.js?v=388';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=388';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=388';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=388';
+import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=388';
+import { patternsFor } from '../deliveryplan.js?v=388';
+import { INVOICING } from '../invoicing.js?v=388';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=388';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=388';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=388';
+import { renderRelatedMovements } from './movements.js?v=388';
+import { openInvoiceListSheet } from './invoice.js?v=388';
+import { openContractDocSheet } from './contract.js?v=388';
+import { wireJumps } from '../jump.js?v=388';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=388';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=388';
+import { freightState } from '../freight.js?v=388';
+import { activeSales, paidSales } from '../paidsales.js?v=388';
+import { openVendorDecSheet } from './vendordec.js?v=388';
+import { summarise as summariseOrders } from '../orders.js?v=388';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=388';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=388';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=388';
+import { standardFor } from '../grades.js?v=388';
+import { commodityClass } from '../commoditycolor.js?v=388';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=388';
 
 let unsub = null;
 
@@ -43,14 +42,8 @@ function paint(root) {
   const saleSort = readSaleSort();
   const groups = groupSalesByCommodity(commodities, activeSales(sales), movements, saleSort);
   const paidList = paidSales(sales);
-  // what is owed, for the Payables button
   // and what buyers are waiting on, for the Orders button
   const ordersSum = summariseOrders(db.getOrders(), movements, todayLocal());
-  // grain still to deliver, and money in and out, for the buttons under it
-  const deliverySum = deliveries(sales, movements, db.getOrders(), todayLocal());
-  const moneySum = moneyPosition(db.get().invoices, sales, db.getPayables(), todayLocal());
-  // grain delivered that is not on an invoice yet, for the Acc Rec / Pay button
-  const notInvoiced = uninvoiced(sales, movements, db.get().invoices, todayLocal()).total.value;
   // freight orders still to cart, for the Freight orders button
   const freightOpen = db.getFreightOrders().map((f) => freightState(f, movements)).filter((st) => st.active);
   const freightLeft = freightOpen.reduce((a, st) => a + st.left, 0);
@@ -82,8 +75,6 @@ function paint(root) {
       ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div class="tile-grid">
         <button type="button" class="btn secondary tool-tile" id="open-orders"><b>Grain orders</b><span>${ordersSum.open.count ? `${num(ordersSum.open.left, 0)} t to deliver${ordersSum.overdue.count ? ` (${ordersSum.overdue.count} overdue)` : ordersSum.soon.count ? ` (${ordersSum.soon.count} due soon)` : ''}` : 'none open'}</span></button>
         <button type="button" class="btn secondary tool-tile" id="open-freight"><b>Freight orders</b><span>${freightOpen.length ? `${freightOpen.length} open · ${num(freightLeft, 0)} t to cart` : 'none open'}</span></button>
-        <button type="button" class="btn secondary tool-tile" id="open-deliveries"><b>Delivery timeline</b><span>${deliverySum.total.count ? `${num(deliverySum.total.due, 0)} t${deliverySum.ended.count ? ` (${deliverySum.ended.count} past end)` : deliverySum.soon.count ? ` (${deliverySum.soon.count} ending soon)` : ''}` : 'nothing due'}</span></button>
-        <button type="button" class="btn secondary tool-tile" id="open-money"><b>Acc Rec / Pay</b><span>${moneySum.owedToYou.outstanding.count || moneySum.youOwe.outstanding.count ? `In ${money(moneySum.owedToYou.outstanding.total, 0)} · Out ${money(moneySum.youOwe.outstanding.total, 0)}${moneySum.owedToYou.overdue.count || moneySum.youOwe.overdue.count ? ' (overdue)' : ''}` : 'nothing owed or owing'}</span>${notInvoiced > 0 ? `<span>Not invoiced ${money(notInvoiced, 0)}</span>` : ''}</button>
       </div>` : ''}
       ${rollup.length === 0 ? '' : `
       <div class="card report">
@@ -134,8 +125,6 @@ function paint(root) {
   });
   root.querySelector('#add-sale').addEventListener('click', () => openSaleSheet(null));
   root.querySelector('#open-orders')?.addEventListener('click', () => openOrdersSheet());
-  root.querySelector('#open-deliveries')?.addEventListener('click', () => openDeliveriesSheet());
-  root.querySelector('#open-money')?.addEventListener('click', () => openMoneySheet('in'));
   root.querySelector('#open-freight')?.addEventListener('click', () => openFreightOrdersSheet());
   root.querySelector('#empty-add')?.addEventListener('click', () => openSaleSheet(null));
   root.querySelector('#open-paid')?.addEventListener('click', () => openPaidSheet());
@@ -150,7 +139,7 @@ function openPaidSheet() {
     const list = paidSales(sales);
     root.innerHTML = `
       <div class="field hint" style="margin-bottom:10px">Contracts marked paid. They are left off the main list and the pick lists, and still count in the position. Open one and untick Paid to bring it back.</div>
-      ${list.length === 0 ? '<div class="empty">No paid contracts.</div>' : sortSales(list, readSaleSort(), movements).map((s, i) => saleRow(s, movements, commodities, i)).join('')}`;
+      ${list.length === 0 ? '<div class="empty">No paid contracts.</div>' : sortSales(list, readSaleSort(), movements).map((s, i) => saleRow(s, movements, commodities, i, { showCommodity: true })).join('')}`;
     root.querySelectorAll('[data-edit-sale]').forEach((el) => el.addEventListener('click', () => openSaleSheet(sales.find((s) => s.id === el.dataset.editSale))));
   });
 }
@@ -315,18 +304,21 @@ function deliveryWindow(s) {
   return '';
 }
 
-function saleRow(s, movements, commodities, index = 0) {
+/** A contract row. Under a commodity heading it does not repeat the commodity; a list with no headings (Paid) names it, in its colour. */
+function saleRow(s, movements, commodities, index = 0, { showCommodity = false } = {}) {
   const invoices = db.getInvoicesForSale(s.id);
   const econ = saleEconomics(s, movements, invoices);
   const window = deliveryWindow(s);
   const outstandingInvoices = invoices.filter((inv) => inv.status !== 'paid');
-  const isBales = commodities.find((c) => c.id === s.commodityId)?.unit === 'bale';
+  const commodity = commodities.find((c) => c.id === s.commodityId);
+  const commodityName = commodity?.name || '';
+  const isBales = commodity?.unit === 'bale';
   const unit = isBales ? 'bales' : 't';
   const amount = isBales ? `${num(s.tons || 0, 1)} bales` : tons(s.tons || 0);
   return `
     <div class="list-item stack band ${index % 2 ? 'alt' : ''}" data-edit-sale="${s.id}">
       <div class="li-top">
-        <div class="main">${s.buyer ? esc(s.buyer) : 'No buyer'}</div>
+        <div class="main">${showCommodity && commodityName ? `<span class="com-tag ${commodityClass(commodityName)}">${esc(commodityName)}</span>` : ''}${s.buyer ? esc(s.buyer) : 'No buyer'}</div>
         <div class="main">${money(econ.totalValue, 0)}</div>
       </div>
       <div class="meta">${[s.grade, s.gradeOptions?.length ? `${s.gradeOptions.length} grades` : '', s.contractNo ? `#${s.contractNo}` : '', s.brokerNote, (s.notes || '').split('\n')[0].slice(0, 60)].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</div>

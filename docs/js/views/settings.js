@@ -1,40 +1,42 @@
-import { db } from '../storage.js?v=387';
-import { getTheme, setTheme } from '../theme.js?v=387';
-import { num, money, esc } from '../fmt.js?v=387';
+import { db } from '../storage.js?v=388';
+import { getTheme, setTheme } from '../theme.js?v=388';
+import { num, money, esc } from '../fmt.js?v=388';
 import {
   openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast,
-} from '../ui.js?v=387';
-import { planYieldUpdate } from '../yieldupdate.js?v=387';
-import { openLoadImportSheet } from './importloads.js?v=387';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=387';
-import { openPastSeasonsSheet } from './pastseasons.js?v=387';
-import { openPastSalesSheet } from './pastsales.js?v=387';
-import { openLineupSheet } from './lineup.js?v=387';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=387';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=387';
-import { openDangerSheet } from './dangerconfirm.js?v=387';
+} from '../ui.js?v=388';
+import { planYieldUpdate } from '../yieldupdate.js?v=388';
+import { openLoadImportSheet } from './importloads.js?v=388';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=388';
+import { openPastSeasonsSheet } from './pastseasons.js?v=388';
+import { openPastSalesSheet } from './pastsales.js?v=388';
+import { openLineupSheet } from './lineup.js?v=388';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=388';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=388';
+import { openDangerSheet } from './dangerconfirm.js?v=388';
 import {
   sampleHistoryFrom, sampleHistoryOffered, sampleOrdersFrom, sampleOrdersOffered, sampleCottonHayFrom, sampleCottonHayOffered, sampleRefreshOffered, sampleStateFor,
-} from '../demo.js?v=387';
-import { seasonContents, contentsText } from '../seasondelete.js?v=387';
-import { openDeletedSheet } from './deleted.js?v=387';
-import { APP_VERSION } from '../version.js?v=387';
-import { checkNow } from '../updatecheck.js?v=387';
-import { logoFromFile } from '../logo.js?v=387';
+} from '../demo.js?v=388';
+import { seasonContents, contentsText } from '../seasondelete.js?v=388';
+import { openDeletedSheet } from './deleted.js?v=388';
+import { openAuditSheet } from './audit.js?v=388';
+import { canSeeAudit } from '../audit.js?v=388';
+import { APP_VERSION } from '../version.js?v=388';
+import { checkNow } from '../updatecheck.js?v=388';
+import { logoFromFile } from '../logo.js?v=388';
 
-import { closingStock, position } from '../derived.js?v=387';
-import { cleanCotton } from '../ginning.js?v=387';
-import { cleanHay, hasHay, BALE_TYPES } from '../hay.js?v=387';
-import { orderedNames, moveName } from '../commodityorder.js?v=387';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=387';
-import { autoSeasonText } from '../harvestseason.js?v=387';
-import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=387';
-import { openMySignatureSheet } from './signaturepad.js?v=387';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=387';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=387';
-import { paintPeople } from './settingspeople.js?v=387';
-import { paintSyncCard } from './settingssync.js?v=387';
-import { openExportCsvSheet } from './settingsexport.js?v=387';
+import { closingStock, position } from '../derived.js?v=388';
+import { cleanCotton } from '../ginning.js?v=388';
+import { cleanHay, hasHay, BALE_TYPES } from '../hay.js?v=388';
+import { orderedNames, moveName } from '../commodityorder.js?v=388';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=388';
+import { autoSeasonText } from '../harvestseason.js?v=388';
+import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=388';
+import { openMySignatureSheet } from './signaturepad.js?v=388';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=388';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=388';
+import { paintPeople } from './settingspeople.js?v=388';
+import { paintSyncCard } from './settingssync.js?v=388';
+import { openExportCsvSheet } from './settingsexport.js?v=388';
 
 let unsub = null;
 
@@ -256,6 +258,7 @@ function paint(root) {
           <button class="btn secondary small" id="export-csv">Export CSV (Excel)&hellip;</button>
           ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="open-import">Import from CSV&hellip;</button>` : ''}
           ${['owner', 'manager'].includes(db.getRole()) ? `<button class="btn secondary small" id="open-deleted">Recently deleted&hellip;</button>` : ''}
+          ${canSeeAudit(db.getRole()) ? `<button class="btn secondary small" id="open-audit">Audit history&hellip;</button>` : ''}
         </div>
         ${db.getRole() === 'owner' ? '<button class="btn danger small" id="reset" style="margin-top:12px">Reset all data&hellip;</button>' : ''}
         <input type="file" id="import-file" accept="application/json" style="display:none" />
@@ -501,6 +504,7 @@ ${err.message}`); }
     root.querySelector('#add-commodity').hidden = !openGroups.has('season');
   }));
   root.querySelector('#open-deleted')?.addEventListener('click', () => openDeletedSheet());
+  root.querySelector('#open-audit')?.addEventListener('click', () => openAuditSheet());
   root.querySelector('#open-my-signature')?.addEventListener('click', () => openMySignatureSheet());
   const importFile = root.querySelector('#import-file');
   root.querySelector('#import').addEventListener('click', () => importFile.click());

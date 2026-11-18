@@ -243,8 +243,9 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 check('Reports has a Harvest view for every role, and a role that is not shown yields gets hectares and silo room with no tonnes', () => {
   const src = read('docs/js/views/reports.js');
-  assert.match(src, /<button data-view="harvest"/);
-  assert.doesNotMatch(src, /showYield \? `<button data-view="harvest"/);
+  const hub = read('docs/js/reportshub.js');
+  assert.match(hub, /tile\('harvest', 'Harvest progress', 'view'/);
+  assert.doesNotMatch(hub, /showYield && tile\('harvest'/);
   assert.match(src, /paintHarvest\(root, showYield\)/);
   const noYield = src.slice(src.indexOf('function harvestNoYieldHtml'), src.indexOf('function paintYield'));
   assert.ok(noYield.length > 500, 'no version without yields');

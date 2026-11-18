@@ -1,22 +1,20 @@
-import { db } from '../storage.js?v=387';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=387';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=387';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=387';
-import { describeMerge } from '../merge.js?v=387';
-import { renderRelatedMovements } from './movements.js?v=387';
-import { canSeeYield } from '../nav.js?v=387';
-import { wireJumps } from '../jump.js?v=387';
-import { openMapSheet } from './farmmap.js?v=387';
-import { openInputsSheet } from './inputs.js?v=387';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=387';
-import { stockLevels } from '../inputs.js?v=387';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=387';
-import { openRotationSheet } from './rotation.js?v=387';
-import { openAveragesSheet } from './averages.js?v=387';
-import { openModulesPickedSheet } from './modulespicked.js?v=387';
-import { openBalesBaledSheet } from './balesbaled.js?v=387';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=387';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=387';
+import { db } from '../storage.js?v=388';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=388';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=388';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=388';
+import { describeMerge } from '../merge.js?v=388';
+import { renderRelatedMovements } from './movements.js?v=388';
+import { canSeeYield } from '../nav.js?v=388';
+import { wireJumps } from '../jump.js?v=388';
+import { openMapSheet } from './farmmap.js?v=388';
+import { openInputsSheet } from './inputs.js?v=388';
+import { openSprayFormSheet, canSpray } from './spray.js?v=388';
+import { stockLevels } from '../inputs.js?v=388';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=388';
+import { openModulesPickedSheet } from './modulespicked.js?v=388';
+import { openBalesBaledSheet } from './balesbaled.js?v=388';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=388';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=388';
 
 let unsub = null;
 
@@ -56,9 +54,7 @@ function paint(root) {
     <div class="view">
       <div class="prod-tools">
         ${fields.length ? `<button type="button" class="btn secondary tool-tile" id="open-map"><b>Farm map</b><span>${fields.some((f) => f.boundary) ? `${fields.filter((f) => f.boundary).length} of ${fields.length} mapped` : 'add your outlines'}</span></button>` : ''}
-        ${canSeeInputs ? `<button type="button" class="btn secondary tool-tile" id="open-inputs"><b>Inputs and stock</b><span>${inputProducts ? `${inputProducts} product${inputProducts === 1 ? '' : 's'} in stock` : 'seed, fert, fuel'}</span></button>` : ''}
-        ${sprayAllowed && fields.length ? `<button type="button" class="btn secondary tool-tile" id="open-spray"><b>Spray requests</b><span>${sprayOpen ? `${sprayOpen} open` : 'send a job'}</span></button>` : ''}
-        ${fields.length || showYield ? `<button type="button" class="btn secondary tool-tile" id="open-reports"><b>Reports</b><span>${fields.length ? 'rotation' : ''}${fields.length && showYield ? ', ' : ''}${showYield ? 'averages' : ''}</span></button>` : ''}
+        ${canSeeInputs ? `<button type="button" class="btn secondary tool-tile" id="open-inputs"><b>Inputs and spraying</b><span>${[inputProducts ? `${inputProducts} in stock` : 'stock and spraying', sprayOpen ? `${sprayOpen} spray open` : ''].filter(Boolean).join(' · ')}</span></button>` : ''}
       </div>
       ${rollup.length === 0 ? '' : `
       <div class="card report">
@@ -104,24 +100,11 @@ function paint(root) {
   });
   root.querySelector('#add-field').addEventListener('click', () => openFieldSheet(null));
   root.querySelector('#open-inputs')?.addEventListener('click', () => openInputsSheet());
-  root.querySelector('#open-reports')?.addEventListener('click', () => openReportsSheet(fields.length > 0, showYield));
   root.querySelector('#open-map')?.addEventListener('click', () => openMapSheet({
     onOpenField: openFieldSheet,
     onSpray: canSpray(db.getRole()) ? (ids) => openSprayFormSheet(null, { ids }) : undefined,
   }));
-  root.querySelector('#open-spray')?.addEventListener('click', () => openSprayJobsSheet());
   root.querySelector('#empty-add-field')?.addEventListener('click', () => openFieldSheet(null));
-}
-
-/** The look-back reports, behind one button so the top of Production stays short: rotation and yield history, and the averages by commodity. */
-function openReportsSheet(hasFields, showYield) {
-  openSheet('Reports', (root) => {
-    root.innerHTML = `
-      ${hasFields ? '<button type="button" class="btn secondary" id="open-rotation" style="margin-bottom:12px">Rotation and yield history &middot; every paddock, every season</button>' : ''}
-      ${showYield ? '<button type="button" class="btn secondary" id="open-averages" style="margin-bottom:12px">Averages by commodity &middot; yield and price, every season</button>' : ''}`;
-    root.querySelector('#open-rotation')?.addEventListener('click', () => openOver(() => openRotationSheet()));
-    root.querySelector('#open-averages')?.addEventListener('click', () => openOver(() => openAveragesSheet()));
-  });
 }
 
 function fieldRow(f, movements, showYield = true) {

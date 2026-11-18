@@ -123,7 +123,7 @@ check('the feature is one module, one screen and one button, so it can be taken 
   const mod = read('docs/js/optimiser.js');
   assert.ok(!/from '\.\/(storage|supabase|sync)\.js/.test(mod), 'the maths never touches the database');
   assert.ok(read('docs/js/views/optimiser.js').includes('openOptimiserSheet'));
-  assert.ok(read('docs/js/views/storage.js').includes('openOptimiserSheet'));
+  assert.ok(read('docs/js/views/reports.js').includes('optimiser: () => openOptimiserSheet()'));
 });
 
 check('the Need, Average and Worst truck columns are centred', () => {

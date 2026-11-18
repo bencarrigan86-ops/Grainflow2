@@ -1267,3 +1267,44 @@ table.cf th:first-child, table.cf td:first-child { padding-left: 0; }
 table.cf td:first-child .meta { font-size: 11px; }
 table.cf td:first-child { white-space: normal; }
 table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
+
+/* Movement: a summary line, and the search with a More menu in place of a row of tool buttons */
+.mv-summary { font-size: 14px; font-weight: 700; color: var(--text-dim); margin: 0 0 10px; min-height: 1.2em; }
+.mv-searchrow { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+.mv-searchrow input[type="search"] { flex: 1; width: auto; min-width: 0; }
+.mv-searchrow .mv-more-btn { flex: none; margin: 0; }
+.mv-menu { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 6px 18px rgba(0,0,0,.14); overflow: hidden; }
+.mv-menu[hidden] { display: none; }
+.mv-menu button { text-align: left; padding: 14px 16px; font-size: 15px; font-family: inherit; border: 0; border-bottom: 1px solid var(--border); background: none; color: var(--text); }
+.mv-menu button:last-child { border-bottom: 0; }
+.fab.labelled { width: auto; padding: 0 22px; border-radius: 27px; font-size: 15px; font-weight: 700; line-height: 54px; white-space: nowrap; }
+.fab-secondary.beside-label { right: 150px; }
+.mv-com { font-weight: 800; margin-right: 12px; }
+.mv-qty { flex: none; white-space: nowrap; text-align: right; }
+
+/* Reports: tiles in groups; the report itself opens with a back button and its PDF button */
+.rep-group { font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--text-dim); margin: 16px 0 6px; }
+.rep-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rep-tile { margin: 0; width: 100%; min-width: 0; min-height: 76px; padding: 10px 12px; text-align: left; font-family: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 0; }
+.rep-tile:active { filter: brightness(.96); }
+.rep-tile .rep-ico { flex: none; color: var(--accent-summary); margin-bottom: 6px; }
+.rep-tile .rep-name { font-size: 15px; font-weight: 800; line-height: 1.2; }
+.rep-foot { margin-top: 16px; font-size: 13px; color: var(--text-dim); text-align: center; }
+.reports-bar .reports-gap { flex: 1; }
+.reports-bar #reports-back { margin: 0; white-space: nowrap; }
+.rep-cell { position: relative; min-width: 0; }
+.rep-cell .rep-tile { width: 100%; }
+.rep-star { position: absolute; top: 2px; right: 2px; width: 36px; height: 36px; border: 0; background: none; font-size: 20px; line-height: 1; color: var(--text-dim); border-radius: 8px; }
+.rep-star.on { color: #c98a00; }
+/* A commodity's name in its own colour (commoditycolor.js), mixed with the text colour so it reads in both themes */
+.com-amber { color: color-mix(in srgb, #b7791f 82%, var(--text)); }
+.com-blue { color: color-mix(in srgb, #2b6cb0 82%, var(--text)); }
+.com-teal { color: color-mix(in srgb, #2c7a7b 82%, var(--text)); }
+.com-coral { color: color-mix(in srgb, #c05621 82%, var(--text)); }
+.com-plum { color: color-mix(in srgb, #805ad5 82%, var(--text)); }
+.com-olive { color: color-mix(in srgb, #6b8e23 82%, var(--text)); }
+.com-rose { color: color-mix(in srgb, #b83280 82%, var(--text)); }
+.com-slate { color: color-mix(in srgb, #4a5568 82%, var(--text)); }
+.com-tag { font-weight: 800; margin-right: 10px; }
+/* Prices: a grade spread row */
+.pr-grade, .pr-adj { min-height: 44px; padding: 8px 10px; font-size: 16px; font-family: inherit; color: var(--text); background: var(--surface-2); border: 1.5px solid var(--border); border-radius: 10px; box-sizing: border-box; }

@@ -1,27 +1,28 @@
-import { db } from '../storage.js?v=387';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=387';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=387';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=387';
-import { withholdingClash } from '../fumigation.js?v=387';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=387';
-import { compressAndStampImage } from '../img.js?v=387';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=387';
-import { specText, extraSpecKey } from '../outload.js?v=387';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=387';
-import { pickableSilos } from '../silopick.js?v=387';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=387';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=387';
-import { activeSales } from '../paidsales.js?v=387';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=387';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=387';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=387';
-import { nowTime } from '../loadreport.js?v=387';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=387';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=387';
-import { openGinRunSheet } from './ginrun.js?v=387';
-import { openModuleMoveSheet } from './modulemove.js?v=387';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=387';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=387';
+import { db } from '../storage.js?v=388';
+import { commodityClass } from '../commoditycolor.js?v=388';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=388';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=388';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=388';
+import { withholdingClash } from '../fumigation.js?v=388';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=388';
+import { compressAndStampImage } from '../img.js?v=388';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=388';
+import { specText, extraSpecKey } from '../outload.js?v=388';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=388';
+import { pickableSilos } from '../silopick.js?v=388';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=388';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=388';
+import { activeSales } from '../paidsales.js?v=388';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=388';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=388';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=388';
+import { nowTime } from '../loadreport.js?v=388';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=388';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=388';
+import { openGinRunSheet } from './ginrun.js?v=388';
+import { openModuleMoveSheet } from './modulemove.js?v=388';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=388';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=388';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -80,36 +81,43 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
-      <div class="stat-grid" id="move-stats"></div>
+      <div class="mv-summary" id="move-stats"></div>
 
-      <div class="move-tools">
-        ${(storages.some((s) => s.kind === 'tally') || commodities.some((c) => c.unit === 'bale')) ? `<button class="btn secondary small" id="move-modules">+ Move modules</button><button class="btn secondary small" id="log-ginning">+ Log ginning</button>` : ''}
-        ${movements.length > 0 ? `<button class="btn secondary small" id="load-report">Load report</button>` : ''}
-        <button class="btn secondary small" id="get-outload">Outload number</button>
-      </div>
-
-      ${movements.length > 0 ? `
       <div class="filterbar">
-        <input type="search" id="mv-q" placeholder="Search tickets, dates, trucks, drivers, buyers, contracts, grades" value="${esc(listFilter.q)}" aria-label="Search tickets" />
-        ${inUse.length > 1 || finishCount > 0 ? `<div class="chips">
+        <div class="mv-searchrow">
+          ${movements.length > 0 ? `<input type="search" id="mv-q" placeholder="Search tickets" value="${esc(listFilter.q)}" aria-label="Search tickets by date, truck, driver, buyer, contract or grade" />` : '<span class="mv-spacer"></span>'}
+          <button type="button" class="btn secondary small mv-more-btn" id="mv-tools-btn" aria-haspopup="true" aria-expanded="false">More &#9662;</button>
+        </div>
+        <div class="mv-menu" id="mv-tools" hidden>
+          ${(storages.some((s) => s.kind === 'tally') || commodities.some((c) => c.unit === 'bale')) ? `<button type="button" id="move-modules">Move modules</button><button type="button" id="log-ginning">Log ginning</button>` : ''}
+          ${movements.length > 0 ? `<button type="button" id="load-report">Load report</button>` : ''}
+          <button type="button" id="get-outload">Get an outload number</button>
+        </div>
+        ${movements.length > 0 && (inUse.length > 1 || finishCount > 0) ? `<div class="chips">
           <button type="button" class="chip ${listFilter.commodityId || listFilter.toFinish ? '' : 'active'}" data-chip="">All</button>
           ${finishCount > 0 ? `<button type="button" class="chip chip-warn ${listFilter.toFinish ? 'active' : ''}" data-finish="1">To finish ${finishCount}</button>` : ''}
           ${inUse.length > 1 ? inUse.map((c) => `<button type="button" class="chip ${listFilter.commodityId === c.id ? 'active' : ''}" data-chip="${esc(c.id)}">${esc(c.name)}</button>`).join('') : ''}
         </div>` : ''}
-      </div>` : ''}
+      </div>
 
       <div class="card input">
         <h2><span class="dot input"></span>Tickets</h2>
         <div id="ticket-list"></div>
       </div>
     </div>
-    ${movements.length > 0 ? `<button class="fab-secondary" id="repeat-movement">Repeat</button>` : ''}
-    <button class="fab" id="add-movement">+</button>
+    ${movements.length > 0 ? `<button class="fab-secondary beside-label" id="repeat-movement">Repeat</button>` : ''}
+    <button class="fab labelled" id="add-movement" aria-label="Add a load">+ Add load</button>
   `;
 
   paintList(root);
 
   root.querySelector('#add-movement').addEventListener('click', () => openMovementSheet(null));
+  const toolsMenu = root.querySelector('#mv-tools');
+  const toolsBtn = root.querySelector('#mv-tools-btn');
+  const setMenu = (open) => { toolsMenu.hidden = !open; toolsBtn.setAttribute('aria-expanded', String(open)); };
+  toolsBtn.addEventListener('click', () => setMenu(toolsMenu.hidden));
+  toolsMenu.addEventListener('click', () => setMenu(false));
+  root.onclick = (ev) => { if (!toolsMenu.hidden && !ev.target.closest('#mv-tools, #mv-tools-btn')) setMenu(false); };
   root.querySelector('#log-ginning')?.addEventListener('click', () => openGinRunSheet(null));
   root.querySelector('#move-modules')?.addEventListener('click', () => openModuleMoveSheet(null));
   root.querySelector('#load-report')?.addEventListener('click', () => openLoadReportSheet());
@@ -144,9 +152,9 @@ function paintList(root) {
   const narrowed = !!(q || listFilter.commodityId || listFilter.toFinish);
   const totalTons = shown.filter((m) => !hasGin(m) && !hasModules(m)).reduce((s, m) => s + (Number(m.tons) || 0), 0);   // a ginning run or a module move counts bales and modules, not tonnes
 
-  root.querySelector('#move-stats').innerHTML = `
-    <div class="stat"><div class="n">${shown.length}</div><div class="l">${narrowed ? 'Loads shown' : 'Loads logged'}</div></div>
-    <div class="stat"><div class="n">${num(totalTons, 1)} t</div><div class="l">${narrowed ? 'Moved (shown)' : 'Total moved'}</div></div>`;
+  const unfinished = toFinish(movements, storages).length;
+  root.querySelector('#move-stats').textContent = movements.length === 0 ? ''
+    : [`${shown.length} load${shown.length === 1 ? '' : 's'}${narrowed ? ' shown' : ''}`, totalTons > 0 ? `${num(totalTons, 1)} t` : '', !narrowed && unfinished ? `${unfinished} to finish` : ''].filter(Boolean).join(' \u00b7 ');
 
   const list = root.querySelector('#ticket-list');
   if (movements.length === 0) {
@@ -161,7 +169,7 @@ function paintList(root) {
   // the latest loads first; the rest are one tap away, and a search looks through all of them
   const page = pageOfRows(shown, listFilter.limit);
   let lastDate = null;
-  list.innerHTML = page.rows.map((m) => {
+  list.innerHTML = page.rows.map((m, i) => {
     let head = '';
     if ((m.date || '') !== lastDate) {
       lastDate = m.date || '';
@@ -169,7 +177,7 @@ function paintList(root) {
       const dayTons = day.reduce((s, x) => s + (Number(x.tons) || 0), 0);
       head = `<div class="day-label"><span>${esc(dayHeading(m.date))}</span><span>${day.length} load${day.length === 1 ? '' : 's'} · ${num(dayTons, 1)} t</span></div>`;
     }
-    return head + movementRow(m, ctx);
+    return head + movementRow(m, { ...ctx, bandIndex: i });
   }).join('') + (page.hidden > 0
     ? `<button type="button" class="btn secondary more-row" id="mv-more">Show ${Math.min(PAGE_SIZE, page.hidden)} more <span class="meta">· ${page.hidden} older ${page.hidden === 1 ? 'load' : 'loads'} not shown</span></button>`
     : '');
@@ -297,12 +305,12 @@ export function movementRow(m, ctx) {
     : null;
   // the order it was delivered against, if any
   const order = m.orderId ? (ctx.orders || db.getOrders()).find((o) => o.id === m.orderId) : null;
-  const details = [commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', m.manualDocketNo ? `docket ${m.manualDocketNo}` : '', m.outloadNo ? `outload ${m.outloadNo}${ctx.dupOutloads?.has(normaliseOutloadNo(m.outloadNo)) ? ' (used on more than one load)' : ''}` : '', order ? (order.orderNo ? `grain order #${order.orderNo}` : 'against a grain order') : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date, { tight: true }) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
+  const details = [ctx.grouped ? '' : commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', m.manualDocketNo ? `docket ${m.manualDocketNo}` : '', m.outloadNo ? `outload ${m.outloadNo}${ctx.dupOutloads?.has(normaliseOutloadNo(m.outloadNo)) ? ' (used on more than one load)' : ''}` : '', order ? (order.orderNo ? `grain order #${order.orderNo}` : 'against a grain order') : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date, { tight: true }) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
   return `
-    <div class="list-item stack" data-edit-movement="${m.id}">
+    <div class="list-item stack${ctx.bandIndex === undefined ? '' : ` band ${ctx.bandIndex % 2 ? 'alt' : ''}`}" data-edit-movement="${m.id}">
       <div class="li-top">
-        <div class="main">${esc(fromLabel)} &rarr; ${esc(toLabel)}</div>
-        <div class="main">${hasGin(m) ? `${num(stdBales(m.gin.lintKg, m.gin.stdBaleKg), 2)} bales` : hasModules(m) ? `${num(m.modules.count, 0)} module${Number(m.modules.count) === 1 ? '' : 's'}` : tons(m.tons || 0)}</div>
+        <div class="main">${ctx.grouped && commodity ? `<span class="mv-com ${commodityClass(commodity)}">${esc(commodity)}</span>` : ''}${esc(fromLabel)} &rarr; ${esc(toLabel)}</div>
+        <div class="main mv-qty">${hasGin(m) ? `${num(stdBales(m.gin.lintKg, m.gin.stdBaleKg), 2)} bales` : hasModules(m) ? `${num(m.modules.count, 0)} module${Number(m.modules.count) === 1 ? '' : 's'}` : tons(m.tons || 0)}</div>
       </div>
       <div class="li-foot" style="margin-top:2px">
         <span class="meta">${details}</span>

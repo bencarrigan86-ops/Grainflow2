@@ -27,15 +27,16 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=387';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=387';
-import { cleanCottonTerms } from './cottonkinds.js?v=387';
-import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=387';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=387';
-import { cleanPicked } from './modulespicked.js?v=387';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=387';
-import { cleanOffFarm } from './offfarm.js?v=387';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=387';
+import { cleanGradeOptions } from './gradeprice.js?v=388';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=388';
+import { cleanCottonTerms } from './cottonkinds.js?v=388';
+import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=388';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=388';
+import { cleanPicked } from './modulespicked.js?v=388';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=388';
+import { cleanHistory, hasHistory } from './pricehistory.js?v=388';
+import { cleanOffFarm } from './offfarm.js?v=388';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=388';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -344,6 +345,8 @@ export function stateToRows(state, farmId) {
         ...((hasCotton(c.cotton) || c.__hasCotton) ? { cotton: hasCotton(c.cotton) ? cleanCotton(c.cotton) : null } : {}),
         // Hay: the kind of bale and its average weight. Optional in the same way.
         ...((hasHay(c.hay) || c.__hasHay) ? { hay: hasHay(c.hay) ? cleanHay(c.hay) : null } : {}),
+        // The weekly price history. Optional in the same way: left out until there is one.
+        ...((hasHistory(c.priceHistory) || c.__hasPriceHistory) ? { price_history: hasHistory(c.priceHistory) ? cleanHistory(c.priceHistory) : null } : {}),
         gross_margin_cost: n(c.grossMarginCost),
         // Cotton is counted in bales, not tonnes; without unit and the ginning
         // ratio the whole lint/seed flow has nothing to work from.
@@ -781,6 +784,7 @@ export function rowsToState(rows) {
         ...(c.harvest_season ? { harvestSeason: c.harvest_season, __hasHarvestSeason: true } : {}),
         ...(c.cotton && typeof c.cotton === 'object' ? { cotton: cleanCotton(c.cotton), __hasCotton: true } : {}),
         ...(c.hay && typeof c.hay === 'object' ? { hay: cleanHay(c.hay), __hasHay: true } : {}),
+        ...(Array.isArray(c.price_history) ? { priceHistory: cleanHistory(c.price_history), __hasPriceHistory: true } : {}),
         grossMarginCost: n(c.gross_margin_cost),
         unit: c.unit ?? 't',
         balesPerRoundBale: n(c.bales_per_round_bale),

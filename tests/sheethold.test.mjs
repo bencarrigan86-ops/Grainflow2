@@ -110,7 +110,8 @@ await check('the contract hands itself over for its PDF, invoices, vendor declar
   for (const f of ['orders', 'freightorders']) assert.ok(read(`docs/js/views/${f}.js`).includes('openOver(() => openMovementSheet(against.find'), `a load from ${f}`);
   assert.ok(read('docs/js/views/outstanding.js').includes('openOver(() => openInvoiceListSheet('), 'invoices from receivables');
   assert.ok(read('docs/js/views/settings.js').includes('openOver(() => openLoadImportSheet())'), 'the import sheets');
-  assert.ok(read('docs/js/views/production.js').includes('openOver(() => openRotationSheet())'), 'the reports');
+  assert.ok(read('docs/js/views/inputs.js').includes('openOver(() => openSprayJobsSheet())'), 'spray requests from Inputs and spraying');
+  assert.ok(read('docs/js/views/prices.js').includes('openOver(openSetPricesSheet, draw)'), 'setting prices from the Prices screen, which redraws when it comes back');
 });
 
 await check('an invoice can open a load to correct it, and comes back with the loads and totals worked out again', () => {

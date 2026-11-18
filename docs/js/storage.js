@@ -18,32 +18,34 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=387';
-import { setBrandLogo } from './brand.js?v=387';
+import { hydrate } from './hydrate.js?v=388';
+import { setBrandLogo } from './brand.js?v=388';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=387';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=387';
-import { isLegacyDirty } from './dirty.js?v=387';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=387';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=387';
-import { hasDeductions } from './deductions.js?v=387';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=387';
-import { hasHay, hasHayLoad } from './hay.js?v=387';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=387';
-import { settleLegs, dedupeLegs } from './legs.js?v=387';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=387';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=387';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=387';
-import { setCommodityOrder } from './commodityorder.js?v=387';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=387';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=387';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=387';
-import { schedulePush, pushOnReconnect } from './sync.js?v=387';
-import { hasParts as hasAddressParts } from './address.js?v=387';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=387';
-import { linePayableId } from './ginoffset.js?v=387';
+} from './local.js?v=388';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=388';
+import { isLegacyDirty } from './dirty.js?v=388';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=388';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=388';
+import { hasDeductions } from './deductions.js?v=388';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=388';
+import { hasHay, hasHayLoad } from './hay.js?v=388';
+import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=388';
+import { todayLocal } from './fmt.js?v=388';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=388';
+import { settleLegs, dedupeLegs } from './legs.js?v=388';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=388';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=388';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=388';
+import { setCommodityOrder } from './commodityorder.js?v=388';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=388';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=388';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=388';
+import { schedulePush, pushOnReconnect } from './sync.js?v=388';
+import { hasParts as hasAddressParts } from './address.js?v=388';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=388';
+import { linePayableId } from './ginoffset.js?v=388';
 
 /**
  * A gin bill the lint buyer pays is settled once lint invoices have taken all of it off: the farm owes the gin nothing, the buyer settles
@@ -845,7 +847,13 @@ export const db = {
     if (commodity.id) {
       const idx = c.commodities.findIndex((x) => x.id === commodity.id);
       if (idx >= 0) {
-        const merged = { ...c.commodities[idx], ...commodity };
+        const before = c.commodities[idx];
+        const merged = { ...before, ...commodity };
+        // a new MTM price typed on the commodity is this week's price: the history builds itself
+        if (commodity.mtmPrice !== undefined && Number(merged.mtmPrice) > 0 && Number(merged.mtmPrice) !== Number(before.mtmPrice)) {
+          merged.priceHistory = recordPrice(merged.priceHistory, { date: todayLocal(), price: merged.mtmPrice, spreads: latestSpreads(merged.priceHistory) });
+        }
+        if (hasHistory(merged.priceHistory)) merged.__hasPriceHistory = true;
         if (Number(merged.openingValue)) merged.__hasOpeningValue = true;
         if (merged.customGrades?.length) merged.__hasCustomGrades = true;
         if (merged.harvestSeason) merged.__hasHarvestSeason = true;   // so going back to automatic still reaches the server
@@ -861,6 +869,7 @@ export const db = {
       if (made.harvestSeason) made.__hasHarvestSeason = true;
       if (hasCotton(made.cotton)) made.__hasCotton = true;
       if (hasHay(made.hay)) made.__hasHay = true;
+      if (Number(made.mtmPrice) > 0) { made.priceHistory = recordPrice(made.priceHistory, { date: todayLocal(), price: made.mtmPrice }); made.__hasPriceHistory = true; }
       c.commodities.push(made);
       touch('commodity', id);
       persist();
@@ -868,6 +877,30 @@ export const db = {
     }
     persist();
     return commodity.id;
+  },
+  /**
+   * The week's prices, one for each commodity: { date, prices: [{ commodityId, price, spreads }] }. Each goes into that commodity's
+   * history for the week the date is in. The latest week's price is also the one unsold grain is valued at (the MTM price), so
+   * entering an older week for the record leaves the MTM price as it is.
+   */
+  setWeeklyPrices({ date, prices = [] } = {}) {
+    const c = current();
+    const week = weekStart(date);
+    if (!week) return 0;
+    let n = 0;
+    for (const p of prices) {
+      const com = c.commodities.find((x) => x.id === p.commodityId);
+      const price = Number(p.price);
+      if (!com || !Number.isFinite(price) || price <= 0) continue;
+      com.priceHistory = recordPrice(com.priceHistory, { date: week, price, spreads: p.spreads });
+      com.__hasPriceHistory = true;
+      const rows = com.priceHistory;
+      if (rows[rows.length - 1].week === week) com.mtmPrice = price;
+      touch('commodity', com.id);
+      n += 1;
+    }
+    if (n) persist();
+    return n;
   },
   deleteCommodity(id) {
     tombstone('commodities', id);

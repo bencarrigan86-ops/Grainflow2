@@ -204,7 +204,7 @@ check('the database has the table (owner, manager, bookkeeper only) and the dele
   assert.equal(sql, sql.replace(/\r/g, ''), 'no stray carriage returns');
   assert.ok(read('supabase/migrations/20261114260000_input_stock.sql').includes('create table if not exists input_stock'));
 });
-check('Production has the Inputs and stock button for the roles that see money, and the screen records the three kinds of entry', () => {
+check('Production has the Inputs and spraying button for the roles that see money, and the screen records the three kinds of entry', () => {
   const p = read('docs/js/views/production.js');
   for (const t of ['open-inputs', 'openInputsSheet', "['owner', 'manager', 'bookkeeper', 'farm_worker'].includes(db.getRole())"]) assert.ok(p.includes(t), t);
   const v = read('docs/js/views/inputs.js');
