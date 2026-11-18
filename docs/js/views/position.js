@@ -1,16 +1,16 @@
-import { db } from '../storage.js?v=390';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=390';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=390';
-import { payablesCost } from '../payables.js?v=390';
-import { commodityClass } from '../commoditycolor.js?v=390';
-import { startProgress } from '../helpcontent.js?v=390';
-import { attentionItems } from '../attention.js?v=390';
-import { lastBackup } from '../backup.js?v=390';
-import { todayLocal, dmy } from '../fmt.js?v=390';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=390';
-import { openSheet, closeSheet } from '../ui.js?v=390';
-import { positionPdf } from '../positionpdf.js?v=390';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=390';
+import { db } from '../storage.js?v=391';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=391';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=391';
+import { payablesCost } from '../payables.js?v=391';
+import { commodityClass } from '../commoditycolor.js?v=391';
+import { startProgress } from '../helpcontent.js?v=391';
+import { attentionItems } from '../attention.js?v=391';
+import { lastBackup } from '../backup.js?v=391';
+import { todayLocal, dmy } from '../fmt.js?v=391';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=391';
+import { openSheet, closeSheet } from '../ui.js?v=391';
+import { positionPdf } from '../positionpdf.js?v=391';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=391';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -154,8 +154,10 @@ function dashTop(totals) {
   const soldShare = total > 0 ? totals.soldValue / total : 0;
   const opening = totals.openingValue || 0;
   return `<div class="pos-dash">
-      <div class="card dash-tile"><div class="l">${opening ? 'Current crop value' : 'Total position value'}</div><div class="n">${money(totals.totalValue, 0)}</div>
-        ${opening ? `<div class="s">Total value ${money(totals.totalValue + opening, 0)}</div><div class="s">Opening stock (${money(opening, 0)})</div>` : `<div class="s">sold plus unsold at MTM</div>`}</div>
+      ${opening ? `<div class="card dash-tile dash-sum">
+        <div class="r"><span>Total value</span><span>${money(totals.totalValue + opening, 0)}</span></div>
+        <div class="r"><span>Open stock</span><span>(${money(opening, 0)})</span></div>
+        <div class="r end"><span>Current crop value</span><span class="n">${money(totals.totalValue, 0)}</span></div></div>` : `<div class="card dash-tile"><div class="l">Total position value</div><div class="n">${money(totals.totalValue, 0)}</div><div class="s">sold plus unsold at MTM</div></div>`}
       <div class="card dash-tile"><div class="l">Produced</div><div class="n">${tons(totals.productionTons, 0)}</div>
         ${totals.area > 0 ? `<div class="s">Income ${money(totals.totalValue / totals.area, 0)}/ha</div>` : ''}</div>
       <div class="card dash-tile dash-ringtile com-green">${ring(soldShare, 52, 8)}<div class="dash-ringtext"><div class="n">${pct(soldShare)} <span class="s">sold</span></div><div class="s">Sold ${money(totals.soldValue, 0)}</div><div class="s">Unsold ${money(totals.unsoldValue, 0)}</div></div></div>
@@ -180,10 +182,10 @@ function cropTile(r) {
   const { bales, qty, per } = cropBits(r);
   const sold = r.pctSold >= 1 ? 'Sold out' : `${pct(r.pctSold)} sold`;
   return `<button type="button" class="card dash-crop ${commodityClass(r.commodity.name)}" data-crop="${esc(r.commodity.id)}">
-      <div class="dc-top"><span class="dc-name">${esc(r.commodity.name)}${bales ? ' <small>in bales</small>' : ''}</span><span class="dc-val">${money(r.totalValue, 0)}</span></div>
-      <div class="dc-gm">Margin ${money(r.grossMargin, 0)} &middot; ${pct(r.grossMarginPct)}</div>
+      <div class="dc-top"><div><div class="dc-name">${esc(r.commodity.name)}${bales ? ' <small>in bales</small>' : ''}</div><div class="dc-pct">${sold}</div></div>
+        <div class="dc-right"><div class="dc-val">${money(r.totalValue, 0)}</div><div class="dc-gm">Margin ${money(r.grossMargin, 0)} &middot; ${pct(r.grossMarginPct)}</div></div></div>
       <div class="dc-body">${ring(r.pctSold, 44, 7)}
-        <div class="dc-main"><div class="dc-pct">${sold}</div>
+        <div class="dc-main">
           <div class="dc-stats">
             <div><small>Produced</small><b>${bales ? num(r.productionTons, 0) : qty(r.productionTons)}</b></div>
             <div><small>Sold</small><b>${bales ? num(r.soldTons, 0) : qty(r.soldTons)}</b></div>
