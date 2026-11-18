@@ -4,11 +4,11 @@
 // season does not have yet), then import. A season that is not in the app yet, or that already has contracts, is left
 // alone. With the paddocks imported first, the position for those seasons then reads: grown, sold, still unsold.
 
-import { db, uid } from '../storage.js?v=399';
-import { openSheet, closeSheet, toast } from '../ui.js?v=399';
-import { esc, num, money } from '../fmt.js?v=399';
-import { parsePastSales, planPastSales, salesRecords } from '../pastsales.js?v=399';
-import { commodityProps } from '../pastseasons.js?v=399';
+import { db, uid } from '../storage.js?v=400';
+import { openSheet, closeSheet, toast } from '../ui.js?v=400';
+import { esc, num, money } from '../fmt.js?v=400';
+import { parsePastSales, planPastSales, salesRecords } from '../pastsales.js?v=400';
+import { commodityProps } from '../pastseasons.js?v=400';
 
 export function openPastSalesSheet() {
   openSheet('Import past sales', (root) => {

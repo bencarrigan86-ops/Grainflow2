@@ -51,11 +51,21 @@ check('the form fills only empty boxes, on a new contract, when the name is pick
   assert.ok(s.includes("buyerBox.addEventListener('change'") && s.includes('buyerList.some('));
 });
 
-check('the tolerance is 5% or 20 t side by side, a transfer tickbox sets both to nothing, and the terms fold starts closed', () => {
+check('the tolerance is 5% or 20 t side by side, a transfer tickbox sets both to nothing, and the buyer fold starts closed', () => {
   const s = read('docs/js/views/sales.js');
   assert.ok(s.includes("id: 'tolCap'") && s.includes('id="tol-transfer"') && s.includes('DEFAULT_TOLERANCE_CAP_TONS'));
-  assert.ok(s.includes('<details class="fold" id="terms-fold">') && s.includes('id="buyer-fold"') && !/id="buyer-fold"[^>]*open/.test(s), 'a fold starts open');
-  assert.ok(s.indexOf("id: 'carryRate'") > s.indexOf('Payment &amp; broker') && s.indexOf("id: 'carryRate'") < s.indexOf("id: 'notes'"), 'carry is not in the payment panel');
+  assert.ok(s.includes('id="buyer-fold"') && !/id="buyer-fold"[^>]*open/.test(s), 'a fold starts open');
+  assert.ok(s.includes('id="pay-fold" ${openPay ?') &&s.includes('<h2>Payment terms and brokerage</h2>'), 'payment and brokerage are a fold, open only when filled in');
+  assert.ok(s.indexOf("id: 'carryRate'") > s.indexOf('id="pay-fold"') && s.indexOf("id: 'carryRate'") < s.indexOf("id: 'notes'"), 'carry is not in the payment panel');
+});
+
+check('the contract form has no Contract terms section: only Trade rules is kept, above the comments, and the others are left as saved', () => {
+  const s = read('docs/js/views/sales.js');
+  assert.ok(!s.includes('id="terms-fold"') && !s.includes('<h2>Contract terms</h2>'), 'the section is gone');
+  for (const id of ['cropYear', 'contractType', 'pricingPoint', 'deliveryTerms']) {
+    assert.ok(!s.includes("id: '" + id + "'") && !s.includes("getVal(root, '" + id + "')"), id + ' is not on the form or saved from it, so a saved value is kept');
+  }
+  assert.ok(s.includes("id: 'tradeRules'") && s.indexOf("id: 'tradeRules'") < s.indexOf("id: 'notes'"), 'trade rules sits above the comments');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
