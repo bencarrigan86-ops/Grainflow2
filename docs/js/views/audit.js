@@ -3,11 +3,11 @@
 // The log is written by the database (see audit.js and supabase/migrations/20261207000000_audit_log.sql); this reads it. It needs
 // signal, as the log lives on the server. Owners, managers and bookkeepers can open it.
 
-import { db } from '../storage.js?v=413';
-import { supabase } from '../supabase.js?v=413';
-import { openSheet, openOver } from '../ui.js?v=413';
-import { esc } from '../fmt.js?v=413';
-import { AUDIT_KINDS, auditTitle, changeLines, changeSummary, whoText, timeText, filterAudit, groupByDay, whenFull } from '../audit.js?v=413';
+import { db } from '../storage.js?v=414';
+import { supabase } from '../supabase.js?v=414';
+import { openSheet, openOver } from '../ui.js?v=414';
+import { esc } from '../fmt.js?v=414';
+import { AUDIT_KINDS, auditTitle, changeLines, changeSummary, whoText, timeText, filterAudit, groupByDay, whenFull } from '../audit.js?v=414';
 
 const PAGE = 50;
 let filterKind = '';   // kept while the app is open

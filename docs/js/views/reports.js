@@ -1,34 +1,35 @@
-import { db } from '../storage.js?v=413';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=413';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT, areaShare, productionSummary } from '../derived.js?v=413';
-import { fertPdf } from '../fertpdf.js?v=413';
-import { seedPdf } from '../seedpdf.js?v=413';
-import { yieldPdf } from '../yieldpdf.js?v=413';
-import { harvestPdf } from '../harvestpdf.js?v=413';
-import { modulesPdf } from '../modulespdf.js?v=413';
-import { modulesReport } from '../modulesreport.js?v=413';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=413';
-import { num, tons, esc, money, todayLocal, dmy } from '../fmt.js?v=413';
-import { field, getVal, getNum } from '../ui.js?v=413';
-import { canSeeYield, canOpen, canSeePrices } from '../nav.js?v=413';
-import { gmReport } from '../grossmargin.js?v=413';
-import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=413';
-import { openMoneySheet, openMtmSheet, openDeliveriesSheet } from './outstanding.js?v=413';
-import { openOptimiserSheet } from './optimiser.js?v=413';
-import { openCalculatorSheet } from './calculator.js?v=413';
-import { openEofySheet } from './eofy.js?v=413';
-import { openPricesSheet } from './prices.js?v=413';
-import { openRotationSheet } from './rotation.js?v=413';
-import { openAveragesSheet } from './averages.js?v=413';
-import { openLoadReportSheet } from './loadreport.js?v=413';
-import { openTraceSheet } from './tracereport.js?v=413';
-import { openXeroSheet } from './xero.js?v=413';
-import { openMapSheet } from './farmmap.js?v=413';
-import { openExportCsvSheet } from './settingsexport.js?v=413';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=413';
-import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=413';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=413';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=413';
+import { db } from '../storage.js?v=414';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=414';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT, areaShare, productionSummary } from '../derived.js?v=414';
+import { fertPdf } from '../fertpdf.js?v=414';
+import { seedPdf } from '../seedpdf.js?v=414';
+import { yieldPdf } from '../yieldpdf.js?v=414';
+import { harvestPdf } from '../harvestpdf.js?v=414';
+import { modulesPdf } from '../modulespdf.js?v=414';
+import { modulesReport } from '../modulesreport.js?v=414';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=414';
+import { num, tons, esc, money, todayLocal, dmy } from '../fmt.js?v=414';
+import { field, getVal, getNum } from '../ui.js?v=414';
+import { canSeeYield, canOpen, canSeePrices } from '../nav.js?v=414';
+import { gmReport } from '../grossmargin.js?v=414';
+import { gmPdf } from '../gmpdf.js?v=414';
+import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=414';
+import { openMoneySheet, openMtmSheet, openDeliveriesSheet } from './outstanding.js?v=414';
+import { openOptimiserSheet } from './optimiser.js?v=414';
+import { openCalculatorSheet } from './calculator.js?v=414';
+import { openEofySheet } from './eofy.js?v=414';
+import { openPricesSheet } from './prices.js?v=414';
+import { openRotationSheet } from './rotation.js?v=414';
+import { openAveragesSheet } from './averages.js?v=414';
+import { openLoadReportSheet } from './loadreport.js?v=414';
+import { openTraceSheet } from './tracereport.js?v=414';
+import { openXeroSheet } from './xero.js?v=414';
+import { openMapSheet } from './farmmap.js?v=414';
+import { openExportCsvSheet } from './settingsexport.js?v=414';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=414';
+import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=414';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=414';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=414';
 
 let unsub = null;
 let view = null;   // null is the screen of tiles; otherwise the report that is open
@@ -990,6 +991,7 @@ function paintGm(root) {
     ? `<input type="number" inputmode="decimal" min="0" step="1" class="gm-cost${r.costIsOverride ? ' set' : ''}" data-field="${esc(r.id)}" value="${r.costIsOverride ? r.costHa : ''}" placeholder="${d0(r.defaultCostHa)}" aria-label="Cost per hectare for ${esc(r.name)}" />`
     : d0(r.costHa);
   body.innerHTML = groups.length === 0 ? '<div class="card report"><div class="empty">Add fields in the Production tab.</div></div>' : `
+    <button type="button" class="btn secondary" id="gm-pdf" style="margin-bottom:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>
     <div class="hint" style="margin-bottom:8px">Price is the crop's blended price (sold and unsold). Cost is the crop's gross margin cost over its area${canEditCost ? '; type a figure in a paddock to use your own, clear it to go back' : ''}.</div>
     ${groups.map((g) => `<div class="card report">
       <h2><span class="dot report"></span>${esc(g.name)}</h2>
@@ -1007,11 +1009,19 @@ function paintGm(root) {
       <div class="row"><span class="label">Cost</span><span class="value">${d0(total.costHa)} /ha &middot; ${money(total.cost, 0)}</span></div>
       <div class="row"><span class="label"><strong>Gross margin</strong></span><span class="value"><strong>${gm(total.gmHa)} /ha &middot; ${money(total.gm, 0)}</strong></span></div>
     </div>`;
+  body.querySelector('#gm-pdf')?.addEventListener('click', async () => {
+    const season = db.getCurrentYear();
+    const bytes = gmPdf({ groups, total }, { business: db.getBusinessDetails().entityName || '', season, today: dmy(todayLocal()) });
+    const fileName = safeFileName(`Gross margin ${season} ${dmy(todayLocal())}`);
+    if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
+    await sharePdf(bytes, fileName, { title: `Gross margin ${season}` });
+  });
   body.querySelectorAll('.gm-cost').forEach((el) => el.addEventListener('change', () => {
     const v = el.value.trim();
     const at = window.scrollY;
     db.upsertField({ id: el.dataset.field, gmCostHa: v === '' || !Number.isFinite(Number(v)) || Number(v) < 0 ? null : Number(v) });
     paintGm(root);
+    dockPdf(root);   // the button is redrawn with the report, and its figures have changed
     window.scrollTo(0, at);
   }));
 }
