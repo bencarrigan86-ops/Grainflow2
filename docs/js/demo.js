@@ -11,8 +11,8 @@
 // remapIds() reissues every one on import and two trial accounts never collide
 // on a primary key.
 
-import { DEFAULT_BUSINESS_DETAILS, prepareImport, newId } from './import.js?v=371';
-import { APP_VERSION } from './version.js?v=371';
+import { DEFAULT_BUSINESS_DETAILS, prepareImport, newId } from './import.js?v=372';
+import { APP_VERSION } from './version.js?v=372';
 
 const WANTED_KEY = 'grainflow.seedSample';
 
@@ -151,10 +151,17 @@ export async function fetchSampleFarm(farmName) {
 const COTTON_HAY_NAMES = ['Cotton', 'Lucerne hay', 'Wheat straw'];
 const COTTON_HAY_IDS = ['cotton', 'lucerne', 'wheatstraw'];
 
-/** Is this the sample farm, with no cotton or hay in it yet? Offered to the owner and manager only. */
-export function sampleCottonHayOffered(commodities = [], currentYear = '', role = 'owner') {
+/** The contract and paddock the sample's cotton is made of: a farm that has them already has had it added. */
+export const SAMPLE_COTTON_CONTRACT = 'WCM-2610';
+export const SAMPLE_COTTON_PADDOCK = 'Cotton North';
+
+/**
+ * Is this the sample farm, without the sample's cotton and hay yet? Offered to the owner and manager only. A farm that has its
+ * own Cotton or hay commodity is still offered it: those are used, not doubled.
+ */
+export function sampleCottonHayOffered(sales = [], fields = [], currentYear = '', role = 'owner') {
   return /^sample/i.test(currentYear || '') && ['owner', 'manager'].includes(role)
-    && !commodities.some((c) => COTTON_HAY_NAMES.includes(c.name));
+    && !sales.some((s) => s.contractNo === SAMPLE_COTTON_CONTRACT) && !fields.some((f) => f.name === SAMPLE_COTTON_PADDOCK);
 }
 
 /**
@@ -164,7 +171,7 @@ export function sampleCottonHayOffered(commodities = [], currentYear = '', role 
  * sample. Every id is reissued, as for a new trial. The straw baled off wheat paddocks goes onto the farm's own paddocks of
  * the same name, and a load from a paddock the farm does not have is left out.
  * @param {object} seed the parsed seed file
- * @param {{fields?: object[], payables?: object[], inputStock?: object[], sprayJobs?: object[]}} farm what the farm has now
+ * @param {{commodities?: object[], fields?: object[], payables?: object[], inputStock?: object[], sprayJobs?: object[]}} farm what the farm has now. A commodity it has by the same name is used, not added again.
  * @returns {object|null} null when the seed carries no cotton or hay
  */
 export function sampleCottonHayFrom(seed, farm = {}) {
@@ -179,7 +186,13 @@ export function sampleCottonHayFrom(seed, farm = {}) {
     movements: y.movements.filter((m) => isOurs(m.commodityId)).sort((a, b) => a.ticketNo - b.ticketNo),
   };
   const ids = new Map();
-  for (const list of Object.values(own)) for (const r of list) ids.set(r.id, newId());
+  const haveByName = new Map((farm.commodities || []).map((c) => [String(c.name).toLowerCase(), c.id]));
+  const added = [];
+  for (const c of own.commodities) {
+    const mine = haveByName.get(String(c.name).toLowerCase());
+    if (mine) ids.set(c.id, mine); else { ids.set(c.id, newId()); added.push(c); }
+  }
+  for (const k of ['fields', 'storages', 'sales', 'movements']) for (const r of own[k]) ids.set(r.id, newId());
   // the seed's wheat paddocks, matched to the farm's by name
   const farmFieldByName = new Map((farm.fields || []).map((f) => [String(f.name).toLowerCase(), f.id]));
   const seedFieldName = new Map(y.fields.map((f) => [f.id, String(f.name).toLowerCase()]));
@@ -192,7 +205,7 @@ export function sampleCottonHayFrom(seed, farm = {}) {
     return r ? `${v.slice(0, i)}:${r}` : '';
   };
 
-  const commodities = own.commodities.map((c) => ({ ...c, id: ids.get(c.id) }));
+  const commodities = added.map((c) => ({ ...c, id: ids.get(c.id) }));
   const fields = own.fields.map((f) => ({
     ...f, id: ids.get(f.id), commodityId: ref(f.commodityId),
     ...(f.boundary ? { __hasBoundary: true } : {}), ...(f.property ? { __hasProperty: true } : {}),

@@ -18,31 +18,31 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=371';
-import { setBrandLogo } from './brand.js?v=371';
+import { hydrate } from './hydrate.js?v=372';
+import { setBrandLogo } from './brand.js?v=372';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=371';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=371';
-import { isLegacyDirty } from './dirty.js?v=371';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=371';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=371';
-import { hasDeductions } from './deductions.js?v=371';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=371';
-import { hasHay, hasHayLoad } from './hay.js?v=371';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=371';
-import { settleLegs, dedupeLegs } from './legs.js?v=371';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=371';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=371';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=371';
-import { setCommodityOrder } from './commodityorder.js?v=371';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=371';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=371';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=371';
-import { schedulePush, pushOnReconnect } from './sync.js?v=371';
-import { hasParts as hasAddressParts } from './address.js?v=371';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=371';
+} from './local.js?v=372';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=372';
+import { isLegacyDirty } from './dirty.js?v=372';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=372';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=372';
+import { hasDeductions } from './deductions.js?v=372';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=372';
+import { hasHay, hasHayLoad } from './hay.js?v=372';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=372';
+import { settleLegs, dedupeLegs } from './legs.js?v=372';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=372';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=372';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=372';
+import { setCommodityOrder } from './commodityorder.js?v=372';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=372';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=372';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=372';
+import { schedulePush, pushOnReconnect } from './sync.js?v=372';
+import { hasParts as hasAddressParts } from './address.js?v=372';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=372';
 
 // Primary keys are UUIDs now, not the old short ids — a phone with no signal
 // has to mint an id no server has ever seen, without risk of collision.
@@ -644,7 +644,7 @@ export const db = {
    */
   addSampleCottonHay(pack) {
     const c = current();
-    if (!pack || (c.commodities || []).some((x) => pack.commodities.some((p) => p.name === x.name))) return null;
+    if (!pack || c.sales.some((s) => pack.sales.some((p) => p.contractNo === s.contractNo))) return null;
     for (const x of pack.commodities) {
       c.commodities.push({ ...x, ...(hasCotton(x.cotton) ? { __hasCotton: true } : {}), ...(hasHay(x.hay) ? { __hasHay: true } : {}) });
       touch('commodity', x.id);

@@ -413,11 +413,18 @@ const oldFarm = {
 const pack = sampleCottonHayFrom(seed, { fields: oldFarm.fields });
 
 check('it is offered to the owner of a sample farm with no cotton or hay, and then not again', () => {
-  assert.equal(sampleCottonHayOffered(oldFarm.commodities, 'Sample 2026', 'owner'), true);
-  assert.equal(sampleCottonHayOffered(oldFarm.commodities, 'Sample 2026', 'manager'), true);
-  assert.equal(sampleCottonHayOffered(oldFarm.commodities, 'Sample 2026', 'viewer'), false);
-  assert.equal(sampleCottonHayOffered(oldFarm.commodities, '2026 Season', 'owner'), false);
-  assert.equal(sampleCottonHayOffered([...oldFarm.commodities, ...pack.commodities], 'Sample 2026', 'owner'), false);
+  assert.equal(sampleCottonHayOffered([], oldFarm.fields, 'Sample 2026', 'owner'), true);
+  assert.equal(sampleCottonHayOffered([], oldFarm.fields, 'Sample 2026', 'manager'), true);
+  assert.equal(sampleCottonHayOffered([], oldFarm.fields, 'Sample 2026', 'viewer'), false);
+  assert.equal(sampleCottonHayOffered([], oldFarm.fields, '2026 Season', 'owner'), false);
+  assert.equal(sampleCottonHayOffered(pack.sales, [...oldFarm.fields, ...pack.fields], 'Sample 2026', 'owner'), false);
+  // a farm that made its own Cotton commodity is still offered it, and it is used rather than doubled
+  const own = { id: 'my-cotton', name: 'Cotton' };
+  assert.equal(sampleCottonHayOffered([], oldFarm.fields, 'Sample 2026', 'owner'), true);
+  const merged = sampleCottonHayFrom(seed, { fields: oldFarm.fields, commodities: [own] });
+  assert.equal(merged.commodities.length, 2);
+  assert.ok(!merged.commodities.some((c) => c.name === 'Cotton'));
+  assert.ok(merged.fields.filter((f) => f.name.startsWith('Cotton')).every((f) => f.commodityId === 'my-cotton'));
 });
 check('it brings the cotton and hay paddocks, stores, contracts, loads and the two invoices', () => {
   assert.equal(pack.commodities.length, 3);
