@@ -1,26 +1,27 @@
-import { db } from '../storage.js?v=369';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=369';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=369';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=369';
-import { withholdingClash } from '../fumigation.js?v=369';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=369';
-import { compressAndStampImage } from '../img.js?v=369';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=369';
-import { specText, extraSpecKey } from '../outload.js?v=369';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=369';
-import { pickableSilos } from '../silopick.js?v=369';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=369';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=369';
-import { activeSales } from '../paidsales.js?v=369';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=369';
-import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=369';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=369';
-import { nowTime } from '../loadreport.js?v=369';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=369';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=369';
-import { openGinRunSheet } from './ginrun.js?v=369';
-import { openModuleMoveSheet } from './modulemove.js?v=369';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=369';
+import { db } from '../storage.js?v=370';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=370';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=370';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=370';
+import { withholdingClash } from '../fumigation.js?v=370';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=370';
+import { compressAndStampImage } from '../img.js?v=370';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=370';
+import { specText, extraSpecKey } from '../outload.js?v=370';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=370';
+import { pickableSilos } from '../silopick.js?v=370';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=370';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=370';
+import { activeSales } from '../paidsales.js?v=370';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=370';
+import { freightOrdersForLoad, freightState, freightTitle } from '../freight.js?v=370';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=370';
+import { nowTime } from '../loadreport.js?v=370';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=370';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=370';
+import { openGinRunSheet } from './ginrun.js?v=370';
+import { openModuleMoveSheet } from './modulemove.js?v=370';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=370';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=370';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -193,7 +194,8 @@ function matchesCommodity(entity, commodityId) {
 }
 
 function fieldOptions(fields, commodityId) {
-  const list = fields.filter((f) => matchesCommodity(f, commodityId));
+  // a paddock that has had this straw baled off it is offered for it too, although its crop is something else
+  const list = fields.filter((f) => matchesCommodity(f, commodityId) || secondaryTypes(f).includes(commodityId));
   return [{ value: '', label: 'Select…' }, ...list.map((f) => ({ value: `field:${f.id}`, label: f.name }))];
 }
 
@@ -281,7 +283,7 @@ export function movementRow(m, ctx) {
   const froms = m.froms || [];
   const tos = m.tos || [];
   const fromLabel = froms.map((f) => endLabel(f.type, f.id, ctx)).join(' + ') || 'Unknown';
-  const toLabel = tos.map((t) => endLabel(t.type, t.id, ctx)).join(' + ') || 'Unknown';
+  const toLabel = tos.map((t) => endLabel(t.type, t.id, ctx)).join(' + ') || (isUsedOnFarm(m) ? 'Used on farm' : 'Unknown');
   const stage = stageOf(m, ctx.storages);
   const commodity = ctx.commodities.find((c) => c.id === m.commodityId)?.name;
   const fromBreakdown = froms.length > 1
@@ -306,6 +308,7 @@ export function movementRow(m, ctx) {
       ${specText(m) ? `<div class="meta">${esc(specText(m))}</div>` : ''}
       ${hasGin(m) ? `<div class="meta">Ginning${m.gin.ginName ? `, ${esc(m.gin.ginName)}` : ''}: ${esc(describeGin(m.gin))}</div>${ginPadLine(m)}` : ''}
       ${hasModules(m) ? `<div class="meta">Modules: ${esc(describeModules(m.modules))}${m.weightStatus === 'final' ? '' : ' (weight estimated)'}</div>` : ''}
+      ${hasHayLoad(m) ? `<div class="meta">${isUsedOnFarm(m) ? `Used on farm: ${esc(m.hayLoad.use)}${m.hayLoad.bales > 0 ? ' · ' : ''}` : ''}${esc(describeBales(m.hayLoad.bales, m.hayLoad.kg))}${m.weightStatus === 'final' ? '' : ' (weight estimated)'}</div>` : ''}
       ${!hasGin(m) && !hasModules(m) && fromBreakdown ? `<div class="meta">${esc(fromBreakdown)}</div>` : ''}
       ${!hasGin(m) && !hasModules(m) && toBreakdown ? `<div class="meta">${esc(toBreakdown)}</div>` : ''}
     </div>
@@ -471,6 +474,7 @@ export function openMovementSheet(existing, template) {
   const existingFroms = src?.froms?.length ? src.froms : [{ type: '', id: '', tons: '' }];
   const existingSiloTos = (src?.tos || []).filter((t) => t.type === 'silo');
   const existingSaleTo = (src?.tos || []).find((t) => t.type === 'sale');
+  const existingUse = isUsedOnFarm(src);
 
   // Opening an existing ticket should show it already narrowed, so work the
   // commodity back out of whatever the load was against — the contract first,
@@ -557,8 +561,9 @@ export function openMovementSheet(existing, template) {
         <div class="field">
           <label>To</label>
           <div class="segmented" id="to-kind">
-            <button type="button" data-kind="silo" class="${!existingSaleTo ? 'active' : ''}">Silo</button>
+            <button type="button" data-kind="silo" class="${!existingSaleTo && !existingUse ? 'active' : ''}">Silo</button>
             <button type="button" data-kind="sale" class="${existingSaleTo ? 'active' : ''}">Contract</button>
+            <button type="button" data-tokind="use" id="to-use-btn" class="${existingUse ? 'active' : ''}" ${isHay(commodities.find((c) => c.id === ctx.commodityId)) || existingUse ? '' : 'hidden'}>Used on farm</button>
           </div>
         </div>
         <div id="to-body" style="margin-top:8px"></div>
@@ -593,6 +598,10 @@ export function openMovementSheet(existing, template) {
           ${field({ label: 'Tare (t, optional)', id: 'tare', type: 'number', step: '0.01', value: src?.tareWeight })}
         </div>
         ${field({ label: 'Net weight (t)', id: 'tons', type: 'number', step: '0.01', value: src?.tons, hint: 'Fills from gross minus tare, or enter it directly.' })}
+        <div id="hay-wrap" ${isHay(commodities.find((c) => c.id === ctx.commodityId)) || hasHayLoad(src) ? '' : 'hidden'}>
+          ${field({ label: 'Bales', id: 'm-bales', type: 'number', step: '1', value: src?.hayLoad?.bales || '' })}
+          <div class="field" style="margin-top:-6px"><div class="hint" id="m-bales-note"></div></div>
+        </div>
         <div class="field">
           <label>Weight status</label>
           <div class="segmented" id="m-status">
@@ -738,6 +747,7 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
     root.querySelector('#m-commodity').addEventListener('change', (e) => {
       ctx.commodityId = e.target.value;
       syncExtra();
+      syncHay();
       ctx.refreshAll();
       recomputeSourcesTotal();
       gradeCtl.refresh();
@@ -749,7 +759,7 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
     // the freight order this load is carted on (see freight.js); `freightTouched` once the person has chosen
     let freightChoice = existing?.freightOrderId ?? null;
     let freightTouched = false;
-    let toKind = existingSaleTo ? 'sale' : 'silo';
+    let toKind = existingUse ? 'use' : existingSaleTo ? 'sale' : 'silo';
 
     // What the chosen order says, under the box at the top: who is carting it, where it goes, by when.
     function showOrderNote() {
@@ -872,6 +882,9 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
         refreshSale.ownedByToBody = true;
         ctx.refreshers.push(refreshSale);
         drawOrders();
+      } else if (toKind === 'use') {
+        toBody.innerHTML = `
+          ${field({ label: 'Used for', id: 'm-use', value: src?.hayLoad?.use || '', placeholder: 'e.g. Fed to cattle', hint: 'Takes it out of the stock. It is not sold, and goes on no contract.' })}`;
       } else {
         toBody.innerHTML = `
           <div id="to-rows"></div>
@@ -892,9 +905,10 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
     }
     renderToBody();
     root.querySelector('#to-kind').addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-kind]');
-      if (!btn || btn.dataset.kind === toKind) return;
-      toKind = btn.dataset.kind;
+      const btn = e.target.closest('button[data-kind], button[data-tokind]');
+      const kind = btn?.dataset.kind || btn?.dataset.tokind;   // 'use' (hay used on the farm) is not a place a load goes, so it is not a leg type
+      if (!btn || kind === toKind) return;
+      toKind = kind;
       root.querySelectorAll('#to-kind button').forEach((b) => b.classList.toggle('active', b === btn));
       renderToBody();
     });
@@ -934,6 +948,41 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
     tareEl.addEventListener('input', recomputeNet);
     tonsEl.addEventListener('input', () => { showLoad(); syncSingleLegs(); });
     showLoad();
+
+    // Hay: a load is counted in bales as well as tonnes. Until the net weight is typed in (or the weighbridge gives it), the
+    // weight is the bales times the bale weight, and the load stays an estimate.
+    let netTouched = !!existing?.tons;
+    let settingNet = false;
+    const commodityNow = () => commodities.find((c) => c.id === ctx.commodityId);
+    const baleKgNow = () => {
+      const from = readFromRows(fromRowsEl).find((f) => f.type === 'field' && f.id);
+      const fld = from ? fields.find((x) => x.id === from.id) : null;
+      return fld ? avgBaleKg(fld, commodityNow()) : Number(commodityNow()?.hay?.baleKg) || 0;
+    };
+    function syncHay(fromBales = false) {
+      const hay = isHay(commodityNow());
+      root.querySelector('#hay-wrap').hidden = !hay && !hasHayLoad(src);
+      root.querySelector('#to-use-btn').hidden = !hay && !existingUse;
+      if (!hay && toKind === 'use') root.querySelector('#to-kind [data-kind="silo"]').click();
+      const bales = getNum(root, 'm-bales');
+      const kg = baleKgNow();
+      if (fromBales && bales > 0 && kg > 0 && !netTouched) {
+        settingNet = true;
+        tonsEl.value = ((bales * kg) / 1000).toFixed(2);
+        tonsEl.dispatchEvent(new Event('input', { bubbles: true }));
+        settingNet = false;
+        const est = root.querySelector('#m-status [data-status="estimate"]');
+        if (!existing && !est.classList.contains('active')) est.click();
+      }
+      root.querySelector('#m-bales-note').textContent = bales > 0
+        ? `${num(bales, 0)} bales${kg > 0 ? ` at about ${num(kg, 0)} kg = ${num((bales * kg) / 1000, 2)} t` : ''}${netTouched ? '' : '. An estimate until the weighbridge weight is typed in.'}`
+        : (kg > 0 ? `About ${num(kg, 0)} kg a bale. Type the bales and the weight fills in.` : '');
+    }
+    root.querySelector('#m-bales').addEventListener('input', () => syncHay(true));
+    tonsEl.addEventListener('input', () => { if (!settingNet) { netTouched = tonsEl.value !== ''; syncHay(); } });
+    root.addEventListener('click', (e) => { if (e.target.closest('#from-rows')) setTimeout(() => syncHay(), 0); });
+    root.addEventListener('change', (e) => { if (e.target.closest?.('#from-rows')) syncHay(); });
+    syncHay();
 
     let weightStatus = src?.weightStatus || 'estimate';
     root.querySelector('#m-status').addEventListener('click', (e) => {
@@ -1015,11 +1064,13 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
         }
         const [type, ...rest] = saleVal.split(':');
         tos = [{ type, id: rest.join(':'), tons: getNum(root, 'tons') }];
+      } else if (toKind === 'use') {
+        tos = [];   // used on the farm: out of the stock, to no contract and no other store
       } else {
         tos = readToRows(toBody.querySelector('#to-rows')).filter((t) => t.type && t.id);
       }
       tos = tos.map((t) => (t.type === 'silo' && t.id === '__transit__' ? { ...t, id: db.ensureTransit(ctx.commodityId || null) } : t));
-      if (froms.length === 0 || tos.length === 0) {
+      if (froms.length === 0 || (tos.length === 0 && toKind !== 'use')) {
         if (froms.length === 0) fromRowsEl.querySelector('.from-select')?.focus();
         else toBody.querySelector('.to-select')?.focus();
         return;
@@ -1057,6 +1108,13 @@ ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">
         tareWeight: getVal(root, 'tare') ? getNum(root, 'tare') : null,
         tons: getNum(root, 'tons'),
         weightStatus,
+        // the bales on a load of hay, and what it was used for when it was used on the farm
+        ...(() => {
+          const bales = getNum(root, 'm-bales');
+          const hay = isHay(commodities.find((c) => c.id === ctx.commodityId)) && (bales > 0 || toKind === 'use');
+          if (!hay) return existing?.hayLoad ? { hayLoad: null } : {};
+          return { hayLoad: cleanHayLoad({ bales, kg: Math.round(getNum(root, 'tons') * 1000), use: toKind === 'use' ? (getVal(root, 'm-use')?.trim() || 'Used on farm') : '' }) };
+        })(),
         notes: getVal(root, 'notes')?.trim(),
         ...(() => {
           const n = (id) => (getVal(root, id) === '' || getVal(root, id) == null ? null : getNum(root, id));

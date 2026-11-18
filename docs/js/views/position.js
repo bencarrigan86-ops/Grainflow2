@@ -1,16 +1,16 @@
-import { db } from '../storage.js?v=369';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=369';
-import { num, tons, money, pct, esc } from '../fmt.js?v=369';
-import { payablesCost } from '../payables.js?v=369';
-import { openEofySheet } from './eofy.js?v=369';
-import { startProgress } from '../helpcontent.js?v=369';
-import { attentionItems } from '../attention.js?v=369';
-import { lastBackup } from '../backup.js?v=369';
-import { todayLocal, dmy } from '../fmt.js?v=369';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=369';
-import { openSheet, closeSheet } from '../ui.js?v=369';
-import { positionPdf } from '../positionpdf.js?v=369';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=369';
+import { db } from '../storage.js?v=370';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=370';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=370';
+import { payablesCost } from '../payables.js?v=370';
+import { openEofySheet } from './eofy.js?v=370';
+import { startProgress } from '../helpcontent.js?v=370';
+import { attentionItems } from '../attention.js?v=370';
+import { lastBackup } from '../backup.js?v=370';
+import { todayLocal, dmy } from '../fmt.js?v=370';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=370';
+import { openSheet, closeSheet } from '../ui.js?v=370';
+import { positionPdf } from '../positionpdf.js?v=370';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=370';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -250,6 +250,8 @@ function commodityCard(r) {
       <div class="row"><span class="label">Gross margin per ha</span><span class="value">${money(r.grossMargin / r.area, 0)}/ha</span></div>` : ''}
       <details class="fold">
         <summary><div><h2>Full breakdown</h2><div class="sub">Values, stock and costs</div></div></summary>
+        ${r.usedTons > 0 ? `<div class="row"><span class="label">Used on the farm<span class="sub">Out of the stock, not sold</span></span><span class="value">${qty(r.usedTons)}</span></div>` : ''}
+        ${r.strawTons > 0 ? `<div class="row"><span class="label">Baled off crop paddocks<span class="sub">On ${ha(r.strawArea, 0)} ha, already counted in the crop's area</span></span><span class="value">${qty(r.strawTons)}</span></div>` : ''}
         <div class="row"><span class="label">Avg sold price</span><span class="value">${money(r.avgSoldPrice, 2)}/${per}</span></div>
         <div class="row"><span class="label">Sold value</span><span class="value">${money(r.soldValue, 0)}</span></div>
         ${r.opening || r.retainedSeed ? `

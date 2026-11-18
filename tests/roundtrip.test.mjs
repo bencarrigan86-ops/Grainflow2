@@ -121,6 +121,7 @@ function markerFor(key, ids) {
   if (key === 'gin') return { ginName: 'Brighann Ginning', invoiceNo: 'I053/23', modules: 18, moduleKg: 222230, physicalBales: 393, lintKg: 90273, seedKg: 99418, stdBaleKg: 227, baleFrom: 'BG027234', baleTo: 'BG027626', ginRate: 65, researchLevy: 2.25, voluntaryLevy: 1.5, gstOnGin: true, paidBy: 'buyer' };
   if (key === 'modules') return { count: 18, kg: 222230, turnoutPct: 40.6, estBales: 397.68 };
   if (key === 'hay') return { baleType: 'round', baleKg: 500 };
+  if (key === 'hayLoad') return { bales: 80, kg: 41600, use: 'Fed to cattle' };
   if (key === 'cotton') return { seedMtm: 500, seedFactor: 0.245, ginRate: 65, levies: 3.75, turnout: 40, moduleKg: 12000 };
   if (key === 'deductions') return [{ reason: 'Screenings 6% vs contract 5%', perTon: 10 }];
   if (key === 'manualDocketNo') return 'D-1042';                // text too

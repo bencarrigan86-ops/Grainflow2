@@ -6,7 +6,7 @@
 //
 // Pure functions, no screen: the sheets that use them are in views/modulespicked.js.
 
-import { cleanCotton, hasModules, SEED_FACTOR_DEFAULT } from './ginning.js?v=369';
+import { cleanCotton, hasModules, SEED_FACTOR_DEFAULT } from './ginning.js?v=370';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 

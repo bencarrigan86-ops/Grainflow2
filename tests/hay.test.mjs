@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { BALE_TYPES, cleanHay, hasHay, isHay, balesToTons, describeBaleSetting, cleanBaled, hasHayLoad, baledTotals, avgBaleKg, describeBales } from '../docs/js/hay.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
+import { secondaryHay, secondaryTypes, balesInStorage, usedOnFarmTons, isUsedOnFarm } from '../docs/js/hay.js';
+import { productionByCommodity, position, fieldTons, movementTonsFromField } from '../docs/js/derived.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -39,8 +41,8 @@ check('bales baled on a paddock: baled, moved off and still in the field', () =>
   assert.equal(cleanBaled(field.balesBaled).length, 2, 'an entry with no bales is not kept');
   const none = baledTotals(field, []);
   assert.deepEqual([none.baled, none.moved, none.inField], [160, 0, 160]);
-  const carted = { id: 'm1', froms: [{ type: 'field', id: 'f1', tons: 41.6 }], tos: [{ type: 'silo', id: 'shed', tons: 41.6 }], hay: { bales: 80, kg: 41600 } };
-  const other = { id: 'm2', froms: [{ type: 'field', id: 'f2', tons: 9 }], tos: [], hay: { bales: 30, kg: 15000 } };
+  const carted = { id: 'm1', froms: [{ type: 'field', id: 'f1', tons: 41.6 }], tos: [{ type: 'silo', id: 'shed', tons: 41.6 }], hayLoad: { bales: 80, kg: 41600 } };
+  const other = { id: 'm2', froms: [{ type: 'field', id: 'f2', tons: 9 }], tos: [], hayLoad: { bales: 30, kg: 15000 } };
   assert.equal(hasHayLoad(carted), true);
   assert.equal(hasHayLoad({ froms: [] }), false);
   const t = baledTotals(field, [carted, other]);
@@ -83,6 +85,59 @@ check('the commodity sheet sets a type up as hay, and the paddock sheet logs bal
   assert.ok(read('docs/js/storage.js').includes('__hasBalesBaled = true') && read('docs/js/storage.js').includes('__hasHay = true'));
   assert.ok(read('supabase/migrations/20261201000000_hay.sql').includes('add column if not exists bales_baled jsonb'));
   assert.ok(read('supabase/paste-into-sql-editor.sql').includes('add column if not exists bales_baled jsonb') && read('supabase/paste-into-sql-editor.sql').includes('commodities add column if not exists hay jsonb'));
+});
+
+check('straw baled behind the header is its own commodity on the crop paddock: its tonnes count, its ground is not counted twice', () => {
+  const wheat = { id: 'w', name: 'Wheat', unit: 't' };
+  const straw = { id: 's', name: 'Wheat straw', unit: 't', hay: { baleType: 'round', baleKg: 500 }, mtmPrice: 100 };
+  const w1 = { id: 'f1', name: 'W1', areaHa: 100, commodityId: 'w', yieldTHa: 3, yieldMode: 'estimate', balesBaled: [
+    { id: 'a', date: '2026-12-01', bales: 200, kg: 100000, commodityId: 's' }] };
+  const w2 = { id: 'f2', name: 'W2', areaHa: 50, commodityId: 'w', yieldTHa: 3, yieldMode: 'estimate', balesBaled: [{ id: 'b', bales: 60, kg: 30000, commodityId: 's' }] };
+  const none = { id: 'f3', name: 'W3', areaHa: 20, commodityId: 'w', yieldTHa: 3, yieldMode: 'estimate' };
+  const fields = [w1, w2, none];
+  const sec = secondaryHay('s', fields);
+  assert.deepEqual([sec.tons, sec.bales, sec.area, sec.fieldCount], [130, 260, 150, 2]);
+  assert.deepEqual(secondaryTypes(w1), ['s']);
+  assert.deepEqual(secondaryTypes(none), []);
+  const prod = productionByCommodity([wheat, straw], fields, []);
+  assert.equal(prod[0].area, 170); assert.equal(prod[0].tons, 510, 'the wheat is the wheat');
+  assert.equal(prod[1].area, 0, 'the straw adds no area of its own'); assert.equal(prod[1].tons, 130);
+  assert.ok(Math.abs(prod[1].yieldTHa - 130 / 150) < 1e-9, 'its yield is worked on the ground it came off');
+  // the straw carted off a wheat paddock is not the wheat's tonnes when the paddock is on actual yield
+  const cart = { id: 'm1', commodityId: 's', froms: [{ type: 'field', id: 'f1', tons: 40 }], tos: [{ type: 'silo', id: 'shed', tons: 40 }], hayLoad: { bales: 80, kg: 40000 }, tons: 40 };
+  const grain = { id: 'm2', commodityId: 'w', froms: [{ type: 'field', id: 'f1', tons: 300 }], tos: [], tons: 300 };
+  assert.equal(movementTonsFromField('f1', [cart, grain], 'w'), 300);
+  assert.equal(fieldTons({ ...w1, yieldMode: 'actual' }, [cart, grain]), 300);
+  assert.equal(baledTotals(w1, [cart], 's').moved, 80); assert.equal(baledTotals(w1, [cart], 's').inField, 120);
+  assert.equal(baledTotals(w1, [cart]).baled, 0, 'the paddock\'s own type is not the straw');
+  // bales in a store, and hay used on the farm
+  const into = { froms: [{ type: 'field', id: 'f1', tons: 40 }], tos: [{ type: 'silo', id: 'shed', tons: 40 }], hayLoad: { bales: 80, kg: 40000 } };
+  const out = { froms: [{ type: 'silo', id: 'shed', tons: 10 }], tos: [{ type: 'sale', id: 'x', tons: 10 }], hayLoad: { bales: 20, kg: 10000 } };
+  const fed = { commodityId: 's', tons: 5, froms: [{ type: 'silo', id: 'shed', tons: 5 }], tos: [], hayLoad: { bales: 10, kg: 5000, use: 'Fed to cattle' } };
+  assert.deepEqual(balesInStorage('shed', [into, out, fed]), { bales: 50, kg: 25000 });
+  assert.equal(isUsedOnFarm(fed), true); assert.equal(isUsedOnFarm(out), false);
+  assert.equal(usedOnFarmTons('s', [into, out, fed]), 5);
+  const rows = position([wheat, straw], fields, [], [cart, fed]);
+  const s = rows.find((r) => r.commodity.id === 's');
+  assert.equal(s.productionTons, 130); assert.equal(s.usedTons, 5);
+  assert.equal(s.unsoldTons, 125, 'used on the farm comes off the stock');
+});
+
+check('a load of hay carries its bales to the server and back, and the sheets know about straw, bales and use on the farm', () => {
+  const st = (m) => ({ currentYear: '2026', years: { 2026: { sales: [], storages: [], commodities: [], fields: [], movements: [m] } }, businessDetails: {} });
+  const m = { id: 'm1', date: '2026-12-01', froms: [{ type: 'field', id: 'f1', tons: 40 }], tos: [], tons: 40, weightStatus: 'estimate', hayLoad: { bales: 80, kg: 40000, use: 'Fed to cattle' } };
+  const rows = stateToRows(st(m), 'farm1');
+  assert.deepEqual(rows.movements[0].hay_load, { bales: 80, kg: 40000, use: 'Fed to cattle' });
+  assert.deepEqual(rowsToState(rows).years[2026].movements[0].hayLoad, { bales: 80, kg: 40000, use: 'Fed to cattle' });
+  assert.ok(!('hay_load' in stateToRows(st({ ...m, hayLoad: undefined }), 'farm1').movements[0]), 'an ordinary load sends no column');
+  assert.equal(stateToRows(st({ ...m, hayLoad: null, __hasHayLoad: true }), 'farm1').movements[0].hay_load, null);
+  const v = read('docs/js/views/movements.js');
+  assert.ok(v.includes("id: 'm-bales'") && v.includes('data-tokind="use"') && v.includes('Used on farm') && v.includes('cleanHayLoad(') && v.includes('secondaryTypes(f).includes(commodityId)'));
+  assert.ok(read('docs/js/views/storage.js').includes('balesInStorage(s.id, movements)'));
+  assert.ok(read('docs/js/views/balesbaled.js').includes("id: 'bb-type'") && read('docs/js/views/production.js').includes('+ Log straw baled'));
+  assert.ok(read('docs/js/derived.js').includes('hayBales:') && read('docs/js/views/invoice.js').includes('hayBales'));
+  assert.ok(read('docs/js/transit.js').includes('hayLoad'), 'a load used on the farm is complete');
+  assert.ok(read('supabase/migrations/20261202000000_hay_loads.sql').includes('hay_load jsonb') && read('supabase/paste-into-sql-editor.sql').includes('movements add column if not exists hay_load jsonb'));
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

@@ -2006,3 +2006,8 @@ alter table commodities add column if not exists hay jsonb;
 alter table fields add column if not exists bales_baled jsonb;
 
 notify pgrst, 'reload schema';
+
+-- Hay: the bales on a load, and hay used on the farm
+alter table movements add column if not exists hay_load jsonb;
+
+notify pgrst, 'reload schema';

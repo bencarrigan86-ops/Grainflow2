@@ -1,10 +1,11 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=369';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=369';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=369';
-import { ginDeduction, cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=369';
-import { commoditySort } from './commodityorder.js?v=369';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=370';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=370';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=370';
+import { ginDeduction, cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=370';
+import { commoditySort } from './commodityorder.js?v=370';
+import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=370';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -152,6 +153,8 @@ export function invoiceLineItems(sale, movements, freightRates = {}) {
         ...(cleanDeductions(m.deductions).length ? { deductions: cleanDeductions(m.deductions) } : {}),
         // a ginning run's lint on a bale contract: the bales as pressed and their numbers, for the bale range on the invoice
         ...gotLots(m, sale.id),
+        // hay is invoiced in tonnes, with the bales it came to alongside (the share of the load that went on this contract)
+        ...(hasHayLoad(m) && !isUsedOnFarm(m) && Number(m.hayLoad.bales) > 0 ? { hayBales: Math.round(Number(m.hayLoad.bales) * (Number(m.tons) > 0 ? Math.min(1, t / Number(m.tons)) : 1)) } : {}),
         // the contract price, and what the contract premium and this load's grade or oil adjust it by
         basePrice: price, adjust: loadRate - price,
         rate: loadRate, subtotal: t * loadRate,
@@ -203,8 +206,10 @@ export function invoicedMovementIds(invoices) {
 }
 
 /** Sum of movement tons carted off this field (actual yield source). */
-export function movementTonsFromField(fieldId, movements) {
-  return (movements || []).reduce((s, m) => s + fromTonsForEndpoint(m, 'field', fieldId), 0);
+export function movementTonsFromField(fieldId, movements, commodityId = '') {
+  // straw baled off a wheat paddock is carted off it too, but it is the straw's tonnes, not the wheat's
+  const own = (m) => !(commodityId && m.hayLoad && m.commodityId && m.commodityId !== commodityId);
+  return (movements || []).reduce((s, m) => s + (own(m) ? fromTonsForEndpoint(m, 'field', fieldId) : 0), 0);
 }
 
 export function estimateFieldTons(f) {
@@ -366,7 +371,7 @@ export function fieldSeed(f, bufferPct = SEED_BUFFER_PCT) {
  * switched to "actual" — the real tons carted off it per Movement tickets.
  */
 export function fieldTons(f, movements = []) {
-  if (f.yieldMode === 'actual') return movementTonsFromField(f.id, movements);
+  if (f.yieldMode === 'actual') return movementTonsFromField(f.id, movements, f.commodityId);
   return estimateFieldTons(f);
 }
 
@@ -375,8 +380,11 @@ export function productionByCommodity(commodities, fields, movements = []) {
     const rows = fields.filter((f) => f.commodityId === c.id);
     const area = rows.reduce((s, f) => s + (Number(f.areaHa) || 0), 0);
     const tons = rows.reduce((s, f) => s + fieldTons(f, movements), 0);
-    const yieldTHa = area > 0 ? tons / area : 0;
-    return { commodity: c, area, tons, yieldTHa, fieldCount: rows.length };
+    // straw baled behind the header on other paddocks: its tonnes count, its ground does not (it is the crop's ground)
+    const straw = secondaryHay(c.id, fields);
+    const allTons = tons + straw.tons;
+    const yieldTHa = (area + straw.area) > 0 ? allTons / (area + straw.area) : 0;
+    return { commodity: c, area, tons: allTons, yieldTHa, fieldCount: rows.length, strawTons: straw.tons, strawArea: straw.area, strawBales: straw.bales };
   });
 }
 
@@ -447,7 +455,9 @@ export function position(commodities, fields, sales, movements = []) {
     const s = sold[i];
     const opening = Number(c.openingStock) || 0;
     const retainedSeed = Number(c.retainedSeed) || 0;
-    const unsoldTons = opening + p.tons - s.tons - retainedSeed;
+    // hay used on the farm leaves the stock without being sold
+    const usedTons = usedOnFarmTons(c.id, movements);
+    const unsoldTons = opening + p.tons - s.tons - retainedSeed - usedTons;
     const mtmPrice = Number(c.mtmPrice) || 0;
     const unsoldValue = unsoldTons * mtmPrice;
     // What the opening stock was worth when last season closed. That income was
@@ -473,6 +483,9 @@ export function position(commodities, fields, sales, movements = []) {
       opening,
       openingValue,
       retainedSeed,
+      usedTons,
+      strawTons: p.strawTons,
+      strawArea: p.strawArea,
       unsoldTons,
       mtmPrice,
       unsoldValue,
@@ -530,7 +543,7 @@ export function positionAtYield(rows, adjustPct = 0) {
   const k = 1 + (Number(adjustPct) || 0) / 100;
   return rows.map((r) => {
     const productionTons = r.productionTons * k;
-    const unsoldTons = r.opening + productionTons - r.soldTons - r.retainedSeed;
+    const unsoldTons = r.opening + productionTons - r.soldTons - r.retainedSeed - (r.usedTons || 0);
     const unsoldValue = unsoldTons * r.mtmPrice;
     // a cotton crop that comes in lighter or heavier has more or less seed and ginning with it
     const cotton = r.cotton ? cottonComponents(r.commodity.cotton, r.opening + productionTons, r.cotton.ginned) : null;

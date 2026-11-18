@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=369';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=369';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=369';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=369';
-import { describeMerge } from '../merge.js?v=369';
-import { renderRelatedMovements } from './movements.js?v=369';
-import { canSeeYield } from '../nav.js?v=369';
-import { wireJumps } from '../jump.js?v=369';
-import { openMapSheet } from './farmmap.js?v=369';
-import { openInputsSheet } from './inputs.js?v=369';
-import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=369';
-import { stockLevels } from '../inputs.js?v=369';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=369';
-import { openRotationSheet } from './rotation.js?v=369';
-import { openAveragesSheet } from './averages.js?v=369';
-import { openModulesPickedSheet } from './modulespicked.js?v=369';
-import { openBalesBaledSheet } from './balesbaled.js?v=369';
-import { isHay, baledTotals, cleanBaled, describeBales } from '../hay.js?v=369';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=369';
+import { db } from '../storage.js?v=370';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=370';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=370';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=370';
+import { describeMerge } from '../merge.js?v=370';
+import { renderRelatedMovements } from './movements.js?v=370';
+import { canSeeYield } from '../nav.js?v=370';
+import { wireJumps } from '../jump.js?v=370';
+import { openMapSheet } from './farmmap.js?v=370';
+import { openInputsSheet } from './inputs.js?v=370';
+import { openSprayJobsSheet, openSprayFormSheet, canSpray } from './spray.js?v=370';
+import { stockLevels } from '../inputs.js?v=370';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=370';
+import { openRotationSheet } from './rotation.js?v=370';
+import { openAveragesSheet } from './averages.js?v=370';
+import { openModulesPickedSheet } from './modulespicked.js?v=370';
+import { openBalesBaledSheet } from './balesbaled.js?v=370';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=370';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=370';
 
 let unsub = null;
 
@@ -128,10 +128,10 @@ function fieldRow(f, movements, showYield = true) {
   const isActual = f.yieldMode === 'actual';
   const t = fieldTons(f, movements);
   const yieldTHa = f.areaHa > 0 ? t / f.areaHa : 0;
-  const actualTons = movementTonsFromField(f.id, movements);
+  const actualTons = movementTonsFromField(f.id, movements, f.commodityId);
   const actualYieldTHa = f.areaHa > 0 ? actualTons / f.areaHa : 0;
   const inFieldModules = pickedTotals(f, movements).inField;
-  const inFieldBales = baledTotals(f, movements).inField;
+  const inFieldBales = baledTotals(f, movements).inField + secondaryTypes(f).reduce((s, id) => s + baledTotals(f, movements, id).inField, 0);
   return `
     <div class="list-item" data-edit-field="${f.id}">
       <div>
@@ -169,12 +169,25 @@ export function openFieldSheet(existing) {
   // hay paddocks: the bales baled, and how many are still in the field
   const hayPaddock = existing && isHay(initialCommodity);
   const bt = hayPaddock ? baledTotals(existing, movements) : null;
+  // any other paddock can have straw (or hay) baled off it, a commodity of its own on the same ground as the crop
+  const hayTypes = commodities.filter((c) => isHay(c) && c.id !== existing?.commodityId);
+  const strawIds = existing && !hayPaddock ? secondaryTypes(existing) : [];
+  const nameOfType = (id) => commodities.find((c) => c.id === id)?.name || 'Hay';
+  const baledRow = (b, withType) => `<div class="row" data-edit-baled="${esc(b.id)}" style="cursor:pointer"><span class="label">${esc(shortDate(b.date))}${withType && b.commodityId ? ` · ${esc(nameOfType(b.commodityId))}` : ''}${b.label ? ` · ${esc(b.label)}` : ''}</span><span class="value">${esc(describeBales(b.bales, b.kg))}</span></div>`;
   const balesBlock = hayPaddock ? `
       <div class="field">
         <label>Bales baled</label>
         <div class="row"><span class="label">Baled · moved · in the field</span><span class="value">${num(bt.baled, 0)} · ${num(bt.moved, 0)} · ${num(bt.inField, 0)}</span></div>
-        ${cleanBaled(existing.balesBaled).map((b) => `<div class="row" data-edit-baled="${esc(b.id)}" style="cursor:pointer"><span class="label">${esc(shortDate(b.date))}${b.label ? ` · ${esc(b.label)}` : ''}</span><span class="value">${esc(describeBales(b.bales, b.kg))}</span></div>`).join('')}
+        ${cleanBaled(existing.balesBaled).map((b) => baledRow(b, false)).join('')}
         <button class="btn secondary small" id="log-baled" style="margin-top:6px">+ Log bales baled</button>
+      </div>`
+    : existing && (hayTypes.length || strawIds.length) ? `
+      <div class="field">
+        <label>Straw and hay baled off this paddock</label>
+        ${strawIds.map((id) => { const t = baledTotals(existing, movements, id); return `<div class="row"><span class="label">${esc(nameOfType(id))}<small style="display:block;font-size:11.5px;color:var(--text-dim)">Baled · moved · in the field</small></span><span class="value">${num(t.baled, 0)} · ${num(t.moved, 0)} · ${num(t.inField, 0)}</span></div>`; }).join('')}
+        ${cleanBaled(existing.balesBaled).filter((b) => b.commodityId && b.commodityId !== existing.commodityId).map((b) => baledRow(b, true)).join('')}
+        <div class="hint">Straw is its own commodity, on the same ground as the crop. The area is not counted twice.</div>
+        <button class="btn secondary small" id="log-baled" style="margin-top:6px">+ Log straw baled</button>
       </div>` : '';
 
   const body = openSheet(existing ? 'Edit field' : 'Add field', (root) => {

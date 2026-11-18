@@ -1,26 +1,27 @@
-import { db } from '../storage.js?v=369';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=369';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=369';
-import { isTransit } from '../transit.js?v=369';
-import { isOffFarm } from '../offfarm.js?v=369';
-import { paintOffFarmCard } from './offfarm.js?v=369';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=369';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=369';
-import { hasStorageQuality } from '../mapping.js?v=369';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=369';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=369';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=369';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=369';
-import { renderRelatedMovements } from './movements.js?v=369';
-import { openOptimiserSheet } from './optimiser.js?v=369';
-import { openSiloSetupSheet } from './silosetup.js?v=369';
-import { commodityFills } from '../commodityfill.js?v=369';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=369';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=369';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=369';
+import { db } from '../storage.js?v=370';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=370';
+import { isHay, balesInStorage, describeBales } from '../hay.js?v=370';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=370';
+import { isTransit } from '../transit.js?v=370';
+import { isOffFarm } from '../offfarm.js?v=370';
+import { paintOffFarmCard } from './offfarm.js?v=370';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=370';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=370';
+import { hasStorageQuality } from '../mapping.js?v=370';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=370';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=370';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=370';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=370';
+import { renderRelatedMovements } from './movements.js?v=370';
+import { openOptimiserSheet } from './optimiser.js?v=370';
+import { openSiloSetupSheet } from './silosetup.js?v=370';
+import { commodityFills } from '../commodityfill.js?v=370';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=370';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=370';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=370';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=369';
+} from '../silolayers.js?v=370';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -646,6 +647,13 @@ function kindLabel(kind) {
   return 'Silo';
 }
 
+/** Hay in a store is counted in bales as well as tonnes: the bales loaded in less those loaded out. */
+function baleLine(s, c, movements) {
+  if (!isHay(c)) return '';
+  const b = balesInStorage(s.id, movements);
+  return b.bales > 0 ? `<div class="meta">${esc(describeBales(b.bales, b.kg))}</div>` : '';
+}
+
 function storageRow(s, commodities, movements) {
   const c = commodities.find((c) => c.id === s.commodityId);
   const ledger = storageLedgerStock(s, movements);
@@ -665,6 +673,7 @@ function storageRow(s, commodities, movements) {
         <div>
           <div class="main">${esc(s.name)} <span class="badge muted">Tally</span></div>
           <div class="meta">${esc(c ? c.name : 'No commodity set')}</div>
+          ${baleLine(s, c, movements)}
           ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
           ${noteLine(s) ? `<div class="meta" style="font-style:italic">${noteLine(s)}</div>` : ''}
         </div>
@@ -708,6 +717,7 @@ function storageRow(s, commodities, movements) {
       <div>
         <div class="main">${esc(s.name)} <span class="badge muted">${kindLabel(looksLikeBunker(s) ? 'bunker' : s.kind)}</span></div>
         <div class="meta">${esc(c ? c.name : 'No commodity set')}${capPct !== null ? ` · ${num(capPct, 0)}% of ${num(capT, 0)} t${asNote}${spare > 0.05 ? ` · ${num(spare, 0)} t spare` : ''}` : ''}</div>
+        ${baleLine(s, c, movements)}
         ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
         ${noteLine(s) ? `<div class="meta" style="font-style:italic">${noteLine(s)}</div>` : ''}
         ${mixLine}

@@ -49,6 +49,8 @@ export const STAGES = {
  * the in-transit store) is waiting for a destination first.
  */
 export function stageOf(m, storages) {
+  // hay used on the farm goes nowhere, and is complete as it is
+  if (m?.hayLoad && typeof m.hayLoad === 'object' && String(m.hayLoad.use ?? '').trim()) return null;
   const tos = m?.tos || [];
   const inTransit = tos.length === 0 || tos.some((t) => t.type === 'silo' && isTransit((storages || []).find((s) => s.id === t.id)));
   if (inTransit) return 'destination';

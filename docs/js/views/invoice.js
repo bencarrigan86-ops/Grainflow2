@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=369';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=369';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=369';
-import { addressLinesOf } from '../address.js?v=369';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=369';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=369';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=369';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=369';
-import { docBandHTML } from '../docband.js?v=369';
-import { deductionNotes } from '../deductions.js?v=369';
-import { ginPrepaid } from '../ginning.js?v=369';
-import { cottonInvoiceModel } from '../cottoninvoice.js?v=369';
-import { openMovementSheet } from './movements.js?v=369';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=369';
+import { db } from '../storage.js?v=370';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=370';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=370';
+import { addressLinesOf } from '../address.js?v=370';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=370';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=370';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=370';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=370';
+import { docBandHTML } from '../docband.js?v=370';
+import { deductionNotes } from '../deductions.js?v=370';
+import { ginPrepaid } from '../ginning.js?v=370';
+import { cottonInvoiceModel } from '../cottoninvoice.js?v=370';
+import { openMovementSheet } from './movements.js?v=370';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=370';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -448,7 +448,7 @@ function invoiceDocHTML(sale, invoice, business, commodity, signed = null) {
                 <td>${esc(l.ticketNo || '—')}</td>
                 <td>${esc(l.description || l.rego || '—')}</td>
                 <td>${esc(l.grade || '—')}</td>
-                <td>${l.tons != null ? num(l.tons, 2) : '—'}</td>
+                <td>${l.tons != null ? num(l.tons, 2) : '—'}${l.hayBales ? `<small style="display:block;font-size:11.5px;color:var(--text-dim)">${num(l.hayBales, 0)} bale${l.hayBales === 1 ? '' : 's'}</small>` : ''}</td>
                 <td>${l.basePrice != null ? money(l.basePrice, 2) : '—'}</td>
                 <td>${l.adjust != null ? `${l.adjust > 0 ? '+' : ''}${money(l.adjust, 2)}` : '—'}</td>
                 <td>${l.rate != null ? money(l.rate, 2) : '—'}</td>
@@ -458,7 +458,7 @@ function invoiceDocHTML(sale, invoice, business, commodity, signed = null) {
           </tbody>
           <tfoot><tr>
             <td colspan="4">Total</td>
-            <td>${num(invoice.totalTons, 2)}</td>
+            <td>${num(invoice.totalTons, 2)}${(() => { const b = invoice.lines.reduce((s, l) => s + (Number(l.hayBales) || 0), 0); return b > 0 ? `<small style="display:block;font-size:11.5px;color:var(--text-dim)">${num(b, 0)} bales</small>` : ''; })()}</td>
             <td colspan="3"></td>
             <td>${money(invoice.subtotalExGST, 2)}</td>
           </tr></tfoot>

@@ -27,13 +27,13 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=369';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=369';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=369';
-import { cleanPicked } from './modulespicked.js?v=369';
-import { cleanHay, hasHay, cleanBaled } from './hay.js?v=369';
-import { cleanOffFarm } from './offfarm.js?v=369';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=369';
+import { cleanGradeOptions } from './gradeprice.js?v=370';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=370';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=370';
+import { cleanPicked } from './modulespicked.js?v=370';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=370';
+import { cleanOffFarm } from './offfarm.js?v=370';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=370';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -140,6 +140,7 @@ export function movementFromRow(m, legs = [], photo = null) {
     ...(Array.isArray(m.deductions) && cleanDeductions(m.deductions).length ? { deductions: cleanDeductions(m.deductions), __hasDeductions: true } : {}),
     ...(m.gin && typeof m.gin === 'object' ? { gin: cleanGin(m.gin), __hasGin: true } : {}),
     ...(m.modules && typeof m.modules === 'object' ? { modules: cleanModules(m.modules), __hasModules: true } : {}),
+    ...(m.hay_load && typeof m.hay_load === 'object' ? { hayLoad: cleanHayLoad(m.hay_load), __hasHayLoad: true } : {}),
     ...(m.load_time ? { loadTime: m.load_time, __hasLoadTime: true } : {}),
     ...(m.load_destination ? { destination: m.load_destination, __hasDestination: true } : {}),
     ...(m.order_id ? { orderId: m.order_id, __hasOrderId: true } : {}),
@@ -534,6 +535,8 @@ export function stateToRows(state, farmId) {
         // A cotton ginning run (modules in, lint and seed out, the gin's rates), one json column; sent once there is one.
         ...((hasGin(m) || m.__hasGin) ? { gin: hasGin(m) ? cleanGin(m.gin) : null } : {}),
         ...((hasModules(m) || m.__hasModules) ? { modules: hasModules(m) ? cleanModules(m.modules) : null } : {}),
+        // The bales on a load of hay (and "used on the farm"), one json column; sent once there is one.
+        ...((hasHayLoad(m) || m.__hasHayLoad) ? { hay_load: hasHayLoad(m) ? cleanHayLoad(m.hayLoad) : null } : {}),
         // The time of day it was loaded, optional in the same way.
         ...((m.loadTime || m.__hasLoadTime) ? { load_time: orNull(m.loadTime) } : {}),
         // Where it is going, typed on the load; optional in the same way.
