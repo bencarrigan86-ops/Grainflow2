@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=400';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=400';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=400';
-import { payablesCost } from '../payables.js?v=400';
-import { commodityClass } from '../commoditycolor.js?v=400';
-import { startProgress } from '../helpcontent.js?v=400';
-import { openSetupWalk } from './setupwalk.js?v=400';
-import { attentionItems } from '../attention.js?v=400';
-import { lastBackup } from '../backup.js?v=400';
-import { todayLocal, dmy } from '../fmt.js?v=400';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=400';
-import { openSheet, closeSheet } from '../ui.js?v=400';
-import { positionPdf } from '../positionpdf.js?v=400';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=400';
+import { db } from '../storage.js?v=401';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=401';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=401';
+import { payablesCost } from '../payables.js?v=401';
+import { commodityClass } from '../commoditycolor.js?v=401';
+import { startProgress } from '../helpcontent.js?v=401';
+import { openSetupWalk } from './setupwalk.js?v=401';
+import { attentionItems } from '../attention.js?v=401';
+import { lastBackup } from '../backup.js?v=401';
+import { todayLocal, dmy } from '../fmt.js?v=401';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=401';
+import { openSheet, closeSheet } from '../ui.js?v=401';
+import { positionPdf } from '../positionpdf.js?v=401';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=401';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -148,7 +148,7 @@ function ring(share, size, stroke) {
   const c = 2 * Math.PI * r;
   const half = size / 2;
   const dash = Math.min(1, Math.max(0, share)) * c;
-  return `<svg class="pos-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${Math.round(share * 100)} percent sold"><circle cx="${half}" cy="${half}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${stroke}"/><circle cx="${half}" cy="${half}" r="${r}" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-dasharray="${dash.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${half} ${half})"/></svg>`;
+  return `<svg class="pos-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${Math.round(share * 100)} percent sold"><circle cx="${half}" cy="${half}" r="${r}" fill="none" stroke="var(--ring-track)" stroke-width="${stroke}"/><circle cx="${half}" cy="${half}" r="${r}" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-dasharray="${dash.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${half} ${half})"/></svg>`;
 }
 
 /** The four tiles at the top: crop value, gross margin, how much is sold, and the sold and unsold values. */

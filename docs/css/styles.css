@@ -16,6 +16,7 @@
   --warn: #a15c00;
   --warn-bg: #fff1dc;
   --track: #e3e5e8;
+  --ring-track: #c5cad1;
   --radius: 14px;
   /* Controls. Derived from the accent and the current surface, so each one is a
      visible, tinted, outlined thing on a white card and on a dark one alike. */
@@ -40,6 +41,7 @@
     --warn: #f0b35a;
     --warn-bg: #33250e;
     --track: #2b2f34;
+    --ring-track: #4a5159;
     --border: #2b2f34;
     --accent-input-bg: var(--surface);
     --accent-report-bg: var(--surface);
@@ -56,6 +58,7 @@
     --warn: #f0b35a;
     --warn-bg: #33250e;
     --track: #2b2f34;
+    --ring-track: #4a5159;
     --border: #2b2f34;
     --accent-input-bg: var(--surface);
     --accent-report-bg: var(--surface);
