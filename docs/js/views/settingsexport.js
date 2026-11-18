@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=389';
-import { num, esc, todayLocal } from '../fmt.js?v=389';
-import { openSheet } from '../ui.js?v=389';
-import { exportRowsAsCSV } from '../csv.js?v=389';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=389';
-import { endpointLabel } from './movements.js?v=389';
-import { layersForStorage } from '../outload.js?v=389';
-import { traceLoads, traceText } from '../trace.js?v=389';
-import { holdings, totalHeld } from '../offfarm.js?v=389';
-import { kindLabel, billTotal } from '../payables.js?v=389';
-import { orderState, STATE_LABEL } from '../orders.js?v=389';
-import { fieldHarvest } from '../harvest.js?v=389';
-import { capacityFor } from '../storagecapacity.js?v=389';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=389';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=389';
+import { db } from '../storage.js?v=390';
+import { num, esc, todayLocal } from '../fmt.js?v=390';
+import { openSheet } from '../ui.js?v=390';
+import { exportRowsAsCSV } from '../csv.js?v=390';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=390';
+import { endpointLabel } from './movements.js?v=390';
+import { layersForStorage } from '../outload.js?v=390';
+import { traceLoads, traceText } from '../trace.js?v=390';
+import { holdings, totalHeld } from '../offfarm.js?v=390';
+import { kindLabel, billTotal } from '../payables.js?v=390';
+import { orderState, STATE_LABEL } from '../orders.js?v=390';
+import { fieldHarvest } from '../harvest.js?v=390';
+import { capacityFor } from '../storagecapacity.js?v=390';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=390';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=390';
 
 function commodityName(commodities, id) {
   return commodities.find((c) => c.id === id)?.name || '';

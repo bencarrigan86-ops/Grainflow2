@@ -1,16 +1,16 @@
-import { db } from '../storage.js?v=389';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=389';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=389';
-import { payablesCost } from '../payables.js?v=389';
-import { commodityClass } from '../commoditycolor.js?v=389';
-import { startProgress } from '../helpcontent.js?v=389';
-import { attentionItems } from '../attention.js?v=389';
-import { lastBackup } from '../backup.js?v=389';
-import { todayLocal, dmy } from '../fmt.js?v=389';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=389';
-import { openSheet, closeSheet } from '../ui.js?v=389';
-import { positionPdf } from '../positionpdf.js?v=389';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=389';
+import { db } from '../storage.js?v=390';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=390';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=390';
+import { payablesCost } from '../payables.js?v=390';
+import { commodityClass } from '../commoditycolor.js?v=390';
+import { startProgress } from '../helpcontent.js?v=390';
+import { attentionItems } from '../attention.js?v=390';
+import { lastBackup } from '../backup.js?v=390';
+import { todayLocal, dmy } from '../fmt.js?v=390';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=390';
+import { openSheet, closeSheet } from '../ui.js?v=390';
+import { positionPdf } from '../positionpdf.js?v=390';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=390';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -152,13 +152,15 @@ function ring(share, size, stroke) {
 function dashTop(totals) {
   const total = totals.soldValue + totals.unsoldValue;
   const soldShare = total > 0 ? totals.soldValue / total : 0;
+  const opening = totals.openingValue || 0;
   return `<div class="pos-dash">
-      <div class="card dash-tile"><div class="l">${totals.openingValue ? 'Current crop value' : 'Total position value'}</div><div class="n">${money(totals.totalValue, 0)}</div>
-        <div class="s">${tons(totals.productionTons, 0)} produced</div>${totals.openingValue ? `<div class="s">after ${money(totals.openingValue, 0)} opening stock</div>` : ''}</div>
+      <div class="card dash-tile"><div class="l">${opening ? 'Current crop value' : 'Total position value'}</div><div class="n">${money(totals.totalValue, 0)}</div>
+        ${opening ? `<div class="s">Total value ${money(totals.totalValue + opening, 0)}</div><div class="s">Opening stock (${money(opening, 0)})</div>` : `<div class="s">sold plus unsold at MTM</div>`}</div>
+      <div class="card dash-tile"><div class="l">Produced</div><div class="n">${tons(totals.productionTons, 0)}</div>
+        ${totals.area > 0 ? `<div class="s">Income ${money(totals.totalValue / totals.area, 0)}/ha</div>` : ''}</div>
+      <div class="card dash-tile dash-ringtile com-green">${ring(soldShare, 52, 8)}<div class="dash-ringtext"><div class="n">${pct(soldShare)} <span class="s">sold</span></div><div class="s">Sold ${money(totals.soldValue, 0)}</div><div class="s">Unsold ${money(totals.unsoldValue, 0)}</div></div></div>
       <div class="card dash-tile"><div class="l">Gross margin</div><div class="n">${money(totals.grossMargin, 0)}</div>
         <div class="s">${totals.area > 0 ? `${money(totals.grossMargin / totals.area, 0)} per ha` : '&nbsp;'}</div></div>
-      <div class="card dash-tile dash-ringtile com-green">${ring(soldShare, 52, 8)}<div><div class="n">${pct(soldShare)}</div><div class="s">sold</div></div></div>
-      <div class="card dash-tile"><div class="s">Sold ${money(totals.soldValue, 0)}</div><div class="s">Unsold ${money(totals.unsoldValue, 0)}</div>${totals.area > 0 ? `<div class="s">Income ${money(totals.totalValue / totals.area, 0)}/ha</div>` : ''}</div>
     </div>`;
 }
 

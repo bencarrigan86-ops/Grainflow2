@@ -13,7 +13,7 @@
 // Paddocks are married to the paddocks the farm has now, by name, so a paddock lines up across the years under its
 // current name. A name with no match is kept as written (a paddock that has since been sold or renamed). Pure.
 
-import { parseCsv, detectDelimiter, nameKey } from './loadimport.js?v=389';
+import { parseCsv, detectDelimiter, nameKey } from './loadimport.js?v=390';
 
 const ALIASES = {
   season: ['season', 'year', 'crop year'],

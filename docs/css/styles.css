@@ -1344,3 +1344,17 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .mv-searchrow { gap: 6px; }
 .mv-searchrow select.storage-sort { flex: none; width: auto; max-width: 92px; min-width: 0; font-size: 12.5px; padding-left: 6px; padding-right: 18px; margin: 0; }
 #storage-more-btn { padding: 0 10px; font-size: 13px; min-height: 40px; }
+/* Storage: search, sort and More are the same height */
+#storage-search, #storage-sort, #storage-more-btn { height: 40px; min-height: 40px; box-sizing: border-box; margin: 0; }
+#storage-search, #storage-sort { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text); font-family: inherit; font-size: 14px; padding: 0 10px; }
+.mv-searchrow select.storage-sort { font-size: 13px; padding: 0 18px 0 8px; }
+.dash-ringtext .n { font-size: 17px; }
+.dash-ringtext .n .s { display: inline; font-size: 12px; font-weight: 400; margin: 0; }
+.dash-ringtext .s { font-size: 11.5px; color: var(--text-dim); margin: 0; white-space: nowrap; }
+.dash-ringtile { gap: 8px; }
+/* Position: crop tiles in alternating colours, as the tickets and contracts are */
+.pos-tiles .dash-crop { background: var(--surface-2); }
+.pos-tiles .dash-crop:nth-child(even) {
+  background: color-mix(in srgb, var(--accent-summary) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent-summary) 28%, var(--border));
+}
