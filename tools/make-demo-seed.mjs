@@ -207,13 +207,13 @@ const storages = [
   { id: 'silo-a', kind: 'silo',   name: 'Silo A',      commodityId: 'wheat',
     radius: 4.6, coneAngle: 35, currentHeight: 9.2, fillState: 'peak',   capacityTons: 620 },
   { id: 'silo-b', kind: 'silo',   name: 'Silo B',      commodityId: 'wheat',
-    radius: 4.6, coneAngle: 35, currentHeight: 6.1, fillState: 'flat',   capacityTons: 620 },
+    radius: 4.6, coneAngle: 35, currentHeight: 9.6, fillState: 'flat',   capacityTons: 620 },
   { id: 'silo-c', kind: 'silo',   name: 'Silo C',      commodityId: 'barley',
-    radius: 3.8, coneAngle: 35, currentHeight: 7.4, fillState: 'decline', capacityTons: 410 },
+    radius: 3.8, coneAngle: 35, currentHeight: 10.2, fillState: 'decline', capacityTons: 410 },
   { id: 'silo-d', kind: 'silo',   name: 'Silo D',      commodityId: 'canola',
-    radius: 3.2, coneAngle: 35, currentHeight: 5.8, fillState: 'peak',   capacityTons: 265 },
+    radius: 3.2, coneAngle: 35, currentHeight: 7.6, fillState: 'peak',   capacityTons: 265 },
   { id: 'bunker-1', kind: 'bunker', name: 'Bunker 1',  commodityId: 'wheat',
-    width: 24, length: 62, currentHeight: 4.1, fillState: 'peak', capacityTons: 2400, tarpOverhangM: 1.5 },
+    width: 14, length: 30, currentHeight: 4.1, fillState: 'peak', capacityTons: 2400, tarpOverhangM: 1.5 },
   { id: 'bunker-2', kind: 'bunker', name: 'Bunker 2',  commodityId: 'barley',
     width: 20, length: 48, currentHeight: 3.4, fillState: 'flat', capacityTons: 1500, tarpOverhangM: 1.5 },
 ].map((s) => ({ openingStock: 0, unitLabel: 't', ...s }));
@@ -351,6 +351,32 @@ for (const [saleId, commodityId, loads] of DELIVERIES) {
 }
 
 // ---------------------------------------------------------------------------
+// Size the grain stores to what is in them. The harvest and the deliveries above decide the tonnes in each silo and bunker;
+// the geometry and the typed capacity are then worked out from that, so no store reads over capacity and the measured tonnes
+// (from the silo or bunker size) agree with the tracked tonnes. A silo keeps its grain height and fill shape and gets the
+// radius that holds the stock; a bunker keeps its width and gets the filled length; the capacity is the stock over how full
+// the store is meant to look.
+// ---------------------------------------------------------------------------
+
+const D2R = Math.PI / 180;
+const FILL = { 'silo-a': 0.86, 'silo-b': 0.78, 'silo-c': 0.72, 'silo-d': 0.9, 'bunker-1': 0.55, 'bunker-2': 0.7 };
+for (const s of storages.filter((q) => FILL[q.id])) {
+  const net = (intoStore.get(s.id) || 0) - (outOfStore.get(s.id) || 0);
+  const c = commodities.find((q) => q.id === s.commodityId);
+  const vol = net / c.testWeight;
+  const tanA = Math.tan(c.angleOfRepose * D2R);
+  if (s.kind === 'silo') {
+    const tanC = Math.tan(s.coneAngle * D2R);
+    const sign = s.fillState === 'peak' ? 1 : s.fillState === 'decline' ? -1 : 0;
+    const volAt = (r) => Math.PI * r * r * (s.currentHeight + (r / 3) * (tanC + sign * tanA));
+    let lo = 1; let hi = 12;
+    for (let i = 0; i < 40; i += 1) { const mid = (lo + hi) / 2; if (volAt(mid) < vol) lo = mid; else hi = mid; }
+    s.radius = Math.round(((lo + hi) / 2) * 20) / 20;
+  } else {
+    s.length = round(vol / (0.25 * tanA * s.width * s.width) - (Math.PI / 6) * s.width + s.width, 0);
+  }
+  s.capacityTons = Math.round(net / FILL[s.id] / 10) * 10;
+}
 
 const invoices = [
   { id: 'inv-1', saleId: 'sale-1', invoiceNo: 1, issueDate: '2026-12-18',

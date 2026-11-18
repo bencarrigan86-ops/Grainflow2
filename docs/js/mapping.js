@@ -27,13 +27,13 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=372';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=372';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=372';
-import { cleanPicked } from './modulespicked.js?v=372';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=372';
-import { cleanOffFarm } from './offfarm.js?v=372';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=372';
+import { cleanGradeOptions } from './gradeprice.js?v=373';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=373';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=373';
+import { cleanPicked } from './modulespicked.js?v=373';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=373';
+import { cleanOffFarm } from './offfarm.js?v=373';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=373';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);

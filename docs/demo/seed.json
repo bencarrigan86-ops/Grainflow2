@@ -1014,11 +1014,11 @@
           "kind": "silo",
           "name": "Silo A",
           "commodityId": "wheat",
-          "radius": 4.6,
+          "radius": 6.55,
           "coneAngle": 35,
           "currentHeight": 9.2,
           "fillState": "peak",
-          "capacityTons": 620
+          "capacityTons": 1510
         },
         {
           "openingStock": 0,
@@ -1027,11 +1027,11 @@
           "kind": "silo",
           "name": "Silo B",
           "commodityId": "wheat",
-          "radius": 4.6,
+          "radius": 6.8,
           "coneAngle": 35,
-          "currentHeight": 6.1,
+          "currentHeight": 9.6,
           "fillState": "flat",
-          "capacityTons": 620
+          "capacityTons": 1710
         },
         {
           "openingStock": 0,
@@ -1040,11 +1040,11 @@
           "kind": "silo",
           "name": "Silo C",
           "commodityId": "barley",
-          "radius": 3.8,
+          "radius": 6.4,
           "coneAngle": 35,
-          "currentHeight": 7.4,
+          "currentHeight": 10.2,
           "fillState": "decline",
-          "capacityTons": 410
+          "capacityTons": 1300
         },
         {
           "openingStock": 0,
@@ -1053,11 +1053,11 @@
           "kind": "silo",
           "name": "Silo D",
           "commodityId": "canola",
-          "radius": 3.2,
+          "radius": 4.75,
           "coneAngle": 35,
-          "currentHeight": 5.8,
+          "currentHeight": 7.6,
           "fillState": "peak",
-          "capacityTons": 265
+          "capacityTons": 500
         },
         {
           "openingStock": 0,
@@ -1066,11 +1066,11 @@
           "kind": "bunker",
           "name": "Bunker 1",
           "commodityId": "wheat",
-          "width": 24,
-          "length": 62,
+          "width": 14,
+          "length": 29,
           "currentHeight": 4.1,
           "fillState": "peak",
-          "capacityTons": 2400,
+          "capacityTons": 740,
           "tarpOverhangM": 1.5
         },
         {
@@ -1081,10 +1081,10 @@
           "name": "Bunker 2",
           "commodityId": "barley",
           "width": 20,
-          "length": 48,
+          "length": 42,
           "currentHeight": 3.4,
           "fillState": "flat",
-          "capacityTons": 1500,
+          "capacityTons": 1630,
           "tarpOverhangM": 1.5
         },
         {
