@@ -1,11 +1,11 @@
 // Modules picked on a paddock: how many, their estimated weight and the turnout. The bales, the seed and the ginning follow.
 
-import { db } from '../storage.js?v=386';
-import { num, esc, todayLocal, shortDate } from '../fmt.js?v=386';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=386';
-import { estimateBales, DEFAULT_TURNOUT } from '../ginning.js?v=386';
-import { cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=386';
-import { cleanCotton } from '../ginning.js?v=386';
+import { db } from '../storage.js?v=387';
+import { num, esc, todayLocal, shortDate } from '../fmt.js?v=387';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=387';
+import { estimateBales, DEFAULT_TURNOUT } from '../ginning.js?v=387';
+import { cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=387';
+import { cleanCotton } from '../ginning.js?v=387';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 

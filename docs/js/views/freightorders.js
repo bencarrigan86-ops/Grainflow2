@@ -5,23 +5,23 @@
 // It goes to the carrier as a PDF (shared or emailed) and a copy is filed with the contract. Loads then name the
 // freight order they travel on, and the carrier's bill is recorded against it. The arithmetic is in freight.js.
 
-import { db } from '../storage.js?v=386';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=386';
-import { signerName } from '../signdoc.js?v=386';
-import { addressFields, readAddress, partsOf, joinAddress } from '../address.js?v=386';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=386';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=386';
-import { orderTitle } from '../orders.js?v=386';
-import { orderDelivery, bookingRows, nilToleranceLines, cleanFreightDetail, freightDetailDefaults, showsRate } from '../orderdetail.js?v=386';
-import { activeSales } from '../paidsales.js?v=386';
+import { db } from '../storage.js?v=387';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=387';
+import { signerName } from '../signdoc.js?v=387';
+import { addressFields, readAddress, partsOf, joinAddress } from '../address.js?v=387';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=387';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=387';
+import { orderTitle } from '../orders.js?v=387';
+import { orderDelivery, bookingRows, nilToleranceLines, cleanFreightDetail, freightDetailDefaults, showsRate } from '../orderdetail.js?v=387';
+import { activeSales } from '../paidsales.js?v=387';
 import {
   BASES, STATE_LABEL, contractFreightNo, freightState, freightOwed, freightTitle, freightDefaults, freightProblems,
   perTonne, rateText, estimatedTotal, windowText, freightOrderPdf,
-} from '../freight.js?v=386';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=386';
-import { fileSentCopy } from '../sentcopy.js?v=386';
-import { movementRow, openMovementSheet } from './movements.js?v=386';
-import { openBillSheet, returnToAfterBill } from './payables.js?v=386';
+} from '../freight.js?v=387';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=387';
+import { fileSentCopy } from '../sentcopy.js?v=387';
+import { movementRow, openMovementSheet } from './movements.js?v=387';
+import { openBillSheet, returnToAfterBill } from './payables.js?v=387';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | closed | all
@@ -179,16 +179,21 @@ export function openFreightOrderSheet(existing, start = {}) {
         </details>
 
         <details class="fold feature" data-fold="job" ${isOpen('job', !(d.pickup && d.deliverTo)) ? 'open' : ''}>
-        <summary><div class="feature-head"><h2>Pick up and delivery</h2><div class="sub">${esc([d.pickup && d.deliverTo ? 'Addresses filled in' : 'Addresses needed', windowText(d)].filter(Boolean).join(' · '))}</div></div></summary>
+        <summary><div class="feature-head"><h2>Pick up and delivery</h2><div class="sub">${esc([d.pickup && d.deliverTo ? 'Addresses filled in' : 'Addresses needed', dt.pickupPhone && `Pick up ${dt.pickupPhone}`, dt.deliverySitePhone && `Delivery ${dt.deliverySitePhone}`, windowText(d)].filter(Boolean).join(' · '))}</div></div></summary>
         <div class="subhead">Pick up from</div>
         ${addressFields('fo-pick', partsOf(d.pickup, d.pickupParts), { label: 'Pick up from' })}
+        ${field({ label: 'Pick up phone', id: 'fd-pphone', type: 'tel', value: d.detail?.pickupPhone })}
         <div class="subhead">Deliver to</div>
         ${field({ label: 'Company', id: 'fd-dco', value: d.detail?.deliverCompany, placeholder: 'Who it is delivered to' })}
         ${addressFields('fo-drop', partsOf(d.deliverTo, d.deliverToParts), { label: 'Deliver to' })}
+        ${field({ label: 'Delivery phone', id: 'fd-dphone', type: 'tel', value: d.detail?.deliverySitePhone })}
         <div class="grid-2">
           ${field({ label: 'Deliver from (date)', id: 'fo-from', type: 'date', value: d.loadFrom })}
           ${field({ label: 'Deliver to (date)', id: 'fo-by', type: 'date', value: d.loadBy })}
         </div>
+        <div class="hint" style="margin:-4px 0 10px">The bookings and who issued the order come from the grain order when you choose one. Check them, change them or clear them.</div>
+        ${field({ label: 'Bookings', id: 'fd-bkc', value: d.detail?.bookingContact, placeholder: 'Who to book with, phone or email' })}
+        ${field({ label: 'Order issued by', id: 'fd-iss', value: d.detail?.orderIssuedBy })}
         </details>
 
         <details class="fold" data-fold="carrier" ${isOpen('carrier', false) ? 'open' : ''}>
@@ -206,17 +211,6 @@ export function openFreightOrderSheet(existing, start = {}) {
           ${field({ label: 'Variety', id: 'fd-variety', value: d.detail?.variety })}
           ${field({ label: 'Payment terms', id: 'fd-terms', value: d.detail?.paymentTerms, placeholder: 'e.g. 30 days end of week' })}
         </div>
-        </details>
-
-        <details class="fold" data-fold="sites" ${isOpen('sites', false) ? 'open' : ''}>
-        <summary><div class="feature-head"><h2>Site phones and bookings</h2><div class="sub">${foldSub([dt.pickupPhone && `Pick up ${dt.pickupPhone}`, dt.deliverySitePhone && `Delivery ${dt.deliverySitePhone}`], 'Phones, who to book with')}</div></div></summary>
-        <div class="grid-2">
-          ${field({ label: 'Pick up phone', id: 'fd-pphone', type: 'tel', value: d.detail?.pickupPhone })}
-          ${field({ label: 'Delivery phone', id: 'fd-dphone', type: 'tel', value: d.detail?.deliverySitePhone })}
-        </div>
-        <div class="hint" style="margin:-4px 0 10px">The bookings and who issued the order come from the grain order when you choose one. Check them, change them or clear them.</div>
-        ${field({ label: 'Bookings', id: 'fd-bkc', value: d.detail?.bookingContact, placeholder: 'Who to book with, phone or email' })}
-        ${field({ label: 'Order issued by', id: 'fd-iss', value: d.detail?.orderIssuedBy })}
         </details>
 
         <details class="fold" data-fold="notes" ${isOpen('notes', !!d.notes) ? 'open' : ''}>

@@ -58,5 +58,16 @@ check('the form has folds, a typeable buyer order no., and offers the contract n
   assert.ok(read('docs/js/storage.js').includes('__hasBuyerOrderNo'));
 });
 
+check('the site phones sit under their addresses in Pick up and delivery, with the bookings; there is no separate Sites fold', () => {
+  const v = read('docs/js/views/freightorders.js');
+  assert.ok(!v.includes('data-fold="sites"') && !v.includes('Site phones and bookings'));
+  const job = v.slice(v.indexOf('data-fold="job"'), v.indexOf('data-fold="carrier"'));
+  for (const id of ['fd-pphone', 'fd-dphone', 'fd-bkc', 'fd-iss']) assert.ok(job.includes(`id: '${id}'`), id);
+  assert.ok(job.indexOf("id: 'fd-pphone'") > job.indexOf("'fo-pick'") && job.indexOf("id: 'fd-pphone'") < job.indexOf("'fo-drop'"), 'pick up phone follows the pick up address');
+  assert.ok(job.indexOf("id: 'fd-dphone'") > job.indexOf("'fo-drop'"), 'delivery phone follows the delivery address');
+  // the ids the save reads are all still on the form
+  for (const id of ['fd-pphone', 'fd-dphone', 'fd-bkc', 'fd-iss']) assert.ok(v.includes(`val('${id}')`), `saved: ${id}`);
+});
+
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
 console.log('\nall passed');
