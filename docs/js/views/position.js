@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=392';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=392';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=392';
-import { payablesCost } from '../payables.js?v=392';
-import { commodityClass } from '../commoditycolor.js?v=392';
-import { startProgress } from '../helpcontent.js?v=392';
-import { openSetupWalk } from './setupwalk.js?v=392';
-import { attentionItems } from '../attention.js?v=392';
-import { lastBackup } from '../backup.js?v=392';
-import { todayLocal, dmy } from '../fmt.js?v=392';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=392';
-import { openSheet, closeSheet } from '../ui.js?v=392';
-import { positionPdf } from '../positionpdf.js?v=392';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=392';
+import { db } from '../storage.js?v=393';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=393';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=393';
+import { payablesCost } from '../payables.js?v=393';
+import { commodityClass } from '../commoditycolor.js?v=393';
+import { startProgress } from '../helpcontent.js?v=393';
+import { openSetupWalk } from './setupwalk.js?v=393';
+import { attentionItems } from '../attention.js?v=393';
+import { lastBackup } from '../backup.js?v=393';
+import { todayLocal, dmy } from '../fmt.js?v=393';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=393';
+import { openSheet, closeSheet } from '../ui.js?v=393';
+import { positionPdf } from '../positionpdf.js?v=393';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=393';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -83,7 +83,7 @@ function paint(root) {
     <div class="view">
       ${attentionCard()}
       ${startCard()}
-      ${rows.length ? `<div class="pos-by"><span>${esc(db.getCurrentYear())} season</span><button type="button" class="btn secondary small pos-pdf" id="position-pdf"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>${canShareFiles() ? 'Share PDF' : 'PDF'}</button></div>` : ''}
+      ${rows.length ? `<div class="pos-by"><span class="pos-season">${esc(db.getCurrentYear())} season</span><button type="button" class="btn secondary small pos-pdf" id="position-pdf"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>${canShareFiles() ? 'Share PDF' : 'PDF'}</button></div>` : ''}
       ${rows.length ? dashTop(totals) : ''}
       ${rows.length === 0 ? `<div class="empty">Nothing to report yet.<br/>Add a paddock in Production, or a contract in Sales, and your position appears here.</div>` : ''}
       ${rows.length ? `<div class="pos-by"><span>Biggest first &middot; tap a crop for the detail</span></div><div class="pos-tiles">${cropTiles(rows)}</div>` : ''}

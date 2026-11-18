@@ -1405,3 +1405,4 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .sw-note + .sw-note { margin-top: 8px; }
 .sw-links { display: flex; gap: 8px; margin-top: 8px; }
 .sw-links .btn { flex: 1; margin: 0; }
+.pos-by .pos-season { font-size: 18px; font-weight: 800; color: var(--accent-summary); letter-spacing: .01em; }
