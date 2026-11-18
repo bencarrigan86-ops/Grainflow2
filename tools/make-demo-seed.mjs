@@ -66,6 +66,9 @@ commodities.push(
   { id: 'cotton', name: 'Cotton', unit: 'bale', angleOfRepose: 0, testWeight: 0, nPerTonne: 0, mtmPrice: 565, targetYieldTHa: 11, defaultYieldTHa: 10.5, grossMarginCost: 640000,
     cotton: { seedMtm: 480, seedFactor: 0.245, ginRate: 75, levies: 3.75, turnout: 43, moduleKg: 2400 },
     balesPerRoundBale: 0, openingStock: 0, retainedSeed: 0, notes: '' },
+  // seed sold outright to a trade buyer: its own commodity in tonnes. The seed in the pad is last season's, carried in as opening stock
+  { id: 'cottonseed', name: 'Cottonseed', unit: 't', angleOfRepose: 35, testWeight: 0.45, nPerTonne: 0, mtmPrice: 470, targetYieldTHa: 0, defaultYieldTHa: 0, grossMarginCost: 0,
+    balesPerRoundBale: 0, openingStock: 420, openingValue: 197400, retainedSeed: 0, notes: '' },
   { id: 'lucerne', name: 'Lucerne hay', unit: 't', angleOfRepose: 35, testWeight: 0.14, nPerTonne: 0, mtmPrice: 410, targetYieldTHa: 9, defaultYieldTHa: 9, grossMarginCost: 38000,
     hay: { baleType: 'round', baleKg: 480 }, balesPerRoundBale: 0, openingStock: 0, retainedSeed: 0, notes: '' },
   { id: 'wheatstraw', name: 'Wheat straw', unit: 't', angleOfRepose: 35, testWeight: 0.1, nPerTonne: 0, mtmPrice: 82, targetYieldTHa: 0, defaultYieldTHa: 0, grossMarginCost: 0,
@@ -219,6 +222,7 @@ const storages = [
 ].map((s) => ({ openingStock: 0, unitLabel: 't', ...s }));
 storages.push(
   { id: 'gin-yard', kind: 'tally', name: 'Bimbi gin yard', commodityId: 'cotton', unitLabel: 'modules', openingStock: 0 },
+  { id: 'seed-pad', kind: 'tally', name: 'Seed pad', commodityId: 'cottonseed', unitLabel: 't', openingStock: 420 },
   { id: 'bale-shed', kind: 'tally', name: 'Bale shed', commodityId: 'cotton', unitLabel: 'bales', openingStock: 0 },
   { id: 'hay-shed-1', kind: 'bunker', name: 'Hay shed 1', commodityId: 'lucerne', width: 14, length: 28, currentHeight: 4, fillState: 'flat', capacityTons: 150, tarpOverhangM: 0, openingStock: 0, unitLabel: 't' },
   { id: 'hay-shed-2', kind: 'bunker', name: 'Hay shed 2', commodityId: 'wheatstraw', width: 14, length: 28, currentHeight: 4.6, fillState: 'flat', capacityTons: 130, tarpOverhangM: 0, openingStock: 0, unitLabel: 't' },
@@ -267,6 +271,9 @@ sales.push(...[
   { id: 'sale-gin2', commodityId: 'cotton', cottonKind: 'ginning', buyer: 'Bimbi Ginning', contractNo: 'BG-GIN-27', grade: '', tons: 1500, price: 0, date: '2026-09-10',
     location: 'Bimbi gin yard', deliveryStart: '2027-04-01', deliveryEnd: '2027-09-30', freight: 0, leviesPct: 0, deliveryPattern: 'ginrun', tolerancePct: 0, toleranceCapTons: 1,
     cottonTerms: { ginRate: 78, researchLevy: 2.25, voluntaryLevy: 1.5, gstOnGin: true } },
+  // seed sold outright to a trade buyer, as an ordinary contract in tonnes (the gin-for-seed contract above is the other way)
+  { id: 'sale-seed1', commodityId: 'cottonseed', buyer: 'Murray Valley Feeds', contractNo: 'MVF-2058', grade: '', tons: 400, price: 470, date: '2026-09-25',
+    location: 'Ex the seed pad', deliveryStart: '2026-12-01', deliveryEnd: '2027-02-28', freight: 0, leviesPct: 0 },
   { id: 'sale-hay1', commodityId: 'lucerne', buyer: 'Valley Stockfeeds', contractNo: 'VS-3310', grade: 'Premium', tons: 150, price: 395, date: '2026-09-20',
     location: 'Ex farm', deliveryStart: '2026-12-01', deliveryEnd: '2027-02-28', freight: 0, leviesPct: 0 },
   { id: 'sale-hay2', commodityId: 'wheatstraw', buyer: 'Hillcrest Dairy Co-op', contractNo: 'HD-0412', grade: '', tons: 80, price: 82, date: '2026-10-08',
@@ -342,7 +349,6 @@ for (const [saleId, commodityId, loads] of DELIVERIES) {
     const tons = round(Math.min(jitter(38, 0.12), available), 2);
     if (tons <= 0) continue;
     add(outOfStore, store, tons);
-    sale.tonsDelivered = round(sale.tonsDelivered + tons, 2);
     movements.push({
       id: `mv-${ticket}`, ticketNo: ticket, date: `2026-12-${String(2 + (ticket % 20)).padStart(2, '0')}`,
       commodityId, status: 'closed',
@@ -509,10 +515,15 @@ const fed = hayMove('2026-12-12', 'silo', 'hay-shed-1', [], 'lucerne', 40, 480, 
 for (const d of ['2026-11-29', '2026-12-01']) hayMove(d, 'field', 'fld-boundary', [{ type: 'silo', id: 'hay-shed-2' }], 'wheatstraw', 70, 520);
 hayMove('2026-11-30', 'field', 'fld-river', [{ type: 'silo', id: 'hay-shed-2' }], 'wheatstraw', 100, 520);
 const strawLoad = hayMove('2026-12-14', 'silo', 'hay-shed-2', [{ type: 'sale', id: 'sale-hay2' }], 'wheatstraw', 60, 520);
-sales.find((s) => s.id === 'sale-hay1').tonsDelivered = r3(hayLoads.reduce((s, m) => s + m.tons, 0));
-sales.find((s) => s.id === 'sale-hay2').tonsDelivered = strawLoad.tons;
-sales.find((s) => s.id === 'sale-ct1').tonsDelivered = r3(lots[0].std);
-sales.find((s) => s.id === 'sale-ct2').tonsDelivered = r3(lots[1].std);
+// two loads of seed off the pad to the seed contract
+for (const [date, tons] of [['2026-12-16', 28.4], ['2026-12-18', 29.1]]) {
+  movements.push({
+    id: `mv-${ticket}`, ticketNo: ticket, date, commodityId: 'cottonseed', status: 'closed',
+    truckRego: TRUCKS[ticket % TRUCKS.length], driver: DRIVERS[ticket % DRIVERS.length],
+    tons, weightStatus: 'final', froms: [{ type: 'silo', id: 'seed-pad', tons }], tos: [{ type: 'sale', id: 'sale-seed1', tons }], notes: 'Seed',
+  });
+  ticket += 1;
+}
 
 // invoices, built by the app's own functions so the totals agree with what the screens work out
 const buildInvoice = (base, sale, movs, extraLines = []) => {

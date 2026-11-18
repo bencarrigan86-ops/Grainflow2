@@ -93,6 +93,23 @@
           "notes": ""
         },
         {
+          "id": "cottonseed",
+          "name": "Cottonseed",
+          "unit": "t",
+          "angleOfRepose": 35,
+          "testWeight": 0.45,
+          "nPerTonne": 0,
+          "mtmPrice": 470,
+          "targetYieldTHa": 0,
+          "defaultYieldTHa": 0,
+          "grossMarginCost": 0,
+          "balesPerRoundBale": 0,
+          "openingStock": 420,
+          "openingValue": 197400,
+          "retainedSeed": 0,
+          "notes": ""
+        },
+        {
           "id": "lucerne",
           "name": "Lucerne hay",
           "unit": "t",
@@ -1096,6 +1113,14 @@
           "openingStock": 0
         },
         {
+          "id": "seed-pad",
+          "kind": "tally",
+          "name": "Seed pad",
+          "commodityId": "cottonseed",
+          "unitLabel": "t",
+          "openingStock": 420
+        },
+        {
           "id": "bale-shed",
           "kind": "tally",
           "name": "Bale shed",
@@ -1143,7 +1168,7 @@
           "buyerAbn": "",
           "buyerAddress": "",
           "notes": "",
-          "tonsDelivered": 150.91,
+          "tonsDelivered": 0,
           "deliveryPeriod": "",
           "id": "sale-1",
           "commodityId": "wheat",
@@ -1195,7 +1220,7 @@
           "buyerAbn": "",
           "buyerAddress": "",
           "notes": "",
-          "tonsDelivered": 115.05,
+          "tonsDelivered": 0,
           "deliveryPeriod": "",
           "id": "sale-3",
           "commodityId": "barley",
@@ -1247,7 +1272,7 @@
           "buyerAbn": "",
           "buyerAddress": "",
           "notes": "",
-          "tonsDelivered": 73.52,
+          "tonsDelivered": 0,
           "deliveryPeriod": "",
           "id": "sale-5",
           "commodityId": "canola",
@@ -1299,7 +1324,7 @@
           "buyerAbn": "",
           "buyerAddress": "",
           "notes": "",
-          "tonsDelivered": 599.119,
+          "tonsDelivered": 0,
           "deliveryPeriod": "",
           "id": "sale-ct1",
           "commodityId": "cotton",
@@ -1326,7 +1351,7 @@
           "buyerAbn": "",
           "buyerAddress": "",
           "notes": "",
-          "tonsDelivered": 403.084,
+          "tonsDelivered": 0,
           "deliveryPeriod": "",
           "id": "sale-ct2",
           "commodityId": "cotton",
@@ -1421,7 +1446,33 @@
           "buyerAbn": "",
           "buyerAddress": "",
           "notes": "",
-          "tonsDelivered": 57.6,
+          "tonsDelivered": 0,
+          "deliveryPeriod": "",
+          "id": "sale-seed1",
+          "commodityId": "cottonseed",
+          "buyer": "Murray Valley Feeds",
+          "contractNo": "MVF-2058",
+          "grade": "",
+          "tons": 400,
+          "price": 470,
+          "date": "2026-09-25",
+          "location": "Ex the seed pad",
+          "deliveryStart": "2026-12-01",
+          "deliveryEnd": "2027-02-28",
+          "freight": 0,
+          "leviesPct": 0
+        },
+        {
+          "premiumDiscount": 0,
+          "ginning": 0,
+          "paymentTermsDays": 14,
+          "tolerancePct": 5,
+          "toleranceCapTons": 20,
+          "brokerNote": "",
+          "buyerAbn": "",
+          "buyerAddress": "",
+          "notes": "",
+          "tonsDelivered": 0,
           "deliveryPeriod": "",
           "id": "sale-hay1",
           "commodityId": "lucerne",
@@ -1447,7 +1498,7 @@
           "buyerAbn": "",
           "buyerAddress": "",
           "notes": "",
-          "tonsDelivered": 31.2,
+          "tonsDelivered": 0,
           "deliveryPeriod": "",
           "id": "sale-hay2",
           "commodityId": "wheatstraw",
@@ -3126,6 +3177,58 @@
             "bales": 60,
             "kg": 31200
           }
+        },
+        {
+          "id": "mv-1057",
+          "ticketNo": 1057,
+          "date": "2026-12-16",
+          "commodityId": "cottonseed",
+          "status": "closed",
+          "truckRego": "XKR 17N",
+          "driver": "Sample Driver",
+          "tons": 28.4,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "silo",
+              "id": "seed-pad",
+              "tons": 28.4
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-seed1",
+              "tons": 28.4
+            }
+          ],
+          "notes": "Seed"
+        },
+        {
+          "id": "mv-1058",
+          "ticketNo": 1058,
+          "date": "2026-12-18",
+          "commodityId": "cottonseed",
+          "status": "closed",
+          "truckRego": "TDD 88Q",
+          "driver": "Casual Carter",
+          "tons": 29.1,
+          "weightStatus": "final",
+          "froms": [
+            {
+              "type": "silo",
+              "id": "seed-pad",
+              "tons": 29.1
+            }
+          ],
+          "tos": [
+            {
+              "type": "sale",
+              "id": "sale-seed1",
+              "tons": 29.1
+            }
+          ],
+          "notes": "Seed"
         }
       ],
       "invoices": [
@@ -3136,23 +3239,23 @@
           "issueDate": "2026-12-18",
           "dueDate": "2027-01-17",
           "status": "outstanding",
-          "totalTons": 150.91,
-          "subtotalExGST": 57194.89,
-          "freightTotal": 3244.57,
-          "levies": 629.14,
-          "gst": 5332.12,
-          "totalPayable": 58653.3,
+          "totalTons": 0,
+          "subtotalExGST": 0,
+          "freightTotal": 0,
+          "levies": 0,
+          "gst": 0,
+          "totalPayable": 0,
           "lines": [
             {
               "description": "APW1 Riverina Grain Traders",
-              "tons": 150.91,
+              "tons": 0,
               "price": 379
             }
           ],
           "totals": {
-            "subtotalExGST": 57194.89,
-            "freightTotal": 3244.57,
-            "levies": 629.14
+            "subtotalExGST": 0,
+            "freightTotal": 0,
+            "levies": 0
           }
         },
         {
@@ -3163,23 +3266,23 @@
           "dueDate": "2027-01-19",
           "status": "paid",
           "paidDate": "2027-01-12",
-          "totalTons": 115.05,
-          "subtotalExGST": 37276.2,
+          "totalTons": 0,
+          "subtotalExGST": 0,
           "freightTotal": 0,
-          "levies": 410.04,
-          "gst": 3686.62,
-          "totalPayable": 40552.78,
+          "levies": 0,
+          "gst": 0,
+          "totalPayable": 0,
           "lines": [
             {
               "description": "BAR1 Coastal Feeds Pty Ltd",
-              "tons": 115.05,
+              "tons": 0,
               "price": 324
             }
           ],
           "totals": {
-            "subtotalExGST": 37276.2,
+            "subtotalExGST": 0,
             "freightTotal": 0,
-            "levies": 410.04
+            "levies": 0
           }
         },
         {
@@ -5667,6 +5770,6 @@
     "bsb": "",
     "accountNumber": ""
   },
-  "nextMovementNo": 1057,
+  "nextMovementNo": 1059,
   "nextInvoiceNo": 5
 }

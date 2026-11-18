@@ -18,17 +18,17 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=376';
-import { openSheet, toast, notify, askConfirm } from '../ui.js?v=376';
-import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=376';
-import { addressLinesOf } from '../address.js?v=376';
-import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=376';
-import { contactLines, splitContact } from '../buyercontact.js?v=376';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=376';
-import { DASH, longDate, termRows, confirmationPdf, confirmationFooting } from '../contractpdf.js?v=376';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=376';
-import { fileSentCopy } from '../sentcopy.js?v=376';
-import { docBandHTML } from '../docband.js?v=376';
+import { db } from '../storage.js?v=377';
+import { openSheet, toast, notify, askConfirm } from '../ui.js?v=377';
+import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=377';
+import { addressLinesOf } from '../address.js?v=377';
+import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=377';
+import { contactLines, splitContact } from '../buyercontact.js?v=377';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=377';
+import { DASH, longDate, termRows, confirmationPdf, confirmationFooting } from '../contractpdf.js?v=377';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=377';
+import { fileSentCopy } from '../sentcopy.js?v=377';
+import { docBandHTML } from '../docband.js?v=377';
 
 /** One term, its value on one line or on several (an array). Omitted entirely when empty — a blank line invites a pen. */
 const term = (label, value) => {

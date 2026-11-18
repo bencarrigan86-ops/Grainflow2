@@ -23,6 +23,7 @@ import { readFileSync } from 'node:fs';
 import { prepareImport, isUuid, remapIds } from '../docs/js/import.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 import { sampleStateFor, sampleHistoryFrom, sampleHistoryOffered, sampleCottonHayFrom, sampleCottonHayOffered, sampleRefreshOffered } from '../docs/js/demo.js';
+import { saleEconomics } from '../docs/js/derived.js';
 import { ringsAreaHa, matchBoundaries } from '../docs/js/farmmap.js';
 
 const raw = readFileSync(new URL('../docs/demo/seed.json', import.meta.url), 'utf8');
@@ -206,7 +207,8 @@ check('every load balances: what left equals what arrived', () => {
 check('no store is carted out of further than it was carted into', () => {
   // A negative silo is the fastest way to make a demo look broken to somebody
   // who knows what they are looking at.
-  const net = new Map();
+  // a store that opened with stock (last season's seed in the pad) starts from it
+  const net = new Map(season.storages.filter((s) => Number(s.openingStock) > 0 && s.unitLabel === 't').map((s) => [s.id, Number(s.openingStock)]));
   for (const m of season.movements) {
     for (const l of m.froms) if (l.type === 'silo') net.set(l.id, (net.get(l.id) || 0) - l.tons);
     for (const l of m.tos) if (l.type === 'silo') net.set(l.id, (net.get(l.id) || 0) + l.tons);
@@ -229,8 +231,18 @@ check('nothing is delivered against a contract that was never grown', () => {
       delivered.set(m.commodityId, (delivered.get(m.commodityId) || 0) + m.tons);
     }
   }
+  // what a commodity opened the season with can be delivered too (last season's seed)
+  for (const c of season.commodities) if (Number(c.openingStock) > 0) grown.set(c.id, (grown.get(c.id) || 0) + Number(c.openingStock));
   for (const [c, t] of delivered) {
     assert.ok(t <= grown.get(c), `${c}: delivered ${t.toFixed(0)} t, grew ${grown.get(c).toFixed(0)} t`);
+  }
+});
+
+check('no delivery is counted twice: a contract with loads has none typed in as well', () => {
+  for (const s of season.sales) {
+    const e = saleEconomics(s, season.movements);
+    assert.ok(e.manualDelivered === 0 || e.movementDelivered === 0, `${s.contractNo} is typed in as delivered and has loads too`);
+    assert.ok(e.tonsDelivered <= s.tons * 1.05 + 0.05, `${s.contractNo} shows ${e.tonsDelivered} delivered against ${s.tons}`);
   }
 });
 
@@ -269,8 +281,9 @@ check('it is a farm you can take in at a glance, not a data dump', () => {
 check('every screen has something on it', () => {
   assert.ok(season.fields.some((f) => f.soilTestNKgHa > 0), 'the Fert report would be empty');
   assert.ok(season.fields.some((f) => f.ureaApplications.length), 'no urea applications to show');
-  assert.ok(season.sales.some((s) => s.tonsDelivered > 0), 'nothing delivered — Sales looks untouched');
-  assert.ok(season.sales.some((s) => s.tonsDelivered === 0), 'everything delivered — no open position');
+  const delivered = (s) => saleEconomics(s, season.movements).tonsDelivered;   // the loads are the deliveries: none is typed in as well
+  assert.ok(season.sales.some((s) => delivered(s) > 0), 'nothing delivered — Sales looks untouched');
+  assert.ok(season.sales.some((s) => delivered(s) === 0), 'everything delivered — no open position');
   assert.ok(season.invoices.some((i) => i.status === 'paid'), 'no paid invoice');
   assert.ok(season.invoices.some((i) => i.status === 'outstanding'), 'no outstanding invoice');
   assert.ok(Object.values(season.overheads).some((v) => v > 0), 'overheads are all zero');
@@ -422,15 +435,16 @@ check('it is offered to the owner of a sample farm with no cotton or hay, and th
   const own = { id: 'my-cotton', name: 'Cotton' };
   assert.equal(sampleCottonHayOffered([], oldFarm.fields, 'Sample 2026', 'owner'), true);
   const merged = sampleCottonHayFrom(seed, { fields: oldFarm.fields, commodities: [own] });
-  assert.equal(merged.commodities.length, 2);
+  assert.equal(merged.commodities.length, 3);
   assert.ok(!merged.commodities.some((c) => c.name === 'Cotton'));
   assert.ok(merged.fields.filter((f) => f.name.startsWith('Cotton')).every((f) => f.commodityId === 'my-cotton'));
 });
 check('it brings the cotton and hay paddocks, stores, contracts, loads and the two invoices', () => {
-  assert.equal(pack.commodities.length, 3);
+  assert.equal(pack.commodities.length, 4);
   assert.equal(pack.fields.length, 3);
-  assert.equal(pack.storages.length, 4);
-  assert.equal(pack.sales.length, 6);
+  assert.equal(pack.storages.length, 5);
+  assert.equal(pack.sales.length, 7);
+  assert.ok(pack.sales.some((s) => s.contractNo === 'MVF-2058'), 'seed sold outright is there too');
   const ginRun = pack.movements.find((m) => m.gin);
   const forSeed = pack.sales.find((s) => s.cottonKind === "ginforseed");
   assert.ok(forSeed && pack.sales.some((s) => s.cottonKind === "ginning"), "a gin-for-seed and a ginning contract");

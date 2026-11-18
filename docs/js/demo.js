@@ -11,8 +11,8 @@
 // remapIds() reissues every one on import and two trial accounts never collide
 // on a primary key.
 
-import { DEFAULT_BUSINESS_DETAILS, prepareImport, newId } from './import.js?v=376';
-import { APP_VERSION } from './version.js?v=376';
+import { DEFAULT_BUSINESS_DETAILS, prepareImport, newId } from './import.js?v=377';
+import { APP_VERSION } from './version.js?v=377';
 
 const WANTED_KEY = 'grainflow.seedSample';
 
@@ -155,7 +155,7 @@ export async function fetchSampleFarm(farmName) {
 
 /** The commodities the cotton and hay part of the sample is built on. */
 const COTTON_HAY_NAMES = ['Cotton', 'Lucerne hay', 'Wheat straw'];
-const COTTON_HAY_IDS = ['cotton', 'lucerne', 'wheatstraw'];
+const COTTON_HAY_IDS = ['cotton', 'cottonseed', 'lucerne', 'wheatstraw'];
 
 /** The contract and paddock the sample's cotton is made of: a farm that has them already has had it added. */
 export const SAMPLE_COTTON_CONTRACT = 'WCM-2610';
