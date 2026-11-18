@@ -128,8 +128,8 @@ console.log('\n=== wired in ===');
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
-check('Position opens it, and the sheet downloads the file', () => {
-  assert.ok(read('docs/js/views/position.js').includes('openEofySheet'));
+check('Reports opens it, and the sheet downloads the file', () => {
+  assert.ok(read('docs/js/views/reports.js').includes('openEofySheet') && read('docs/js/reportshub.js').includes("tile('eofy'"));
   const v = read('docs/js/views/eofy.js');
   for (const t of ['eofy-date', 'eofyPdf', 'financialYearEnd', 'downloadFile']) assert.ok(v.includes(t), t);
 });

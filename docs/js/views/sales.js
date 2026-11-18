@@ -1,32 +1,33 @@
-import { db } from '../storage.js?v=388';
+import { db } from '../storage.js?v=389';
+import { tileIcon } from '../tileicon.js?v=389';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=388';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=388';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=388';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=388';
-import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=388';
-import { patternsFor } from '../deliveryplan.js?v=388';
-import { INVOICING } from '../invoicing.js?v=388';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=388';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=388';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=388';
-import { renderRelatedMovements } from './movements.js?v=388';
-import { openInvoiceListSheet } from './invoice.js?v=388';
-import { openContractDocSheet } from './contract.js?v=388';
-import { wireJumps } from '../jump.js?v=388';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=388';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=388';
-import { freightState } from '../freight.js?v=388';
-import { activeSales, paidSales } from '../paidsales.js?v=388';
-import { openVendorDecSheet } from './vendordec.js?v=388';
-import { summarise as summariseOrders } from '../orders.js?v=388';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=388';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=388';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=388';
-import { standardFor } from '../grades.js?v=388';
-import { commodityClass } from '../commoditycolor.js?v=388';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=388';
+} from '../documents.js?v=389';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=389';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=389';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=389';
+import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=389';
+import { patternsFor } from '../deliveryplan.js?v=389';
+import { INVOICING } from '../invoicing.js?v=389';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=389';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=389';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=389';
+import { renderRelatedMovements } from './movements.js?v=389';
+import { openInvoiceListSheet } from './invoice.js?v=389';
+import { openContractDocSheet } from './contract.js?v=389';
+import { wireJumps } from '../jump.js?v=389';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=389';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=389';
+import { freightState } from '../freight.js?v=389';
+import { activeSales, paidSales } from '../paidsales.js?v=389';
+import { openVendorDecSheet } from './vendordec.js?v=389';
+import { summarise as summariseOrders } from '../orders.js?v=389';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=389';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=389';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=389';
+import { standardFor } from '../grades.js?v=389';
+import { commodityClass } from '../commoditycolor.js?v=389';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=389';
 
 let unsub = null;
 
@@ -73,8 +74,8 @@ function paint(root) {
     </div>
     <div class="view">
       ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div class="tile-grid">
-        <button type="button" class="btn secondary tool-tile" id="open-orders"><b>Grain orders</b><span>${ordersSum.open.count ? `${num(ordersSum.open.left, 0)} t to deliver${ordersSum.overdue.count ? ` (${ordersSum.overdue.count} overdue)` : ordersSum.soon.count ? ` (${ordersSum.soon.count} due soon)` : ''}` : 'none open'}</span></button>
-        <button type="button" class="btn secondary tool-tile" id="open-freight"><b>Freight orders</b><span>${freightOpen.length ? `${freightOpen.length} open · ${num(freightLeft, 0)} t to cart` : 'none open'}</span></button>
+        <button type="button" class="btn secondary tool-tile" id="open-orders">${tileIcon('orders')}<span class="tt-text"><b>Grain orders</b><span>${ordersSum.open.count ? `${num(ordersSum.open.left, 0)} t to deliver${ordersSum.overdue.count ? ` (${ordersSum.overdue.count} overdue)` : ordersSum.soon.count ? ` (${ordersSum.soon.count} due soon)` : ''}` : 'none open'}</span></span></button>
+        <button type="button" class="btn secondary tool-tile" id="open-freight">${tileIcon('freight')}<span class="tt-text"><b>Freight orders</b><span>${freightOpen.length ? `${freightOpen.length} open · ${num(freightLeft, 0)} t to cart` : 'none open'}</span></span></button>
       </div>` : ''}
       ${rollup.length === 0 ? '' : `
       <div class="card report">
@@ -105,9 +106,14 @@ function paint(root) {
 
       <div class="card input">
         <h2><span class="dot input"></span>Contracts</h2>
-        ${carryList.length ? `<button type="button" class="btn secondary small" id="carry-contracts" style="margin-bottom:10px">Bring in ${esc(prevLabel)} contracts&hellip; (${carryList.length})</button>` : ''}
-        ${paidList.length ? `<button type="button" class="btn secondary small" id="open-paid" style="margin-bottom:10px">Paid contracts (${paidList.length})</button>` : ''}
-        ${activeSales(sales).length > 1 ? `<div class="field" style="margin-bottom:10px"><label for="sale-sort">Sort contracts by</label><select id="sale-sort">${SALE_SORTS.map((o) => `<option value="${o.value}" ${o.value === saleSort ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></div>` : ''}
+        ${(activeSales(sales).length > 1 || paidList.length || carryList.length) ? `<div class="sale-toolrow">
+          ${activeSales(sales).length > 1 ? `<div class="field"><label for="sale-sort">Sort contracts by</label><select id="sale-sort">${SALE_SORTS.map((o) => `<option value="${o.value}" ${o.value === saleSort ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></div>` : '<span class="sale-spacer"></span>'}
+          ${(paidList.length || carryList.length) ? '<button type="button" class="btn secondary small mv-more-btn" id="sale-more-btn" aria-haspopup="true" aria-expanded="false">More &#9662;</button>' : ''}
+        </div>
+        ${(paidList.length || carryList.length) ? `<div class="mv-menu" id="sale-more" hidden style="margin-bottom:10px">
+          ${paidList.length ? `<button type="button" id="open-paid">Paid contracts (${paidList.length})</button>` : ''}
+          ${carryList.length ? `<button type="button" id="carry-contracts">Bring in ${esc(prevLabel)} contracts&hellip; (${carryList.length})</button>` : ''}
+        </div>` : ''}` : ''}
         ${groups.length === 0 ? (sales.length ? `<div class="empty">Every contract is marked paid.</div>` : `<div class="empty">No contracts yet.<br/><button class="btn" id="empty-add">Add your first sale</button></div>`) : groups.map((g) => `
           <div class="group-label" id="grp-${esc(g.id ?? 'none')}"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
           ${g.sales.map((s, i) => saleRow(s, movements, commodities, i)).join('')}
@@ -130,6 +136,15 @@ function paint(root) {
   root.querySelector('#open-paid')?.addEventListener('click', () => openPaidSheet());
   root.querySelector('#sale-sort')?.addEventListener('change', (e) => { if (isSaleSort(e.target.value)) { saveSaleSort(e.target.value); paint(root); } });
   root.querySelector('#carry-contracts')?.addEventListener('click', () => openCarrySheet(prevLabel));
+  // Paid contracts and last season's contracts sit behind More, so they are not taking up the top of the list all the time
+  const menu = root.querySelector('#sale-more');
+  const moreBtn = root.querySelector('#sale-more-btn');
+  if (menu && moreBtn) {
+    const setMenu = (open) => { menu.hidden = !open; moreBtn.setAttribute('aria-expanded', String(open)); };
+    moreBtn.addEventListener('click', () => setMenu(menu.hidden));
+    menu.addEventListener('click', () => setMenu(false));
+    root.onclick = (ev) => { if (!menu.hidden && !ev.target.closest('#sale-more, #sale-more-btn')) setMenu(false); };
+  }
 }
 
 /** The contracts marked paid: out of the way on the main list, still here to open, check or put back. */

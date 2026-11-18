@@ -1,39 +1,36 @@
-import { db } from '../storage.js?v=388';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=388';
-import { isHay, balesInStorage, describeBales } from '../hay.js?v=388';
-import { modulesReport } from '../modulesreport.js?v=388';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=388';
-import { isTransit } from '../transit.js?v=388';
-import { isOffFarm } from '../offfarm.js?v=388';
-import { paintOffFarmCard } from './offfarm.js?v=388';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=388';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=388';
-import { hasStorageQuality } from '../mapping.js?v=388';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=388';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=388';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=388';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=388';
-import { renderRelatedMovements } from './movements.js?v=388';
-import { openSiloSetupSheet } from './silosetup.js?v=388';
-import { commodityFills } from '../commodityfill.js?v=388';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=388';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=388';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=388';
+import { db } from '../storage.js?v=389';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=389';
+import { isHay, balesInStorage, describeBales } from '../hay.js?v=389';
+import { modulesReport } from '../modulesreport.js?v=389';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=389';
+import { isTransit } from '../transit.js?v=389';
+import { isOffFarm } from '../offfarm.js?v=389';
+import { paintOffFarmCard } from './offfarm.js?v=389';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=389';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=389';
+import { hasStorageQuality } from '../mapping.js?v=389';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=389';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=389';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=389';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=389';
+import { renderRelatedMovements } from './movements.js?v=389';
+import { openSiloSetupSheet } from './silosetup.js?v=389';
+import { openCalculatorSheet } from './calculator.js?v=389';
+import { commodityFills } from '../commodityfill.js?v=389';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=389';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=389';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=389';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=388';
+} from '../silolayers.js?v=389';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
 let listMode = 'commodity';
-let view = 'saved';
-let quickKind = 'silo';
 // The search box and the chosen commodity tab, kept across repaints so a sync
 // arriving does not clear what you were looking for.
 let searchText = '';
 let commodityTab = '';
-// Season set-up and fill-in sit behind a Tools button: they are used a few times a season, so they shouldn't push the list down.
-let toolsOpen = false;
 // How the list is ordered, remembered on the device like the measured switch.
 const SORT_KEY = 'grainflow.storageSort';
 let sortMode = (() => { try { const v = localStorage.getItem(SORT_KEY); return SORTS.some((x) => x.id === v) ? v : 'volume'; } catch { return 'volume'; } })();
@@ -64,30 +61,14 @@ function paint(root) {
     <div class="topbar">
       <div>
         <h1>Storage</h1>
-        <div class="sub">Saved silos &amp; bunkers, plus a quick calculator</div>
+        <div class="sub">Silos and bunkers</div>
       </div>
     </div>
     <div class="view">
-      <div class="segmented" id="storage-view">
-        <button data-view="saved" class="${view === 'saved' ? 'active' : ''}">Saved</button>
-        <button data-view="calculator" class="${view === 'calculator' ? 'active' : ''}">Calculator</button>
-      </div>
-      <div id="storage-body" style="margin-top:12px"></div>
+      <div id="storage-body"></div>
     </div>
-    ${view === 'saved' ? `<button class="fab" id="add-storage">+</button>` : ''}
+    <button class="fab" id="add-storage">+</button>
   `;
-
-  root.querySelector('#storage-view').addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-view]');
-    if (!btn) return;
-    view = btn.dataset.view;
-    paint(root);
-  });
-
-  if (view === 'calculator') {
-    paintCalculator(root);
-    return;
-  }
 
   const body = root.querySelector('#storage-body');
   if (storages.length === 0) {
@@ -103,28 +84,17 @@ function paint(root) {
   body.innerHTML = `
     <div id="storage-summary"></div>
     <div class="card">
-      <h2>Saved silos &amp; bunkers</h2>
-      <div class="storage-tools-bar">
-        <button type="button" class="chip ${showMeasured ? 'active' : ''}" id="toggle-measured" aria-pressed="${showMeasured}">Measured: ${showMeasured ? 'shown' : 'hidden'}</button>
-        ${canSetUp ? `<button type="button" class="chip" id="toggle-tools" aria-expanded="${toolsOpen}">Tools ${toolsOpen ? '&#9652;' : '&#9662;'}</button>` : ''}
+      <div class="mv-searchrow">
+        <input type="search" id="storage-search" aria-label="Search silos" placeholder="Search&hellip;" value="${esc(searchText)}" />
+        ${listMode === 'name' ? '' : `<select id="storage-sort" class="storage-sort" aria-label="Sort by">${SORTS.map((x) => `<option value="${x.id}" ${sortMode === x.id ? 'selected' : ''}>${x.label}</option>`).join('')}</select>`}
+        <button type="button" class="btn secondary small mv-more-btn" id="storage-more-btn" aria-haspopup="true" aria-expanded="false">More &#9662;</button>
       </div>
-      ${canSetUp && toolsOpen ? `<div class="storage-tools">
-        <button class="btn secondary small" id="silo-setup">Season set-up&hellip;</button>
-        <button class="btn secondary small" id="fill-commodity">Fill in commodities from loads</button>
-      </div>` : ''}
-      <div class="segmented" id="list-mode">
-        <button data-mode="commodity" class="${listMode === 'commodity' ? 'active' : ''}">By commodity</button>
-        <button data-mode="name" class="${listMode === 'name' ? 'active' : ''}">By name</button>
-      </div>
-      <div class="storage-find ${listMode === 'name' ? 'one' : ''}">
-        <div class="field">
-          <label for="storage-search">Search</label>
-          <input type="search" id="storage-search" placeholder="Number, name, grade&hellip;" value="${esc(searchText)}" />
-        </div>
-        ${listMode === 'name' ? '' : `<div class="field">
-          <label for="storage-sort">Sort by</label>
-          <select id="storage-sort">${SORTS.map((x) => `<option value="${x.id}" ${sortMode === x.id ? 'selected' : ''}>${x.label}</option>`).join('')}</select>
-        </div>`}
+      <div class="mv-menu" id="storage-more" hidden style="margin-top:8px">
+        <button type="button" id="toggle-measured" aria-pressed="${showMeasured}">Measured figures: ${showMeasured ? 'shown' : 'hidden'}</button>
+        <button type="button" id="list-mode" data-mode="${listMode === 'name' ? 'commodity' : 'name'}">${listMode === 'name' ? 'Group by commodity' : 'List by name, A to Z'}</button>
+        <button type="button" id="silo-calculator">Silo calculator&hellip;</button>
+        ${canSetUp ? `<button type="button" id="silo-setup">Season set-up&hellip;</button>
+        <button type="button" id="fill-commodity">Fill in commodities from loads</button>` : ''}
       </div>
       <div id="storage-chips" style="margin-top:10px"></div>
       <div id="storage-list" style="margin-top:10px"></div>
@@ -146,11 +116,16 @@ function paint(root) {
     paintStorageParts(root);
   });
   body.querySelector('#list-mode').addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-mode]');
-    if (!btn) return;
-    listMode = btn.dataset.mode;
+    listMode = e.currentTarget.dataset.mode;
     paint(root);
   });
+  // The measured switch, the list order and the tools sit behind More, so the list starts straight under the search
+  const menu = body.querySelector('#storage-more');
+  const moreBtn = body.querySelector('#storage-more-btn');
+  const setMenu = (open) => { menu.hidden = !open; moreBtn.setAttribute('aria-expanded', String(open)); };
+  moreBtn.addEventListener('click', () => setMenu(menu.hidden));
+  menu.addEventListener('click', (ev) => { if (ev.target.closest('button')) setMenu(false); });
+  root.onclick = (ev) => { if (!menu.hidden && !ev.target.closest('#storage-more, #storage-more-btn')) setMenu(false); };
   body.querySelector('#storage-chips').addEventListener('click', (e) => {
     const chip = e.target.closest('[data-tab]');
     if (!chip) return;
@@ -169,6 +144,7 @@ function paint(root) {
     if (row) openStorageSheet(db.get().storages.find((s) => s.id === row.dataset.editStorage));
   });
   root.querySelector('#add-storage').addEventListener('click', () => openStorageSheet(null));
+  root.querySelector('#silo-calculator')?.addEventListener('click', () => openCalculatorSheet());
   root.querySelector('#silo-setup')?.addEventListener('click', () => openSiloSetupSheet());
   root.querySelector('#fill-commodity')?.addEventListener('click', async () => {
     const { storages, movements, fields, commodities } = db.get();
@@ -189,7 +165,6 @@ function paint(root) {
     toast(`${fills.length} silo${fills.length === 1 ? '' : 's'} updated`);
     paint(root);
   });
-  root.querySelector('#toggle-tools')?.addEventListener('click', () => { toolsOpen = !toolsOpen; paint(root); });
   root.querySelector('#toggle-measured')?.addEventListener('click', () => { setShowMeasured(!showMeasured); paint(root); });
 }
 
@@ -340,154 +315,6 @@ function openTransitSheet(t) {
       <div id="transit-list"></div>`;
     renderRelatedMovements(root.querySelector('#transit-list'), 'silo', t.id);
   });
-}
-
-function paintCalculator(root) {
-  const { commodities } = db.get();
-  const body = root.querySelector('#storage-body');
-  body.innerHTML = `
-    <div class="card">
-      <div class="segmented" id="quick-kind">
-        <button data-kind="silo" class="${quickKind === 'silo' ? 'active' : ''}">Silo</button>
-        <button data-kind="bunker" class="${quickKind === 'bunker' ? 'active' : ''}">Bunker / shed</button>
-      </div>
-      <div id="quick-form" style="margin-top:12px"></div>
-      <div id="quick-result"></div>
-    </div>
-    <div class="field hint" style="padding:0 4px">Quick one-off calc — save it below under Saved if you want to track it day to day.</div>
-  `;
-  body.querySelector('#quick-kind').addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-kind]');
-    if (!btn) return;
-    quickKind = btn.dataset.kind;
-    paintCalculator(root);
-  });
-  buildQuickForm(body, commodities);
-}
-
-function commodityOptionsQuick(commodities) {
-  return [{ value: '', label: 'None / manual' }, ...commodities.map((c) => ({ value: c.id, label: c.name }))];
-}
-
-function buildQuickForm(root, commodities) {
-  const formEl = root.querySelector('#quick-form');
-  const resultEl = root.querySelector('#quick-result');
-
-  if (quickKind === 'silo') {
-    formEl.innerHTML = `
-      ${field({ label: 'Commodity (autofills angle &amp; test weight)', id: 'q-commodity', type: 'select', options: commodityOptionsQuick(commodities) })}
-      <div class="grid-2">
-        ${field({ label: 'Radius (m)', id: 'q-radius', type: 'number', step: '0.01' })}
-        ${field({ label: 'Grain height (m)', id: 'q-height', type: 'number', step: '0.01' })}
-      </div>
-      <div class="grid-2">
-        ${field({ label: 'Cone angle (°)', id: 'q-cone', type: 'number', step: '1', value: 0, hint: '0 = flat bottom' })}
-        ${field({ label: 'Angle of repose (°)', id: 'q-angle', type: 'number', step: '1' })}
-      </div>
-      ${field({ label: 'Test weight (t/m³)', id: 'q-tw', type: 'number', step: '0.01' })}
-      <div class="segmented" id="q-fill">
-        <button data-fill="peak" class="active">Peaked</button>
-        <button data-fill="flat">Flat</button>
-        <button data-fill="decline">Declined</button>
-      </div>
-    `;
-    let fillState = 'peak';
-    formEl.querySelector('#q-fill').addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-fill]');
-      if (!btn) return;
-      fillState = btn.dataset.fill;
-      formEl.querySelectorAll('#q-fill button').forEach((b) => b.classList.toggle('active', b === btn));
-      recompute();
-    });
-    formEl.querySelector('#q-commodity').addEventListener('change', () => {
-      const c = commodities.find((c) => c.id === getVal(formEl, 'q-commodity'));
-      if (c) {
-        formEl.querySelector('#q-angle').value = c.angleOfRepose ?? '';
-        formEl.querySelector('#q-tw').value = c.testWeight ?? '';
-      }
-      recompute();
-    });
-    formEl.querySelectorAll('input').forEach((el) => el.addEventListener('input', recompute));
-
-    function recompute() {
-      const r = siloResult({
-        radius: getNum(formEl, 'q-radius'),
-        height: getNum(formEl, 'q-height'),
-        coneAngle: getNum(formEl, 'q-cone'),
-        angleOfRepose: getNum(formEl, 'q-angle'),
-        testWeight: getNum(formEl, 'q-tw'),
-        fillState,
-      });
-      resultEl.innerHTML = quickResultHTML(r.tons, [
-        ['Volume', `${num(r.totalVol, 1)} m³`],
-        ['Cone height', `${num(r.coneHeight, 2)} m`],
-        ['Peak/decline height', `${num(r.peakHeight, 2)} m`],
-      ]);
-    }
-    recompute();
-  } else {
-    formEl.innerHTML = `
-      ${field({ label: 'Commodity (autofills angle &amp; test weight)', id: 'q-commodity', type: 'select', options: commodityOptionsQuick(commodities) })}
-      <div class="grid-2">
-        ${field({ label: 'Width (m)', id: 'q-width', type: 'number', step: '0.01' })}
-        ${field({ label: 'Length (m)', id: 'q-length', type: 'number', step: '0.01' })}
-      </div>
-      ${field({ label: 'Wall height (m, optional)', id: 'q-wall', type: 'number', step: '0.01', hint: 'Bunkers and sheds can have walls: the grain is held straight up to the top of them, with the peak on top' })}
-      <div class="grid-2">
-        ${field({ label: 'Peak angle (°)', id: 'q-angle', type: 'number', step: '1', hint: 'Grain angle of repose' })}
-        ${field({ label: 'Test weight (t/m³)', id: 'q-tw', type: 'number', step: '0.01' })}
-      </div>
-      ${field({ label: 'Tarp overhang per side (m)', id: 'q-overhang', type: 'number', step: '0.1', value: 1.5 })}
-    `;
-    formEl.querySelector('#q-commodity').addEventListener('change', () => {
-      const c = commodities.find((c) => c.id === getVal(formEl, 'q-commodity'));
-      if (c) {
-        formEl.querySelector('#q-angle').value = c.angleOfRepose ?? '';
-        formEl.querySelector('#q-tw').value = c.testWeight ?? '';
-      }
-      recompute();
-    });
-    formEl.querySelectorAll('input').forEach((el) => el.addEventListener('input', recompute));
-
-    function recompute() {
-      const r = bunkerResult({
-        width: getNum(formEl, 'q-width'),
-        length: getNum(formEl, 'q-length'),
-        angleDeg: getNum(formEl, 'q-angle'),
-        testWeight: getNum(formEl, 'q-tw'),
-        wallHeight: getNum(formEl, 'q-wall'),
-      });
-      const t = bunkerTarpRequirement({
-        width: getNum(formEl, 'q-width'),
-        length: getNum(formEl, 'q-length'),
-        angleDeg: getNum(formEl, 'q-angle'),
-        overhangM: getNum(formEl, 'q-overhang'),
-      });
-      resultEl.innerHTML = quickResultHTML(r.tons, [
-        ['Volume', `${num(r.volume, 1)} m³`],
-        ['Height to the peak', `${num(r.height, 2)} m`],
-      ]) + tarpResultHTML(t);
-    }
-    recompute();
-  }
-}
-
-function tarpResultHTML(t) {
-  return `
-    <hr class="sep" />
-    <div class="row"><span class="label"><strong>Tarp needed</strong></span></div>
-    <div class="row"><span class="label">Width</span><span class="value">${num(t.tarpWidthNeeded, 1)} m</span></div>
-    <div class="row"><span class="label">Length</span><span class="value">${num(t.tarpLengthNeeded, 1)} m</span></div>
-    <div class="row"><span class="label">Bare minimum to reach ground</span><span class="value">${num(t.slantWidth, 1)} x ${num(t.slantLength, 1)} m</span></div>
-  `;
-}
-
-function quickResultHTML(tonsVal, extraRows) {
-  return `
-    <hr class="sep" />
-    <div class="row"><span class="label"><strong>Tons</strong></span><span class="value" style="font-size:22px">${num(tonsVal, 1)} t</span></div>
-    ${extraRows.map(([l, v]) => `<div class="row"><span class="label">${l}</span><span class="value">${v}</span></div>`).join('')}
-  `;
 }
 
 function storageTonsByCommodity(commodities, storages, movements) {

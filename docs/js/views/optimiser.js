@@ -4,11 +4,11 @@
 // the storages of that commodity. It saves nothing. To take the feature out, delete this file, ../optimiser.js and
 // tests/optimiser.test.mjs, and remove the one chip and its import in storage.js.
 
-import { db } from '../storage.js?v=388';
-import { openSheet, field, getVal, getNum, notify } from '../ui.js?v=388';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=388';
-import { SPECS, extraSpecKey } from '../outload.js?v=388';
-import { sourcesFor, optimise, limitsOf } from '../optimiser.js?v=388';
+import { db } from '../storage.js?v=389';
+import { openSheet, field, getVal, getNum, notify } from '../ui.js?v=389';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=389';
+import { SPECS, extraSpecKey } from '../outload.js?v=389';
+import { sourcesFor, optimise, limitsOf } from '../optimiser.js?v=389';
 
 // what was asked last time, kept while the app is open
 let last = { commodityId: '', tons: '', truck: 36, mode: 'every-truck', grades: [], min: {}, max: {} };
@@ -33,7 +33,7 @@ export function openOptimiserSheet() {
   if (!commodities.length) { notify('Add a commodity and some storages first.'); return; }
   if (!last.commodityId || !commodities.some((c) => c.id === last.commodityId)) last.commodityId = busiestCommodity(storages, movements, today) || commodities[0].id;
 
-  openSheet('Outload optimiser', (root) => {
+  openSheet('Silo blending', (root) => {
     const commodity = () => commodities.find((c) => c.id === (getVal(root, 'op-commodity') || last.commodityId));
     const extra = () => extraSpecKey(commodity()?.name);
     const stored = () => sourcesFor({ storages, movements, commodityId: commodity()?.id, today });

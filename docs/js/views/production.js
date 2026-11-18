@@ -1,20 +1,21 @@
-import { db } from '../storage.js?v=388';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=388';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=388';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=388';
-import { describeMerge } from '../merge.js?v=388';
-import { renderRelatedMovements } from './movements.js?v=388';
-import { canSeeYield } from '../nav.js?v=388';
-import { wireJumps } from '../jump.js?v=388';
-import { openMapSheet } from './farmmap.js?v=388';
-import { openInputsSheet } from './inputs.js?v=388';
-import { openSprayFormSheet, canSpray } from './spray.js?v=388';
-import { stockLevels } from '../inputs.js?v=388';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=388';
-import { openModulesPickedSheet } from './modulespicked.js?v=388';
-import { openBalesBaledSheet } from './balesbaled.js?v=388';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=388';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=388';
+import { db } from '../storage.js?v=389';
+import { tileIcon } from '../tileicon.js?v=389';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst } from '../derived.js?v=389';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=389';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=389';
+import { describeMerge } from '../merge.js?v=389';
+import { renderRelatedMovements } from './movements.js?v=389';
+import { canSeeYield } from '../nav.js?v=389';
+import { wireJumps } from '../jump.js?v=389';
+import { openMapSheet } from './farmmap.js?v=389';
+import { openInputsSheet } from './inputs.js?v=389';
+import { openSprayFormSheet, canSpray } from './spray.js?v=389';
+import { stockLevels } from '../inputs.js?v=389';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=389';
+import { openModulesPickedSheet } from './modulespicked.js?v=389';
+import { openBalesBaledSheet } from './balesbaled.js?v=389';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=389';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=389';
 
 let unsub = null;
 
@@ -53,8 +54,8 @@ function paint(root) {
     </div>
     <div class="view">
       <div class="prod-tools">
-        ${fields.length ? `<button type="button" class="btn secondary tool-tile" id="open-map"><b>Farm map</b><span>${fields.some((f) => f.boundary) ? `${fields.filter((f) => f.boundary).length} of ${fields.length} mapped` : 'add your outlines'}</span></button>` : ''}
-        ${canSeeInputs ? `<button type="button" class="btn secondary tool-tile" id="open-inputs"><b>Inputs and spraying</b><span>${[inputProducts ? `${inputProducts} in stock` : 'stock and spraying', sprayOpen ? `${sprayOpen} spray open` : ''].filter(Boolean).join(' · ')}</span></button>` : ''}
+        ${fields.length ? `<button type="button" class="btn secondary tool-tile" id="open-map">${tileIcon('map')}<span class="tt-text"><b>Farm map</b><span>${fields.some((f) => f.boundary) ? `${fields.filter((f) => f.boundary).length} of ${fields.length} mapped` : 'add your outlines'}</span></span></button>` : ''}
+        ${canSeeInputs ? `<button type="button" class="btn secondary tool-tile" id="open-inputs">${tileIcon('inputs')}<span class="tt-text"><b>Inputs and spraying</b><span>${[inputProducts ? `${inputProducts} in stock` : 'stock and spraying', sprayOpen ? `${sprayOpen} spray open` : ''].filter(Boolean).join(' · ')}</span></span></button>` : ''}
       </div>
       ${rollup.length === 0 ? '' : `
       <div class="card report">

@@ -4,17 +4,18 @@
 // and Bought, Used and Count record an entry. Seed and fertiliser also show what this season's paddocks call for
 // against what is in the shed. The arithmetic is in inputs.js.
 
-import { db } from '../storage.js?v=388';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=388';
-import { openSprayJobsSheet, canSpray } from './spray.js?v=388';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=388';
-import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=388';
-import { isTransit } from '../transit.js?v=388';
-import { isOffFarm } from '../offfarm.js?v=388';
+import { tileIcon } from '../tileicon.js?v=389';
+import { db } from '../storage.js?v=389';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=389';
+import { openSprayJobsSheet, canSpray } from './spray.js?v=389';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=389';
+import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=389';
+import { isTransit } from '../transit.js?v=389';
+import { isOffFarm } from '../offfarm.js?v=389';
 import {
   KINDS, UNITS, MOVE_TYPES, kindLabel, defaultUnit, productKey, stockLevels, productMoves, stockValue,
   plannedNeeds, planVsStock, inputProblems, adjustmentFor, moveDelta, qtyText, onHandAt,
-} from '../inputs.js?v=388';
+} from '../inputs.js?v=389';
 
 // A farm worker sees what is on hand and records what is used and counts. The prices are not sent to their phone
 // at all (see the migration); this keeps the screens from showing blanks where a price would be, and from offering a delivery.
@@ -56,7 +57,7 @@ export function openInputsSheet() {
 
     const sprayOpen = canSpray(db.getRole()) ? db.getSprayJobs().filter((j) => j.status !== 'done').length : 0;
     root.innerHTML = `
-      ${canSpray(db.getRole()) && fields.length ? `<div class="tile-grid" style="grid-template-columns:1fr;margin-bottom:12px"><button type="button" class="btn secondary tool-tile" id="open-spray"><b>Spray requests</b><span>${sprayOpen ? `${sprayOpen} open` : 'make a job, tick the paddocks, send it'}</span></button></div>` : ''}
+      ${canSpray(db.getRole()) && fields.length ? `<div class="tile-grid" style="grid-template-columns:1fr;margin-bottom:12px"><button type="button" class="btn secondary tool-tile" id="open-spray">${tileIcon('spray')}<span class="tt-text"><b>Spray requests</b><span>${sprayOpen ? `${sprayOpen} open` : 'make a job, tick the paddocks, send it'}</span></span></button></div>` : ''}
       ${levels.length ? `<div class="stat-grid">
         <div class="stat"><div class="n">${levels.length}</div><div class="l">Product${levels.length === 1 ? '' : 's'} in stock</div></div>
         ${priced ? `<div class="stat"><div class="n">${value > 0 ? money(value, 0) : '-'}</div><div class="l">Stock value${value > 0 ? '' : ' (add prices to see it)'}</div></div>` : ''}

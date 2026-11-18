@@ -1115,9 +1115,11 @@ details.fold.feature > *:last-child { margin-bottom: 14px; }
 .assume-line .hint { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
 .storage-find.one { grid-template-columns: minmax(0, 1fr); }
 .prod-tools, .tile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-.prod-tools .tool-tile, .tile-grid .tool-tile { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; min-height: 54px; padding: 8px 12px; text-align: left; margin: 0; min-width: 0; }
-.prod-tools .tool-tile b, .tile-grid .tool-tile b { font-size: 15px; font-weight: 800; }
-.prod-tools .tool-tile span, .tile-grid .tool-tile span { font-size: 12px; font-weight: 600; opacity: .8; }
+.prod-tools .tool-tile, .tile-grid .tool-tile { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; min-height: 54px; padding: 8px 12px; text-align: left; margin: 0; min-width: 0; background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+.prod-tools .tool-tile .tt-ico, .tile-grid .tool-tile .tt-ico { flex: none; color: var(--accent-summary); }
+.prod-tools .tool-tile .tt-text, .tile-grid .tool-tile .tt-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: inherit; font-weight: inherit; opacity: 1; }
+.prod-tools .tool-tile b, .tile-grid .tool-tile b { font-size: 15px; font-weight: 700; }
+.prod-tools .tool-tile .tt-text > span, .tile-grid .tool-tile .tt-text > span { font-size: 12px; font-weight: 400; color: var(--text-dim); opacity: 1; }
 .tab-total-fig .short, .tab-total-fig .short b { color: var(--danger); }
 .tile-grid .btn { margin: 0; min-width: 0; }
 .theme-line { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -1308,3 +1310,37 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .com-tag { font-weight: 800; margin-right: 10px; }
 /* Prices: a grade spread row */
 .pr-grade, .pr-adj { min-height: 44px; padding: 8px 10px; font-size: 16px; font-family: inherit; color: var(--text); background: var(--surface-2); border: 1.5px solid var(--border); border-radius: 10px; box-sizing: border-box; }
+/* Sales: the sort and a More menu on one line above the contracts */
+.sale-toolrow { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px; }
+.sale-toolrow .field { flex: 1; min-width: 0; margin: 0; }
+.sale-toolrow .sale-spacer { flex: 1; }
+.sale-toolrow .mv-more-btn { flex: none; margin: 0; min-height: 44px; }
+/* Position as a dashboard: four tiles, bars of value by crop, a tile for each crop */
+.pos-pdf { flex: none; display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+.pos-by { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); margin: 0 2px 8px; }
+.pos-dash { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.pos-dash .card, .pos-tiles .card { margin: 0; }
+.dash-tile { padding: 10px 12px; min-width: 0; }
+.dash-tile .l { font-size: 12px; color: var(--text-dim); }
+.dash-tile .n { font-size: 19px; font-weight: 700; }
+.dash-tile .s { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.dash-ringtile { display: flex; align-items: center; gap: 10px; }
+.dash-ringtile .n { color: var(--text); }
+.pos-tiles { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.dash-crop { display: block; width: 100%; text-align: left; font: inherit; cursor: pointer; padding: 10px 12px; }
+.dash-crop .dc-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.dash-crop .dc-name { font-weight: 700; font-size: 15px; color: var(--text); }
+.dash-crop .dc-name small { font-size: 11px; font-weight: 400; color: var(--text-dim); }
+.dash-crop .dc-val { font-weight: 700; color: var(--text); white-space: nowrap; }
+.dash-crop .dc-gm { font-size: 11.5px; color: var(--text-dim); margin: 2px 0 8px; }
+.dash-crop .dc-body { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+.dash-crop .pos-ring { flex: none; }
+.dash-crop .dc-main { flex: 1; min-width: 0; }
+.dash-crop .dc-pct { text-align: right; font-size: 11.5px; color: var(--text-dim); }
+.dash-crop .dc-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 8px; margin-top: 2px; color: var(--text); }
+.dash-crop .dc-stats small { display: block; font-size: 11px; color: var(--text-dim); }
+.dash-crop .dc-stats b { font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.com-green { color: var(--accent-summary); }
+.mv-searchrow { gap: 6px; }
+.mv-searchrow select.storage-sort { flex: none; width: auto; max-width: 92px; min-width: 0; font-size: 12.5px; padding-left: 6px; padding-right: 18px; margin: 0; }
+#storage-more-btn { padding: 0 10px; font-size: 13px; min-height: 40px; }

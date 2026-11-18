@@ -119,7 +119,7 @@ check('the tiles are small and light: a picture and a short name, no extra wordi
   assert.ok(css.includes('.rep-tile .rep-ico { flex: none; color: var(--accent-summary)') && css.includes('min-height: 76px'));
 });
 
-check('Deliveries and the Outload plan are Full tiles, and are gone from the tops of Sales and Storage', () => {
+check('Deliveries and Silo blending are Full tiles, and are gone from the tops of Sales and Storage', () => {
   const full = ids(owner({ mode: 'full' }));
   assert.ok(full.includes('deliveries') && full.includes('optimiser'));
   assert.ok(!ids(owner({ mode: 'simple' })).some((id) => id === 'deliveries' || id === 'optimiser'));
@@ -130,7 +130,10 @@ check('Deliveries and the Outload plan are Full tiles, and are gone from the top
   const storage = read('docs/js/views/storage.js');
   assert.ok(!storage.includes('id="open-optimiser"') && !storage.includes('openOptimiserSheet'));
   assert.ok(read('docs/js/views/reports.js').includes('optimiser: () => openOptimiserSheet()'));
-  for (const id of ['deliveries', 'optimiser']) assert.ok(TILE_ICONS[id], id);
+  for (const id of ['deliveries', 'optimiser', 'calculator']) assert.ok(TILE_ICONS[id], id);
+  assert.ok(!storage.includes('paintCalculator') && !storage.includes('id="storage-view"'), 'Storage is the saved list only');
+  assert.ok(storage.includes('id="silo-calculator"') && storage.includes('openCalculatorSheet()'), 'the calculator is also a button under Tools');
+  assert.ok(read('docs/js/views/reports.js').includes('calculator: () => openCalculatorSheet()') && read('docs/js/views/calculator.js').includes('export function openCalculatorSheet'));
 });
 
 check('the Farm map stays at the top of Production as well', () => {

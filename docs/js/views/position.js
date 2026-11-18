@@ -1,16 +1,16 @@
-import { db } from '../storage.js?v=388';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=388';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=388';
-import { payablesCost } from '../payables.js?v=388';
-import { openEofySheet } from './eofy.js?v=388';
-import { startProgress } from '../helpcontent.js?v=388';
-import { attentionItems } from '../attention.js?v=388';
-import { lastBackup } from '../backup.js?v=388';
-import { todayLocal, dmy } from '../fmt.js?v=388';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=388';
-import { openSheet, closeSheet } from '../ui.js?v=388';
-import { positionPdf } from '../positionpdf.js?v=388';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=388';
+import { db } from '../storage.js?v=389';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=389';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=389';
+import { payablesCost } from '../payables.js?v=389';
+import { commodityClass } from '../commoditycolor.js?v=389';
+import { startProgress } from '../helpcontent.js?v=389';
+import { attentionItems } from '../attention.js?v=389';
+import { lastBackup } from '../backup.js?v=389';
+import { todayLocal, dmy } from '../fmt.js?v=389';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=389';
+import { openSheet, closeSheet } from '../ui.js?v=389';
+import { positionPdf } from '../positionpdf.js?v=389';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=389';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -81,45 +81,18 @@ function paint(root) {
     <div class="view">
       ${attentionCard()}
       ${startCard()}
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <button class="btn secondary" id="open-eofy" style="flex:1">End of year snapshot</button>
-        ${rows.length ? `<button class="btn secondary" id="position-pdf" style="flex:1">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>` : ''}
-      </div>
-      <div class="stat-grid">
-        <div class="stat">
-          <div class="n">${tons(totals.productionTons, 0)}</div>
-          <div class="l">Total production</div>
-        </div>
-        <div class="stat">
-          <div class="n">${money(totals.totalValue, 0)}</div>
-          <div class="l">${totals.openingValue ? "Current Crop Value" : "Total position value"}</div>
-        </div>
-        <div class="stat">
-          <div class="n">${money(totals.soldValue, 0)}</div>
-          <div class="l">Sold value</div>
-        </div>
-        <div class="stat">
-          <div class="n">${money(totals.unsoldValue, 0)}</div>
-          <div class="l">Unsold value (MTM)</div>
-        </div>
-        ${totals.area > 0 ? `<div class="stat">
-          <div class="n">${money(totals.totalValue / totals.area, 0)}</div>
-          <div class="l">Income per ha</div>
-        </div>
-        <div class="stat">
-          <div class="n">${money(totals.grossMargin / totals.area, 0)}</div>
-          <div class="l">Gross margin per ha</div>
-        </div>` : ''}
-      </div>
-
+      ${rows.length ? `<div class="pos-by"><span>${esc(db.getCurrentYear())} season</span><button type="button" class="btn secondary small pos-pdf" id="position-pdf"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>${canShareFiles() ? 'Share PDF' : 'PDF'}</button></div>` : ''}
+      ${rows.length ? dashTop(totals) : ''}
       ${rows.length === 0 ? `<div class="empty">Nothing to report yet.<br/>Add a paddock in Production, or a contract in Sales, and your position appears here.</div>` : ''}
-
-      ${rows.map((r) => commodityCard(r)).join('')}
+      ${rows.length ? `<div class="pos-by"><span>Biggest first &middot; tap a crop for the detail</span></div><div class="pos-tiles">${cropTiles(rows)}</div>` : ''}
 
       ${rows.length > 0 ? farmSummaryCard(totals, overheads, pl, cost) : ''}
     </div>
   `;
-  root.querySelector('#open-eofy').addEventListener('click', openEofySheet);
+  root.querySelectorAll('[data-crop]').forEach((el) => el.addEventListener('click', () => {
+    const r = rows.find((x) => x.commodity.id === el.dataset.crop);
+    if (r) openSheet(r.commodity.name, (body) => { body.innerHTML = cropDetail(r); });
+  }));
   root.querySelector('#position-pdf')?.addEventListener('click', () => openPdfSheet({ rows, totals, overheads, pl, cost }));
   root.querySelectorAll('[data-start-go]').forEach((el) => el.addEventListener('click', () => { location.hash = `#/${el.dataset.startGo}`; }));
   root.querySelector('#attention-fold')?.addEventListener('toggle', (e) => { root.querySelector('#attn-sub').hidden = e.target.open; try { localStorage.setItem(ATTN_KEY, e.target.open ? '1' : '0'); } catch { /* opens again next time */ } });
@@ -164,6 +137,59 @@ async function exportPdf(data, show = readShow()) {
   const fileName = safeFileName(`Position ${season} ${dmy(todayLocal())}`);
   if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
   await sharePdf(bytes, fileName, { title: `Position ${season}` });
+}
+
+/** A ring that fills to the share sold (0 to 1); it takes the colour of the element it sits in. */
+function ring(share, size, stroke) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const half = size / 2;
+  const dash = Math.min(1, Math.max(0, share)) * c;
+  return `<svg class="pos-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${Math.round(share * 100)} percent sold"><circle cx="${half}" cy="${half}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${stroke}"/><circle cx="${half}" cy="${half}" r="${r}" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-dasharray="${dash.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${half} ${half})"/></svg>`;
+}
+
+/** The four tiles at the top: crop value, gross margin, how much is sold, and the sold and unsold values. */
+function dashTop(totals) {
+  const total = totals.soldValue + totals.unsoldValue;
+  const soldShare = total > 0 ? totals.soldValue / total : 0;
+  return `<div class="pos-dash">
+      <div class="card dash-tile"><div class="l">${totals.openingValue ? 'Current crop value' : 'Total position value'}</div><div class="n">${money(totals.totalValue, 0)}</div>
+        <div class="s">${tons(totals.productionTons, 0)} produced</div>${totals.openingValue ? `<div class="s">after ${money(totals.openingValue, 0)} opening stock</div>` : ''}</div>
+      <div class="card dash-tile"><div class="l">Gross margin</div><div class="n">${money(totals.grossMargin, 0)}</div>
+        <div class="s">${totals.area > 0 ? `${money(totals.grossMargin / totals.area, 0)} per ha` : '&nbsp;'}</div></div>
+      <div class="card dash-tile dash-ringtile com-green">${ring(soldShare, 52, 8)}<div><div class="n">${pct(soldShare)}</div><div class="s">sold</div></div></div>
+      <div class="card dash-tile"><div class="s">Sold ${money(totals.soldValue, 0)}</div><div class="s">Unsold ${money(totals.unsoldValue, 0)}</div>${totals.area > 0 ? `<div class="s">Income ${money(totals.totalValue / totals.area, 0)}/ha</div>` : ''}</div>
+    </div>`;
+}
+
+/** How a crop's quantities are counted: bales for cotton, tonnes for the rest. */
+function cropBits(r) {
+  const bales = r.commodity.unit === 'bale';
+  return { bales, qty: (v) => (bales ? `${num(v, 0)} bales` : tons(v, 0)), per: bales ? 'bale' : 't' };
+}
+
+/** The crops, biggest value first. */
+function cropTiles(rows) {
+  return [...rows].sort((x, y) => y.totalValue - x.totalValue).map((r) => cropTile(r)).join('');
+}
+
+/** A crop as a tile: its value and margin, then the ring with produced, unsold, average price and yield. Tap it for the detail. */
+function cropTile(r) {
+  const { bales, qty, per } = cropBits(r);
+  const sold = r.pctSold >= 1 ? 'Sold out' : `${pct(r.pctSold)} sold`;
+  return `<button type="button" class="card dash-crop ${commodityClass(r.commodity.name)}" data-crop="${esc(r.commodity.id)}">
+      <div class="dc-top"><span class="dc-name">${esc(r.commodity.name)}${bales ? ' <small>in bales</small>' : ''}</span><span class="dc-val">${money(r.totalValue, 0)}</span></div>
+      <div class="dc-gm">Margin ${money(r.grossMargin, 0)} &middot; ${pct(r.grossMarginPct)}</div>
+      <div class="dc-body">${ring(r.pctSold, 44, 7)}
+        <div class="dc-main"><div class="dc-pct">${sold}</div>
+          <div class="dc-stats">
+            <div><small>Produced</small><b>${bales ? num(r.productionTons, 0) : qty(r.productionTons)}</b></div>
+            <div><small>Sold</small><b>${bales ? num(r.soldTons, 0) : qty(r.soldTons)}</b></div>
+            <div><small>Unsold</small><b>${bales ? num(r.unsoldTons, 0) : qty(r.unsoldTons)}</b></div>
+            <div><small>Area</small><b>${r.area > 0 ? `${num(r.area, 0)} ha` : '&ndash;'}</b></div>
+            <div><small>Yield</small><b>${num(r.yieldTHa, 2)}${bales ? '' : ' t'}/ha</b></div>
+            <div><small>Avg price</small><b>${money(r.avgSoldPrice, 0)}/${per}</b></div>
+          </div></div></div></button>`;
 }
 
 function farmSummaryCard(totals, overheads, pl, cost) {
@@ -218,19 +244,14 @@ function cottonLines(r) {
       </div>`;
 }
 
-function commodityCard(r) {
-  // cotton is counted in bales, everything else in tonnes
-  const bales = r.commodity.unit === 'bale';
-  const qty = (v) => (bales ? `${num(v, 0)} bales` : tons(v, 0));
-  const per = bales ? 'bale' : 't';
+/** What opens behind a crop's tile: its quantities, prices, value, margin and the full breakdown. */
+function cropDetail(r) {
+  const { bales, qty, per } = cropBits(r);
   const sold = Math.min(1, Math.max(0, r.pctSold));
   const pctSoldBadge = r.pctSold >= 1
     ? `<span class="badge pos">Sold out</span>`
     : `<span class="badge ${r.pctSold > 0 ? 'pos' : 'muted'}">${pct(r.pctSold)} sold</span>`;
-
   return `
-    <div class="card summary">
-      <h2><span class="dot summary"></span>${esc(r.commodity.name)} ${pctSoldBadge}</h2>
       <div class="trio">
         <div class="kv"><div class="l">Produced</div><div class="v">${qty(r.productionTons)}</div></div>
         <div class="kv"><div class="l">Sold</div><div class="v">${qty(r.soldTons)}</div></div>
@@ -254,7 +275,7 @@ function commodityCard(r) {
       <div class="row"><span class="label">Gross margin</span><span class="value">${money(r.grossMargin, 0)} <span class="badge ${r.grossMargin >= 0 ? 'pos' : 'neg'}">${pct(r.grossMarginPct)}</span></span></div>
       ${r.area > 0 ? `<div class="row"><span class="label">Income per ha</span><span class="value">${money(r.totalValue / r.area, 0)}/ha</span></div>
       <div class="row"><span class="label">Gross margin per ha</span><span class="value">${money(r.grossMargin / r.area, 0)}/ha</span></div>` : ''}
-      <details class="fold">
+      <details class="fold" open>
         <summary><div><h2>Full breakdown</h2><div class="sub">Values, stock and costs</div></div></summary>
         ${r.usedTons > 0 ? `<div class="row"><span class="label">Used on the farm<span class="sub">Out of the stock, not sold</span></span><span class="value">${qty(r.usedTons)}</span></div>` : ''}
         ${r.strawTons > 0 ? `<div class="row"><span class="label">Baled off crop paddocks<span class="sub">On ${ha(r.strawArea, 0)} ha, already counted in the crop's area</span></span><span class="value">${qty(r.strawTons)}</span></div>` : ''}
@@ -270,6 +291,5 @@ function commodityCard(r) {
         ${r.openingValue ? `<div class="row"><span class="label">Less opening stock</span><span class="value">&minus;${money(r.openingValue, 0)}</span></div>` : ''}
         <div class="row"><span class="label">Gross margin cost</span><span class="value">${money(r.grossMarginCost, 0)}</span></div>
       </details>
-    </div>
   `;
 }
