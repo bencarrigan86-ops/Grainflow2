@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=391';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=391';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=391';
-import { addressLinesOf } from '../address.js?v=391';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=391';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=391';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=391';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=391';
-import { docBandHTML } from '../docband.js?v=391';
-import { deductionNotes } from '../deductions.js?v=391';
-import { ginOffsetOptions, ginOffsetLine, linePayableId } from '../ginoffset.js?v=391';
-import { cottonInvoiceModel } from '../cottoninvoice.js?v=391';
-import { openMovementSheet } from './movements.js?v=391';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=391';
+import { db } from '../storage.js?v=392';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=392';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=392';
+import { addressLinesOf } from '../address.js?v=392';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=392';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=392';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=392';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=392';
+import { docBandHTML } from '../docband.js?v=392';
+import { deductionNotes } from '../deductions.js?v=392';
+import { ginOffsetOptions, ginOffsetLine, linePayableId } from '../ginoffset.js?v=392';
+import { cottonInvoiceModel } from '../cottoninvoice.js?v=392';
+import { openMovementSheet } from './movements.js?v=392';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=392';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {

@@ -1,16 +1,17 @@
-import { db } from '../storage.js?v=391';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=391';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=391';
-import { payablesCost } from '../payables.js?v=391';
-import { commodityClass } from '../commoditycolor.js?v=391';
-import { startProgress } from '../helpcontent.js?v=391';
-import { attentionItems } from '../attention.js?v=391';
-import { lastBackup } from '../backup.js?v=391';
-import { todayLocal, dmy } from '../fmt.js?v=391';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=391';
-import { openSheet, closeSheet } from '../ui.js?v=391';
-import { positionPdf } from '../positionpdf.js?v=391';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=391';
+import { db } from '../storage.js?v=392';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=392';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=392';
+import { payablesCost } from '../payables.js?v=392';
+import { commodityClass } from '../commoditycolor.js?v=392';
+import { startProgress } from '../helpcontent.js?v=392';
+import { openSetupWalk } from './setupwalk.js?v=392';
+import { attentionItems } from '../attention.js?v=392';
+import { lastBackup } from '../backup.js?v=392';
+import { todayLocal, dmy } from '../fmt.js?v=392';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=392';
+import { openSheet, closeSheet } from '../ui.js?v=392';
+import { positionPdf } from '../positionpdf.js?v=392';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=392';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -50,6 +51,7 @@ function startCard() {
             <div><div class="main" style="${s.done ? 'text-decoration:line-through;opacity:.6' : ''}">${esc(s.label)}</div><div class="meta">${esc(s.detail)}</div></div></div>
         </div>`).join('')}
         <div class="swipe-actions" style="margin-top:10px">
+          <button type="button" class="btn small" id="start-walk">${start.done ? 'Continue setup' : 'Start setup'}</button>
           <button type="button" class="btn secondary small" id="start-help">How-to guide</button>
           <button type="button" class="btn secondary small" id="start-hide">Hide this</button>
         </div>
@@ -102,6 +104,7 @@ function paint(root) {
     else if (go === 'deliveries') openDeliveriesSheet();
     else if (go === 'settings') location.hash = '#/settings';
   }));
+  root.querySelector('#start-walk')?.addEventListener('click', () => openSetupWalk());
   root.querySelector('#start-help')?.addEventListener('click', () => { location.hash = '#/help'; });
   root.querySelector('#start-hide')?.addEventListener('click', () => { try { localStorage.setItem(START_HIDDEN, '1'); } catch { /* shown again next time */ } paint(root); });
 }

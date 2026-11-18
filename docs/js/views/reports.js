@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=391';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=391';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=391';
-import { fertPdf } from '../fertpdf.js?v=391';
-import { seedPdf } from '../seedpdf.js?v=391';
-import { yieldPdf } from '../yieldpdf.js?v=391';
-import { harvestPdf } from '../harvestpdf.js?v=391';
-import { modulesPdf } from '../modulespdf.js?v=391';
-import { modulesReport } from '../modulesreport.js?v=391';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=391';
-import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=391';
-import { field, getVal, getNum } from '../ui.js?v=391';
-import { canSeeYield, canOpen } from '../nav.js?v=391';
-import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=391';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=391';
-import { openOptimiserSheet } from './optimiser.js?v=391';
-import { openCalculatorSheet } from './calculator.js?v=391';
-import { openEofySheet } from './eofy.js?v=391';
-import { openPricesSheet } from './prices.js?v=391';
-import { openRotationSheet } from './rotation.js?v=391';
-import { openAveragesSheet } from './averages.js?v=391';
-import { openLoadReportSheet } from './loadreport.js?v=391';
-import { openXeroSheet } from './xero.js?v=391';
-import { openMapSheet } from './farmmap.js?v=391';
-import { openExportCsvSheet } from './settingsexport.js?v=391';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=391';
-import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=391';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=391';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=391';
+import { db } from '../storage.js?v=392';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=392';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT } from '../derived.js?v=392';
+import { fertPdf } from '../fertpdf.js?v=392';
+import { seedPdf } from '../seedpdf.js?v=392';
+import { yieldPdf } from '../yieldpdf.js?v=392';
+import { harvestPdf } from '../harvestpdf.js?v=392';
+import { modulesPdf } from '../modulespdf.js?v=392';
+import { modulesReport } from '../modulesreport.js?v=392';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=392';
+import { num, tons, esc, todayLocal, dmy } from '../fmt.js?v=392';
+import { field, getVal, getNum } from '../ui.js?v=392';
+import { canSeeYield, canOpen } from '../nav.js?v=392';
+import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=392';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=392';
+import { openOptimiserSheet } from './optimiser.js?v=392';
+import { openCalculatorSheet } from './calculator.js?v=392';
+import { openEofySheet } from './eofy.js?v=392';
+import { openPricesSheet } from './prices.js?v=392';
+import { openRotationSheet } from './rotation.js?v=392';
+import { openAveragesSheet } from './averages.js?v=392';
+import { openLoadReportSheet } from './loadreport.js?v=392';
+import { openXeroSheet } from './xero.js?v=392';
+import { openMapSheet } from './farmmap.js?v=392';
+import { openExportCsvSheet } from './settingsexport.js?v=392';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=392';
+import { harvestReport, siloSpace, roomSplit, pctText } from '../harvest.js?v=392';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=392';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=392';
 
 let unsub = null;
 let view = null;   // null is the screen of tiles; otherwise the report that is open
@@ -111,14 +111,14 @@ function paintHub(root, { showYield, hasCotton, hasFields }) {
       </div>
     </div>
     <div class="view">
-      <div class="segmented" id="reports-mode" style="margin-bottom:4px">
-        <button type="button" data-mode="simple" class="${mode === 'simple' ? 'active' : ''}">Simple</button>
-        <button type="button" data-mode="full" class="${mode === 'full' ? 'active' : ''}">Full</button>
+      <div class="rep-mode" id="reports-mode" role="group" aria-label="Reports shown">
+        <button type="button" data-mode="simple" class="${mode === 'simple' ? 'active' : ''}">Favourites</button>
+        <button type="button" data-mode="full" class="${mode === 'full' ? 'active' : ''}">All</button>
       </div>
       ${groups.map((g) => `<div class="rep-group">${esc(g.title)}</div>
         <div class="rep-tiles">${g.tiles.map((t) => `<div class="rep-cell"><button type="button" class="rep-tile" data-tile="${esc(t.id)}"><svg class="rep-ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TILE_ICONS[t.id] || ''}</svg><span class="rep-name">${esc(t.label)}</span></button>${full ? `<button type="button" class="rep-star ${t.fav ? 'on' : ''}" data-star="${esc(t.id)}" aria-pressed="${t.fav}" aria-label="${t.fav ? 'Take' : 'Put'} ${esc(t.label)} ${t.fav ? 'out of' : 'in'} Simple">${t.fav ? '&#9733;' : '&#9734;'}</button>` : ''}</div>`).join('')}</div>`).join('')}
-      ${groups.length === 0 ? '<div class="empty">Nothing starred. Tap Full, then the star on the reports you want here.</div>' : ''}
-      <div class="rep-foot">${full ? 'Tap a star to put a report in Simple.' : 'More reports, and the stars that choose these, are under Full.'}</div>
+      ${groups.length === 0 ? '<div class="empty">Nothing starred. Tap All, then the star on the reports you want here.</div>' : ''}
+      <div class="rep-foot">${full ? 'Tap a star to make a report a favourite.' : 'More reports, and the stars that choose these, are under All.'}</div>
     </div>
   `;
   root.querySelector('#reports-mode').addEventListener('click', (e) => {

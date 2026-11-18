@@ -1,9 +1,9 @@
-import { db } from '../storage.js?v=391';
-import { esc } from '../fmt.js?v=391';
-import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm } from '../ui.js?v=391';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=391';
-import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=391';
-import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=391';
+import { db } from '../storage.js?v=392';
+import { esc } from '../fmt.js?v=392';
+import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm } from '../ui.js?v=392';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=392';
+import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=392';
+import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=392';
 
 // ---------------------------------------------------------------------------
 // People
@@ -58,7 +58,7 @@ export function paintPeople(card) {
 
   if (peopleError) {
     card.innerHTML = `
-      <h2>People</h2>
+      <h2>People and permissions</h2>
       <div class="field hint" style="color:var(--danger)">${esc(peopleError)}</div>
       <button class="btn secondary small" id="people-retry" style="margin-top:8px">Try again</button>`;
     card.querySelector('#people-retry').addEventListener('click', refreshPeople);
@@ -66,14 +66,14 @@ export function paintPeople(card) {
   }
 
   if (people === null) {
-    card.innerHTML = '<h2>People</h2><div class="empty">Loading…</div>';
+    card.innerHTML = '<h2>People and permissions</h2><div class="empty">Loading…</div>';
     loadPeople();
     return;
   }
 
   const { members, pending, meId } = people;
   card.innerHTML = `
-    <h2>People</h2>
+    <h2>People and permissions</h2>
     <div class="field hint" style="margin-bottom:8px">Who can open this farm, and what they can do. Tap someone to change their access.</div>
     ${members.map((m) => memberRow(m, meId)).join('')}
     ${pending.length ? `

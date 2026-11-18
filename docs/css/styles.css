@@ -1375,3 +1375,33 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .dash-crop .dc-pct { text-align: left; font-size: 11.5px; color: var(--text-dim); }
 .dash-crop .dc-gm { margin: 0; }
 .dash-crop .dc-body { margin-top: 8px; }
+/* Reports: Simple / Full as a slim light switch, not the heavy block buttons */
+.rep-mode { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--accent-summary) 9%, var(--surface)); border: 1px solid var(--border); }
+.rep-mode button { margin: 0; min-height: 30px; padding: 4px 16px; border: none; border-radius: 999px; background: transparent; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--text-dim); }
+.rep-mode button.active { background: var(--surface); color: var(--accent-summary); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+/* Reports: the group headings (Paddock, Crop and so on) stand out as section bars */
+.rep-group { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; letter-spacing: .06em; color: var(--accent-summary); margin: 22px 0 8px; padding: 0 0 6px; border-bottom: 2px solid color-mix(in srgb, var(--accent-summary) 35%, var(--surface)); }
+.rep-group::before { content: ''; width: 5px; height: 16px; border-radius: 3px; background: var(--accent-summary); flex: none; }
+/* Setup walk-through: one question at a time */
+.sw { display: flex; flex-direction: column; gap: 4px; }
+.sw-bars { display: flex; gap: 4px; margin-bottom: 8px; }
+.sw-bars span { flex: 1; height: 5px; border-radius: 3px; background: var(--border); }
+.sw-bars span.done { background: var(--accent-summary); }
+.sw-bars span.now { background: color-mix(in srgb, var(--accent-summary) 45%, var(--border)); }
+.sw-step { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-dim); }
+.sw-q { margin: 2px 0 0; font-size: 21px; font-weight: 800; line-height: 1.2; }
+.sw-hint { font-size: 14px; color: var(--text-dim); margin-bottom: 10px; }
+.sw-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.sw-chip { padding: 4px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; background: color-mix(in srgb, var(--accent-summary) 12%, var(--surface)); color: var(--accent-summary); }
+.sw-none { font-size: 14px; color: var(--text-dim); padding: 6px 0; }
+.sw-pick { display: flex; flex-direction: column; gap: 8px; }
+.sw-actions { display: flex; gap: 8px; margin-top: 16px; }
+.sw-actions .btn { flex: 1; margin: 0; min-width: 0; }
+.sw-actions #sw-next, .sw-actions #sw-position { flex: 1.4; }
+.sw-actions-col { flex-direction: column; }
+.sw-done-mark { width: 52px; height: 52px; border-radius: 50%; background: var(--accent-summary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 14px 0 6px; }
+.sw-note { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent-summary) 9%, var(--surface)); font-size: 14px; }
+.sw-note span { color: var(--text-dim); }
+.sw-note + .sw-note { margin-top: 8px; }
+.sw-links { display: flex; gap: 8px; margin-top: 8px; }
+.sw-links .btn { flex: 1; margin: 0; }

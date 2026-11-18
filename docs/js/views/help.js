@@ -3,11 +3,12 @@
 // The words are in helpcontent.js, checked against nav.js and the database policies by tests/help.test.mjs. This only lays
 // them out, and offers each guide only to the roles that have it.
 
-import { db } from '../storage.js?v=391';
-import { esc } from '../fmt.js?v=391';
-import { canOpen } from '../nav.js?v=391';
-import { ROLE_INFO, ACCESS, LEVELS, guidesForRole } from '../helpcontent.js?v=391';
-import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=391';
+import { db } from '../storage.js?v=392';
+import { esc } from '../fmt.js?v=392';
+import { canOpen } from '../nav.js?v=392';
+import { ROLE_INFO, ACCESS, LEVELS, guidesForRole, startProgress } from '../helpcontent.js?v=392';
+import { openSetupWalk } from './setupwalk.js?v=392';
+import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=392';
 
 // a coloured chip for what a role can do, so a table of ticks and blanks reads at a glance
 const TINT = { full: 'var(--accent-summary)', view: 'var(--accent-report)', own: 'var(--accent-input)', used: 'var(--accent-input)', none: 'var(--text-dim)' };
@@ -35,6 +36,9 @@ export function renderHelp(root) {
       ${Object.keys(SHORT).map((k) => `<td style="text-align:center;${k === role ? 'background:var(--accent-summary-bg)' : ''}">${pill(r[k])}</td>`).join('')}
     </tr>`;
 
+  // the walk-through is for the roles that set a farm up; it opens at the first step not done
+  const canWalk = startProgress(role, {}).steps.length > 0;
+
   root.innerHTML = `
     <div class="topbar">
       <div>
@@ -43,6 +47,7 @@ export function renderHelp(root) {
       </div>
     </div>
     <div class="view">
+      ${canWalk ? `<div class="card"><h2>Setup walk-through</h2><div class="hint" style="margin-bottom:8px">One question at a time: business, season, crops, paddocks, silos, a contract, a load and an invoice. Skip what you like, and come back to it here.</div><button type="button" class="btn" id="help-walk">Open the walk-through</button></div>` : ''}
       <div class="card summary">
         <h2><span class="dot summary"></span>What you can do</h2>
         <div class="hint" style="margin-bottom:6px">${esc(me.summary)}</div>
@@ -74,5 +79,6 @@ export function renderHelp(root) {
       </div>
     </div>`;
 
+  root.querySelector('#help-walk')?.addEventListener('click', () => openSetupWalk());
   root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => { location.hash = `#/${b.dataset.go}`; }));
 }
