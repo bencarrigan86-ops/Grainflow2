@@ -6,17 +6,18 @@
 // contract or a storage, which should add up to the bales pressed. The gin's invoice is saved as a bill when we pay it
 // (see ginning.js).
 
-import { db } from '../storage.js?v=380';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=380';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=380';
-import { activeSales } from '../paidsales.js?v=380';
-import { isGinContract, cottonKind, ginContracts, cleanCottonTerms, kindSummary } from '../cottonkinds.js?v=380';
-import { storageLedgerStock, movementTonsToSale } from '../derived.js?v=380';
-import { offerGinYard } from './modulemove.js?v=380';
+import { db } from '../storage.js?v=381';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=381';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=381';
+import { activeSales } from '../paidsales.js?v=381';
+import { isGinContract, cottonKind, ginContracts, cleanCottonTerms, kindSummary } from '../cottonkinds.js?v=381';
+import { storageLedgerStock, movementTonsToSale } from '../derived.js?v=381';
+import { offerGinYard } from './modulemove.js?v=381';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=381';
 import {
   STD_BALE_KG, cleanGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice, contractShare,
   baleRangeCount, allocateLint, allocationProblems, padOffBy,
-} from '../ginning.js?v=380';
+} from '../ginning.js?v=381';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -52,6 +53,10 @@ export function openGinRunSheet(existing = null) {
   const seedStart = gin.seedTo || legValue(existing?.tos?.[1]);
   // the contracts with the gin that are still open, and the one this run is already on, whatever its state
   const ginContractList = [...ginContracts(data.sales), ...(gin.ginContract && !ginContracts(data.sales).some((s) => s.id === gin.ginContract) ? data.sales.filter((s) => s.id === gin.ginContract) : [])];
+
+  // the gin's invoice is kept as a bill in Payables; the file is attached to that bill, whose id is minted now for a new run
+  const billNow = gin.payableId ? db.getPayables().find((p) => p.id === gin.payableId) : null;
+  const billId = billNow?.id || crypto.randomUUID();
 
   const kindOf = (to) => (String(to).startsWith('sale:') ? 'sale' : String(to).startsWith('silo:') ? 'silo' : '');
   const optionsFor = (kind, to) => {
@@ -140,6 +145,7 @@ export function openGinRunSheet(existing = null) {
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="g-gst" ${gin.gstOnGin ? 'checked' : ''} style="width:18px;height:18px" /> GST on ginning</label></div>
       </div>
       <div class="card" style="margin:0 0 10px;padding:10px 12px"><div id="g-invoice-line" class="meta"></div></div>
+      ${attachmentsHtml('payable', billNow?.documents || [], { title: 'Gin invoice', sub: "The gin's invoice, kept with its bill in Payables" })}
       ${field({ label: 'Who pays the gin invoice', id: 'g-paid-by', type: 'select', value: existing ? gin.paidBy : (parseTarget(startAllocs[0].to)?.type === 'sale' ? 'buyer' : 'us'), options: [{ value: 'us', label: 'We pay it (saved as a bill)' }, { value: 'buyer', label: 'The lint buyer pays it and takes it off the lint payment' }], hint: 'Cotton sold to a merchant is usually ginned on their account. Cotton not yet sold is on yours.' })}
       <div class="field"><div class="hint" id="g-paid-note"></div></div>
       ${field({ label: 'Notes', id: 'g-notes', value: existing?.notes || '' })}
@@ -147,6 +153,10 @@ export function openGinRunSheet(existing = null) {
       ${existing ? `<button class="btn ghost-danger" id="g-del" style="margin-top:12px">Delete ginning run</button>` : ''}
     `;
 
+    const att = wireAttachments(root, {
+      parentType: 'payable', parentId: billId, docs: billNow?.documents || [],
+      persist: billNow ? (documents) => db.upsertPayable({ id: billNow.id, documents }) : undefined,
+    });
     const allocsEl = root.querySelector('#g-allocs');
     const readAllocs = () => Array.from(allocsEl.querySelectorAll('.al-row')).map((row) => ({
       to: row.querySelector('.al-kind').value ? row.querySelector('.al-to').value : '',
@@ -318,7 +328,8 @@ export function openGinRunSheet(existing = null) {
           notes: `Ginning run: ${num(inv.bales, 2)} standard bales${part < 1 ? `, ${num(part * 100, 1)}% of them to contracts` : ''}. Ginning ${money(inv.ginning, 2)}, levies ${money(inv.levies, 2)}.`,
         };
         const same = payableId && db.getPayables().find((p) => p.id === payableId);
-        payableId = db.upsertPayable(same ? { ...bill, id: payableId } : bill);
+        // a new bill takes the id the file was attached under; the files go with it
+        payableId = db.upsertPayable({ ...bill, id: same ? payableId : billId, documents: same && !att.docs().length ? (same.documents || []) : att.docs() });
       }
 
       db.upsertMovement({

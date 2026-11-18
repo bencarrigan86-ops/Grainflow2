@@ -10,13 +10,13 @@
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { Pdf, wrapText } from './pdf.js?v=380';
-import { drawBrandLogo } from './brand.js?v=380';
-import { dmy } from './fmt.js?v=380';
-import { movementTonsToSale } from './derived.js?v=380';
-import { hasSignature, strokesInBox } from './signature.js?v=380';
-import { orderDelivery, orderGrade, bookingRows, orderIssuedText, nilToleranceLines, orderCommentLines, orderCommentText, freightDetailDefaults, showsRate } from './orderdetail.js?v=380';
-import { toleranceText } from './contractterms.js?v=380';
+import { Pdf, wrapText } from './pdf.js?v=381';
+import { drawBrandLogo } from './brand.js?v=381';
+import { dmy } from './fmt.js?v=381';
+import { movementTonsToSale } from './derived.js?v=381';
+import { hasSignature, strokesInBox } from './signature.js?v=381';
+import { orderDelivery, orderGrade, bookingRows, orderIssuedText, nilToleranceLines, orderCommentLines, orderCommentText, freightDetailDefaults, showsRate } from './orderdetail.js?v=381';
+import { toleranceText } from './contractterms.js?v=381';
 
 export const BASES = [
   { key: 'per_t', label: '$ per tonne' },

@@ -260,5 +260,12 @@ check('a freight order with everything on it is still one page', () => {
   assert.equal((full.match(/\/Type\s*\/Page[^s]/g) || []).length, 1);
 });
 
+console.log('\n=== the gin invoice file on a ginning run ===');
+check('the ginning run has a place to attach the gin invoice, kept on the bill it saves', () => {
+  const g = src('views/ginrun.js');
+  assert.ok(g.includes("attachmentsHtml('payable'") && g.includes("wireAttachments(root, {"));
+  assert.ok(g.includes('id: same ? payableId : billId') && g.includes('documents:'), 'the bill takes the id the file was attached under');
+});
+
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
 console.log('\nall passed');
