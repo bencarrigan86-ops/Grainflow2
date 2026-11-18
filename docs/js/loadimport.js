@@ -327,6 +327,7 @@ export function readFreightExport(text, setup = PLATFORM_SETUP) {
     const load = {
       line: i + 2,                       // as the person would count it in a spreadsheet
       ref: cell(r, 'ref'),
+      siteTicket: cell(r, 'siteTicket'),   // the receiving site's ticket number: goes in Their ticket no.
       status,
       finished: hasStatus ? finishedValues.has(status.toLowerCase()) : true,
       commodity: cell(r, 'commodity'),
@@ -359,7 +360,7 @@ export function readFreightExport(text, setup = PLATFORM_SETUP) {
   const occurrence = new Map();
   for (const load of loads) {
     if (load.ref) continue;
-    const key = [load.date, load.time, load.rego, load.deliveryTons, load.field, load.silo].join('|');
+    const key = [load.date, load.time, load.rego, load.deliveryTons, load.field, load.silo, load.siteTicket || ''].join('|').replace(/|$/, '');
     const n = (occurrence.get(key) || 0) + 1;
     occurrence.set(key, n);
     load.ref = 'X' + fingerprint(n > 1 ? `${key}#${n}` : key);
@@ -529,8 +530,9 @@ export function buildMovements(loads, maps, { existing = [], include = new Set()
       driver: '',
       tons: load.deliveryTons,
       weightStatus: 'final',
-      notes: refNote(load),
+      notes: refNote(load),           // the platform's movement number stays in the notes
       sourceRef: load.ref,
+      ...(load.siteTicket ? { externalTicketNo: load.siteTicket } : {}),   // the site's own ticket number is Their ticket no.
       // What the platform recorded on the truck, so the storage can say what is in it
       // and the outload predictor has something to work from.
       ...(load.grade ? { grade: load.grade } : {}),

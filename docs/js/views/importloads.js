@@ -8,18 +8,18 @@
 // The reading and the rules live in loadimport.js, where they are tested. This
 // file is the screen: it holds the person's choices and hands them over.
 
-import { db } from '../storage.js?v=407';
-import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=407';
-import { esc, num, shortDate } from '../fmt.js?v=407';
-import { commodityFills } from '../commodityfill.js?v=407';
-import { isTransit } from '../transit.js?v=407';
-import { reconcileLoads } from '../loadcheck.js?v=407';
+import { db } from '../storage.js?v=408';
+import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=408';
+import { esc, num, shortDate } from '../fmt.js?v=408';
+import { commodityFills } from '../commodityfill.js?v=408';
+import { isTransit } from '../transit.js?v=408';
+import { reconcileLoads } from '../loadcheck.js?v=408';
 import {
   FIELD_SPECS, REQUIRED_KEYS, chooseSetup, recallSetups, rememberSetup, setupProblems, peekFile, distinctOf, likelyFinished,
-} from '../loadmap.js?v=407';
+} from '../loadmap.js?v=408';
 import {
   readFreightExport, planNames, distinctNames, matchCommodity, matchSiloByNumber, suggestCutoff, buildMovements, COMPLETED,
-} from '../loadimport.js?v=407';
+} from '../loadimport.js?v=408';
 
 const MEMORY_KEY = 'grainflow.loadImportChoices';
 const NEW = '__new';
@@ -341,7 +341,7 @@ function review(body, text, setup, source, headers, rows) {
     <label class="row" style="align-items:flex-start;gap:10px;cursor:pointer">
       <input type="checkbox" data-include="${esc(l.ref)}" style="margin-top:3px;width:auto" />
       <span class="label" style="flex:1"><strong>${esc(l.field)} → ${esc(l.silo)}</strong>
-        <div class="meta">${esc(shortDate(l.date))} · ${esc(l.rego || 'no truck')} · ${esc(l.ref)}</div>
+        <div class="meta">${esc(shortDate(l.date))} · ${esc(l.rego || 'no truck')} · ${l.siteTicket ? `their #${esc(l.siteTicket)}` : esc(l.ref)}</div>
         <div class="meta" style="color:var(--danger)">${l.check === 'differs'
     ? `Outload ${num(l.pickupTons, 1)} t, delivered ${num(l.deliveryTons, 1)} t`
     : `No outload weight to check against; delivered ${num(l.deliveryTons, 1)} t`}</div></span>

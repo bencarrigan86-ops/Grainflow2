@@ -1,33 +1,33 @@
-import { db } from '../storage.js?v=407';
-import { tileIcon } from '../tileicon.js?v=407';
+import { db } from '../storage.js?v=408';
+import { tileIcon } from '../tileicon.js?v=408';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=407';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=407';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=407';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=407';
-import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=407';
-import { patternsFor } from '../deliveryplan.js?v=407';
-import { INVOICING } from '../invoicing.js?v=407';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=407';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=407';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=407';
-import { renderRelatedMovements } from './movements.js?v=407';
-import { openInvoiceListSheet } from './invoice.js?v=407';
-import { openContractDocSheet } from './contract.js?v=407';
-import { wireJumps } from '../jump.js?v=407';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=407';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=407';
-import { freightState } from '../freight.js?v=407';
-import { activeSales, paidSales } from '../paidsales.js?v=407';
-import { openVendorDecSheet } from './vendordec.js?v=407';
-import { summarise as summariseOrders } from '../orders.js?v=407';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=407';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=407';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=407';
-import { standardFor } from '../grades.js?v=407';
-import { commodityClass } from '../commoditycolor.js?v=407';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=407';
+} from '../documents.js?v=408';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=408';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=408';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=408';
+import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=408';
+import { patternsFor } from '../deliveryplan.js?v=408';
+import { INVOICING } from '../invoicing.js?v=408';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=408';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=408';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=408';
+import { renderRelatedMovements } from './movements.js?v=408';
+import { openInvoiceListSheet } from './invoice.js?v=408';
+import { openContractDocSheet } from './contract.js?v=408';
+import { wireJumps } from '../jump.js?v=408';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=408';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=408';
+import { freightState } from '../freight.js?v=408';
+import { activeSales, paidSales } from '../paidsales.js?v=408';
+import { openVendorDecSheet } from './vendordec.js?v=408';
+import { summarise as summariseOrders } from '../orders.js?v=408';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=408';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=408';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=408';
+import { standardFor } from '../grades.js?v=408';
+import { commodityClass } from '../commoditycolor.js?v=408';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=408';
 
 let unsub = null;
 
@@ -374,7 +374,6 @@ function openSaleSheet(existing) {
   const openAdjust = !!existing && (!!existing.premiumDiscount || !!existing.ginning || Math.abs((existing.leviesPct ?? 0) * 100 - 1.02) > 1e-6);
   const openGrades = !!existing?.gradeOptions?.length;
   // Payment and brokerage open on an edit that has any of it filled in
-  const openPay = !!existing && !!(existing.invoicing || existing.paymentTermsDays || existing.paymentTermsBasis || existing.carryRate || existing.broker || existing.brokerRef || existing.brokeragePaidBy || existing.brokerageRate || existing.tradeRules);
   // The oil section is for canola; it shows for any contract that already prices oil, whatever it is called.
   const openOil = oilPricingOn(existing);
   const isCanola = (c) => standardFor(c?.name)?.key === 'canola';
@@ -472,7 +471,7 @@ function openSaleSheet(existing) {
       ], hint: 'Decides whether freight is taken off the grain invoice.' })}
       </section>
 
-      <details class="fold feature" id="pay-fold" ${openPay ? 'open' : ''}>
+      <details class="fold feature" id="pay-fold">
         <summary><div class="feature-head"><h2>Payment terms and brokerage</h2>
           <div class="sub">Invoicing, payment days, carry, broker, trade rules</div></div></summary>
       ${field({ label: 'Contract invoicing', id: 'invoicing', type: 'select', value: existing?.invoicing ?? '', options: INVOICING, hint: 'Who raises the invoice: we do, or the buyer sends a recipient created tax invoice (RCTI). Printed on the confirmation.' })}

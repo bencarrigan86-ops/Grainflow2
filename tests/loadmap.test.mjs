@@ -40,7 +40,8 @@ check('a farmer\'s own spreadsheet is matched on the names alone', () => {
 });
 check('a semicolon spreadsheet with a ticket number is matched', () => {
   const g = guessColumns(SPREADSHEET.split(';'));
-  assert.equal(g.ref, 'Ticket');
+  assert.equal(g.siteTicket, 'Ticket', "a ticket column is the site's ticket number");
+  assert.equal(g.ref, undefined, 'and is not taken for the platform load number');
   assert.equal(g.date, 'Load Date');
   assert.equal(g.field, 'Field Name');
   assert.equal(g.silo, 'Bin');
@@ -175,10 +176,22 @@ check('a semicolon file with a ticket number and month-first dates is read as as
   const csv = `${SPREADSHEET}\nT100;10/28/2026;North;1 Silo;Wheat;30.5`;
   const setup = { ...chooseSetup(SPREADSHEET.split(';'), {}).setup, dateOrder: 'mdy' };
   const { loads } = readFreightExport(csv, setup);
-  assert.equal(loads[0].ref, 'T100');
+  assert.equal(loads[0].siteTicket, 'T100');
   assert.equal(loads[0].date, '2026-10-28');
   assert.equal(loads[0].deliveryTons, 30.5);
-  assert.equal(loads[0].synthetic, undefined);
+  assert.equal(loads[0].synthetic, true, 'a file with only a ticket number has no platform number, so one is worked out');
+});
+check('a site ticket number goes in Their ticket no.; the platform movement number stays in the notes', () => {
+  const csv = 'Movement No,Ticket No,Date,Paddock,Silo,Crop,Net t
+M123,T555,01/11/2026,North,S1,Wheat,30';
+  const setup = chooseSetup(csv.split('
+')[0].split(','), {}).setup;
+  const { loads } = readFreightExport(csv, setup);
+  assert.equal(loads[0].ref, 'M123'); assert.equal(loads[0].siteTicket, 'T555');
+  const { movements: made } = buildMovements(loads, { fields: { North: 'f1' }, silos: { S1: 's1' }, commodities: { Wheat: 'w' } }, { existing: [], include: new Set() });
+  assert.equal(made[0].externalTicketNo, 'T555');
+  assert.ok(made[0].notes.includes('M123') && !made[0].notes.includes('T555'), 'the platform number is in the notes');
+  assert.equal(made[0].sourceRef, 'M123');
 });
 check('a status column with the person\'s own words for finished: only those loads count', () => {
   const csv = 'Date,Paddock,Silo,Crop,Net t,State\n01/11/2026,A,S,Wheat,30,Done\n01/11/2026,A,S,Wheat,30,Cancelled';

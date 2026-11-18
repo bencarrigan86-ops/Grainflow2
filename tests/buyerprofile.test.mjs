@@ -55,7 +55,7 @@ check('the tolerance is 5% or 20 t side by side, a transfer tickbox sets both to
   const s = read('docs/js/views/sales.js');
   assert.ok(s.includes("id: 'tolCap'") && s.includes('id="tol-transfer"') && s.includes('DEFAULT_TOLERANCE_CAP_TONS'));
   assert.ok(s.includes('id="buyer-fold"') && !/id="buyer-fold"[^>]*open/.test(s), 'a fold starts open');
-  assert.ok(s.includes('id="pay-fold" ${openPay ?') &&s.includes('<h2>Payment terms and brokerage</h2>'), 'payment and brokerage are a fold, open only when filled in');
+  assert.ok(s.includes('id="pay-fold">') && !s.includes('openPay') &&s.includes('<h2>Payment terms and brokerage</h2>'), 'payment and brokerage are a fold that always starts closed');
   assert.ok(s.indexOf("id: 'carryRate'") > s.indexOf('id="pay-fold"') && s.indexOf("id: 'carryRate'") < s.indexOf("id: 'notes'"), 'carry is not in the payment panel');
 });
 
@@ -66,7 +66,6 @@ check('the contract form has no Contract terms section: only Trade rules is kept
     assert.ok(!s.includes("id: '" + id + "'") && !s.includes("getVal(root, '" + id + "')"), id + ' is not on the form or saved from it, so a saved value is kept');
   }
   assert.ok(s.includes("id: 'tradeRules'") && s.indexOf("id: 'tradeRules'") > s.indexOf('id="pay-fold"') && s.indexOf("id: 'tradeRules'") < s.indexOf('<div class="subhead">Notes</div>'), 'trade rules is inside the payment fold, so Notes is only the comments');
-  assert.ok(s.includes('existing.brokerageRate || existing.tradeRules'), 'the fold opens when trade rules are filled in');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
