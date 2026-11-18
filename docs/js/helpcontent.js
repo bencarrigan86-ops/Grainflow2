@@ -4,7 +4,7 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=395';
+import { ROLES, canOpen } from './nav.js?v=396';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -197,8 +197,8 @@ export const GUIDES = [
     id: 'map', title: 'The farm map', roles: ['owner', 'manager', 'bookkeeper', 'farm_worker'], open: 'production', openLabel: 'Open Production',
     blurb: 'Your paddock outlines, coloured by crop.',
     steps: [
-      'In John Deere Operations Center, export your boundaries as a shapefile.',
-      'Open the Farm map (Reports or Production) and choose the .shp and .dbf files, or the zip.',
+      'Export your paddock boundaries as a shapefile from any mapping software. Any shapefile works, with its .dbf.',
+      'Open the Farm map (Reports or Production) and choose the .shp and .dbf files together, or the zip.',
       'Paddocks match yours by name. Tick the ones that take their area from the map, then save.',
     ],
     tips: [
@@ -207,7 +207,7 @@ export const GUIDES = [
   },
   {
     id: 'storage', title: 'Silos and bunkers', roles: ['owner', 'manager', 'bookkeeper', 'farm_worker'], open: 'storage', openLabel: 'Open Storage',
-    shot: 'help/storage.jpg', shotAlt: 'The Storage screen with search, sort and More',
+    shot: 'help/storage.jpg', shotAlt: 'The Storage screen: search, sort and More, and two silos holding several grades each, shown as coloured bars',
     blurb: 'What is in each store and how full it is.',
     steps: [
       'On Storage, tap + to add a silo or a bunker.',

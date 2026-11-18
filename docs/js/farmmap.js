@@ -1,4 +1,4 @@
-// The farm map: paddock outlines from a shapefile (John Deere Operations Center and most farm software export one), kept
+// The farm map: paddock outlines from a shapefile (any mapping or farm software can export one), kept
 // with each paddock and drawn as one map.
 //
 // A shapefile is three or more files. The .shp holds the outlines and the .dbf the names that go with them. They are read

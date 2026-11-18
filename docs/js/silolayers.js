@@ -7,6 +7,8 @@
 //
 // Pure. The stack itself comes from outload.js (layersForStorage).
 
+import { STANDARDS } from './grades.js?v=396';
+
 export const NO_GRADE = 'No grade';
 const NO_GRADE_COLOR = '#9aa3ad';
 
@@ -16,10 +18,16 @@ const PALETTE = ['#d95f02', '#1f78b4', '#7570b3', '#e7298a', '#b8860b', '#16a085
 
 export const gradeKey = (g) => String(g ?? '').trim().toLowerCase();
 
+// Known grades take their colour from their place in their commodity's list, so no two grades of one commodity share a colour
+// (hashing alone let two wheat grades land on the same one). A code in several lists keeps the first.
+const FIXED = new Map();
+for (const s of STANDARDS) (s.grades || []).forEach((g, i) => { const k = gradeKey(g.code); if (!FIXED.has(k)) FIXED.set(k, PALETTE[i % PALETTE.length]); });
+
 /** The colour a grade is drawn in; the same grade is the same colour everywhere. */
 export function gradeColor(grade) {
   const key = gradeKey(grade);
   if (!key) return NO_GRADE_COLOR;
+  if (FIXED.has(key)) return FIXED.get(key);
   let h = 0;
   for (let i = 0; i < key.length; i++) h = (Math.imul(h, 31) + key.charCodeAt(i)) >>> 0;
   return PALETTE[h % PALETTE.length];

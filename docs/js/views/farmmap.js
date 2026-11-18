@@ -1,18 +1,18 @@
 // The farm map: every paddock's outline on one map, coloured by what is growing in it. Tap a paddock to open it.
 //
-// The outlines come from a shapefile (John Deere Operations Center, and most farm software, can export one). Choose the
+// The outlines come from a shapefile (any mapping or farm software can export one). Choose the
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=395';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=395';
-import { esc, num, todayLocal, dmy } from '../fmt.js?v=395';
-import { sharePdf, safeFileName } from '../sharefile.js?v=395';
-import { APP_VERSION } from '../version.js?v=395';
-import { buildFarmMapPdf } from '../spraypdf.js?v=395';
+import { db } from '../storage.js?v=396';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=396';
+import { esc, num, todayLocal, dmy } from '../fmt.js?v=396';
+import { sharePdf, safeFileName } from '../sharefile.js?v=396';
+import { APP_VERSION } from '../version.js?v=396';
+import { buildFarmMapPdf } from '../spraypdf.js?v=396';
 import {
   readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx, farmLabelPx, commonLabelPx,
-} from '../farmmap.js?v=395';
+} from '../farmmap.js?v=396';
 
 const MAX_ZOOM = 40;
 const MIN_LABEL_PX = 6.5;    // the smallest writing a paddock's name is shown in, on screen
@@ -292,7 +292,7 @@ function importView(root, done, haveMap = false) {
       <div class="hint">It was set up before the sample had a map. Add the sample map to its paddocks: nothing else changes.</div>
       <button type="button" class="btn" id="fm-sample">Add the sample map</button></div>` : ''}
     <div class="hint" style="margin-bottom:10px">${haveMap ? 'Choose the file again to update the outlines.' : 'Draw your paddocks on a map.'}
-      In John Deere Operations Center export your boundaries as a shapefile, then choose the <strong>.shp</strong> and <strong>.dbf</strong> files together
+      Export your boundaries as a shapefile from any mapping software, then choose the <strong>.shp</strong> and <strong>.dbf</strong> files together
       (select both at once), or the <strong>.zip</strong> they came in. Paddocks are matched to yours by name.</div>
     <label class="btn" style="display:block;text-align:center;cursor:pointer">Choose the files&hellip;
       <input type="file" id="fm-files" multiple style="display:none" />

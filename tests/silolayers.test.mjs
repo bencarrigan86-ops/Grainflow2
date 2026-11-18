@@ -5,6 +5,7 @@
 // each load. Running samples say what a stretch of it is, by tonnes from the bottom.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { STANDARDS } from '../docs/js/grades.js';
 import {
   gradeMix, dominantGrade, hasGrades, mixText, gradeColor, cleanBands, layersTotal, siloSvg, bunkerSvg, storageSvg, NO_GRADE,
 } from '../docs/js/silolayers.js';
@@ -51,6 +52,15 @@ check('a grade is always the same colour, and grain with no grade is grey', () =
   assert.equal(gradeColor('APH1'), gradeColor(' aph1 '));
   assert.notEqual(gradeColor('APH1'), gradeColor(''));
   assert.equal(gradeColor(''), gradeColor(null));
+});
+check('no two grades of one commodity share a colour', () => {
+  for (const key of ['wheat', 'barley', 'canola', 'chickpeas', 'sorghum']) {
+    const std = STANDARDS.find((x) => x.key === key);
+    if (!std) continue;
+    const colours = std.grades.map((x) => gradeColor(x.code));
+    assert.equal(new Set(colours).size, colours.length, key + ' has two grades the same colour');
+  }
+  assert.notEqual(gradeColor('AH2'), gradeColor('AGP1'));
 });
 
 console.log('\n=== samples, by tonnes from the bottom ===');
