@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=431';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=431';
-import { isHay, balesInStorage, describeBales } from '../hay.js?v=431';
-import { modulesReport } from '../modulesreport.js?v=431';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=431';
-import { isTransit } from '../transit.js?v=431';
-import { isOffFarm } from '../offfarm.js?v=431';
-import { paintOffFarmCard } from './offfarm.js?v=431';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=431';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=431';
-import { hasStorageQuality } from '../mapping.js?v=431';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=431';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=431';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=431';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=431';
-import { renderRelatedMovements } from './movements.js?v=431';
-import { openSiloSetupSheet } from './silosetup.js?v=431';
-import { openCalculatorSheet } from './calculator.js?v=431';
-import { commodityFills } from '../commodityfill.js?v=431';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=431';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=431';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=431';
+import { db } from '../storage.js?v=432';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=432';
+import { isHay, balesInStorage, describeBales } from '../hay.js?v=432';
+import { modulesReport } from '../modulesreport.js?v=432';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=432';
+import { isTransit } from '../transit.js?v=432';
+import { isOffFarm } from '../offfarm.js?v=432';
+import { paintOffFarmCard } from './offfarm.js?v=432';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=432';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=432';
+import { hasStorageQuality } from '../mapping.js?v=432';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=432';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=432';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=432';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=432';
+import { renderRelatedMovements } from './movements.js?v=432';
+import { openSiloSetupSheet } from './silosetup.js?v=432';
+import { openCalculatorSheet } from './calculator.js?v=432';
+import { commodityFills } from '../commodityfill.js?v=432';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=432';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=432';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=432';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=431';
+} from '../silolayers.js?v=432';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).

@@ -1520,7 +1520,7 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 }
 @media (min-width: 900px) {
   /* everything is drawn in pixels for a phone, so on a computer the whole page is scaled up a little (sizes in vw and vh are divided by --zoom to match) */
-  :root { --rail-w: 92px; --content-max: 1100px; --tabbar-h: 0px; --zoom: 1.06; }
+  :root { --rail-w: 92px; --content-max: 1100px; --tabbar-h: 0px; --zoom: 1.03; }
   html { zoom: var(--zoom); }
   #app { padding-left: var(--rail-w); }
   .tabbar {
@@ -1540,4 +1540,4 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
   .sheet.sheet-wide { max-width: min(1280px, calc(100vw / var(--zoom) - 48px)); max-height: calc(94vh / var(--zoom)); }
   .sheet.sheet-wide #fm-svg { max-height: calc(74vh / var(--zoom)) !important; }
 }
-@media (min-width: 1400px) { :root { --zoom: 1.12; } }
+@media (min-width: 1400px) { :root { --zoom: 1.07; } }
