@@ -15,7 +15,7 @@
 // Pulled out of main.js for the same reason as boot.js and reconcile.js: a
 // decision worth testing should not be trapped inside a render function.
 
-import { AREA_TAB, levelRank } from './farmswitches.js?v=443';
+import { AREA_TAB, levelRank } from './farmswitches.js?v=444';
 
 export const ROLES = ['owner', 'manager', 'bookkeeper', 'farm_worker', 'driver', 'advisor'];
 

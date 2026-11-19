@@ -2,11 +2,11 @@
 // totals for the whole farm. Pure: the figures come from the same places the Storage screen uses (the layers in a silo, the
 // holdings of an off-farm site), so the report cannot disagree with it.
 
-import { layersForStorage } from './outload.js?v=443';
-import { holdings, isOffFarm, commodityOfLoad } from './offfarm.js?v=443';
-import { isTransit } from './transit.js?v=443';
-import { createReport, fixed } from './reportpdf.js?v=443';
-import { gradeComparer } from './grades.js?v=443';
+import { layersForStorage } from './outload.js?v=444';
+import { holdings, isOffFarm, commodityOfLoad } from './offfarm.js?v=444';
+import { isTransit } from './transit.js?v=444';
+import { createReport, fixed } from './reportpdf.js?v=444';
+import { gradeComparer } from './grades.js?v=444';
 
 const EPS = 0.0005;
 const round3 = (n) => Math.round(n * 1000) / 1000;
@@ -226,27 +226,32 @@ const t1 = (v) => fixed(v, 1);
 
 /** The report as a PDF: a table of commodity, grade and tonnes under each location, then the farm total. */
 export function stockPdf({ report, business = '', today = '', scope = '', group = 'location', commodityIds = [], rowTotals = false } = {}) {
-  const pdf = createReport({ title: 'Stock by location', business, season: scope, today, footerNote: 'Tonnes held now, by silo, bunker and off-farm site.' });
+  // the grid is wide: on its own landscape pages once it has more than a handful of columns
+  const matrix = group === 'table' && report && report.locations.length ? stockMatrix(report, { commodityIds }) : null;
+  const pdf = createReport({ title: 'Stock by location', business, season: scope, today, footerNote: 'Tonnes held now, by silo, bunker and off-farm site.', landscape: !!matrix && matrix.columns.length > 6 });
   if (!report || !report.locations.length) { pdf.message('Nothing is held in storage yet.'); return pdf.bytes(); }
   if (group === 'table') {
-    const m = stockMatrix(report, { commodityIds });
+    const m = matrix;
     const t0 = (v) => (v ? fixed(v, Math.abs(v - Math.round(v)) < 0.05 ? 0 : 1) : '');
     const place = (r) => `${r.name}${r.kind === 'off' ? ' (off farm)' : ''}`;
-    // up to eight columns fit on one page across; more than that, each commodity gets a table of its own
-    const sets = m.columns.length <= 8 ? [m.columns] : m.groups.map((g) => m.columns.filter((c) => c.commodityId === g.commodityId));
+    // a page across holds about 22 columns; more than that and each commodity gets a table of its own
+    const sets = m.columns.length <= 22 ? [m.columns] : m.groups.map((g) => m.columns.filter((c) => c.commodityId === g.commodityId));
     for (const cols of sets) {
       const one = sets.length > 1;
       const rows = m.rows.filter((r) => cols.some((c) => r.cells[c.key])).map((r) => ({ ...r, total: cols.reduce((a, c) => a + (r.cells[c.key] || 0), 0) }));
       const totals = Object.fromEntries(cols.map((c) => [c.key, m.totals[c.key] || 0]));
       const grand = cols.reduce((a, c) => a + (totals[c.key] || 0), 0);
-      const w = (1 - 0.28 - (rowTotals ? 0.1 : 0)) / Math.max(1, cols.length);
+      const lead = cols.length > 6 ? 0.2 : 0.28;
+      const w = (1 - lead - (rowTotals ? 0.07 : 0)) / Math.max(1, cols.length);
+      const spans = [];
+      for (const c of cols) { const last = spans[spans.length - 1]; if (last && last.commodityId === c.commodityId) last.span += 1; else spans.push({ commodityId: c.commodityId, head: c.commodity, span: 1 }); }
       const columns = [
-        { head: 'Location', w: 0.28, left: true, cell: (r) => place(r) },
-        ...cols.map((c) => ({ head: one ? (c.grade || NO_GRADE) : `${c.commodity.slice(0, 6)} ${c.grade || NO_GRADE}`, w, cell: (r) => t0(r.cells[c.key]) })),
-        ...(rowTotals ? [{ head: 'Total', w: 0.1, cell: (r) => t0(r.total) }] : []),
+        { head: 'Location', w: lead, left: true, cell: (r) => place(r) },
+        ...cols.map((c) => ({ head: c.grade || NO_GRADE, w, cell: (r) => t0(r.cells[c.key]) })),
+        ...(rowTotals ? [{ head: 'Total', w: 0.07, cell: (r) => t0(r.total) }] : []),
       ];
       if (one) pdf.heading(cols[0].commodity);
-      pdf.table(columns, rows, { total: { name: 'Total', kind: 'farm', cells: totals, total: grand }, name: one ? cols[0].commodity : 'Stock by location', columnLines: true });
+      pdf.table(columns, rows, { total: { name: 'Total', kind: 'farm', cells: totals, total: grand }, name: one ? cols[0].commodity : 'Stock by location', columnLines: true, groups: spans, body: cols.length > 12 ? 7.5 : 9 });
     }
     return pdf.bytes();
   }

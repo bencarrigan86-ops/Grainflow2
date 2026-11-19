@@ -232,5 +232,14 @@ check('By location: on farm / off farm, then property, commodity, grade and the 
   assert.ok(stockPdf({ report: stock, business: 'Farm', today: '19-11-2026', group: 'location' }).length > 1000);
 });
 
+check('the Grid PDF is the whole grid on one landscape page, a band naming each commodity over its grades', () => {
+  const many = stockByLocation({ storages: [{ id: 's', name: 'Silo 1', kind: 'silo', commodityId: 'w' }], movements: ['H2', 'APW1', 'ASW1', 'APH1', 'H1', 'AUH2', 'SFW1'].flatMap((g, n) => [{ id: 'a' + n, date: '2026-11-0' + (n + 1), grade: g, commodityId: 'w', froms: [], tos: [{ type: 'silo', id: 's', tons: 10 }] }, { id: 'b' + n, date: '2026-11-1' + n, grade: g, commodityId: 'b', froms: [], tos: [{ type: 'silo', id: 's', tons: 5 }] }]), commodities });
+  const pdf = Buffer.from(stockPdf({ report: many, group: 'table' })).toString('latin1');
+  assert.ok(pdf.includes('MediaBox [0 0 841.89 595.28]'), 'landscape');
+  assert.equal(pdf.split('/Type /Page').length - 1 - (pdf.split('/Type /Pages').length - 1), 1, 'one page');
+  const few = Buffer.from(stockPdf({ report, group: 'table' })).toString('latin1');
+  assert.ok(few.includes('MediaBox [0 0 595.28 841.89]'), 'a narrow grid stays portrait');
+});
+
 console.log(`\n${failures === 0 ? 'ALL PASS' : failures + ' FAILURES'}`);
 process.exit(failures ? 1 : 0);

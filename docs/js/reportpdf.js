@@ -3,10 +3,11 @@
 // total row, a footer with the page number). The reports say what goes on it; this does the laying out, and runs a long
 // table on to the next page with its heading and table head repeated. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=443';
-import { drawBrandLogo } from './brand.js?v=443';
+import { Pdf, wrapText } from './pdf.js?v=444';
+import { drawBrandLogo } from './brand.js?v=444';
 
-const PAGE = { width: 595.28, height: 841.89 };
+const PORTRAIT = { width: 595.28, height: 841.89 };
+const LANDSCAPE = { width: 841.89, height: 595.28 };
 const M = 36;
 const GREY = 0.4;
 const GREEN = [0.18, 0.49, 0.196];
@@ -21,7 +22,8 @@ export const fixed = (v, dp = 0) => num(v).toLocaleString('en-AU', { minimumFrac
 /**
  * @param {{title: string, business?: string, season?: string, today?: string, footerNote?: string}} opts
  */
-export function createReport({ title, business = '', season = '', today = '', footerNote = '' }) {
+export function createReport({ title, business = '', season = '', today = '', footerNote = '', landscape = false }) {
+  const PAGE = landscape ? LANDSCAPE : PORTRAIT;
   const pdf = new Pdf(PAGE);
   const W = PAGE.width - M * 2;
   const BOTTOM = PAGE.height - 44;
@@ -74,24 +76,43 @@ export function createReport({ title, business = '', season = '', today = '', fo
   /**
    * A table: columns are {head, w (share of the width), left (left-aligned), cell(row)}. `total`, when given, is a row
    * shaded and ruled at the foot; its first cell reads "Total". `columnLines` rules a thin line between the columns.
+   * `groups` ([{head, span}], covering the columns after the first) puts a band above the head naming each run of columns, and `body`
+   * sets the type size, for a wide grid.
    */
-  const table = (columns, rows, { total = null, name = '', columnLines = false } = {}) => {
+  const table = (columns, rows, { total = null, name = '', columnLines = false, groups = null, body = BODY } = {}) => {
     const widths = columns.map((c) => c.w * W);
     const edges = widths.reduce((a, w, i) => { a.push(a[i] + w); return a; }, [0]);
     const put = (i, str, opts = {}) => {
       const c = columns[i];
-      if (c.left) pdf.text(M + edges[i] + 5, y, wrapText(String(str ?? ''), widths[i] - 10, BODY, !!opts.bold)[0] || '', { size: BODY, ...opts });
-      else pdf.text(M + edges[i] + widths[i] / 2, y, String(str ?? ''), { size: BODY, align: 'center', ...opts });
+      if (c.left) pdf.text(M + edges[i] + 5, y, wrapText(String(str ?? ''), widths[i] - 10, body, !!opts.bold)[0] || '', { size: body, ...opts });
+      else if (opts.head) {
+        // a column head that is too wide for its column goes on two lines, in smaller type
+        const parts = wrapText(String(str ?? ''), widths[i] - 3, HEAD, true);
+        if (parts.length > 1) { pdf.text(M + edges[i] + widths[i] / 2, y - 2, parts[0], { size: 6.5, bold: true, gray: 1, align: 'center' }); pdf.text(M + edges[i] + widths[i] / 2, y + 6, parts[1], { size: 6.5, bold: true, gray: 1, align: 'center' }); }
+        else pdf.text(M + edges[i] + widths[i] / 2, y, parts[0] || '', { size: HEAD, bold: true, gray: 1, align: 'center' });
+      } else pdf.text(M + edges[i] + widths[i] / 2, y, String(str ?? ''), { size: body, align: 'center', ...opts });
     };
     // a thin line down the left of every column but the first, across the row about to be written
     const lines = (h, gray) => { if (columnLines) edges.slice(1, -1).forEach((e) => pdf.line(M + e, y - 5, M + e, y - 5 + h, { width: 0.5, gray })); };
     const headRow = () => {
+      if (groups) {
+        // the band naming each commodity over its grades
+        pdf.rect(M, y - 5, W, 15, { stroke: null, fill: GREEN });
+        let at = 1;
+        for (const g of groups) {
+          const x0 = edges[at]; const x1 = edges[at + g.span];
+          if (at > 1) pdf.line(M + x0, y - 5, M + x0, y + 10, { width: 0.5, gray: 0.85 });
+          pdf.text(M + (x0 + x1) / 2, y, wrapText(String(g.head), x1 - x0 - 4, HEAD, true)[0] || '', { size: HEAD, bold: true, gray: 1, align: 'center' });
+          at += g.span;
+        }
+        y += 15;
+      }
       pdf.rect(M, y - 5, W, 19, { stroke: null, fill: GREEN });
       lines(19, 0.85);
-      columns.forEach((c, i) => put(i, c.head, { bold: true, size: HEAD, gray: 1 }));
+      columns.forEach((c, i) => put(i, c.head, c.left ? { bold: true, size: HEAD, gray: 1 } : { head: true }));
       y += 20;
     };
-    ensure(20 + 18 * 2 + (total ? 24 : 0));
+    ensure(20 + (groups ? 15 : 0) + 18 * 2 + (total ? 24 : 0));
     headRow();
     rows.forEach((r, n) => {
       if (y + 20 > BOTTOM) {
