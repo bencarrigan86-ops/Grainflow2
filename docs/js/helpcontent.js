@@ -4,7 +4,8 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=423';
+import { ROLES, canOpen } from './nav.js?v=424';
+import { LEVEL_ROLES, narrowTo } from './farmswitches.js?v=424';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -14,6 +15,7 @@ export const LEVELS = {
   own: { label: 'Add loads, change open ones', short: 'Loads' },
   used: { label: 'See stock, record use and counts (no prices)', short: 'Use' },
   draft: { label: 'Write drafts for a manager to send', short: 'Draft' },
+  tonnes: { label: 'See contracts and tonnes, no prices', short: 'No $' },
   none: { label: 'Not available', short: '—' },
 };
 
@@ -55,43 +57,43 @@ export const ROLE_INFO = [
  * so the test can check the row against the tab bar.
  */
 export const ACCESS = [
-  { area: 'Position', hint: 'Tonnes, unsold grain and profit', tab: 'position',
+  { key: 'position', area: 'Position', hint: 'Tonnes, unsold grain and profit', tab: 'position',
     owner: 'view', manager: 'view', bookkeeper: 'none', farm_worker: 'none', driver: 'none', advisor: 'none',
     note: 'A manager sees tonnes and margin per paddock, but not overheads or the whole farm\'s profit.' },
-  { area: 'Production', hint: 'Paddocks, yields, urea, seed, farm map', tab: 'production',
+  { key: 'production', area: 'Production', hint: 'Paddocks, yields, urea, seed, farm map', tab: 'production',
     owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'view', driver: 'none', advisor: 'view',
     note: 'A worker can change paddocks only if the owner has allowed them to record production. Workers do not see yields.' },
-  { area: 'Contracts and prices', hint: 'Sales', tab: 'sales',
+  { key: 'contracts', area: 'Contracts and prices', hint: 'Sales', tab: 'sales',
     owner: 'full', manager: 'view', bookkeeper: 'full', farm_worker: 'none', driver: 'none', advisor: 'none',
     note: 'A manager sees contracts and tonnes with the prices left out.' },
-  { area: 'Invoices', hint: 'Invoices and the buyer\'s RCTI check',
+  { key: 'invoices', area: 'Invoices', hint: 'Invoices and the buyer\'s RCTI check',
     owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'none', driver: 'none', advisor: 'none' },
-  { area: 'Bills', hint: 'Brokerage, freight, storage and other bills you owe',
+  { key: 'bills', area: 'Bills', hint: 'Brokerage, freight, storage and other bills you owe',
     owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'none', driver: 'none', advisor: 'none' },
-  { area: 'Overheads', hint: 'Whole-farm costs, set in Settings',
+  { key: 'overheads', area: 'Overheads', hint: 'Whole-farm costs, set in Settings',
     owner: 'full', manager: 'none', bookkeeper: 'none', farm_worker: 'none', driver: 'none', advisor: 'none',
     note: 'This is what keeps whole-farm profit from a manager.' },
-  { area: 'Grain orders', hint: 'Who is to deliver what, and when',
+  { key: 'grainorders', area: 'Grain orders', hint: 'Who is to deliver what, and when',
     owner: 'full', manager: 'full', bookkeeper: 'none', farm_worker: 'none', driver: 'none', advisor: 'none' },
-  { area: 'Freight orders', hint: 'Loads to cart, and the carrier',
+  { key: 'freightorders', area: 'Freight orders', hint: 'Loads to cart, and the carrier',
     owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'none', driver: 'none', advisor: 'none' },
-  { area: 'Loads and tickets', hint: 'Movement, load tickets, the load report', tab: 'movement',
+  { key: 'loads', area: 'Loads and tickets', hint: 'Movement, load tickets, the load report', tab: 'movement',
     owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'own', driver: 'own', advisor: 'none',
     note: 'Workers and drivers can change a load until it is closed, and can remove only their own.' },
-  { area: 'Storage', hint: 'Silos and bunkers', tab: 'storage',
+  { key: 'storage', area: 'Storage', hint: 'Silos and bunkers', tab: 'storage',
     owner: 'full', manager: 'full', bookkeeper: 'none', farm_worker: 'view', driver: 'none', advisor: 'view',
     note: 'Drivers do not have the Storage tab, but can pick a silo when they record a load.' },
-  { area: 'Reports', hint: 'Reports and summaries', tab: 'reports',
+  { key: 'reports', area: 'Reports', hint: 'Reports and summaries', tab: 'reports',
     owner: 'view', manager: 'view', bookkeeper: 'view', farm_worker: 'view', driver: 'none', advisor: 'none' },
-  { area: 'Spray requests', hint: 'Spray form and map for a contractor',
+  { key: 'sprays', area: 'Spray requests', hint: 'Spray form and map for a contractor',
     owner: 'full', manager: 'full', bookkeeper: 'none', farm_worker: 'none', driver: 'none', advisor: 'view' },
-  { area: 'Inputs and spraying', hint: 'Seed, fertiliser, fuel and chemical on hand',
+  { key: 'inputs', area: 'Inputs and spraying', hint: 'Seed, fertiliser, fuel and chemical on hand',
     owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'used', driver: 'none', advisor: 'used',
     note: 'A worker sees what is on hand and records what is used and counts. Prices are never sent to their phone.' },
-  { area: 'Settings', hint: 'Commodities, seasons, grades, business details',
+  { key: 'settings', area: 'Settings', hint: 'Commodities, seasons, grades, business details',
     owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'none', driver: 'none', advisor: 'none',
     note: 'Commodities are changed by the owner and manager; overheads by the owner; business and bank details by the owner only (the bookkeeper can see the bank details; a manager cannot). Workers and drivers have Account only, for signing out.' },
-  { area: 'People', hint: 'Invite, change and remove people',
+  { key: 'people', area: 'People', hint: 'Invite, change and remove people',
     owner: 'full', manager: 'none', bookkeeper: 'none', farm_worker: 'none', driver: 'none', advisor: 'none' },
 ];
 
@@ -101,7 +103,7 @@ export const ACCESS = [
  * changes changed. A switch that narrows (delete, final weights, a driver's own loads) changes no cell: those are rules inside
  * an area. Returns new rows; ACCESS itself is the standard rules and is not touched.
  */
-export function effectiveAccess(switches = {}) {
+export function effectiveAccess(switches = {}, levels = {}) {
   const rows = ACCESS.map((r) => ({ ...r }));
   const set = (area, role, level) => { const r = rows.find((x) => x.area === area); if (r) r[role] = level; };
   const on = (k) => switches[k] === true;
@@ -117,6 +119,8 @@ export function effectiveAccess(switches = {}) {
     if (on('advisorSeesPrices')) for (const a of ['Invoices', 'Bills', 'Grain orders', 'Freight orders']) set(a, 'advisor', 'view');
     if (on('advisorSeesOverheads')) set('Overheads', 'advisor', 'view');
   }
+  // what the owner has taken away on top of that (see farmswitches.js): only ever less than the cell had
+  for (const r of rows) for (const role of LEVEL_ROLES) { const chosen = levels?.[r.key]?.[role]; if (chosen) r[role] = narrowTo(r[role], chosen); }
   return rows;
 }
 

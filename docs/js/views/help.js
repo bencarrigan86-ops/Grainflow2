@@ -3,15 +3,15 @@
 // The words are in helpcontent.js, checked against nav.js and the database policies by tests/help.test.mjs. This only lays
 // them out, and offers each guide only to the roles that have it.
 
-import { db } from '../storage.js?v=423';
-import { esc } from '../fmt.js?v=423';
-import { canOpen } from '../nav.js?v=423';
-import { ROLE_INFO, ACCESS, LEVELS, effectiveAccess, guidesForRole, startProgress } from '../helpcontent.js?v=423';
-import { readSwitches } from '../farmswitches.js?v=423';
-import { openSetupWalk } from './setupwalk.js?v=423';
-import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=423';
+import { db } from '../storage.js?v=424';
+import { esc } from '../fmt.js?v=424';
+import { canOpen } from '../nav.js?v=424';
+import { ROLE_INFO, ACCESS, LEVELS, effectiveAccess, guidesForRole, startProgress } from '../helpcontent.js?v=424';
+import { readSwitches, readLevels } from '../farmswitches.js?v=424';
+import { openSetupWalk } from './setupwalk.js?v=424';
+import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=424';
 
-import { pill, ROLE_SHORT } from './levelpill.js?v=423';
+import { pill, ROLE_SHORT } from './levelpill.js?v=424';
 
 const SHORT = ROLE_SHORT;
 
@@ -70,7 +70,7 @@ export function renderHelp(root) {
         <div class="table-scroll" style="margin-top:12px">
           <table>
             <thead><tr><th style="text-align:left">Area</th>${Object.values(SHORT).map((s) => `<th style="text-align:center">${esc(s)}</th>`).join('')}</tr></thead>
-            <tbody>${effectiveAccess(readSwitches(db.getBusinessDetails().switches)).map(accessRow).join('')}</tbody>
+            <tbody>${effectiveAccess(readSwitches(db.getBusinessDetails().switches), readLevels(db.getBusinessDetails().switches)).map(accessRow).join('')}</tbody>
           </table>
         </div>
         <div class="hint" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center">${Object.keys(LEVELS).map((k) => `<span>${pill(k)} ${esc(LEVELS[k].label)}</span>`).join('')}</div>

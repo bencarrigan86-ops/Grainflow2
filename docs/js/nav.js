@@ -15,6 +15,8 @@
 // Pulled out of main.js for the same reason as boot.js and reconcile.js: a
 // decision worth testing should not be trapped inside a render function.
 
+import { AREA_TAB } from './farmswitches.js?v=424';
+
 export const ROLES = ['owner', 'manager', 'bookkeeper', 'farm_worker', 'driver', 'advisor'];
 
 /**
@@ -83,20 +85,33 @@ let switches = {};
 export function setFarmSwitches(obj) { switches = obj && typeof obj === 'object' && !Array.isArray(obj) ? { ...obj } : {}; }
 export const farmSwitch = (key) => switches[key] === true;
 
+// What the owner has taken away from a role in an area (farmswitches.js, readLevels), handed over the same way. Empty: the standard rules.
+let levels = {};
+export function setFarmLevels(obj) { levels = obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {}; }
+/** The owner's choice for this role in this area ('none', 'tonnes', 'view', 'full'), or '' when it is the standard. */
+export const farmLevel = (role, area) => levels?.[area]?.[role] || '';
+const cut = (role, area) => farmLevel(role, area) === 'none';
+const noChange = (role, area) => ['none', 'view'].includes(farmLevel(role, area));
+/** May this role open this area at all? False only when the owner has set it to None. */
+export const canSeeArea = (role, area) => !cut(role, area);
+/** May this role add and change in this area? False when the owner has set it to See or None. */
+export const canChangeArea = (role, area) => !noChange(role, area);
+
 const known = (role) => (ROLES.includes(role) || role === 'support' ? role : 'driver');
 
 /** Tab ids for the bar, in order. Unknown roles get the narrowest bar there is. */
 export function tabsForRole(role) {
   const r = known(role);
-  const bar = [...TABS_BY_ROLE[r]];
+  let bar = [...TABS_BY_ROLE[r]];
   // a farm that has switched it on gives its workers Position as well, first in the bar like everyone else's
   if (r === 'farm_worker' && farmSwitch('workerSeesPosition') && !bar.includes('position')) bar.unshift('position');
   // two more the owner can give: a driver the Storage tab, a worker the Sales tab (contracts and tonnes, no prices)
   if (r === 'driver' && farmSwitch('driverSeesStorage')) bar.push('storage');
   if (r === 'farm_worker' && farmSwitch('workerSeesSales') && !bar.includes('sales')) bar.splice(bar.indexOf('production') + 1, 0, 'sales');
   // an advisor the owner has let see loads and contracts gets the rest of the bar, tonnes without prices unless those are on too
-  if (r === 'advisor' && farmSwitch('advisorSeesLoads')) return ['position', 'production', 'sales', 'movement', 'storage', 'reports'];
-  return bar;
+  if (r === 'advisor' && farmSwitch('advisorSeesLoads')) bar = ['position', 'production', 'sales', 'movement', 'storage', 'reports'];
+  // and what the owner has set to None for this role on this farm
+  return bar.filter((tab) => !Object.entries(AREA_TAB).some(([area, t]) => t === tab && cut(r, area)));
 }
 
 /** Everything the role may open, bar or not. */
@@ -107,7 +122,7 @@ export function routesForRole(role) {
 
 /** Where this role lands with no route in the address bar. */
 export function landingTabFor(role) {
-  return tabsForRole(role)[0];
+  return tabsForRole(role)[0] || 'account';   // an owner can take every tab away: Account is always there
 }
 
 /**
@@ -158,10 +173,11 @@ export function canSeeYield(role) {
 }
 
 /** Grain orders (who is to deliver what, and when): an owner and a manager. A bookkeeper is not sent them. */
-export const canSeeOrders = (role) => role === 'owner' || role === 'manager';
+export const canSeeOrders = (role) => (role === 'owner' || role === 'manager') && !cut(role, 'grainorders');
 
 /** The whole farm's overheads: an owner; a manager once the farm has switched it on. A bookkeeper does not see them. */
 export function canSeeOverheads(role) {
+  if (cut(role, 'overheads')) return false;
   if (role === 'owner' || role === 'support') return true;
   if (role === 'manager') return farmSwitch('managerSeesOverheads');
   if (role === 'advisor') return farmSwitch('advisorSeesLoads') && farmSwitch('advisorSeesOverheads');
@@ -172,13 +188,14 @@ export function canSeeOverheads(role) {
  * May this role change paddocks, yields and the stock of seed, fertiliser, fuel and chemical? A bookkeeper looks and changes
  * none of it (the database refuses the writes), and so does an advisor or the support login, so the screen offers no way to try.
  */
-export const canChangeProduction = (role) => !['bookkeeper', 'advisor', 'support'].includes(role);
+export const canChangeProduction = (role) => !['bookkeeper', 'advisor', 'support'].includes(role) && !noChange(role, 'production');
 
 /**
  * May this role add and change loads? Owners, managers, workers and drivers always; a bookkeeper only on a farm that has switched
  * it on; an advisor or support never. (The database says the same: see 20261210000000_farm_switches_two.sql.)
  */
 export function canEditLoads(role) {
+  if (noChange(role, 'loads')) return false;
   if (role === 'bookkeeper') return farmSwitch('bookkeeperEditsLoads');
   return ['owner', 'manager', 'farm_worker', 'driver'].includes(role);
 }
@@ -199,6 +216,7 @@ export function canMarkFinal(role) {
  * would be sums with the prices left out.
  */
 export function canSeePrices(role) {
+  if (['none', 'tonnes'].includes(farmLevel(role, 'contracts'))) return false;   // the owner has kept the prices from this role
   if (role === 'owner' || role === 'bookkeeper') return true;
   if (role === 'manager') return farmSwitch('managerSeesPrices');
   if (role === 'advisor') return farmSwitch('advisorSeesLoads') && farmSwitch('advisorSeesPrices');
@@ -210,6 +228,7 @@ export function canSeePrices(role) {
  * once it has switched on loads and prices. Nobody else (as the standard rules already say).
  */
 export function canSeeBills(role) {
+  if (cut(role, 'invoices') && cut(role, 'bills')) return false;
   if (role === 'owner' || role === 'bookkeeper') return true;
   if (role === 'manager') return !farmSwitch('managerHidesBills');
   if (role === 'advisor') return farmSwitch('advisorSeesLoads') && farmSwitch('advisorSeesPrices');

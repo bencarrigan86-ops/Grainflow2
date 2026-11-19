@@ -1473,3 +1473,7 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .area-block .ab-role { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0; }
 .area-block .ab-roles span[title] { min-width: 0 !important; padding: 2px 4px !important; }
 .sw-row.sw-off { opacity: .55; cursor: default; }
+/* the owner's pick for a role in an area (Settings > People > Who can do what) */
+.area-block .ab-roles.ab-edit { grid-template-columns: repeat(3, 1fr); gap: 8px 6px; }
+.area-block .ab-pick { width: 100%; min-width: 0; padding: 6px 4px; font-size: 13px; text-align-last: center; }
+.area-block .ab-pick.ab-changed { border-color: var(--accent-summary); font-weight: 700; }

@@ -52,8 +52,8 @@ export function readSwitches(raw) {
 
 /** The saved switches with one changed. Off is kept as an explicit false, so turning a switch off again reaches the server. */
 export function withSwitch(current, key, on) {
-  if (!SWITCHES.some((s) => s.key === key)) return readSwitches(current);
-  return { ...readSwitches(current), [key]: !!on };
+  if (!SWITCHES.some((s) => s.key === key)) return keepLevels(current, readLevels(current));
+  return { ...keepLevels(current, readLevels(current)), [key]: !!on };
 }
 
 /** The questions under one area of the grid (an area of helpcontent.js's ACCESS), in order. */
@@ -68,4 +68,89 @@ export function switchGroups() {
     g.items.push(s);
   }
   return groups;
+}
+
+// --- what each role may do in each area: the owner's choice, kept with the farm ---------------------------------------------------
+//
+// The standard rules (helpcontent.js ACCESS, with the switches above) say what a role can do in an area. An owner can take some of that
+// away from a role on their own farm: Full becomes See, or None. These choices only ever narrow: a role is never given more than
+// the standard rules and the switches give it (that is what the switches are for). They are kept in the same place as the switches,
+// farms.switches -> levels: { loads: { bookkeeper: 'view' }, ... }. The database enforces the areas that have tables of their own
+// (see supabase/migrations/20261220000000_access_levels.sql); the areas that are only screens (Position, Storage, Reports) hide the tab.
+
+/** The roles an owner can set. The owner is always Full, and People and Settings are the owner's own. */
+export const LEVEL_ROLES = ['manager', 'bookkeeper', 'farm_worker', 'driver', 'advisor'];
+
+/** The areas with tables of their own, and the tables each one holds back: the same list the database policies are written from. */
+export const LEVEL_TABLES = {
+  production: ['fields', 'field_agronomy'],
+  contracts: ['sales', 'sale_terms', 'sale_documents'],
+  invoices: ['invoices'],
+  bills: ['payables'],
+  overheads: ['overheads'],
+  grainorders: ['orders'],
+  freightorders: ['freight_orders'],
+  loads: ['movements', 'movement_legs', 'movement_photos'],
+  sprays: ['spray_jobs'],
+  inputs: ['input_stock'],
+};
+
+/** The areas that are a screen made from the others: None hides the tab, and the data under it is kept by the areas above. */
+export const SCREEN_AREAS = ['position', 'storage', 'reports'];
+
+/** Every area an owner can change. */
+export const LEVEL_AREAS = [...Object.keys(LEVEL_TABLES), ...SCREEN_AREAS];
+
+/** The tab each area opens, where it has one (an area with none is a part of another screen). */
+export const AREA_TAB = { position: 'position', production: 'production', contracts: 'sales', loads: 'movement', storage: 'storage', reports: 'reports' };
+
+const RANK = { none: 0, tonnes: 1, view: 2, used: 2, draft: 2, own: 3, full: 4 };
+export const levelRank = (level) => RANK[level] ?? 0;
+
+/** The saved choices, cleaned: { area: { role: 'none' | 'tonnes' | 'view' | 'full' } }, with nothing in it that is not a real area, role or level. */
+export function readLevels(raw) {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) && raw.levels && typeof raw.levels === 'object' ? raw.levels : {};
+  const out = {};
+  for (const area of LEVEL_AREAS) {
+    const row = src[area];
+    if (!row || typeof row !== 'object') continue;
+    for (const role of LEVEL_ROLES) {
+      const v = row[role];
+      if (v === 'none' || v === 'view' || v === 'full' || (v === 'tonnes' && area === 'contracts')) (out[area] ||= {})[role] = v;
+    }
+  }
+  return out;
+}
+
+/** The saved switches with one choice changed (null puts it back to the standard). Keeps the switches. */
+export function withLevel(current, area, role, level) {
+  if (!LEVEL_AREAS.includes(area) || !LEVEL_ROLES.includes(role)) return keepLevels(current, readLevels(current));
+  const levels = readLevels(current);
+  if (level == null) { if (levels[area]) { delete levels[area][role]; if (!Object.keys(levels[area]).length) delete levels[area]; } }
+  else (levels[area] ||= {})[role] = level;
+  return keepLevels(current, readLevels({ levels }));
+}
+
+/** The switches as they are, with these choices alongside (nothing added when there are none). */
+function keepLevels(current, levels) {
+  return { ...readSwitches(current), ...(Object.keys(levels).length ? { levels } : {}) };
+}
+
+/** The level a role ends up with: the owner's choice if it takes something away, else the standard. */
+export function narrowTo(standard, chosen) {
+  return chosen && levelRank(chosen) < levelRank(standard) ? chosen : standard;
+}
+
+/**
+ * What an owner may pick for a role in an area, lowest first. The standard (what the rules give it now) is the top: nothing above it.
+ * `prices` is whether this role is shown contract prices now, which is what makes "See without prices" a real choice.
+ */
+export function levelChoices(standard, { area = '', prices = false } = {}) {
+  const out = [];
+  const add = (v) => { if (!out.includes(v)) out.push(v); };
+  add('none');
+  if (area === 'contracts' && prices && levelRank(standard) >= levelRank('view')) add('tonnes');
+  if (levelRank(standard) > levelRank('view')) add('view');
+  if (standard !== 'none') add(standard === 'tonnes' ? 'tonnes' : standard);
+  return out;
 }

@@ -1,34 +1,34 @@
-import { db } from '../storage.js?v=423';
-import { canDelete, canSeeBills, canSeeOrders } from '../nav.js?v=423';
-import { tileIcon } from '../tileicon.js?v=423';
+import { db } from '../storage.js?v=424';
+import { canDelete, canSeeBills, canSeeOrders, canSeeArea, canChangeArea } from '../nav.js?v=424';
+import { tileIcon } from '../tileicon.js?v=424';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=423';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=423';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=423';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=423';
-import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=423';
-import { patternsFor } from '../deliveryplan.js?v=423';
-import { INVOICING } from '../invoicing.js?v=423';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=423';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=423';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=423';
-import { renderRelatedMovements } from './movements.js?v=423';
-import { openInvoiceListSheet } from './invoice.js?v=423';
-import { openContractDocSheet } from './contract.js?v=423';
-import { wireJumps } from '../jump.js?v=423';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=423';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=423';
-import { freightState } from '../freight.js?v=423';
-import { activeSales, paidSales } from '../paidsales.js?v=423';
-import { openVendorDecSheet } from './vendordec.js?v=423';
-import { summarise as summariseOrders } from '../orders.js?v=423';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=423';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=423';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=423';
-import { standardFor } from '../grades.js?v=423';
-import { commodityClass } from '../commoditycolor.js?v=423';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=423';
+} from '../documents.js?v=424';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=424';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=424';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify, freezeSheet } from '../ui.js?v=424';
+import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=424';
+import { patternsFor } from '../deliveryplan.js?v=424';
+import { INVOICING } from '../invoicing.js?v=424';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=424';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=424';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=424';
+import { renderRelatedMovements } from './movements.js?v=424';
+import { openInvoiceListSheet } from './invoice.js?v=424';
+import { openContractDocSheet } from './contract.js?v=424';
+import { wireJumps } from '../jump.js?v=424';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=424';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=424';
+import { freightState } from '../freight.js?v=424';
+import { activeSales, paidSales } from '../paidsales.js?v=424';
+import { openVendorDecSheet } from './vendordec.js?v=424';
+import { summarise as summariseOrders } from '../orders.js?v=424';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=424';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=424';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=424';
+import { standardFor } from '../grades.js?v=424';
+import { commodityClass } from '../commoditycolor.js?v=424';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=424';
 
 let unsub = null;
 
@@ -74,9 +74,9 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
-      ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div class="tile-grid"${canSeeOrders(db.getRole()) ? '' : ' style="grid-template-columns:1fr"'}>
+      ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div class="tile-grid"${canSeeOrders(db.getRole()) && canSeeArea(db.getRole(), 'freightorders') ? '' : ' style="grid-template-columns:1fr"'}>
         ${canSeeOrders(db.getRole()) ? `<button type="button" class="btn secondary tool-tile" id="open-orders">${tileIcon('orders')}<span class="tt-text"><b>Grain orders</b><span>${ordersSum.open.count ? `${num(ordersSum.open.left, 0)} t to deliver${ordersSum.overdue.count ? ` (${ordersSum.overdue.count} overdue)` : ordersSum.soon.count ? ` (${ordersSum.soon.count} due soon)` : ''}` : 'none open'}</span></span></button>`: ''}
-        <button type="button" class="btn secondary tool-tile" id="open-freight">${tileIcon('freight')}<span class="tt-text"><b>Freight orders</b><span>${freightOpen.length ? `${freightOpen.length} open · ${num(freightLeft, 0)} t to cart` : 'none open'}</span></span></button>
+        ${canSeeArea(db.getRole(), 'freightorders') ? `<button type="button" class="btn secondary tool-tile" id="open-freight">${tileIcon('freight')}<span class="tt-text"><b>Freight orders</b><span>${freightOpen.length ? `${freightOpen.length} open · ${num(freightLeft, 0)} t to cart` : 'none open'}</span></span></button>`: ''}
       </div>` : ''}
       ${rollup.length === 0 ? '' : `
       <div class="card report">
@@ -121,7 +121,7 @@ function paint(root) {
         `).join('')}
       </div>
     </div>
-    <button class="fab" id="add-sale">+</button>
+    ${canChangeArea(db.getRole(), 'contracts') ? '<button class="fab" id="add-sale">+</button>' : ''}
   `;
 
   // The commodity rows in the table at the top jump to that commodity's contracts below.
@@ -130,7 +130,7 @@ function paint(root) {
   root.querySelectorAll('[data-edit-sale]').forEach((el) => {
     el.addEventListener('click', () => openSaleSheet(sales.find((s) => s.id === el.dataset.editSale)));
   });
-  root.querySelector('#add-sale').addEventListener('click', () => openSaleSheet(null));
+  root.querySelector('#add-sale')?.addEventListener('click', () => openSaleSheet(null));
   root.querySelector('#open-orders')?.addEventListener('click', () => openOrdersSheet());
   root.querySelector('#open-freight')?.addEventListener('click', () => openFreightOrdersSheet());
   root.querySelector('#empty-add')?.addEventListener('click', () => openSaleSheet(null));
@@ -1029,5 +1029,7 @@ function openSaleSheet(existing) {
         });
       });
     }
+    // an owner can keep a role to looking at contracts: the boxes are switched off and the Save bar is put away
+    if (!canChangeArea(db.getRole(), 'contracts')) freezeSheet(root);
   });
 }

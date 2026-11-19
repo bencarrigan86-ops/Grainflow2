@@ -1,12 +1,12 @@
-import { db } from '../storage.js?v=423';
-import { esc } from '../fmt.js?v=423';
-import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=423';
-import { SWITCHES, switchesForArea, readSwitches, withSwitch } from '../farmswitches.js?v=423';
-import { ACCESS, effectiveAccess } from '../helpcontent.js?v=423';
-import { pill, ROLE_SHORT } from './levelpill.js?v=423';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=423';
-import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=423';
-import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=423';
+import { db } from '../storage.js?v=424';
+import { esc } from '../fmt.js?v=424';
+import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=424';
+import { SWITCHES, switchesForArea, readSwitches, withSwitch, readLevels, withLevel, levelChoices, narrowTo, LEVEL_AREAS, LEVEL_ROLES, SCREEN_AREAS } from '../farmswitches.js?v=424';
+import { ACCESS, effectiveAccess } from '../helpcontent.js?v=424';
+import { pill, ROLE_SHORT } from './levelpill.js?v=424';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=424';
+import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=424';
+import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=424';
 
 // ---------------------------------------------------------------------------
 // People
@@ -98,6 +98,23 @@ export function paintPeople(card) {
     toast(box.checked ? 'Switched on for this farm' : 'Switched off');
   }));
 
+  // what an owner takes away from a role in an area: a pick from what that cell may be (never more than the rules give it)
+  card.querySelectorAll('[data-level]').forEach((sel) => sel.addEventListener('change', () => {
+    const [area, role] = sel.dataset.level.split('|');
+    const standard = sel.dataset.standard;
+    const next = sel.value === standard ? null : sel.value;
+    db.updateBusinessDetails({ switches: withLevel(db.getBusinessDetails().switches, area, role, next) });
+    toast(next ? 'Saved for this farm' : 'Back to the standard');
+    paintPeople(card);
+  }));
+  card.querySelectorAll('[data-level-reset]').forEach((b) => b.addEventListener('click', () => {
+    let sw = db.getBusinessDetails().switches;
+    for (const role of LEVEL_ROLES) sw = withLevel(sw, b.dataset.levelReset, role, null);
+    db.updateBusinessDetails({ switches: sw });
+    toast('Back to the standard');
+    paintPeople(card);
+  }));
+
   card.querySelectorAll('[data-edit-member]').forEach((el) => {
     el.addEventListener('click', () => {
       openMemberSheet(members.find((m) => m.userId === el.dataset.editMember));
@@ -136,17 +153,37 @@ function questionRow(x, on) {
   return `<label class="sw-row${blocked ? ' sw-off' : ''}"><input type="checkbox" data-switch="${x.key}" ${on[x.key] ? 'checked' : ''} ${blocked ? 'disabled' : ''} /><span><strong>${ROLE_WORD[x.role] ? `${esc(ROLE_WORD[x.role])}: ` : ''}${esc(x.label)}</strong><span class="meta" style="display:block">${esc(blocked ? `Switch on "${need}" first.` : x.hint)}</span></span></label>`;
 }
 
+const CHOICE_WORD = { full: 'Full', view: 'See', own: 'Loads', used: 'Use', draft: 'Draft', tonnes: 'No prices', none: 'None' };
+
+/** Are contract prices shown to this role by the standard rules and the switches (before anything the owner takes away)? */
+const pricesShown = (role, on) => role === 'bookkeeper' || (role === 'manager' && on.managerSeesPrices === true) || (role === 'advisor' && on.advisorSeesLoads === true && on.advisorSeesPrices === true);
+
+/** One role in one area: a pill where it cannot be changed (the owner, People and Settings, or a cell already at None), else a pick. */
+function levelCell(row, standardRow, role, levels, on) {
+  const standard = standardRow[role];
+  if (role === 'owner' || !LEVEL_AREAS.includes(row.key) || !LEVEL_ROLES.includes(role)) return pill(row[role]);
+  const choices = levelChoices(standard, { area: row.key, prices: pricesShown(role, on) });
+  if (choices.length < 2) return pill(row[role]);
+  const now = narrowTo(standard, levels[row.key]?.[role]);
+  const changed = now !== standard;
+  return `<select class="ab-pick${changed ? ' ab-changed' : ''}" data-level="${esc(row.key)}|${esc(role)}" data-standard="${esc(standard)}" aria-label="${esc(ROLE_SHORT[role])} in ${esc(row.area)}">${choices.map((c) => `<option value="${esc(c)}" ${c === now ? 'selected' : ''}>${esc(CHOICE_WORD[c] || c)}</option>`).join('')}</select>`;
+}
+
 /** The farm's rules: each area with what every role can do in it now, and the questions that change it. */
 function switchesFoldHtml() {
   const on = readSwitches(db.getBusinessDetails().switches);
-  const rows = effectiveAccess(on);
+  const raw = db.getBusinessDetails().switches;
+  const levels = readLevels(raw);
+  const standardRows = effectiveAccess(on);            // what the rules and the switches give each role
+  const rows = effectiveAccess(on, levels);            // and what is left after the owner's choices
   return `<details class="fold" id="switch-fold" ${switchesOpen ? 'open' : ''} style="margin-top:14px">
     <summary><div><h2>Who can do what</h2><div class="sub">This farm's rules, area by area</div></div></summary>
-    <div class="field hint" style="margin:8px 0">Each area shows what every kind of login can do there now. The questions under it change that for this farm only. Everything starts off, the standard rules, and a change reaches each person's app the next time it refreshes.</div>
+    <div class="field hint" style="margin:8px 0">Pick Full, See or None for each kind of login. You can only take away from the standard rules (the questions under an area give more), and the Owner is always Full. Position, Storage and Reports are screens: None hides the tab. A changed pick is outlined, and Back to the standard undoes an area. It reaches each person's app the next time it refreshes.</div>
     ${rows.map((r) => {
       const qs = switchesForArea(r.area);
       return `<div class="area-block"><div class="ab-head"><strong>${esc(r.area)}</strong><span class="meta">${esc(r.hint)}</span></div>
-        <div class="ab-roles">${Object.keys(ROLE_SHORT).map((k) => `<div><span class="ab-role">${esc(ROLE_SHORT[k])}</span>${pill(r[k])}</div>`).join('')}</div>
+        <div class="ab-roles ab-edit">${Object.keys(ROLE_SHORT).map((k) => `<div><span class="ab-role">${esc(ROLE_SHORT[k])}</span>${levelCell(r, standardRows.find((x) => x.area === r.area), k, levels, on)}</div>`).join('')}</div>
+        ${levels[r.key] ? `<div style="margin:2px 0 6px"><button type="button" class="link-btn" data-level-reset="${esc(r.key)}">Back to the standard</button></div>` : ''}
         ${qs.map((x) => questionRow(x, on)).join('')}</div>`;
     }).join('')}
   </details>`;
