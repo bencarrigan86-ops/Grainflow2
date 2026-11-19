@@ -12,8 +12,12 @@ export const LIVE = {
   key: 'sb_publishable_v8t04o3uoNx-Dt9VMVvyow_2Q17cG6V',
 };
 
-// Fill these in once the test project exists (STAGING.md, step 2).
-export const TEST = { name: 'test', url: '', key: '' };
+// The address people are sent to: the front door of the live app, as it appears in the trial invitation message and its link.
+// When the live app moves to its own domain, this is the one line to change (and nothing else shows the old address).
+export const APP_ADDRESS = 'https://grainflow2.bencarrigan86.workers.dev/';
+
+// The test project (STAGING.md). The key is the publishable kind, which is meant to be in the browser.
+export const TEST = { name: 'test', url: 'https://lnezobhpgnaismtowrhl.supabase.co', key: 'sb_publishable_ftAFjvTvIkEnh49OvyaRMg_Cr4r3Qra' };
 
 const UNREACHABLE = 'https://test-copy-not-set-up.invalid';
 

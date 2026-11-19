@@ -10,6 +10,7 @@ import { APP_VERSION } from '../docs/js/version.js';
 const stamp = APP_VERSION.split('.').pop();
 const { validEmail, trialInviteMessage, farmLabel, standingText, trialNoticeText, trialSampleText, ownSeasonGuess, startOwnWarning, startedLine, trialLink, emailFromTrialHash } = await import(`../docs/js/trialtext.js?v=${stamp}`);
 const { standingStatus } = await import('../docs/js/supportinfo.js');
+const { APP_ADDRESS } = await import('../docs/js/env.js');
 
 let failures = 0;
 const check = (name, fn) => {
@@ -128,6 +129,11 @@ check('the paste file can be run whole, again and again: a function whose shape 
       assert.ok(new RegExp(`drop function if exists ${fn}\\(\\);\\s*$`).test(sql.slice(0, mk.index)), `${fn} is dropped just before it is made`);
     }
   }
+});
+
+check('the address in the invitation message comes from one place, env.js, so a new domain is a one-line change', () => {
+  assert.ok(trialInviteMessage('a@b.com').includes(APP_ADDRESS + '#/try/a%40b.com'));
+  assert.ok(!read('docs/js/trialtext.js').includes('workers.dev'), 'no address written into the message code');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

@@ -1,8 +1,8 @@
 // "Choose a new password": the screen a password reset link opens on. The link has already signed the person in, for this one job.
 // Same plain card as the sign-in screen. When it is done (or set aside) the app carries on as normal.
 
-import { setNewPassword } from '../auth.js?v=422';
-import { checkNewPassword } from '../recovery.js?v=422';
+import { setNewPassword } from '../auth.js?v=423';
+import { checkNewPassword } from '../recovery.js?v=423';
 
 export function renderNewPassword(root, { onDone } = {}) {
   let busy = false;

@@ -1,5 +1,7 @@
 // The words and small checks for trial farms, kept apart from the server calls so they can be tested without a connection.
 
+import { APP_ADDRESS } from './env.js?v=423';
+
 export const asText = (v) => String(v ?? '').trim();
 
 /** Good enough to catch a typo before the server is asked; the server checks again. */
@@ -8,7 +10,7 @@ export function validEmail(email) {
 }
 
 /** The link to send: opens the app on the sign-up screen with their email already in it. The email is a convenience, not a key: the server matches the address they actually sign up with. */
-export function trialLink(email, url = 'https://grainflow2.bencarrigan86.workers.dev/') {
+export function trialLink(email, url = APP_ADDRESS) {
   const base = String(url).replace(/#.*$/, '').replace(/\/*$/, '/');
   return `${base}#/try/${encodeURIComponent(asText(email).toLowerCase())}`;
 }
@@ -23,7 +25,7 @@ export function emailFromTrialHash(hash) {
 }
 
 /** What to send to the person: where to go, what to pick, and what they will be told about who can see the farm. */
-export function trialInviteMessage(email, url = 'https://grainflow2.bencarrigan86.workers.dev/') {
+export function trialInviteMessage(email, url = APP_ADDRESS) {
   return [
     'You are invited to try Commodity Mate.',
     '',

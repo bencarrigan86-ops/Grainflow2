@@ -1,47 +1,48 @@
-# A test copy of Grainflow
+# A test copy of the app
 
-A second copy of the app and the database, so a change can be tried on made-up data before it goes near the farm's
-real records. About an hour to set up, once. Nothing in it touches the live farm.
+A second copy of the app and the database, so a change can be tried before it goes near the farm's real records. Nothing in it
+touches the live farm.
 
-The app is ready for it (`docs/js/env.js`). A copy served from a name starting with `grainflow2-test` uses the test
-database, shows a red "TEST COPY" bar on every screen, and never falls back to the live database. Until step 2 is done
-it talks to nothing at all.
+The app is ready for it (`docs/js/env.js`). A copy served from a name starting with `grainflow2-test` uses the test database,
+shows a red "TEST COPY" bar on every screen, and never falls back to the live database.
 
-## 1. A second database
+## 1. The test database (done)
 
-1. In Supabase, create a new project (the free plan is fine for testing). Call it `grainflow-test`.
-2. Open its SQL editor and paste in all of `supabase/paste-into-sql-editor.sql`, then press Run. That builds the same
-   tables, rules and functions as the live one. (The first migrations in `supabase/migrations` create the base tables
-   and are older than the paste file; run those in date order first, then the paste file.)
-3. In Authentication, switch on email sign-in, the same as the live project.
+A second Supabase project, in the same organisation as the live one, in the same region (Sydney).
 
-## 2. Point the test copy at it
+1. Create the project (Supabase, New project). Compute size Micro. Leave "Grant API access to new tables automatically" and
+   "Enable RLS on new tables automatically" off: the migrations do both themselves.
+2. Build it: run `supabase/test-copy/part-1.sql` to `part-4.sql`, in order, each in a new SQL editor query. They are every
+   migration in date order. After a new migration is added, run `node tools/make-test-sql.mjs` to rebuild them, or just paste
+   the new migration into the test project's SQL editor.
+3. Authentication, Sign In / Providers, User Signups: turn Confirm email off. Leave sign-ups on while the test accounts are
+   made, then turn them off.
 
-1. In the test project, Settings, API: copy the project URL and the publishable key (`sb_publishable_...`). Never the
-   secret key.
-2. Put them in `docs/js/env.js`, in `TEST`:
-   ```js
-   export const TEST = { name: 'test', url: 'https://xxxx.supabase.co', key: 'sb_publishable_...' };
-   ```
-3. Commit it. The live app ignores `TEST`: it only reads it on a `grainflow2-test` address.
+## 2. Point the test copy at it (done)
+
+The project address and the publishable key (`sb_publishable_...`, never the secret key) are in `docs/js/env.js`, in `TEST`.
+The live app ignores `TEST`: it only reads it on a `grainflow2-test` address.
 
 ## 3. A second place to serve it
 
-Cloudflare, Workers & Pages: create another Worker from the same GitHub repository.
+Cloudflare, Workers & Pages, Create, Import a repository: the same GitHub repository.
 
-- Name: `grainflow2-test` (the address becomes `grainflow2-test.<your account>.workers.dev`).
-- Branch: use a branch called `test` so the live app only changes when `main` does. Make changes on `test`, try them
-  on the test address, and merge to `main` when they are right.
-- Build settings: none (the same as the live one; `wrangler.jsonc` serves `docs/`).
+- Worker name: `grainflow2-test` (the address becomes `grainflow2-test.<account>.workers.dev`).
+- Production branch: `test`, so the live app changes only when `main` does. Try things on `test`, merge to `main` when right.
+- Build settings: no build command. Deploy command: `npx wrangler deploy -c wrangler.test.jsonc` (the test Worker's own config,
+  so its name matches the Worker).
 
-## 4. Test data
+## 4. Test data and people
 
-Sign up on the test address, make a farm, and choose sample data when it offers it. Or use Settings, Import backup with
-a copy of the farm that has the names and money changed. Do not put the real backup in the test project: it is a second
-copy of the real farm in a place that is looked after less.
+- The family farm's own data can be used here (it is a copy, on a private project): in the live app, Settings, download a backup;
+  on the test address, sign in and import it. Then delete the bank details and signature. Keep the file out of the repository
+  (`*backup*.json` is ignored) and delete it afterwards. Never copy a trial farm or anyone else's data.
+- One test account for each role (owner, manager, bookkeeper, worker, driver, advisor). Use your own email with `+role` added
+  before the `@`, so every email comes to you. Invite each one from the owner's Settings, People.
+- When the accounts exist, turn off "Allow new users to sign up" so nobody else can make one.
 
 ## Using it
 
 - Try every change on the test address first, signed in as each role that it affects.
-- Support access and the SQL both behave the same there, so run any new SQL on the test project first.
-- Delete the test project's data whenever you like. Nothing depends on it.
+- Run any new SQL on the test project first.
+- Refresh the data from a new backup whenever it gets stale.

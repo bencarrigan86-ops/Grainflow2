@@ -1,0 +1,15 @@
+{
+  // The test copy's Cloudflare config: the same files as the live app (docs/), served under another Worker name.
+  // The live app uses wrangler.jsonc. In Cloudflare, the test Worker's deploy command is
+  //   npx wrangler deploy -c wrangler.test.jsonc
+  // and it builds from the "test" branch, so the live app only changes when "main" does. See STAGING.md.
+  // The name has to start with "grainflow2-test": that is how the app knows to use the test database (docs/js/env.js).
+
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "grainflow2-test",
+  "compatibility_date": "2026-08-31",
+
+  "assets": {
+    "directory": "./docs"
+  }
+}
