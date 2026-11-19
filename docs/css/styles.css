@@ -1495,3 +1495,39 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .area-block .ab-extra .sw-row input:focus-visible { outline: 2px solid var(--accent-summary); outline-offset: 2px; }
 .area-block .link-btn[data-level-reset] { font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { .area-block .ab-extra .sw-row input, .area-block .ab-extra .sw-row input::after { transition: none; } }
+
+/* ---------------------------------------------------------------------------
+   Wider screens: tablet and computer.
+   --------------------------------------------------------------------------
+   The app is made for a phone, so on a wide screen it used to be the phone layout stretched across the window. From 700px the content
+   keeps a comfortable width in the middle, with the buttons, the season and the cog tied to its edge; from 900px the tab bar becomes
+   a rail down the left, and the windows that slide up from the bottom of a phone open in the middle. Nothing here changes a phone. */
+:root { --rail-w: 0px; --content-max: 1100px; --fab-x: 18px; }
+@media (min-width: 700px) {
+  :root { --content-max: 760px; --fab-x: calc(max(0px, (100vw - var(--rail-w) - var(--content-max)) / 2) + 18px); }
+  #app > .topbar, #app > .view { max-width: var(--content-max); margin-left: auto; margin-right: auto; width: 100%; }
+  .fab { right: var(--fab-x); }
+  .fab-secondary { right: calc(var(--fab-x) + 64px); }
+  .fab-secondary.beside-label { right: calc(var(--fab-x) + 132px); }
+  .settings-btn { right: calc(var(--fab-x) - 8px); }
+  .year-pill { right: calc(var(--fab-x) + 34px); }
+  .sheet-backdrop { align-items: center; justify-content: center; }
+  .sheet { max-width: 640px; border-radius: 18px; max-height: 88vh; box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+  .sheet-handle { display: none; }
+  .toast { left: calc(50% + var(--rail-w) / 2); }
+  .update-bar { left: calc(var(--rail-w) + 8px); }
+}
+@media (min-width: 900px) {
+  :root { --rail-w: 92px; --content-max: 1100px; --tabbar-h: 0px; }
+  #app { padding-left: var(--rail-w); }
+  .tabbar {
+    top: 0; right: auto; width: var(--rail-w); height: auto; flex-direction: column; justify-content: flex-start; gap: 6px;
+    padding: calc(18px + var(--safe-top)) 8px 16px; border-top: 0; border-right: 1px solid var(--border);
+  }
+  .tabbar button { flex: none; height: 68px; border-radius: 14px; font-size: 11.5px; }
+  .tabbar button:hover { background: var(--surface-2); }
+  .tabbar button.active { background: var(--btn-tint); }
+  .tabbar button .icon { font-size: 23px; }
+  .pos-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+}

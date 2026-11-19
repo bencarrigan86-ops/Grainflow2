@@ -5,10 +5,10 @@
 // rather than new styling, so it looks like the rest of Commodity Mate rather than
 // a login page bolted onto the front of it.
 
-import { signIn, signUp, createFarm, requestPasswordReset, signOut } from '../auth.js?v=428';
-import { RESET_SENT } from '../recovery.js?v=428';
-import { wantSampleData } from '../demo.js?v=428';
-import { hasTrialInvite, trialNoticeText, trialSampleText } from '../trials.js?v=428';
+import { signIn, signUp, createFarm, requestPasswordReset, signOut } from '../auth.js?v=429';
+import { RESET_SENT } from '../recovery.js?v=429';
+import { wantSampleData } from '../demo.js?v=429';
+import { hasTrialInvite, trialNoticeText, trialSampleText } from '../trials.js?v=429';
 
 export function renderLogin(root, { mode = 'signin', onDone, invited = false, trialEmail = null, notice = null } = {}) {
   let busy = false;
