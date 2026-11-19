@@ -171,13 +171,14 @@ console.log('\n=== wired in ===');
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 
-check('it is hydrated, pushed, and writable by owner, manager and bookkeeper; a worker writes only use and count entries', () => {
+check('it is hydrated, pushed, and writable by owner and manager (a bookkeeper only reads it); a worker writes only use and count entries', () => {
   assert.match(read('docs/js/hydrate.js'), /'input_stock'/);
   const sync = read('docs/js/sync.js');
   assert.ok(sync.includes("'input_stock',"), 'in the push order');
   const w = sync.slice(sync.indexOf('const WRITABLE'));
   assert.match(w.slice(w.indexOf('manager:'), w.indexOf('bookkeeper:')), /input_stock/);
-  assert.match(w.slice(w.indexOf('bookkeeper:'), w.indexOf('farm_worker:')), /input_stock/);
+  const bk = w.slice(w.indexOf('bookkeeper:'), w.indexOf('farm_worker:'));
+  assert.doesNotMatch(bk.slice(bk.indexOf('bookkeeper:')), /\[[^\]]*input_stock/, 'a bookkeeper reads the stock and changes none of it');
   const worker = w.slice(w.indexOf('farm_worker:'), w.indexOf('driver:'));
   assert.match(worker, /input_stock/, 'a worker records use and counts');
   const driverAt = w.indexOf('driver:'); assert.ok(!/input_stock/.test(w.slice(driverAt, w.indexOf(']', driverAt))), 'a driver cannot write them');

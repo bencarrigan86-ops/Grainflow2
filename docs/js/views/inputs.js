@@ -4,18 +4,19 @@
 // and Bought, Used and Count record an entry. Seed and fertiliser also show what this season's paddocks call for
 // against what is in the shed. The arithmetic is in inputs.js.
 
-import { tileIcon } from '../tileicon.js?v=421';
-import { db } from '../storage.js?v=421';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=421';
-import { openSprayJobsSheet, canSpray } from './spray.js?v=421';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=421';
-import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=421';
-import { isTransit } from '../transit.js?v=421';
-import { isOffFarm } from '../offfarm.js?v=421';
+import { tileIcon } from '../tileicon.js?v=422';
+import { db } from '../storage.js?v=422';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=422';
+import { openSprayJobsSheet, canSpray } from './spray.js?v=422';
+import { canChangeProduction } from '../nav.js?v=422';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=422';
+import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=422';
+import { isTransit } from '../transit.js?v=422';
+import { isOffFarm } from '../offfarm.js?v=422';
 import {
   KINDS, UNITS, MOVE_TYPES, kindLabel, defaultUnit, productKey, stockLevels, productMoves, stockValue,
   plannedNeeds, planVsStock, inputProblems, adjustmentFor, moveDelta, qtyText, onHandAt,
-} from '../inputs.js?v=421';
+} from '../inputs.js?v=422';
 
 // A farm worker sees what is on hand and records what is used and counts. The prices are not sent to their phone
 // at all (see the migration); this keeps the screens from showing blanks where a price would be, and from offering a delivery.
@@ -35,6 +36,7 @@ const whereText = (l) => (l.locations.some((x) => x.location)
 
 /** The Bought / Used / Count buttons; a worker is not offered Bought. */
 function newButtons(priced) {
+  if (!canChangeProduction(db.getRole())) return '';   // a bookkeeper reads the stock and changes none of it
   return `<div style="display:grid;grid-template-columns:repeat(${priced ? 3 : 2},1fr);gap:8px;margin:12px 0">
         ${priced ? '<button type="button" class="btn" data-new="buy">+ Bought</button>' : ''}
         <button type="button" class="btn${priced ? ' secondary' : ''}" data-new="use">Used</button>
@@ -120,7 +122,7 @@ function openProductSheet(level) {
     root.querySelectorAll('[data-new]').forEach((b) => b.addEventListener('click', () => openMoveSheet(null, { type: b.dataset.new, kind: level.kind, product: level.product })));
     root.querySelectorAll('[data-edit-move]').forEach((el) => el.addEventListener('click', () => {
       const m = moves.find((x) => x.id === el.dataset.editMove);
-      if (m && (priced || m.type !== 'buy')) openMoveSheet(m);   // a worker does not change a delivery: it carries the price
+      if (m && canChangeProduction(db.getRole()) && (priced || m.type !== 'buy')) openMoveSheet(m);   // a worker does not change a delivery: it carries the price
     }));
     root.querySelector('#in-back').addEventListener('click', () => openInputsSheet());
   });

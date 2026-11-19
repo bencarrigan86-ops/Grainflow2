@@ -46,7 +46,9 @@ export const TAB_NEEDS = {
 export const TABS_BY_ROLE = {
   owner:       ['position', 'production', 'sales', 'movement', 'storage', 'reports'],
   manager:     ['position', 'production', 'sales', 'movement', 'storage', 'reports'],
-  bookkeeper:  ['position', 'production', 'sales', 'movement', 'storage', 'reports'],
+  // No Position and no Storage for a bookkeeper: the money side is contracts, invoices and bills, and they look at paddocks and loads
+  // but change neither. Sales is first, so it is where they land.
+  bookkeeper:  ['sales', 'production', 'movement', 'reports'],
   // No Position for a worker: it is the book — tonnes on hand, unsold value,
   // what the season is worth. A worker needs to know where grain went, not
   // what it is worth.
@@ -152,8 +154,25 @@ export function canOpen(role, routeId) {
  */
 export function canSeeYield(role) {
   // a farm can also let its workers see yields without giving them the Position tab
-  return canOpen(role, 'position') || (role === 'farm_worker' && farmSwitch('workerSeesYields'));
+  return canOpen(role, 'position') || role === 'bookkeeper' || (role === 'farm_worker' && farmSwitch('workerSeesYields'));
 }
+
+/** Grain orders (who is to deliver what, and when): an owner and a manager. A bookkeeper is not sent them. */
+export const canSeeOrders = (role) => role === 'owner' || role === 'manager';
+
+/** The whole farm's overheads: an owner; a manager once the farm has switched it on. A bookkeeper does not see them. */
+export function canSeeOverheads(role) {
+  if (role === 'owner' || role === 'support') return true;
+  if (role === 'manager') return farmSwitch('managerSeesOverheads');
+  if (role === 'advisor') return farmSwitch('advisorSeesLoads') && farmSwitch('advisorSeesOverheads');
+  return false;
+}
+
+/**
+ * May this role change paddocks, yields and the stock of seed, fertiliser, fuel and chemical? A bookkeeper looks and changes
+ * none of it (the database refuses the writes), and so does an advisor or the support login, so the screen offers no way to try.
+ */
+export const canChangeProduction = (role) => !['bookkeeper', 'advisor', 'support'].includes(role);
 
 /**
  * May this role add and change loads? Owners, managers, workers and drivers always; a bookkeeper only on a farm that has switched

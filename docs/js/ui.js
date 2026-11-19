@@ -55,6 +55,20 @@ export function escHtml(v) {
  * Open a bottom sheet. `buildBody(container)` receives the sheet's content div
  * to populate with fields/buttons. Returns the content container for convenience.
  */
+/**
+ * A sheet someone may look at and not change: every box is switched off, and the Save bar and every button are put away, with
+ * one plain line at the top saying so. (Used for a bookkeeper on Production, where the database refuses the writes anyway.)
+ */
+export function freezeSheet(root, line = 'You can look at this but not change it.') {
+  root.querySelectorAll('input, select, textarea').forEach((el) => { el.disabled = true; });
+  root.querySelectorAll('.save-bar, button.btn, button.ghost-danger, [data-edit-baled], [data-edit-picked]').forEach((el) => { el.style.display = 'none'; });
+  const note = document.createElement('div');
+  note.className = 'hint';
+  note.style.margin = '0 0 10px';
+  note.textContent = line;
+  root.prepend(note);
+}
+
 export function openSheet(title, buildBody, { askBeforeClose = true } = {}) {
   removeTop();
   backdrop = document.createElement('div');

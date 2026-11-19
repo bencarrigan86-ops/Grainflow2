@@ -37,7 +37,7 @@ export const INVITABLE_ROLES = [
   { value: 'manager',     label: 'Farm manager',
     blurb: 'Runs paddocks, silos and loads, and handles orders, invoices and bills. Cannot see contract prices, overheads or the bank details in Settings, and cannot change the business details.' },
   { value: 'bookkeeper',  label: 'Bookkeeper',
-    blurb: 'Contracts and prices, invoicing, bills and overheads. The financial side, without recording loads or changing paddocks.' },
+    blurb: 'Contracts and prices, invoicing and bills. The financial side. Sees paddocks, loads and reports, but not Position, Storage, overheads or grain orders, and changes no paddocks, stock or loads.' },
   { value: 'farm_worker', label: 'Farm worker',
     blurb: 'Paddocks, storage and movements. No contract pricing, no position.' },
   { value: 'driver',      label: 'Driver',

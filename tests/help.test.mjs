@@ -70,7 +70,7 @@ check('what the money tables send is what the guide says can see them', () => {
   assert.deepEqual(sees('sale_terms').sort(), ['bookkeeper', 'owner'], 'prices are owner and bookkeeper only');
   assert.deepEqual(sees('spray_jobs').sort(), who(area('Spray requests'), 'full', 'view').sort());
   assert.deepEqual(sees('input_stock').sort(), who(area('Inputs and spraying'), 'full', 'view', 'used').sort());
-  assert.deepEqual(sees('freight_orders').sort(), who(area('Grain orders and freight orders'), 'full', 'view').sort());
+  assert.deepEqual(sees('freight_orders').sort(), who(area('Freight orders'), 'full', 'view').sort());
 });
 check('who can add things is who the guide says can add and change', () => {
   assert.deepEqual(ins.get('sales').sort(), who(area('Contracts and prices'), 'full').sort());
@@ -79,7 +79,7 @@ check('who can add things is who the guide says can add and change', () => {
   assert.deepEqual(ins.get('spray_jobs').sort(), who(area('Spray requests'), 'full').sort());
   assert.deepEqual(ins.get('input_stock').sort(), who(area('Inputs and spraying'), 'full', 'used').sort());
   assert.deepEqual(ins.get('storages').sort(), who(area('Storage'), 'full').sort());
-  assert.deepEqual(ins.get('freight_orders').sort(), who(area('Grain orders and freight orders'), 'full').sort());
+  assert.deepEqual(ins.get('freight_orders').sort(), who(area('Freight orders'), 'full').sort());
   assert.deepEqual(ins.get('movements').sort(), who(area('Loads and tickets'), 'full', 'own').sort());
   assert.deepEqual(ins.get('overheads').sort(), who(area('Overheads'), 'full').sort());
 });
@@ -139,7 +139,7 @@ check('the invite screen does not say a manager is kept from what they can do', 
   const blurb = (r) => INVITABLE_ROLES.find((x) => x.value === r).blurb;
   assert.ok(/invoices/i.test(blurb('manager')) && /bills/i.test(blurb('manager')), 'a manager handles invoices and bills');
   assert.ok(/contract prices/i.test(blurb('manager')) && /bank/i.test(blurb('manager')));
-  assert.ok(/overheads/i.test(blurb('bookkeeper')) && /invoic/i.test(blurb('bookkeeper')));
+  assert.ok(/bills/i.test(blurb('bookkeeper')) && /invoic/i.test(blurb('bookkeeper')));
 });
 check('only the owner edits the business details; a manager is not shown the bank details', () => {
   const s = read('docs/js/views/settings.js');

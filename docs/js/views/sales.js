@@ -1,34 +1,34 @@
-import { db } from '../storage.js?v=421';
-import { canDelete, canSeeBills } from '../nav.js?v=421';
-import { tileIcon } from '../tileicon.js?v=421';
+import { db } from '../storage.js?v=422';
+import { canDelete, canSeeBills, canSeeOrders } from '../nav.js?v=422';
+import { tileIcon } from '../tileicon.js?v=422';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=421';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=421';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=421';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=421';
-import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=421';
-import { patternsFor } from '../deliveryplan.js?v=421';
-import { INVOICING } from '../invoicing.js?v=421';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=421';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=421';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=421';
-import { renderRelatedMovements } from './movements.js?v=421';
-import { openInvoiceListSheet } from './invoice.js?v=421';
-import { openContractDocSheet } from './contract.js?v=421';
-import { wireJumps } from '../jump.js?v=421';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=421';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=421';
-import { freightState } from '../freight.js?v=421';
-import { activeSales, paidSales } from '../paidsales.js?v=421';
-import { openVendorDecSheet } from './vendordec.js?v=421';
-import { summarise as summariseOrders } from '../orders.js?v=421';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=421';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=421';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=421';
-import { standardFor } from '../grades.js?v=421';
-import { commodityClass } from '../commoditycolor.js?v=421';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=421';
+} from '../documents.js?v=422';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=422';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=422';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=422';
+import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=422';
+import { patternsFor } from '../deliveryplan.js?v=422';
+import { INVOICING } from '../invoicing.js?v=422';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=422';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=422';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=422';
+import { renderRelatedMovements } from './movements.js?v=422';
+import { openInvoiceListSheet } from './invoice.js?v=422';
+import { openContractDocSheet } from './contract.js?v=422';
+import { wireJumps } from '../jump.js?v=422';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=422';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=422';
+import { freightState } from '../freight.js?v=422';
+import { activeSales, paidSales } from '../paidsales.js?v=422';
+import { openVendorDecSheet } from './vendordec.js?v=422';
+import { summarise as summariseOrders } from '../orders.js?v=422';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=422';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=422';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=422';
+import { standardFor } from '../grades.js?v=422';
+import { commodityClass } from '../commoditycolor.js?v=422';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=422';
 
 let unsub = null;
 
@@ -74,8 +74,8 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
-      ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div class="tile-grid">
-        <button type="button" class="btn secondary tool-tile" id="open-orders">${tileIcon('orders')}<span class="tt-text"><b>Grain orders</b><span>${ordersSum.open.count ? `${num(ordersSum.open.left, 0)} t to deliver${ordersSum.overdue.count ? ` (${ordersSum.overdue.count} overdue)` : ordersSum.soon.count ? ` (${ordersSum.soon.count} due soon)` : ''}` : 'none open'}</span></span></button>
+      ${['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div class="tile-grid"${canSeeOrders(db.getRole()) ? '' : ' style="grid-template-columns:1fr"'}>
+        ${canSeeOrders(db.getRole()) ? `<button type="button" class="btn secondary tool-tile" id="open-orders">${tileIcon('orders')}<span class="tt-text"><b>Grain orders</b><span>${ordersSum.open.count ? `${num(ordersSum.open.left, 0)} t to deliver${ordersSum.overdue.count ? ` (${ordersSum.overdue.count} overdue)` : ordersSum.soon.count ? ` (${ordersSum.soon.count} due soon)` : ''}` : 'none open'}</span></span></button>`: ''}
         <button type="button" class="btn secondary tool-tile" id="open-freight">${tileIcon('freight')}<span class="tt-text"><b>Freight orders</b><span>${freightOpen.length ? `${freightOpen.length} open · ${num(freightLeft, 0)} t to cart` : 'none open'}</span></span></button>
       </div>` : ''}
       ${rollup.length === 0 ? '' : `
@@ -573,7 +573,7 @@ function openSaleSheet(existing) {
         <div class="field hint" style="margin-top:14px">Save the sale first, then you can
           attach the buyer's contract and the broker's note to it.</div>
       `}
-      ${existing ? `<div id="contract-orders" style="margin:12px 0"></div>` : ''}
+      ${existing && canSeeOrders(db.getRole()) ? `<div id="contract-orders" style="margin:12px 0"></div>` : ''}
       ${existing && ['owner', 'manager', 'bookkeeper'].includes(db.getRole()) ? `<div id="contract-freight" style="margin:12px 0"></div>` : ''}
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       ${existing && canSeeBills(db.getRole()) ? `<button class="btn secondary" id="view-invoice" style="margin-top:12px">${invoiceButtonLabel(existing)}</button>` : ''}

@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=421';
-import { tileIcon } from '../tileicon.js?v=421';
-import { cropCostPerHa } from '../grossmargin.js?v=421';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=421';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=421';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=421';
-import { describeMerge } from '../merge.js?v=421';
-import { renderRelatedMovements } from './movements.js?v=421';
-import { canSeeYield } from '../nav.js?v=421';
-import { wireJumps } from '../jump.js?v=421';
-import { openMapSheet } from './farmmap.js?v=421';
-import { openInputsSheet } from './inputs.js?v=421';
-import { openSprayFormSheet, canSpray } from './spray.js?v=421';
-import { stockLevels } from '../inputs.js?v=421';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=421';
-import { openModulesPickedSheet } from './modulespicked.js?v=421';
-import { openBalesBaledSheet } from './balesbaled.js?v=421';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=421';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=421';
+import { db } from '../storage.js?v=422';
+import { tileIcon } from '../tileicon.js?v=422';
+import { cropCostPerHa } from '../grossmargin.js?v=422';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=422';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=422';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=422';
+import { describeMerge } from '../merge.js?v=422';
+import { renderRelatedMovements } from './movements.js?v=422';
+import { canSeeYield, canChangeProduction } from '../nav.js?v=422';
+import { wireJumps } from '../jump.js?v=422';
+import { openMapSheet } from './farmmap.js?v=422';
+import { openInputsSheet } from './inputs.js?v=422';
+import { openSprayFormSheet, canSpray } from './spray.js?v=422';
+import { stockLevels } from '../inputs.js?v=422';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=422';
+import { openModulesPickedSheet } from './modulespicked.js?v=422';
+import { openBalesBaledSheet } from './balesbaled.js?v=422';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=422';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=422';
 
 let unsub = null;
 
@@ -76,13 +76,13 @@ function paint(root) {
 
       <div class="card input">
         <h2><span class="dot input"></span>Fields</h2>
-        ${groups.length === 0 ? `<div class="empty">No fields yet.<br/><button class="btn" id="empty-add-field">Add your first field</button></div>` : groups.map((g) => `
+        ${groups.length === 0 ? `<div class="empty">No fields yet.${canChangeProduction(db.getRole()) ? '<br/><button class="btn" id="empty-add-field">Add your first field</button>' : ''}</div>` : groups.map((g) => `
           <div class="group-label" id="grp-${esc(g.id ?? 'none')}"><span>${esc(g.name)}</span><span class="n">${showYield ? tons(g.totalTons, 0) : ''}</span></div>
           ${g.fields.map((f) => fieldRow(f, movements, showYield)).join('')}
         `).join('')}
       </div>
     </div>
-    <button class="fab" id="add-field">+</button>
+    ${canChangeProduction(db.getRole()) ? '<button class="fab" id="add-field">+</button>' : ''}
   `;
 
   // The commodity rows in the table at the top jump to that commodity's fields below.
@@ -91,7 +91,7 @@ function paint(root) {
   root.querySelectorAll('[data-edit-field]').forEach((el) => {
     el.addEventListener('click', () => openFieldSheet(fields.find((f) => f.id === el.dataset.editField)));
   });
-  root.querySelector('#add-field').addEventListener('click', () => openFieldSheet(null));
+  root.querySelector('#add-field')?.addEventListener('click', () => openFieldSheet(null));
   root.querySelector('#open-inputs')?.addEventListener('click', () => openInputsSheet());
   root.querySelector('#open-map')?.addEventListener('click', () => openMapSheet({
     onOpenField: openFieldSheet,
@@ -544,6 +544,8 @@ export function openFieldSheet(existing) {
         });
       });
     }
+    // a bookkeeper (or an advisor) looks at a paddock and changes nothing
+    if (!canChangeProduction(db.getRole())) freezeSheet(root);
   });
   return body;
 }

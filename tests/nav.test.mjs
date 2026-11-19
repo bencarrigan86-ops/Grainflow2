@@ -208,12 +208,12 @@ check('every tab id has a view wired to it in main.js', () => {
   }
 });
 
-check('yield is for the roles that see Position, not for workers or drivers', () => {
+check('yield is for the roles that see Position (and a bookkeeper, who looks at production), not for workers or drivers', () => {
   for (const r of ['owner', 'manager', 'bookkeeper']) assert.equal(canSeeYield(r), true, r);
   for (const r of ['farm_worker', 'driver']) assert.equal(canSeeYield(r), false, r);
   assert.equal(canSeeYield('nonsense'), false, 'an unknown role gets the narrowest view');
-  // One rule, not two that can drift: yield follows Position.
-  for (const r of ROLES) assert.equal(canSeeYield(r), canOpen(r, 'position'), r);
+  // One rule, not two that can drift: yield follows Position, and a bookkeeper (no Position tab, but the paddocks to look at) also sees it.
+  for (const r of ROLES) assert.equal(canSeeYield(r), canOpen(r, 'position') || r === 'bookkeeper', r);
 });
 
 console.log('\n=== a different tab starts at its top ===');

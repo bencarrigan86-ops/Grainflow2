@@ -15,14 +15,14 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=421';
-import { stateToRows } from './mapping.js?v=421';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=421';
-import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=421';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=421';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=421';
-import { readAllIn } from './pages.js?v=421';
-import { farmSwitch } from './nav.js?v=421';
+import { supabase } from './supabase.js?v=422';
+import { stateToRows } from './mapping.js?v=422';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=422';
+import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=422';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=422';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=422';
+import { readAllIn } from './pages.js?v=422';
+import { farmSwitch } from './nav.js?v=422';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -55,7 +55,8 @@ const WRITABLE = {
   manager: ['seasons', 'commodities', 'fields', 'field_agronomy', 'storages',
             'sale_documents', 'orders', 'freight_orders', 'input_stock', 'spray_jobs', 'record_documents', 'invoices', 'payables',
             'movements', 'movement_legs', 'movement_photos'],
-  bookkeeper: ['sales', 'sale_terms', 'sale_documents', 'orders', 'freight_orders', 'input_stock', 'invoices', 'overheads', 'payables', 'record_documents'],
+  // (no grain orders, overheads or input stock: a bookkeeper reads the stock and changes none of it)
+  bookkeeper: ['sales', 'sale_terms', 'sale_documents', 'freight_orders', 'invoices', 'payables', 'record_documents'],
   // a worker records what is used and counts, never a delivery (which carries the price): see pushRowsFor()
   farm_worker: ['fields', 'field_agronomy', 'movements', 'movement_legs', 'movement_photos', 'input_stock'],
   driver: ['movements', 'movement_legs', 'movement_photos'],
