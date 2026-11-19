@@ -3,11 +3,11 @@
 // The paddock-by-paddock replay is trace.js (the same one the movements CSV column uses); this picks the loads, adds them up
 // across the whole list ("which paddocks made up this contract") and lays out the PDF. Pure.
 
-import { Pdf, wrapText } from './pdf.js?v=435';
-import { drawBrandLogo } from './brand.js?v=435';
-import { dmy } from './fmt.js?v=435';
-import { traceDetailed, traceParts } from './trace.js?v=435';
-import { endName, rangeText, clipText } from './loadreport.js?v=435';
+import { Pdf, wrapText } from './pdf.js?v=436';
+import { drawBrandLogo } from './brand.js?v=436';
+import { dmy } from './fmt.js?v=436';
+import { traceDetailed, traceParts } from './trace.js?v=436';
+import { endName, rangeText, clipText } from './loadreport.js?v=436';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 const round = (v, dp = 2) => { const f = 10 ** dp; return Math.round(v * f) / f; };

@@ -8,7 +8,7 @@
  *   go     another screen (a tab)
  */
 
-import { canSeePrices, canSeeBills } from './nav.js?v=435';
+import { canSeePrices, canSeeBills } from './nav.js?v=436';
 
 export const MODE_KEY = 'grainflow.reports.mode';
 
@@ -57,7 +57,7 @@ export function hubGroups({ mode = 'simple', role = '', showYield = true, hasCot
         can('position') && canSeePrices(role) && has('production') && has('contracts') && has('loads') && tile('gm', 'Gross margin', 'view'),
         can('sales') && canSeeBills(role) && tile('owed', 'Invoices', 'sheet', { simple: true }),
         can('sales') && has('contracts') && tile('mtm', 'MTM', 'sheet'),
-        BOOKS.includes(role) && has('contracts') && has('loads') && tile('deliveries', 'Delivery timeline', 'sheet'),
+        BOOKS.includes(role) && has('contracts') && has('loads') && tile('deliveries', 'Sales timeline', 'sheet'),
         can('position') && tile('prices', 'Prices', 'sheet'),
         can('position') && tile('eofy', 'End of year', 'sheet'),
       ],

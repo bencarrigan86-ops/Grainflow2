@@ -21,7 +21,7 @@ function commodityOfLoad(m, fieldsById) {
  * @returns {{fills: {storage: object, commodityId: string, loads: number}[],
  *            mixed: {storage: object, commodityIds: string[]}[]}}
  */
-import { isTransit } from './transit.js?v=435';
+import { isTransit } from './transit.js?v=436';
 
 export function commodityFills(storages, movements, fields = []) {
   const fieldsById = new Map(fields.map((f) => [f.id, f]));

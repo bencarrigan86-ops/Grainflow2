@@ -4,8 +4,8 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=435';
-import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=435';
+import { ROLES, canOpen } from './nav.js?v=436';
+import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=436';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -206,7 +206,7 @@ export const GUIDES = [
       'Tap a tile to open it. In All, tap a star to make a report a favourite.',
     ],
     tips: [
-      'Invoices, Delivery timeline, Available storage, Silo blending, the Silo calculator, Traceability and the exports are all here.',
+      'Invoices, Sales timeline, Available storage, Silo blending, the Silo calculator, Traceability and the exports are all here.',
     ],
   },
   {
@@ -328,7 +328,7 @@ export const GUIDES = [
       'Loads against the contract count as delivered. Its card shows what is still to go.',
     ],
     tips: [
-      'More has Paid contracts, and Bring in last season\'s contracts. Say how a contract is delivered and Delivery timeline and the cash forecast use it.',
+      'More has Paid contracts, and Bring in last season\'s contracts. Say how a contract is delivered and Sales timeline and the cash forecast use it.',
       'Type the buyer\'s address in its parts so documents and the Xero export fill in.',
     ],
   },
@@ -350,7 +350,7 @@ export const GUIDES = [
     blurb: 'What is still to deliver, and what is owed.',
     steps: [
       'Grain orders and Freight orders are on Sales. A freight order can be signed before it goes to the carrier.',
-      'Delivery timeline (Reports) shows tonnes still to deliver and how near each delivery period is to ending.',
+      'Sales timeline (Reports) shows tonnes still to deliver and how near each delivery period is to ending.',
       'Invoices (Reports) shows invoices owed to you and bills you owe. By month shows when the money lands, with a forecast in italics.',
     ],
     tips: [

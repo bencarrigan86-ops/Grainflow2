@@ -328,7 +328,7 @@ check('the two reports are Reports tiles, not buttons at the top of Sales, and S
   assert.ok(!src.includes('id="open-deliveries"') && !src.includes('id="open-money"'), 'no report buttons at the top of Sales');
   const rep = read('docs/js/views/reports.js');
   assert.ok(rep.includes('deliveries: () => openDeliveriesSheet()') && rep.includes('owed: () => openMoneySheet()'));
-  assert.ok(read('docs/js/reportshub.js').includes("tile('deliveries', 'Delivery timeline', 'sheet')"));
+  assert.ok(read('docs/js/reportshub.js').includes("tile('deliveries', 'Sales timeline', 'sheet')"));
   assert.match(src, /id="open-orders"/);
   assert.match(src, /id="open-freight"/);
   assert.ok(!src.includes('id="open-payables"'), 'receivables and payables are one tile');
