@@ -27,17 +27,17 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=426';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=426';
-import { cleanCottonTerms } from './cottonkinds.js?v=426';
-import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=426';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=426';
-import { cleanPicked } from './modulespicked.js?v=426';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=426';
-import { cleanHistory, hasHistory } from './pricehistory.js?v=426';
-import { cleanOffFarm } from './offfarm.js?v=426';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=426';
-import { cleanDriverSignature } from './driversign.js?v=426';
+import { cleanGradeOptions } from './gradeprice.js?v=427';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=427';
+import { cleanCottonTerms } from './cottonkinds.js?v=427';
+import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=427';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=427';
+import { cleanPicked } from './modulespicked.js?v=427';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=427';
+import { cleanHistory, hasHistory } from './pricehistory.js?v=427';
+import { cleanOffFarm } from './offfarm.js?v=427';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=427';
+import { cleanDriverSignature } from './driversign.js?v=427';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);

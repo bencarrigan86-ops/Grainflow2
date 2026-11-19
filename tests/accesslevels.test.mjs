@@ -8,7 +8,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import {
   LEVEL_ROLES, LEVEL_AREAS, LEVEL_TABLES, SCREEN_AREAS, AREA_TAB, readLevels, withLevel, withSwitch, readSwitches, levelNow, levelChoices, pricesShown,
 } from '../docs/js/farmswitches.js';
-import { ACCESS, effectiveAccess } from '../docs/js/helpcontent.js';
+import { ACCESS, effectiveAccess, missingAreas, missingLine, pickWarning, levelFor } from '../docs/js/helpcontent.js';
+import { hubGroups } from '../docs/js/reportshub.js';
 import {
   setFarmSwitches, setFarmLevels, tabsForRole, landingTabFor, canOpen, canSeeOrders, canSeeOverheads, canSeePrices, canSeeBills, canEditLoads,
   canChangeProduction, canSeeArea, canChangeArea, canSeeFreight, canAddContracts, canChangeInputs,
@@ -212,6 +213,29 @@ check('the switches that hold rows back from a kind of login give way to the pic
   }
   assert.ok(!sql.includes("'owner'"), 'nothing names the owner');
   for (const m of sql.matchAll(/app_cell\(farm_id, '(\w+)'\)/g)) assert.ok(LEVEL_AREAS.includes(m[1]) && !SCREEN_AREAS.includes(m[1]), m[1]);
+});
+
+console.log('\n=== a screen made from areas the role cannot see ===');
+check('a screen says so, the reports built on the missing area are left out, and the owner is warned when picking', () => {
+  const raw = { levels: { production: { bookkeeper: 'none' }, position: { bookkeeper: 'view' } } };
+  assert.deepEqual(missingAreas('bookkeeper', 'position', raw), ['Production']);
+  assert.deepEqual(missingAreas('bookkeeper', 'position', {}), [], 'a role that cannot see the screen at all has nothing missing');
+  assert.deepEqual(missingAreas('manager', 'position', {}), []);
+  assert.match(missingLine('bookkeeper', 'position', raw), /built from Production, which your login cannot see/);
+  assert.equal(missingLine('manager', 'position', {}), '');
+  assert.match(pickWarning('bookkeeper', 'position', raw), /Position is built from Production/);
+  assert.match(pickWarning('bookkeeper', 'production', raw), /Position is partly built from Production/);
+  assert.equal(pickWarning('driver', 'production', {}), '', 'a driver sees neither screen');
+  assert.equal(levelFor('bookkeeper', 'production', raw), 'none');
+  const has = (area) => levelFor('bookkeeper', area, raw) !== 'none';
+  const ids = (h) => h.flatMap((g) => g.tiles.map((t) => t.id));
+  const withAll = ids(hubGroups({ mode: 'full', role: 'bookkeeper', can: () => true }));
+  const without = ids(hubGroups({ mode: 'full', role: 'bookkeeper', can: () => true, has }));
+  for (const id of ['yield', 'harvest', 'fert', 'seed', 'room', 'trace']) { assert.ok(withAll.includes(id), id); assert.ok(!without.includes(id), id + ' needs Production'); }
+  assert.ok(without.includes('loads') && without.includes('mtm'), 'what is still readable stays');
+  const pos = read('docs/js/views/position.js');
+  assert.ok(pos.includes("missingLine(db.getRole(), 'position'"), 'Position says so');
+  assert.ok(read('docs/js/views/reports.js').includes("has: (area) => levelFor(role, area"), 'Reports passes what the role can see');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

@@ -98,6 +98,12 @@ export const LEVEL_TABLES = {
 /** The areas that are a screen made from the others: None hides the tab, and the data under it is kept by the areas above. */
 export const SCREEN_AREAS = ['position', 'storage', 'reports'];
 
+/**
+ * What a screen is made from. A role that is shown the screen but cannot read one of these areas gets zeros and missing tonnes, and a
+ * margin that is a false loss, so the screen says so, the reports built on them are left out, and the owner is warned when picking.
+ */
+export const SCREEN_NEEDS = { position: ['production', 'contracts', 'loads'], storage: ['loads'] };
+
 /** Every area an owner can change. */
 export const LEVEL_AREAS = [...Object.keys(LEVEL_TABLES), ...SCREEN_AREAS];
 

@@ -1,17 +1,17 @@
-import { db } from '../storage.js?v=426';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=426';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=426';
-import { payablesCost } from '../payables.js?v=426';
-import { commodityClass } from '../commoditycolor.js?v=426';
-import { startProgress } from '../helpcontent.js?v=426';
-import { openSetupWalk } from './setupwalk.js?v=426';
-import { attentionItems } from '../attention.js?v=426';
-import { lastBackup } from '../backup.js?v=426';
-import { todayLocal, dmy } from '../fmt.js?v=426';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=426';
-import { openSheet, closeSheet } from '../ui.js?v=426';
-import { positionPdf } from '../positionpdf.js?v=426';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=426';
+import { db } from '../storage.js?v=427';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=427';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=427';
+import { payablesCost } from '../payables.js?v=427';
+import { commodityClass } from '../commoditycolor.js?v=427';
+import { startProgress, missingLine } from '../helpcontent.js?v=427';
+import { openSetupWalk } from './setupwalk.js?v=427';
+import { attentionItems } from '../attention.js?v=427';
+import { lastBackup } from '../backup.js?v=427';
+import { todayLocal, dmy } from '../fmt.js?v=427';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=427';
+import { openSheet, closeSheet } from '../ui.js?v=427';
+import { positionPdf } from '../positionpdf.js?v=427';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=427';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -81,6 +81,7 @@ function paint(root) {
       </div>
     </div>
     <div class="view">
+      ${missingLine(db.getRole(), 'position', db.getBusinessDetails().switches) ? `<div class="field hint" style="margin:0 0 10px">${esc(missingLine(db.getRole(), 'position', db.getBusinessDetails().switches))}</div>` : ''}
       ${attentionCard()}
       ${startCard()}
       ${rows.length ? `<div class="pos-by"><span class="pos-season">${esc(db.getCurrentYear())} season</span><button type="button" class="btn secondary small pos-pdf" id="position-pdf"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>${canShareFiles() ? 'Share PDF' : 'PDF'}</button></div>` : ''}

@@ -4,8 +4,8 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=426';
-import { LEVEL_ROLES, levelNow, pricesShown } from './farmswitches.js?v=426';
+import { ROLES, canOpen } from './nav.js?v=427';
+import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=427';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -125,6 +125,35 @@ export function effectiveAccess(switches = {}, levels = {}) {
   // and what the owner has picked on top of that (see farmswitches.js): the pick is the answer, more or less than the standard
   for (const r of rows) for (const role of LEVEL_ROLES) { const chosen = levels?.[r.key]?.[role]; if (chosen) r[role] = levelNow(r[role], chosen); }
   return rows;
+}
+
+/** The level this role has in an area on a farm with these saved switches (the raw farms.switches), or 'full' for a role not in the table. */
+export function levelFor(role, key, raw) {
+  const row = effectiveAccess(readSwitches(raw), readLevels(raw)).find((r) => r.key === key);
+  return row?.[role] ?? 'full';
+}
+
+/** The names of the areas this screen is built from that this role cannot see (empty when the role cannot see the screen itself, or nothing is missing). */
+export function missingAreas(role, screenKey, raw) {
+  const need = SCREEN_NEEDS[screenKey] || [];
+  if (!need.length || levelFor(role, screenKey, raw) === 'none') return [];
+  return need.filter((k) => levelFor(role, k, raw) === 'none').map((k) => ACCESS.find((r) => r.key === k).area);
+}
+
+const joined = (names) => names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+
+/** The line on a screen made from areas its viewer cannot see, or '' when nothing is missing. */
+export function missingLine(role, screenKey, raw) {
+  const m = missingAreas(role, screenKey, raw);
+  return m.length ? `Part of this is built from ${joined(m)}, which your login cannot see, so some tonnes and margins here are incomplete.` : '';
+}
+
+/** A warning for the owner picking a level: which screens this role sees would be left incomplete (or are already). */
+export function pickWarning(role, key, raw) {
+  const area = ACCESS.find((r) => r.key === key)?.area;
+  if (SCREEN_NEEDS[key]) { const m = missingAreas(role, key, raw); return m.length ? `${area} is built from ${joined(m)}, which this login cannot see, so its numbers will be incomplete.` : ''; }
+  const screens = Object.entries(SCREEN_NEEDS).filter(([s, need]) => need.includes(key) && levelFor(role, s, raw) !== 'none').map(([s]) => ACCESS.find((r) => r.key === s).area);
+  return screens.length ? `${joined(screens)} is partly built from ${area}. If this login cannot see it, those numbers will be incomplete.` : '';
 }
 
 export function accessFor(role) {

@@ -1,12 +1,12 @@
-import { db } from '../storage.js?v=426';
-import { esc } from '../fmt.js?v=426';
-import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=426';
-import { SWITCHES, switchesForArea, readSwitches, withSwitch, readLevels, withLevel, levelChoices, levelNow, levelRank, LEVEL_AREAS, LEVEL_ROLES, SCREEN_AREAS } from '../farmswitches.js?v=426';
-import { ACCESS, LEVELS, effectiveAccess } from '../helpcontent.js?v=426';
-import { pill, ROLE_SHORT } from './levelpill.js?v=426';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=426';
-import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=426';
-import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=426';
+import { db } from '../storage.js?v=427';
+import { esc } from '../fmt.js?v=427';
+import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=427';
+import { SWITCHES, switchesForArea, readSwitches, withSwitch, readLevels, withLevel, levelChoices, levelNow, levelRank, LEVEL_AREAS, LEVEL_ROLES, SCREEN_AREAS } from '../farmswitches.js?v=427';
+import { ACCESS, LEVELS, effectiveAccess, pickWarning } from '../helpcontent.js?v=427';
+import { pill, ROLE_SHORT } from './levelpill.js?v=427';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=427';
+import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=427';
+import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=427';
 
 // ---------------------------------------------------------------------------
 // People
@@ -172,7 +172,9 @@ function openLevelSheet(area, role, standard, onPick) {
   const picked = readLevels(db.getBusinessDetails().switches)[area.key]?.[role];
   const now = levelNow(standard, picked);
   openSheet(`${ROLE_SHORT[role]}: ${area.area}`, (root) => {
+    const warn = pickWarning(role, area.key, db.getBusinessDetails().switches);
     root.innerHTML = `<div class="field hint" style="margin-bottom:8px">What can a ${esc(ROLE_SHORT[role].replace('-', '').toLowerCase())} do in ${esc(area.area)}?</div>
+      ${warn ? `<div class="field hint" style="margin-bottom:8px;color:var(--danger)">${esc(warn)}</div>` : ''}
       ${levelChoices(standard, { area: area.key }).map((c) => `<button type="button" class="btn secondary ab-opt${c === now ? ' ab-now' : ''}" data-pick="${esc(c)}">${pill(c)}<span><strong>${esc(c === 'view' && area.key === 'contracts' ? 'View contracts, tonnes and prices' : LEVELS[c].label)}</strong><span class="meta" style="display:block">${c === standard ? 'The standard' : levelRank(c) > levelRank(standard) ? 'More than the standard' : 'Less than the standard'}${c === now ? ' · now' : ''}</span></span></button>`).join('')}`;
     root.querySelectorAll('[data-pick]').forEach((b) => b.addEventListener('click', () => { closeSheet(); onPick(b.dataset.pick); }));
   });

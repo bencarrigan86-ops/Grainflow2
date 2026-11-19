@@ -8,7 +8,7 @@
  *   go     another screen (a tab)
  */
 
-import { canSeePrices, canSeeBills } from './nav.js?v=426';
+import { canSeePrices, canSeeBills } from './nav.js?v=427';
 
 export const MODE_KEY = 'grainflow.reports.mode';
 
@@ -33,19 +33,19 @@ const BOOKS = ['owner', 'manager', 'bookkeeper'];
  * `can(tab)` says whether their role may open that tab; the report behind a tile needs the same.
  * Simple shows the starred tiles (the standard Simple ones, until the person stars their own); Full shows all of them, each marked starred or not.
  */
-export function hubGroups({ mode = 'simple', role = '', showYield = true, hasCotton = false, hasFields = true, can = () => true, favs = null } = {}) {
+export function hubGroups({ mode = 'simple', role = '', showYield = true, hasCotton = false, hasFields = true, can = () => true, has = () => true, favs = null } = {}) {
   const full = mode === 'full';
   const tile = (id, label, kind, extra = {}) => ({ id, label, kind, ...extra });
   const groups = [
     {
       title: 'Paddocks and crops',
       tiles: [
-        showYield && tile('yield', 'Yield', 'view', { simple: true }),
-        tile('harvest', 'Harvest progress', 'view', { simple: true }),
-        tile('fert', 'Fert', 'view', { simple: true }),
-        tile('seed', 'Seed', 'view', { simple: true }),
+        showYield && has('production') && tile('yield', 'Yield', 'view', { simple: true }),
+        has('production') && tile('harvest', 'Harvest progress', 'view', { simple: true }),
+        has('production') && tile('fert', 'Fert', 'view', { simple: true }),
+        has('production') && tile('seed', 'Seed', 'view', { simple: true }),
         hasFields && can('production') && tile('map', 'Farm map', 'sheet', { simple: true }),
-        hasCotton && tile('modules', 'Modules', 'view', { simple: true }),
+        hasCotton && has('production') && tile('modules', 'Modules', 'view', { simple: true }),
         hasFields && can('production') && tile('rotation', 'Rotation', 'sheet'),
         showYield && can('production') && tile('averages', 'Averages', 'sheet'),
       ],
@@ -54,10 +54,10 @@ export function hubGroups({ mode = 'simple', role = '', showYield = true, hasCot
       title: 'Money',
       tiles: [
         can('position') && tile('position', 'Position', 'go', { simple: true, tab: 'position' }),
-        can('position') && canSeePrices(role) && tile('gm', 'Gross margin', 'view'),
+        can('position') && canSeePrices(role) && has('production') && has('contracts') && has('loads') && tile('gm', 'Gross margin', 'view'),
         can('sales') && canSeeBills(role) && tile('owed', 'Invoices', 'sheet', { simple: true }),
-        can('sales') && tile('mtm', 'MTM', 'sheet'),
-        BOOKS.includes(role) && tile('deliveries', 'Delivery timeline', 'sheet'),
+        can('sales') && has('contracts') && tile('mtm', 'MTM', 'sheet'),
+        BOOKS.includes(role) && has('contracts') && has('loads') && tile('deliveries', 'Delivery timeline', 'sheet'),
         can('position') && tile('prices', 'Prices', 'sheet'),
         can('position') && tile('eofy', 'End of year', 'sheet'),
       ],
@@ -65,9 +65,9 @@ export function hubGroups({ mode = 'simple', role = '', showYield = true, hasCot
     {
       title: 'Loads and storage',
       tiles: [
-        tile('room', 'Available storage', 'view', { simple: true, view: 'harvest' }),
-        can('movement') && tile('loads', 'Load report', 'sheet', { simple: true }),
-        can('movement') && tile('trace', 'Traceability', 'sheet'),
+        has('production') && tile('room', 'Available storage', 'view', { simple: true, view: 'harvest' }),
+        can('movement') && has('loads') && tile('loads', 'Load report', 'sheet', { simple: true }),
+        can('movement') && has('loads') && has('production') && tile('trace', 'Traceability', 'sheet'),
         can('storage') && tile('optimiser', 'Silo blending', 'sheet'),
         can('storage') && tile('calculator', 'Silo calculator', 'sheet'),
       ],
