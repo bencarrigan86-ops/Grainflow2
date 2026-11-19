@@ -1,7 +1,7 @@
 // A person's outload series: the digit in the middle of their numbers (26 1 001), kept against them on the farm by the server.
 // The phone asks for its own digit once it has signal, and remembers it, so a number can be given out in a paddock with none.
 
-import { supabase } from './supabase.js?v=430';
+import { supabase } from './supabase.js?v=431';
 
 const KEY = (userId, farmId) => `grainflow.outloadSeries.${userId}.${farmId}`;
 

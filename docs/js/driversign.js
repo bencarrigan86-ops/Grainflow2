@@ -6,7 +6,7 @@
 // no longer matches and the load says so ("changed since it was signed"). Nothing is locked: the load can still be corrected, and
 // the driver signs again. Pure: no page, no storage.
 
-import { cleanStrokes, hasSignature } from './signature.js?v=430';
+import { cleanStrokes, hasSignature } from './signature.js?v=431';
 
 /** What the driver confirms, printed over the pad and under the signature on the ticket. */
 export const SIGN_WORDS = 'I confirm I loaded this and the details are correct';
