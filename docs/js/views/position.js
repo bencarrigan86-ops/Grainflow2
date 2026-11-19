@@ -1,18 +1,19 @@
-import { db } from '../storage.js?v=444';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=444';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=444';
-import { payablesCost } from '../payables.js?v=444';
-import { commodityClass } from '../commoditycolor.js?v=444';
-import { startProgress, missingLine } from '../helpcontent.js?v=444';
-import { openSetupWalk } from './setupwalk.js?v=444';
-import { attentionItems } from '../attention.js?v=444';
-import { lastBackup } from '../backup.js?v=444';
-import { supportWaitingCount } from './support.js?v=444';
-import { todayLocal, dmy } from '../fmt.js?v=444';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=444';
-import { openSheet, closeSheet } from '../ui.js?v=444';
-import { positionPdf } from '../positionpdf.js?v=444';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=444';
+import { db } from '../storage.js?v=445';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=445';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=445';
+import { payablesCost } from '../payables.js?v=445';
+import { commodityClass } from '../commoditycolor.js?v=445';
+import { hasCommodityOrder } from '../commodityorder.js?v=445';
+import { startProgress, missingLine } from '../helpcontent.js?v=445';
+import { openSetupWalk } from './setupwalk.js?v=445';
+import { attentionItems } from '../attention.js?v=445';
+import { lastBackup } from '../backup.js?v=445';
+import { supportWaitingCount } from './support.js?v=445';
+import { todayLocal, dmy } from '../fmt.js?v=445';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=445';
+import { openSheet, closeSheet } from '../ui.js?v=445';
+import { positionPdf } from '../positionpdf.js?v=445';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=445';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -93,7 +94,7 @@ function paint(root) {
       ${rows.length ? `<div class="pos-by"><span class="pos-season">${esc(db.getCurrentYear())} season</span><button type="button" class="btn secondary small pos-pdf" id="position-pdf"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>${canShareFiles() ? 'Share PDF' : 'PDF'}</button></div>` : ''}
       ${rows.length ? dashTop(totals) : ''}
       ${rows.length === 0 ? `<div class="empty">Nothing to report yet.<br/>Add a paddock in Production, or a contract in Sales, and your position appears here.</div>` : ''}
-      ${rows.length ? `<div class="pos-by"><span>Biggest first &middot; tap a crop for the detail</span></div><div class="pos-tiles">${cropTiles(rows)}</div>` : ''}
+      ${rows.length ? `<div class="pos-by"><span>${hasCommodityOrder() ? 'In your order' : 'Biggest first'} &middot; tap a crop for the detail</span></div><div class="pos-tiles">${cropTiles(rows)}</div>` : ''}
 
       ${rows.length > 0 ? farmSummaryCard(totals, overheads, pl, cost) : ''}
     </div>
@@ -182,9 +183,13 @@ function cropBits(r) {
   return { bales, qty: (v) => (bales ? `${num(v, 0)} bales` : tons(v, 0)), per: bales ? 'bale' : 't' };
 }
 
-/** The crops, biggest value first. */
+/**
+ * The crops: in the order the farm set in Settings when there is one (the rows arrive in it), otherwise biggest value first. A crop with
+ * a negative value (stock carried in, valued above today's price) is not pushed to the bottom of a list the owner has ordered.
+ */
 function cropTiles(rows) {
-  return [...rows].sort((x, y) => y.totalValue - x.totalValue).map((r) => cropTile(r)).join('');
+  const list = hasCommodityOrder() ? rows : [...rows].sort((x, y) => y.totalValue - x.totalValue);
+  return list.map((r) => cropTile(r)).join('');
 }
 
 /** A crop as a tile: its value and margin, then the ring with produced, unsold, average price and yield. Tap it for the detail. */

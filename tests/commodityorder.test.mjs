@@ -54,5 +54,11 @@ check('every screen that lists commodities sorts them that way', () => {
   assert.ok(d.includes('sort(bigFirst((r) => Math.max(r.productionTons, r.soldTons)') && d.includes('.sort(bigFirst((g) => g.totalTons))'), 'position and the paddock groups');
 });
 
+check('the Position tiles follow the farm order when there is one, and biggest value first when there is not', () => {
+  const p = read('docs/js/views/position.js');
+  assert.ok(p.includes('hasCommodityOrder() ? rows : [...rows].sort((x, y) => y.totalValue - x.totalValue)'), 'a set order is kept; the value sort is the fallback');
+  assert.ok(p.includes("hasCommodityOrder() ? 'In your order' : 'Biggest first'"), 'the heading says which');
+});
+
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
 console.log('\nall passed');

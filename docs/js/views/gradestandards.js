@@ -5,10 +5,10 @@
 //    across the top. It is a reference, so nothing on it can be edited.
 //  - My grades: the farm's own grades for each commodity. They join the dropdowns wherever a grade is chosen.
 
-import { db } from '../storage.js?v=444';
-import { openSheet, notify } from '../ui.js?v=444';
-import { esc } from '../fmt.js?v=444';
-import { STANDARDS, standardFor, gradesFor, cleanCustomGrades } from '../grades.js?v=444';
+import { db } from '../storage.js?v=445';
+import { openSheet, notify } from '../ui.js?v=445';
+import { esc } from '../fmt.js?v=445';
+import { STANDARDS, standardFor, gradesFor, cleanCustomGrades } from '../grades.js?v=445';
 
 /** The reference: pick a commodity, read its standard. `preferName` (a commodity name) opens that one first. */
 export function openGradeStandardsSheet(preferName = '') {
