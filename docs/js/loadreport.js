@@ -3,10 +3,10 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=416';
-import { drawBrandLogo } from './brand.js?v=416';
-import { dmy } from './fmt.js?v=416';
-import { SPECS, specOf } from './outload.js?v=416';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=417';
+import { drawBrandLogo } from './brand.js?v=417';
+import { dmy } from './fmt.js?v=417';
+import { SPECS, specOf } from './outload.js?v=417';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -56,6 +56,14 @@ export function endName(leg, { fields = [], storages = [], sales = [] } = {}) {
   return '';
 }
 
+/** The farm or site a paddock or silo sits on, if it has been said (a contract has none). */
+export function endPlace(leg, { fields = [], storages = [] } = {}) {
+  if (!leg) return '';
+  const src = leg.type === 'field' ? fields.find((f) => f.id === leg.id) : leg.type === 'silo' && leg.id !== '__transit__' ? storages.find((s) => s.id === leg.id) : null;
+  return String(src?.property || '').trim();
+}
+const placesOf = (legs, ctx) => [...new Set((legs || []).map((l) => endPlace(l, ctx)).filter(Boolean))].join(', ');
+
 const same = (a, b) => String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase();
 /** A filter as a list: the list if there is one, else the single value if there is one, else nothing (so no filter). */
 const asList = (many, one) => (Array.isArray(many) ? many : many ? [many] : one ? [one] : []).filter((v) => String(v ?? '').trim() !== '');
@@ -101,6 +109,7 @@ export function loadReportRows(movements, ctx, opts = {}) {
       time: cleanTime(m.loadTime),
       ticketNo: m.ticketNo ?? '',
       truck: m.truckRego || '',
+      company: m.truckCompany || '',
       driver: m.driver || '',
       commodity: commodities.find((c) => c.id === m.commodityId)?.name || '',
       goingTo: (m.tos || []).map((t) => endName(t, ctx)).filter(Boolean).join(', '),
@@ -111,8 +120,11 @@ export function loadReportRows(movements, ctx, opts = {}) {
       grade: String(m.grade || '').trim(),
       quality: testedOn(m),
       from: (m.froms || []).map((f) => endName(f, ctx)).filter(Boolean).join(', '),
+      // the farm or site it came from (once for several), and where it went, when said
+      fromPlace: placesOf(m.froms, ctx),
+      goingPlace: placesOf(m.tos, ctx),
       // each place it came from with the tonnes taken from it, for a load drawn from more than one
-      fromLegs: (m.froms || []).map((f) => ({ name: endName(f, ctx), tons: Number(f.tons) || 0 })).filter((l) => l.name),
+      fromLegs: (m.froms || []).map((f) => ({ name: endName(f, ctx), place: endPlace(f, ctx), tons: Number(f.tons) || 0 })).filter((l) => l.name),
       tons: Number(m.tons) || 0,                       // the net load
       gross: m.grossWeight === null || m.grossWeight === undefined || m.grossWeight === '' ? null : Number(m.grossWeight),
       tare: m.tareWeight === null || m.tareWeight === undefined || m.tareWeight === '' ? null : Number(m.tareWeight),
@@ -227,13 +239,14 @@ export function qualityKeys(rows) {
  * (keys from qualityKeys) is a narrow column of its own after the net weight, so a tested load is still one line. When the page
  * would get too crowded for the going-to column, the gross and tare columns are dropped (the net stays), then the destination and from columns are narrowed.
  */
-export function reportColumns({ showOrigin = true, showCommodity = true, showDestination = false, showGrossTare = true, showGrade = false, quality = [] } = {}) {
+export function reportColumns({ showOrigin = true, showCommodity = true, showDestination = false, showGrossTare = true, showGrade = false, showCompany = false, quality = [] } = {}) {
   const MIN_GOING = 70;
   const build = (withGrossTare) => [
     { key: 'date', head: 'Date', w: 56 },
     { key: 'time', head: 'Time', w: 34 },
     { key: 'ticketNo', head: 'Ticket', w: 50 },
     { key: 'truck', head: 'Truck', w: 58 },
+    ...(showCompany ? [{ key: 'company', head: 'Transport company', w: 72 }] : []),
     { key: 'driver', head: 'Driver', w: 66 },
     ...(showCommodity ? [{ key: 'commodity', head: 'Commodity', w: 52 }] : []),
     ...(showGrade ? [{ key: 'grade', head: 'Grade', w: 36 }] : []),
@@ -247,7 +260,7 @@ export function reportColumns({ showOrigin = true, showCommodity = true, showDes
   const slack = (cs) => PAGE.width - 2 * MARGIN - cs.reduce((t, c) => t + c.w, 0);
   let cols = build(showGrossTare);
   if (showGrossTare && slack(cols) < MIN_GOING) cols = build(false);
-  if (slack(cols) < MIN_GOING) for (const c of cols) { if (c.key === 'destination') c.w = 70; if (c.key === 'from') c.w = 80; }   // still crowded: the two long text columns get narrower
+  if (slack(cols) < MIN_GOING) for (const c of cols) { if (c.key === 'destination') c.w = 70; if (c.key === 'company') c.w = 58; if (c.key === 'from') c.w = 80; }   // still crowded: the two long text columns get narrower
   cols.find((c) => c.key === 'goingTo').w = Math.max(40, slack(cols));
   let x = MARGIN;
   for (const c of cols) { c.x = x; x += c.w; }
@@ -257,7 +270,7 @@ export function reportColumns({ showOrigin = true, showCommodity = true, showDes
 /** The report as a landscape A4 PDF, as many pages as the loads need. */
 export function buildLoadReportPdf(rows, { title = 'Load report', business = '', ngr = '', from = '', to = '', showOrigin = true, showDestination = true, showQuality = true, madeAt = '', filters = '' } = {}) {
   const pdf = new Pdf({ width: PAGE.width, height: PAGE.height });
-  const cols = reportColumns({ showOrigin, showCommodity: new Set(rows.map((r) => r.commodity).filter(Boolean)).size > 0, showDestination: showDestination && rows.some((r) => r.destination), showGrossTare: rows.some((r) => r.gross !== null || r.tare !== null), showGrade: rows.some((r) => r.grade), quality: showQuality ? qualityKeys(rows) : [] });
+  const cols = reportColumns({ showOrigin, showCommodity: new Set(rows.map((r) => r.commodity).filter(Boolean)).size > 0, showDestination: showDestination && rows.some((r) => r.destination), showGrossTare: rows.some((r) => r.gross !== null || r.tare !== null), showGrade: rows.some((r) => r.grade), showCompany: rows.some((r) => r.company), quality: showQuality ? qualityKeys(rows) : [] });
   const totals = loadReportTotals(rows);
   const HEAD_H = cols.some((c) => c.head2) ? 26 : 18;
   const ROW = 17; const BOTTOM = PAGE.height - 40;
@@ -353,8 +366,16 @@ export function buildLoadTicketPdf(row, { business = '', ngr = '', showOrigin = 
 
   // who
   const half = (CW - GAP) / 2;
-  card(L, y, half, 56, 'TRUCK', row.truck);
-  card(L + half + GAP, y, half, 56, 'DRIVER', row.driver);
+  if (row.company) {
+    // three across when there is a trucking company: the company, then the truck and the driver
+    const third = (CW - 2 * GAP) / 3;
+    card(L, y, third, 56, 'TRANSPORT COMPANY', row.company, { size: 13 });
+    card(L + third + GAP, y, third, 56, 'TRUCK', row.truck, { size: 13 });
+    card(L + 2 * (third + GAP), y, third, 56, 'DRIVER', row.driver, { size: 13 });
+  } else {
+    card(L, y, half, 56, 'TRUCK', row.truck);
+    card(L + half + GAP, y, half, 56, 'DRIVER', row.driver);
+  }
   y += 56 + GAP + 6;
 
   // where: from, an arrow, then the contract and the destination
@@ -372,9 +393,13 @@ export function buildLoadTicketPdf(row, { business = '', ngr = '', showOrigin = 
         const ty = y + 26 + i * 16;
         const tons = `${plain(l.tons)} t`;
         pdf.text(L + fromW - 12, ty, tons, { size: 11, bold: true, align: 'right' });
-        pdf.text(L + 12, ty, clipText(l.name, fromW - 24 - textWidth(tons, 11, true) - 8, 11, true), { size: 11, bold: true });
+        pdf.text(L + 12, ty, clipText(l.place ? `${l.name} · ${l.place}` : l.name, fromW - 24 - textWidth(tons, 11, true) - 8, 11, true), { size: 11, bold: true });
       });
-    } else card(L, y, fromW, routeH, 'FROM', row.from);
+    } else {
+      card(L, y, fromW, routeH, 'FROM', row.from);
+      // the farm or site, under the name
+      if (row.fromPlace) pdf.text(L + 12, y + 50, clipText(row.fromPlace, fromW - 24, 11, true), { size: 11, bold: true, gray: GREEN });
+    }
     const ay = y + routeH / 2;
     pdf.line(L + fromW + 6, ay, L + fromW + 26, ay, { width: 2, gray: GREEN });
     pdf.polyline([[L + fromW + 20, ay - 6], [L + fromW + 27, ay], [L + fromW + 20, ay + 6]], { width: 2, gray: GREEN });
@@ -382,6 +407,9 @@ export function buildLoadTicketPdf(row, { business = '', ngr = '', showOrigin = 
   pdf.rect(toX, y, toW, routeH, { stroke: null, fill: CARD });
   pdf.text(toX + 12, y + 10, 'GOING TO', { size: 7.5, bold: true, gray: DIM });
   pdf.text(toX + 12, y + 26, clipText(row.goingTo || '-', toW - 24, 15, true), { size: 15, bold: true });
+  if (!(showDestination && row.destination) && row.goingPlace) {
+    pdf.text(toX + 12, y + 50, clipText(row.goingPlace, toW - 24, 11, true), { size: 11, bold: true, gray: GREEN });
+  }
   if (showDestination && row.destination) {
     pdf.text(toX + 12, y + 50, 'DESTINATION', { size: 7.5, bold: true, gray: DIM });
     pdf.text(toX + 12, y + 61, clipText(row.destination, toW - 24, 11, true), { size: 11, bold: true, gray: GREEN });

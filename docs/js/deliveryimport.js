@@ -8,10 +8,10 @@
 // owner saves it) and recognised the next time by the column headings. The reading and the rules are here, pure; the screen that
 // drives them is views/importdeliveries.js. Nothing here touches the farm.
 
-import { parseCsv, detectDelimiter, parseDate } from './loadimport.js?v=416';
-import { normHeader, looksLikeKilograms } from './loadmap.js?v=416';
-import { normaliseOutloadNo } from './outloadno.js?v=416';
-import { appendNote } from './carryover.js?v=416';
+import { parseCsv, detectDelimiter, parseDate } from './loadimport.js?v=417';
+import { normHeader, looksLikeKilograms } from './loadmap.js?v=417';
+import { normaliseOutloadNo } from './outloadno.js?v=417';
+import { appendNote } from './carryover.js?v=417';
 
 /** What a delivery file can give us. `synonyms` are headings sites tend to use (spacing, case and punctuation ignored). */
 export const DELIVERY_FIELDS = [
@@ -26,7 +26,7 @@ export const DELIVERY_FIELDS = [
   { key: 'grade', label: 'Grade', kind: 'text', synonyms: ['grade', 'receivedgrade', 'gradename', 'class'] },
   { key: 'commodity', label: 'Commodity (to check it is the right grain)', kind: 'text', synonyms: ['commodity', 'crop', 'grain', 'product'] },
   { key: 'rego', label: 'Truck rego (to check it is the right truck)', kind: 'text', synonyms: ['truckrego', 'rego', 'registration', 'truck', 'vehicle'] },
-  { key: 'theirTicket', label: 'Their ticket number', kind: 'text', synonyms: ['ticket', 'ticketno', 'ticketnumber', 'weighbridgeticket', 'deliveryticket', 'docketno'] },
+  { key: 'theirTicket', label: 'Delivery number', kind: 'text', synonyms: ['ticket', 'ticketno', 'ticketnumber', 'weighbridgeticket', 'deliveryticket', 'docketno'] },
   { key: 'status', label: 'Status (to leave out rejected loads)', kind: 'text', synonyms: ['status', 'ticketstatus', 'state'] },
   { key: 'moisturePct', label: 'Moisture (%)', kind: 'pct', synonyms: ['moisture', 'moisturepct', 'mogr', 'moist', 'mc'] },
   { key: 'proteinPct', label: 'Protein (%)', kind: 'pct', synonyms: ['protein', 'proteinpct', 'prgr', 'prot'] },
@@ -130,7 +130,7 @@ export function extractRows(table, mapping, { units = 'auto', dateOrder = 'dmy',
     if (net === null && gross !== null && tare !== null) net = round3(gross - tare);
     const rawTicket = get('theirTicket');
     const rounded = looksRounded(rawTicket);
-    if (rounded) problems.push('Their ticket number has been rounded off (it reads like 6.298E+11), so it was not used.');
+    if (rounded) problems.push('Delivery number has been rounded off (it reads like 6.298E+11), so it was not used.');
     const status = get('status');
     const quality = {};
     for (const key of QUALITY_KEYS) { const v = cleanNumber(get(key)); if (v !== null) quality[key] = v; }

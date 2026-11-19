@@ -1,29 +1,29 @@
-import { db } from '../storage.js?v=416';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=416';
-import { commodityClass } from '../commoditycolor.js?v=416';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=416';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=416';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=416';
-import { withholdingClash } from '../fumigation.js?v=416';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=416';
-import { compressAndStampImage } from '../img.js?v=416';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=416';
-import { specText, extraSpecKey } from '../outload.js?v=416';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=416';
-import { pickableSilos } from '../silopick.js?v=416';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=416';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=416';
-import { activeSales } from '../paidsales.js?v=416';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=416';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=416';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=416';
-import { nowTime } from '../loadreport.js?v=416';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=416';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=416';
-import { openGinRunSheet } from './ginrun.js?v=416';
-import { openModuleMoveSheet } from './modulemove.js?v=416';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=416';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=416';
+import { db } from '../storage.js?v=417';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=417';
+import { commodityClass } from '../commoditycolor.js?v=417';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=417';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=417';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=417';
+import { withholdingClash } from '../fumigation.js?v=417';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=417';
+import { compressAndStampImage } from '../img.js?v=417';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=417';
+import { specText, extraSpecKey } from '../outload.js?v=417';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=417';
+import { pickableSilos } from '../silopick.js?v=417';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=417';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=417';
+import { activeSales } from '../paidsales.js?v=417';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=417';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=417';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=417';
+import { nowTime } from '../loadreport.js?v=417';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=417';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=417';
+import { openGinRunSheet } from './ginrun.js?v=417';
+import { openModuleMoveSheet } from './modulemove.js?v=417';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=417';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=417';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -54,7 +54,7 @@ function ticketSearchText(m, ctx) {
   const fo = m.freightOrderId ? (ctx.freightOrders || []).find((f) => f.id === m.freightOrderId) : null;
   // a date is searchable as it is written on paperwork (05-11-2026) as well as stored (2026-11-05)
   const written = /^(\d{4})-(\d{2})-(\d{2})/.exec(m.date || '');
-  return [m.ticketNo, m.sourceRef, m.externalTicketNo, m.manualDocketNo, m.outloadNo, m.date, written ? `${written[3]}-${written[2]}-${written[1]} ${written[3]}/${written[2]}/${written[1]}` : '', m.truckRego, m.driver, m.notes, m.grade, m.tons, c?.name,
+  return [m.ticketNo, m.sourceRef, m.externalTicketNo, m.manualDocketNo, m.outloadNo, m.date, written ? `${written[3]}-${written[2]}-${written[1]} ${written[3]}/${written[2]}/${written[1]}` : '', m.truckRego, m.truckCompany, m.driver, m.notes, m.grade, m.tons, c?.name,
     ...linked.flatMap((s) => [s.buyer, s.contractNo, s.ourRef]), fo?.carrier, fo?.freightNo, ...ends].filter((x) => x !== undefined && x !== null && x !== '').join(' ').toLowerCase();
 }
 
@@ -536,6 +536,7 @@ export function openMovementSheet(existing, template) {
     root.innerHTML = `
       <datalist id="dl-regos">${distinctOf(movements, 'truckRego').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
       <datalist id="dl-drivers">${distinctOf(movements, 'driver').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
+      <datalist id="dl-companies">${[...new Set([...distinctOf(movements, 'truckCompany'), ...db.getFreightOrders().map((f) => String(f.carrier || '').trim()).filter(Boolean)])].sort((a, b) => a.localeCompare(b)).map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
       <section class="form-section">
         <div class="subhead">Load</div>
         <div class="grid-2">
@@ -587,8 +588,9 @@ export function openMovementSheet(existing, template) {
           ${field({ label: 'Truck rego', id: 'truckRego', value: src?.truckRego, list: 'dl-regos' })}
           ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
         </div>
+        ${field({ label: 'Transport company', id: 'truckCompany', value: src?.truckCompany, list: 'dl-companies', placeholder: 'Who carted it', hint: 'Shown on the load ticket. Fills in from the freight order.' })}
         <div class="grid-2">
-          ${field({ label: 'Their ticket no.', id: 'extTicket', value: existing?.externalTicketNo, placeholder: 'On their ticket' })}
+          ${field({ label: 'Delivery no.', id: 'extTicket', value: existing?.externalTicketNo, placeholder: 'On their delivery ticket' })}
           ${field({ label: 'Manual docket no.', id: 'manualDocket', value: existing?.manualDocketNo, placeholder: 'Our paper docket' })}
         </div>
         <div class="field">
@@ -788,12 +790,16 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
     // The destination on the ticket comes from the freight order chosen: the company, then the address. It only fills a blank
     // box, or one it filled itself; what was typed stays. `destAuto` is what it last put there.
     let destAuto = '';
+    let companyAuto = '';   // the same for the transport company, which is the freight order's carrier
     const applyFreightDestination = (saleId) => {
       const el = root.querySelector('#destination');
       if (!el) return;
       const fo = freightChoice ? db.getFreightOrders().find((x) => x.id === freightChoice) : null;
       const want = fo ? freightDestination(fo, db.get().sales.find((s) => s.id === saleId)) : '';
       if (el.value === '' || el.value === destAuto) { el.value = want; destAuto = want; }
+      const co = root.querySelector('#truckCompany');
+      const wantCo = fo ? String(fo.carrier || '').trim() : '';
+      if (co && (co.value === '' || co.value === companyAuto)) { co.value = wantCo; companyAuto = wantCo; }
     };
     let toKind = existingUse ? 'use' : existingSaleTo ? 'sale' : 'silo';
 
@@ -1118,6 +1124,7 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
         // the freight order it is carted on; kept as it was when this person cannot see freight orders (no select)
         freightOrderId: toKind === 'sale' ? (root.querySelector('#to-freight-select') ? (getVal(root, 'to-freight-select') || null) : (existing?.freightOrderId || null)) : null,
         truckRego: getVal(root, 'truckRego')?.trim(),
+        truckCompany: getVal(root, 'truckCompany')?.trim() || '',
         driver: getVal(root, 'driver')?.trim(),
         grossWeight: getVal(root, 'gross') ? getNum(root, 'gross') : null,
         tareWeight: getVal(root, 'tare') ? getNum(root, 'tare') : null,
@@ -1160,7 +1167,7 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
         moisturePct: num('lq-moisture'), proteinPct: num('lq-protein'), screeningsPct: num('lq-screenings'),
         testWeightKgHl: num('lq-tw'), fallingNumber: num('lq-fn'), oilPct: num('lq-oil'), ffaPct: num('lq-ffa'), retentionPct: num('lq-ret'),
         loadTime: getVal(root, 'loadTime') || '', destination: getVal(root, 'destination')?.trim() || '',
-        truckRego: getVal(root, 'truckRego')?.trim(), driver: getVal(root, 'driver')?.trim(),
+        truckRego: getVal(root, 'truckRego')?.trim(), truckCompany: getVal(root, 'truckCompany')?.trim() || '', driver: getVal(root, 'driver')?.trim(),
         grossWeight: num('gross'), tareWeight: num('tare'), tons: getNum(root, 'tons'), weightStatus,
         notes: getVal(root, 'notes')?.trim(),
       };

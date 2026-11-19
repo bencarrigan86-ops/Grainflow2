@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=416';
-import { esc } from '../fmt.js?v=416';
-import { notify, askConfirm } from '../ui.js?v=416';
-import { roleLabel } from '../invites.js?v=416';
-import { getSession } from '../auth.js?v=416';
+import { db } from '../storage.js?v=417';
+import { esc } from '../fmt.js?v=417';
+import { notify, askConfirm } from '../ui.js?v=417';
+import { roleLabel } from '../invites.js?v=417';
+import { getSession } from '../auth.js?v=417';
 
 /**
  * Whether this device is up to date with the server, in words.

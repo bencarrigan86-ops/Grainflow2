@@ -188,7 +188,7 @@ check('the slip has a comments box with the load\'s notes, and it can be turned 
 check('a load from two places can list the tonnes from each, and that can be turned off', () => {
   const two = { ...moves[0], id: 'two', froms: [{ type: 'field', id: 'f1', tons: 12.5 }, { type: 'silo', id: 's1', tons: 17.5 }], tons: 30 };
   const row = loadReportRows([two], ctx)[0];
-  assert.deepEqual(row.fromLegs, [{ name: 'River Block', tons: 12.5 }, { name: 'Silo 3', tons: 17.5 }]);
+  assert.deepEqual(row.fromLegs, [{ name: 'River Block', place: '', tons: 12.5 }, { name: 'Silo 3', place: '', tons: 17.5 }]);
   const on = text(buildLoadTicketPdf(row, {}));
   assert.ok(on.includes('(River Block)') && on.includes('(12.50 t)') && on.includes('(Silo 3)') && on.includes('(17.50 t)'));
   const off = text(buildLoadTicketPdf(row, { showSplit: false }));

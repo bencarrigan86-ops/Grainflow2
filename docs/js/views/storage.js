@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=416';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=416';
-import { isHay, balesInStorage, describeBales } from '../hay.js?v=416';
-import { modulesReport } from '../modulesreport.js?v=416';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=416';
-import { isTransit } from '../transit.js?v=416';
-import { isOffFarm } from '../offfarm.js?v=416';
-import { paintOffFarmCard } from './offfarm.js?v=416';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=416';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=416';
-import { hasStorageQuality } from '../mapping.js?v=416';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=416';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=416';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=416';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=416';
-import { renderRelatedMovements } from './movements.js?v=416';
-import { openSiloSetupSheet } from './silosetup.js?v=416';
-import { openCalculatorSheet } from './calculator.js?v=416';
-import { commodityFills } from '../commodityfill.js?v=416';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=416';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=416';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=416';
+import { db } from '../storage.js?v=417';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=417';
+import { isHay, balesInStorage, describeBales } from '../hay.js?v=417';
+import { modulesReport } from '../modulesreport.js?v=417';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=417';
+import { isTransit } from '../transit.js?v=417';
+import { isOffFarm } from '../offfarm.js?v=417';
+import { paintOffFarmCard } from './offfarm.js?v=417';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=417';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=417';
+import { hasStorageQuality } from '../mapping.js?v=417';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=417';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=417';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=417';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=417';
+import { renderRelatedMovements } from './movements.js?v=417';
+import { openSiloSetupSheet } from './silosetup.js?v=417';
+import { openCalculatorSheet } from './calculator.js?v=417';
+import { commodityFills } from '../commodityfill.js?v=417';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=417';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=417';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=417';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=416';
+} from '../silolayers.js?v=417';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -1152,7 +1152,21 @@ function wireMeasureSummary(root) {
   setTimeout(update, 0);
 }
 
-function openStorageSheet(existing) {
+/** The farm or site a storage sits on: typed, with the farms already used on paddocks and storages offered. Shown on the load ticket. */
+export function farmNames(state) {
+  const names = new Map();
+  for (const x of [...(state?.fields || []), ...(state?.storages || [])]) {
+    const v = String(x.property || '').trim();
+    if (v && !names.has(v.toLowerCase())) names.set(v.toLowerCase(), v);
+  }
+  return [...names.values()].sort((a, b) => a.localeCompare(b));
+}
+function siteField(existing) {
+  const options = farmNames(db.get()).map((x) => `<option value="${esc(x)}">`).join('');
+  return `<datalist id="dl-sites">${options}</datalist>${field({ label: 'Farm / site', id: 's-property', value: existing?.property, list: 'dl-sites', placeholder: 'e.g. Aralu', hint: 'Where it sits. Shown on the load ticket.' })}`;
+}
+
+export function openStorageSheet(existing) {
   const { commodities, movements, storages } = db.get();
   // Suggestions for the grade of a sample of grain in this silo: this commodity's grades if it has one, otherwise
   // every commodity's, and any grade already used on another storage.
@@ -1193,6 +1207,7 @@ function openStorageSheet(existing) {
           ${!existing || existing.kind === 'tally' ? `<button data-kind="tally" class="${kind === 'tally' ? 'active' : ''}">Tally</button>` : ''}
         </div>
         ${field({ label: 'Name', id: 's-name', value: existing?.name, placeholder: existing?.kind === 'bunker' || kind === 'bunker' ? 'e.g. Bunker 1' : 'e.g. Silo 12 (155t)' })}
+        ${siteField(existing)}
         ${field({ label: 'Commodity currently stored', id: 's-commodity', type: 'select', value: existing?.commodityId, options: commodityOptions(commodities) })}
         ${field({ label: 'Opening / current stock (t)', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
@@ -1322,6 +1337,7 @@ function openStorageSheet(existing) {
           kind,
           name,
           commodityId: getVal(root, 's-commodity') || null,
+          property: getVal(root, 's-property')?.trim() || '',
           openingStock: getNum(root, 's-opening'),
           capacityTons: getNum(root, 's-capacity') || null,
           volumeM3: getNum(root, 's-volume') || null,
@@ -1381,6 +1397,7 @@ function openStorageSheet(existing) {
           <button data-kind="tally" class="${kind === 'tally' ? 'active' : ''}">Tally</button>
         </div>` : ''}
         ${field({ label: 'Name', id: 's-name', value: existing?.name, placeholder: 'e.g. SR1 round bales' })}
+        ${siteField(existing)}
         ${field({ label: 'Commodity', id: 's-commodity', type: 'select', value: existing?.commodityId, options: commodityOptions(commodities) })}
         ${field({ label: 'Unit', id: 's-unit', value: existing?.unitLabel, placeholder: 'e.g. round bales, bales, t', hint: "Whatever this storage counts — shown next to the tracked stock figure" })}
         ${field({ label: 'Opening / current stock', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
@@ -1425,6 +1442,7 @@ function openStorageSheet(existing) {
           kind,
           name,
           commodityId: getVal(root, 's-commodity') || null,
+          property: getVal(root, 's-property')?.trim() || '',
           unitLabel: getVal(root, 's-unit')?.trim() || 't',
           openingStock: getNum(root, 's-opening'),
         });

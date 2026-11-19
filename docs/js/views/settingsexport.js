@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=416';
-import { num, esc, todayLocal } from '../fmt.js?v=416';
-import { openSheet } from '../ui.js?v=416';
-import { exportRowsAsCSV } from '../csv.js?v=416';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=416';
-import { endpointLabel } from './movements.js?v=416';
-import { layersForStorage } from '../outload.js?v=416';
-import { traceLoads, traceText } from '../trace.js?v=416';
-import { holdings, totalHeld } from '../offfarm.js?v=416';
-import { kindLabel, billTotal } from '../payables.js?v=416';
-import { orderState, STATE_LABEL } from '../orders.js?v=416';
-import { fieldHarvest } from '../harvest.js?v=416';
-import { capacityFor } from '../storagecapacity.js?v=416';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=416';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=416';
+import { db } from '../storage.js?v=417';
+import { num, esc, todayLocal } from '../fmt.js?v=417';
+import { openSheet } from '../ui.js?v=417';
+import { exportRowsAsCSV } from '../csv.js?v=417';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=417';
+import { endpointLabel } from './movements.js?v=417';
+import { layersForStorage } from '../outload.js?v=417';
+import { traceLoads, traceText } from '../trace.js?v=417';
+import { holdings, totalHeld } from '../offfarm.js?v=417';
+import { kindLabel, billTotal } from '../payables.js?v=417';
+import { orderState, STATE_LABEL } from '../orders.js?v=417';
+import { fieldHarvest } from '../harvest.js?v=417';
+import { capacityFor } from '../storagecapacity.js?v=417';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=417';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=417';
 
 function commodityName(commodities, id) {
   return commodities.find((c) => c.id === id)?.name || '';
@@ -131,13 +131,14 @@ function exportMovementsCSV(year, stamp) {
   const traced = traceLoads(data.storages, movements);
   exportRowsAsCSV(`grainflow-movements-${year}-${stamp}.csv`, movements, [
     { label: 'Ticket No', get: (m) => m.ticketNo ?? '' },
-    { label: 'Their ticket no.', get: (m) => m.externalTicketNo ?? '' },
+    { label: 'Delivery no.', get: (m) => m.externalTicketNo ?? '' },
     { label: "Buyer's order no.", get: (m) => (m.orderId ? (db.getOrders().find((o) => o.id === m.orderId)?.orderNo ?? '') : '') },
     { label: 'Date', get: (m) => m.date ?? '' },
     { label: 'From', get: (m) => endpointsLabel(m.froms, data) },
     { label: 'To', get: (m) => endpointsLabel(m.tos, data) },
     { label: 'Tons', get: (m) => m.tons ?? '' },
     { label: 'Truck rego', get: (m) => m.truckRego ?? '' },
+    { label: 'Transport company', get: (m) => m.truckCompany ?? '' },
     { label: 'Driver', get: (m) => m.driver ?? '' },
     { label: 'Gross weight (t)', get: (m) => m.grossWeight ?? '' },
     { label: 'Tare weight (t)', get: (m) => m.tareWeight ?? '' },

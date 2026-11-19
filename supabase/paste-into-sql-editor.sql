@@ -2508,3 +2508,23 @@ create policy payables_manager_hidden on payables as restrictive for select
   using (app_role(farm_id) is distinct from 'manager' or not app_switch(farm_id, 'managerHidesBills'));
 
 notify pgrst, 'reload schema';
+
+-- ===========================================================================
+-- Load tickets: the trucking company
+-- ===========================================================================
+-- The trucking company that carted a load, typed on the load ticket (the truck's rego and the driver are already there). Optional: empty
+-- means not said. Safe to run more than once. The same row security as the rest of the load applies.
+
+alter table movements add column if not exists truck_company text;
+
+notify pgrst, 'reload schema';
+
+-- ===========================================================================
+-- Storages: the farm or site
+-- ===========================================================================
+-- The farm or site a silo, bunker or tally storage sits on (a paddock already has its Farm). Optional: empty means not said.
+-- Safe to run more than once. The same row security as the rest of the storage applies.
+
+alter table storages add column if not exists property text;
+
+notify pgrst, 'reload schema';

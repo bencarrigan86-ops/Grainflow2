@@ -327,7 +327,7 @@ export function readFreightExport(text, setup = PLATFORM_SETUP) {
     const load = {
       line: i + 2,                       // as the person would count it in a spreadsheet
       ref: cell(r, 'ref'),
-      siteTicket: cell(r, 'siteTicket'),   // the receiving site's ticket number: goes in Their ticket no.
+      siteTicket: cell(r, 'siteTicket'),   // the receiving site's ticket number: goes in Delivery no.
       status,
       finished: hasStatus ? finishedValues.has(status.toLowerCase()) : true,
       commodity: cell(r, 'commodity'),
@@ -336,6 +336,7 @@ export function readFreightExport(text, setup = PLATFORM_SETUP) {
       field: cell(r, 'field'),
       silo: cell(r, 'silo'),
       rego: cell(r, 'rego'),
+      company: cell(r, 'company'),   // the trucking company: goes on the load
       // The grade the load left the paddock as; the delivered grade if that is blank.
       grade: cell(r, 'grade') || cell(r, 'deliveryGrade'),
       season: cell(r, 'season'),
@@ -527,12 +528,13 @@ export function buildMovements(loads, maps, { existing = [], include = new Set()
       froms: [{ type: 'field', id: fieldId, tons: load.deliveryTons }],
       tos: [{ type: 'silo', id: siloId, tons: load.deliveryTons }],
       truckRego: load.rego || '',
+      ...(load.company ? { truckCompany: load.company } : {}),
       driver: '',
       tons: load.deliveryTons,
       weightStatus: 'final',
       notes: refNote(load),           // the platform's movement number stays in the notes
       sourceRef: load.ref,
-      ...(load.siteTicket ? { externalTicketNo: load.siteTicket } : {}),   // the site's own ticket number is Their ticket no.
+      ...(load.siteTicket ? { externalTicketNo: load.siteTicket } : {}),   // the site's own ticket number is Delivery no.
       // What the platform recorded on the truck, so the storage can say what is in it
       // and the outload predictor has something to work from.
       ...(load.grade ? { grade: load.grade } : {}),

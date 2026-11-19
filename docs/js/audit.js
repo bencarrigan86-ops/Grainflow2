@@ -30,7 +30,7 @@ export function auditTitle(row) {
 const LABEL = {
   price: 'Price', mtm_price: 'MTM price', tonnes: 'Tonnes', tons: 'Tonnes', buyer: 'Buyer', contract_no: 'Contract no.', grade: 'Grade',
   status: 'Status', amount: 'Amount', gst: 'GST', due_date: 'Due date', paid_date: 'Paid date', move_date: 'Date', sale_date: 'Sale date',
-  invoice_date: 'Invoice date', truck_rego: 'Truck', driver_name: 'Driver', name: 'Name', notes: 'Notes', supplier: 'Supplier',
+  invoice_date: 'Invoice date', truck_rego: 'Truck', truck_company: 'Transport company', driver_name: 'Driver', name: 'Name', notes: 'Notes', supplier: 'Supplier',
   payment_terms_days: 'Payment terms (days)', contract_value: 'Contract value', delivery_period: 'Delivery period', kind: 'Type',
   weight_status: 'Weight', gross_weight: 'Gross weight', tare_weight: 'Tare weight', area_ha: 'Hectares', opening_stock: 'Opening stock',
   invoice_no: 'Invoice no.', ticket_no: 'Ticket no.', order_no: 'Order no.', freight_no: 'Freight no.', reference: 'Reference',

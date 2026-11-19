@@ -24,9 +24,9 @@ import { movementFromRow } from './mapping.js';
 
 /** The parts of a ticket that people edit, with the words used for them. */
 export const TICKET_FIELDS = [
-  ['date', 'Date'], ['commodityId', 'Commodity'], ['truckRego', 'Truck'], ['driver', 'Driver'],
+  ['date', 'Date'], ['commodityId', 'Commodity'], ['truckRego', 'Truck'], ['truckCompany', 'Transport company'], ['driver', 'Driver'],
   ['grossWeight', 'Gross weight'], ['tareWeight', 'Tare weight'], ['tons', 'Net load'],
-  ['weightStatus', 'Weight status'], ['notes', 'Notes'], ['externalTicketNo', 'Their ticket number'], ['manualDocketNo', 'Manual docket number'], ['loadTime', 'Time'], ['destination', 'Destination'],
+  ['weightStatus', 'Weight status'], ['notes', 'Notes'], ['externalTicketNo', 'Delivery number'], ['manualDocketNo', 'Manual docket number'], ['loadTime', 'Time'], ['destination', 'Destination'],
   ['grade', 'Grade'], ['proteinPct', 'Protein'], ['moisturePct', 'Moisture'], ['screeningsPct', 'Screenings'],
   ['testWeightKgHl', 'Test weight'], ['fallingNumber', 'Falling number'], ['oilPct', 'Oil'], ['ffaPct', 'Free fatty acid'], ['retentionPct', 'Retention'],
   ['froms', 'Where it came from'], ['tos', 'Where it went'],

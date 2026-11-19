@@ -1,16 +1,16 @@
 // Rotation and yield history: every paddock against every season, with the crop and its yield in each cell, and the
 // farm's yield for each crop by season underneath. Built from the seasons the farm already holds; nothing is entered here.
 
-import { db } from '../storage.js?v=416';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=416';
-import { openSheet, toast } from '../ui.js?v=416';
-import { canSeeYield } from '../nav.js?v=416';
-import { PALETTE } from '../farmmap.js?v=416';
-import { rotationGrid, rotationFarms, withoutFarms, withoutSeasons } from '../fieldhistory.js?v=416';
-import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=416';
-import { nowTime } from '../loadreport.js?v=416';
-import { downloadCSV } from '../csv.js?v=416';
-import { sharePdf, safeFileName } from '../sharefile.js?v=416';
+import { db } from '../storage.js?v=417';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=417';
+import { openSheet, toast } from '../ui.js?v=417';
+import { canSeeYield } from '../nav.js?v=417';
+import { PALETTE } from '../farmmap.js?v=417';
+import { rotationGrid, rotationFarms, withoutFarms, withoutSeasons } from '../fieldhistory.js?v=417';
+import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=417';
+import { nowTime } from '../loadreport.js?v=417';
+import { downloadCSV } from '../csv.js?v=417';
+import { sharePdf, safeFileName } from '../sharefile.js?v=417';
 
 const ORIENT_KEY = 'grainflow.rotation.orientation';
 const lastOrientation = () => { try { return orientationOf(localStorage.getItem(ORIENT_KEY)); } catch { return 'landscape'; } };
