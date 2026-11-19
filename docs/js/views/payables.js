@@ -4,17 +4,17 @@
 // what is unpaid and overdue, and the brokerage that has run up on contracts but has not been billed yet. Each
 // bill is recorded in a form of its own. The arithmetic is in payables.js.
 
-import { db } from '../storage.js?v=425';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=425';
-import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=425';
+import { db } from '../storage.js?v=426';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=426';
+import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=426';
 import {
   KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed, paidByBuyer,
-} from '../payables.js?v=425';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=425';
-import { activeSales } from '../paidsales.js?v=425';
-import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=425';
-import { ginOffsetOptions, ginBillTotal, ginBillTakenOff } from '../ginoffset.js?v=425';
-import { matchesAll, amountText } from '../listsearch.js?v=425';
+} from '../payables.js?v=426';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=426';
+import { activeSales } from '../paidsales.js?v=426';
+import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=426';
+import { ginOffsetOptions, ginBillTotal, ginBillTakenOff } from '../ginoffset.js?v=426';
+import { matchesAll, amountText } from '../listsearch.js?v=426';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'unpaid';   // unpaid | paid | all

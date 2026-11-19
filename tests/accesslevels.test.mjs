@@ -122,7 +122,8 @@ check('raising: a pick above the standard gives the tab, the buttons and the tab
   reset();
   assert.deepEqual(tabsForRole('driver'), ['movement']);
   setFarmLevels({ production: { driver: 'view' }, contracts: { driver: 'tonnes' }, reports: { driver: 'full' } });
-  assert.deepEqual(tabsForRole('driver'), ['movement', 'production', 'sales', 'reports']);
+  assert.deepEqual(tabsForRole('driver'), ['production', 'sales', 'movement', 'reports'], 'a tab the owner gives goes in its usual place');
+  assert.equal(landingTabFor('driver'), 'movement', 'but a driver still opens on loads');
   assert.equal(canOpen('driver', 'production'), true);
   assert.equal(canChangeProduction('driver'), false, 'See does not change');
   assert.equal(canSeePrices('driver'), false, 'no prices');

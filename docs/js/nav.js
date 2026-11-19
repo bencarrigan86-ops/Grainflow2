@@ -15,7 +15,7 @@
 // Pulled out of main.js for the same reason as boot.js and reconcile.js: a
 // decision worth testing should not be trapped inside a render function.
 
-import { AREA_TAB, levelRank } from './farmswitches.js?v=425';
+import { AREA_TAB, levelRank } from './farmswitches.js?v=426';
 
 export const ROLES = ['owner', 'manager', 'bookkeeper', 'farm_worker', 'driver', 'advisor'];
 
@@ -102,8 +102,10 @@ export const canChangeArea = (role, area, standard = true) => { const o = farmLe
 const known = (role) => (ROLES.includes(role) || role === 'support' ? role : 'driver');
 
 /** Tab ids for the bar, in order. Unknown roles get the narrowest bar there is. */
-export function tabsForRole(role) {
-  const r = known(role);
+const TAB_ORDER = ['position', 'production', 'sales', 'movement', 'storage', 'reports'];
+
+/** The bar the standard rules and the farm's switches give a role, less any tab the owner has set to None (before the owner gives any more). */
+function standardBar(r) {
   let bar = [...TABS_BY_ROLE[r]];
   // a farm that has switched it on gives its workers Position as well, first in the bar like everyone else's
   if (r === 'farm_worker' && farmSwitch('workerSeesPosition') && !bar.includes('position')) bar.unshift('position');
@@ -112,9 +114,19 @@ export function tabsForRole(role) {
   if (r === 'farm_worker' && farmSwitch('workerSeesSales') && !bar.includes('sales')) bar.splice(bar.indexOf('production') + 1, 0, 'sales');
   // an advisor the owner has let see loads and contracts gets the rest of the bar, tonnes without prices unless those are on too
   if (r === 'advisor' && farmSwitch('advisorSeesLoads')) bar = ['position', 'production', 'sales', 'movement', 'storage', 'reports'];
-  // and what the owner has picked for this role on this farm: None takes a tab away, See or Full gives one the role did not have
-  bar = bar.filter((tab) => !Object.entries(AREA_TAB).some(([area, t]) => t === tab && cut(r, area)));
-  for (const [area, tab] of Object.entries(AREA_TAB)) if (!bar.includes(tab) && levelRank(farmLevel(r, area)) >= 1) bar.push(tab);
+  // and what the owner has set to None for this role on this farm
+  return bar.filter((tab) => !Object.entries(AREA_TAB).some(([area, t]) => t === tab && cut(r, area)));
+}
+
+export function tabsForRole(role) {
+  const r = known(role);
+  const bar = standardBar(r);
+  // a tab the owner has given this role (View or Full) goes where it belongs in the usual order: before the first tab that comes after it
+  for (const tab of TAB_ORDER) {
+    if (bar.includes(tab) || !Object.entries(AREA_TAB).some(([area, t]) => t === tab && levelRank(farmLevel(r, area)) >= 1)) continue;
+    const next = bar.findIndex((x) => TAB_ORDER.indexOf(x) > TAB_ORDER.indexOf(tab));
+    if (next < 0) bar.push(tab); else bar.splice(next, 0, tab);
+  }
   return bar;
 }
 
@@ -126,7 +138,7 @@ export function routesForRole(role) {
 
 /** Where this role lands with no route in the address bar. */
 export function landingTabFor(role) {
-  return tabsForRole(role)[0] || 'account';   // an owner can take every tab away: Account is always there
+  return standardBar(known(role))[0] || tabsForRole(role)[0] || 'account';   // an owner can take every tab away: Account is always there
 }
 
 /**

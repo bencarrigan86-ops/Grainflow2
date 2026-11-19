@@ -1,12 +1,12 @@
-import { db } from '../storage.js?v=425';
-import { esc } from '../fmt.js?v=425';
-import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=425';
-import { SWITCHES, switchesForArea, readSwitches, withSwitch, readLevels, withLevel, levelChoices, levelNow, levelRank, LEVEL_AREAS, LEVEL_ROLES, SCREEN_AREAS } from '../farmswitches.js?v=425';
-import { ACCESS, LEVELS, effectiveAccess } from '../helpcontent.js?v=425';
-import { pill, ROLE_SHORT } from './levelpill.js?v=425';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=425';
-import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=425';
-import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=425';
+import { db } from '../storage.js?v=426';
+import { esc } from '../fmt.js?v=426';
+import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=426';
+import { SWITCHES, switchesForArea, readSwitches, withSwitch, readLevels, withLevel, levelChoices, levelNow, levelRank, LEVEL_AREAS, LEVEL_ROLES, SCREEN_AREAS } from '../farmswitches.js?v=426';
+import { ACCESS, LEVELS, effectiveAccess } from '../helpcontent.js?v=426';
+import { pill, ROLE_SHORT } from './levelpill.js?v=426';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=426';
+import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=426';
+import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=426';
 
 // ---------------------------------------------------------------------------
 // People
@@ -193,7 +193,7 @@ function switchesFoldHtml() {
       return `<div class="area-block"><div class="ab-head"><strong>${esc(r.area)}</strong><span class="meta">${esc(r.hint)}</span></div>
         <div class="ab-roles">${Object.keys(ROLE_SHORT).map((k) => `<div><span class="ab-role">${esc(ROLE_SHORT[k])}</span>${levelCell(r, std, k, levels)}</div>`).join('')}</div>
         ${levels[r.key] ? `<div style="margin:2px 0 6px"><button type="button" class="link-btn" data-level-reset="${esc(r.key)}">Back to the standard</button></div>` : ''}
-        ${qs.map((x) => questionRow(x, on)).join('')}</div>`;
+        ${qs.length ? `<div class="ab-extra">${qs.map((x) => questionRow(x, on)).join('')}</div>` : ''}</div>`;
     }).join('')}
   </details>`;
 }

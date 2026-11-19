@@ -1480,3 +1480,18 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .ab-opt { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; margin-bottom: 8px; }
 .ab-opt > span:first-child { flex: none; }
 .ab-opt.ab-now { border-color: var(--text); }
+/* the extra questions under an area: a light panel of toggle rows, so they read as part of the grid and not as a form beside it */
+.area-block .ab-extra { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 2px 12px; margin: 6px 0 10px; }
+.area-block .ab-extra .sw-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); }
+.area-block .ab-extra .sw-row:first-child { border-top: 0; }
+.area-block .ab-extra .sw-row > span { order: 1; min-width: 0; font-size: 13px; }
+.area-block .ab-extra .sw-row > span strong { font-weight: 600; }
+.area-block .ab-extra .sw-row .meta { font-size: 12px; margin-top: 1px; }
+.area-block .ab-extra .sw-row input { order: 2; appearance: none; -webkit-appearance: none; flex: none; width: 38px; height: 22px; margin: 0; border-radius: 11px; background: var(--border); position: relative; cursor: pointer; transition: background .15s; }
+.area-block .ab-extra .sw-row input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: transform .15s; }
+.area-block .ab-extra .sw-row input:checked { background: var(--accent-summary); }
+.area-block .ab-extra .sw-row input:checked::after { transform: translateX(16px); }
+.area-block .ab-extra .sw-row input:disabled { cursor: default; }
+.area-block .ab-extra .sw-row input:focus-visible { outline: 2px solid var(--accent-summary); outline-offset: 2px; }
+.area-block .link-btn[data-level-reset] { font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { .area-block .ab-extra .sw-row input, .area-block .ab-extra .sw-row input::after { transition: none; } }
