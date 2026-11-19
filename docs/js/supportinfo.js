@@ -87,6 +87,19 @@ export function reportText(r) {
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 /** "23 Nov 2026, 3:15 pm" in the viewer's own time. */
+/** The words beside the tick on "Report a problem": one tap sends the report and lets support look at the farm. */
+export const SUPPORT_TICK = 'Let support look at my farm, read only, for 7 days';
+export const SUPPORT_TICK_HINT = 'So they can see what you see. They cannot change anything or see your bank details. It switches itself off, and you can take it away in Settings.';
+export const SUPPORT_ALREADY = 'Support can already see your farm, read only.';
+export const SUPPORT_OWNER_ONLY = 'Only an owner can let support look at the farm. Ask the owner, who can do it from this same screen or under Settings.';
+
+/** What the report says about support access, added under the message so whoever reads it knows (given, or tried and failed). */
+export function accessNote(outcome) {
+  if (outcome === 'given') return 'Support access: given for 7 days with this report.';
+  if (outcome === 'failed') return 'Support access: the owner ticked the box but it did not go through.';
+  return '';
+}
+
 export function whenText(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';

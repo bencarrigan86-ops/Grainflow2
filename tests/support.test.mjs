@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { addError, errorEntry, buildReport, reportText, supportStatusText, logLine, whenText, MAX_ERRORS } from '../docs/js/supportinfo.js';
+import { addError, errorEntry, buildReport, reportText, supportStatusText, logLine, whenText, MAX_ERRORS, accessNote, SUPPORT_TICK, SUPPORT_TICK_HINT } from '../docs/js/supportinfo.js';
 import { environmentFor, isTestHost, LIVE } from '../docs/js/env.js';
 import { tabsForRole, canOpen } from '../docs/js/nav.js';
 
@@ -95,6 +95,18 @@ check('a report carries the build, role, sync state and errors, and nothing of t
   assert.match(t, /Build: 2026-11-16.277/);
   assert.match(t, /Waiting to send: 3/);
   assert.match(t, /TypeError: x is undefined/);
+});
+check('Report a problem can give support access with the report: an owner ticks, it is noted on the report, and others are told who can', () => {
+  const v = read('docs/js/views/support.js');
+  assert.ok(v.includes('id="rp-access-tick"') && v.includes("role === 'owner'"), 'only an owner is offered the tick');
+  assert.ok(v.includes("supabase.rpc('grant_support_access', { p_farm_id: db.getFarmId(), p_days: 7 })"), 'the same grant as Settings, for 7 days');
+  assert.ok(v.indexOf("supabase.rpc('grant_support_access', { p_farm_id: db.getFarmId(), p_days: 7 })", v.indexOf('rp-send')) < v.indexOf("from('problem_reports').insert"), 'the grant is tried first, so the report says what happened');
+  assert.ok(v.includes('SUPPORT_ALREADY') && v.includes('SUPPORT_OWNER_ONLY'));
+  assert.equal(accessNote('given'), 'Support access: given for 7 days with this report.');
+  assert.match(accessNote('failed'), /did not go through/);
+  assert.equal(accessNote(''), '');
+  assert.match(SUPPORT_TICK, /read only, for 7 days/);
+  assert.match(SUPPORT_TICK_HINT, /cannot change anything or see your bank details/);
 });
 check('an empty report says so rather than printing blanks', () => {
   const t = reportText(buildReport({ build: 'b', role: 'owner' }));

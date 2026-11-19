@@ -4,13 +4,13 @@
 // whether it is on, turns it on for 7 days or off early, and shows the log of what happened. A report sends the build,
 // the role, the sync state and the last few errors, with a message; the words are in supportinfo.js.
 
-import { supabase } from '../supabase.js?v=432';
-import { db } from '../storage.js?v=432';
-import { APP_VERSION } from '../version.js?v=432';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=432';
-import { esc } from '../fmt.js?v=432';
-import { buildReport, reportText, recentErrors, supportStatusText, standingStatus, logLine } from '../supportinfo.js?v=432';
-import { trialWatched, standingText } from '../trials.js?v=432';
+import { supabase } from '../supabase.js?v=433';
+import { db } from '../storage.js?v=433';
+import { APP_VERSION } from '../version.js?v=433';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=433';
+import { esc } from '../fmt.js?v=433';
+import { buildReport, reportText, recentErrors, supportStatusText, standingStatus, logLine, SUPPORT_TICK, SUPPORT_TICK_HINT, SUPPORT_ALREADY, SUPPORT_OWNER_ONLY, accessNote } from '../supportinfo.js?v=433';
+import { trialWatched, standingText } from '../trials.js?v=433';
 
 const UNAVAILABLE = 'Support access is not available yet. Ask whoever looks after Commodity Mate to finish setting it up.';
 
@@ -79,6 +79,7 @@ export async function openReportProblemSheet() {
     root.innerHTML = `
       <div class="hint" style="margin-bottom:8px">Say what went wrong and what you were doing. This is sent with the build, your role, whether you are online, what is waiting to send and the last few errors. None of your farm's records are sent.</div>
       <div class="field"><label for="rp-msg">What happened</label><textarea id="rp-msg" rows="5" style="width:100%"></textarea></div>
+      <div id="rp-access"></div>
       <div class="meta" id="rp-details" style="white-space:pre-wrap;margin:8px 0"></div>
       <div id="rp-problem" class="hint" style="color:var(--danger)"></div>
       <button type="button" class="btn" id="rp-send">Send</button>
@@ -86,6 +87,17 @@ export async function openReportProblemSheet() {
     const msg = () => root.querySelector('#rp-msg').value;
     const show = () => { root.querySelector('#rp-details').textContent = reportText(make('')).split('\n').slice(2).join('\n'); };
     show();
+    // support access: an owner can give it with the report in one tap (not shown once it is already on, or to anyone but an owner)
+    const accessBox = root.querySelector('#rp-access');
+    const role = db.getRole();
+    if (role === 'owner' || role === 'manager' || role === 'bookkeeper' || role === 'farm_worker' || role === 'driver' || role === 'advisor') {
+      status(db.getFarmId()).then((st) => {
+        if (!accessBox.isConnected) return;
+        if (st.on) accessBox.innerHTML = `<div class="hint" style="margin:8px 0">${esc(SUPPORT_ALREADY)}</div>`;
+        else if (role === 'owner') accessBox.innerHTML = `<label class="sw-row" style="padding:8px 0"><input type="checkbox" id="rp-access-tick" /><span><strong>${esc(SUPPORT_TICK)}</strong><span class="meta" style="display:block">${esc(SUPPORT_TICK_HINT)}</span></span></label>`;
+        else accessBox.innerHTML = `<div class="hint" style="margin:8px 0">${esc(SUPPORT_OWNER_ONLY)}</div>`;
+      }).catch(() => { /* support access is not set up here: no tick, the report still goes */ });
+    }
     root.querySelector('#rp-copy').addEventListener('click', async () => {
       try { await navigator.clipboard.writeText(reportText(make(msg()))); toast('Copied'); } catch { root.querySelector('#rp-problem').textContent = 'Could not copy. Select the text above instead.'; }
     });
@@ -93,10 +105,16 @@ export async function openReportProblemSheet() {
       const problem = root.querySelector('#rp-problem');
       if (!msg().trim()) { problem.textContent = 'Say what went wrong first.'; return; }
       e.target.disabled = true;
-      const r = make(msg());
+      let outcome = '';
+      if (root.querySelector('#rp-access-tick')?.checked) {
+        const { error: grantError } = await supabase.rpc('grant_support_access', { p_farm_id: db.getFarmId(), p_days: 7 });
+        outcome = grantError ? 'failed' : 'given';
+      }
+      const note = accessNote(outcome);
+      const r = make(note ? `${msg()}\n\n${note}` : msg());
       const { error } = await supabase.from('problem_reports').insert({ farm_id: db.getFarmId(), role: r.role, build: r.build, message: r.message, details: r.details });
       if (error) { e.target.disabled = false; problem.textContent = 'Could not send it just now. Check your signal and try again, or use Copy instead and send it another way.'; return; }
-      toast('Sent. Thank you');
+      toast(outcome === 'failed' ? 'Sent. Support access did not go through: you can give it under Settings.' : outcome === 'given' ? 'Sent. Support can look at your farm for 7 days' : 'Sent. Thank you');
       closeSheet();
     });
   });
