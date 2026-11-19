@@ -1,21 +1,26 @@
 // Stock by location: the Reports window that lists every silo, bunker and off-farm site with what it holds, by commodity and grade.
+// Three ways to read it: a card for each location, a card for each grade with the locations under it, and a grid (a row for each
+// location, a column for each commodity and grade). Narrow it to on farm or off farm, and to the commodities ticked.
 
-import { db } from '../storage.js?v=437';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=437';
-import { openSheet, toast } from '../ui.js?v=437';
-import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=437';
-import { exportRowsAsCSV } from '../csv.js?v=437';
-import { stockByLocation, stockByGrade, narrowed, stockRows, STOCK_COLUMNS, stockPdf } from '../stocklocation.js?v=437';
+import { db } from '../storage.js?v=439';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=439';
+import { openSheet, toast } from '../ui.js?v=439';
+import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=439';
+import { exportRowsAsCSV } from '../csv.js?v=439';
+import { stockByLocation, stockByGrade, stockMatrix, matrixSheet, narrowed, stockRows, STOCK_COLUMNS, stockPdf } from '../stocklocation.js?v=439';
 
 const SCOPES = [['all', 'All'], ['farm', 'On farm'], ['off', 'Off farm']];
 const SCOPE_TEXT = { all: '', farm: 'On farm', off: 'Off farm' };
-const GROUPS = [['location', 'By location'], ['grade', 'By grade']];
+const GROUPS = [['location', 'By location'], ['grade', 'By grade'], ['table', 'Grid']];
 const KEY = 'grainflow.stocklocation';
 const GROUP_KEY = 'grainflow.stocklocation.group';
-const readGroup = () => { try { return localStorage.getItem(GROUP_KEY) === 'grade' ? 'grade' : 'location'; } catch { return 'location'; } };
+const TOTALS_KEY = 'grainflow.stocklocation.rowtotals';
+const readGroup = () => { try { const v = localStorage.getItem(GROUP_KEY); return GROUPS.some(([k]) => k === v) ? v : 'location'; } catch { return 'location'; } };
 const saveGroup = (v) => { try { localStorage.setItem(GROUP_KEY, v); } catch { /* not remembered */ } };
 const readScope = () => { try { const v = localStorage.getItem(KEY); return SCOPES.some(([k]) => k === v) ? v : 'all'; } catch { return 'all'; } };
 const saveScope = (v) => { try { localStorage.setItem(KEY, v); } catch { /* not remembered */ } };
+const readTotals = () => { try { return localStorage.getItem(TOTALS_KEY) === '1'; } catch { return false; } };
+const saveTotals = (v) => { try { localStorage.setItem(TOTALS_KEY, v ? '1' : '0'); } catch { /* not remembered */ } };
 
 const gradeRows = (c) => c.grades.map((g) => `<div class="row" style="padding:2px 0 2px 14px"><span class="label">${esc(g.grade || 'No grade')}</span><span class="value">${num(g.tons, 1)} t${g.tons < 0 ? ' (over-drawn)' : ''}</span></div>`).join('');
 const commodityBlock = (c) => `<div class="row" style="margin-top:6px"><span class="label"><strong>${esc(c.name)}</strong></span><span class="value"><strong>${num(c.tons, 1)} t</strong></span></div>${gradeRows(c)}`;
@@ -29,22 +34,51 @@ const gradeBlock = (c) => `
       ${g.sites.map((s) => `<div class="of-grade"><span>${esc(s.name)}${s.operator ? ` &middot; ${esc(s.operator)}` : s.kind === 'off' ? ' &middot; off farm' : ''}</span><span>${num(s.tons, 1)} t</span></div>`).join('')}`).join('')}
   </div>`;
 
+/** A figure in the grid: whole tonnes when it is, else one decimal; nothing for an empty cell. */
+const cell = (v) => (v ? num(v, Math.abs(v - Math.round(v)) < 0.05 ? 0 : 1) : '');
+
+/** The grid: commodities across the top with their grades under them, a row for each location, a total row along the bottom. */
+function gridHtml(m, rowTotals) {
+  const span = 1 + m.columns.length + (rowTotals ? 1 : 0);
+  const section = (kind, label) => {
+    const rows = m.rows.filter((r) => r.kind === kind);
+    if (!rows.length) return '';
+    return `<tr class="sm-sec"><th colspan="${span}">${label}</th></tr>${rows.map((r) => `<tr><th class="sm-loc">${esc(r.name)}${r.operator ? `<span class="sm-op"> ${esc(r.operator)}</span>` : ''}</th>${m.columns.map((c) => `<td>${cell(r.cells[c.key])}</td>`).join('')}${rowTotals ? `<td class="sm-tot">${cell(r.total)}</td>` : ''}</tr>`).join('')}`;
+  };
+  return `<div class="table-scroll"><table class="sm" data-grid>
+    <thead>
+      <tr><th class="sm-loc" rowspan="2">Location</th>${m.groups.map((g) => `<th colspan="${g.span}" class="sm-grp">${esc(g.commodity)}</th>`).join('')}${rowTotals ? '<th rowspan="2" class="sm-tot">Total</th>' : ''}</tr>
+      <tr>${m.columns.map((c) => `<th>${esc(c.grade || 'No grade')}</th>`).join('')}</tr>
+    </thead>
+    <tbody>${section('farm', 'On farm')}${section('off', 'Off farm')}</tbody>
+    <tfoot><tr><th class="sm-loc">Total</th>${m.columns.map((c) => `<td>${cell(m.totals[c.key])}</td>`).join('')}${rowTotals ? `<td class="sm-tot">${cell(m.grand)}</td>` : ''}</tr></tfoot>
+  </table></div>`;
+}
+
 export function openStockByLocationSheet() {
   openSheet('Stock by location', (root) => {
     let scope = readScope();
     let group = readGroup();
-    const data = () => {
-      const d = db.get();
-      return d;
-    };
+    let rowTotals = readTotals();
+    const picked = new Set();   // commodities ticked; none ticked means all of them
+    const data = () => db.get();
     const full = () => stockByLocation(data());
-    const shown = () => narrowed(full(), scope, data());
+    const shown = () => narrowed(full(), scope, data(), [...picked]);
 
     const paint = () => {
+      // the commodity chips come from what is held in the scope chosen, so a ticked one never vanishes from the row
+      const offered = narrowed(full(), scope, data()).total.commodities;
+      for (const id of [...picked]) if (!offered.some((c) => c.commodityId === id)) picked.delete(id);
+      root.querySelector('#sl-chips').innerHTML = offered.length > 1
+        ? `<div class="chips" role="group" aria-label="Commodities"><button type="button" class="chip ${picked.size ? '' : 'active'}" data-c="">All</button>${offered.map((c) => `<button type="button" class="chip ${picked.has(c.commodityId) ? 'active' : ''}" data-c="${esc(c.commodityId)}">${esc(c.name)}</button>`).join('')}</div>` : '';
+      root.querySelector('#sl-totals-row').hidden = group !== 'table';
+      root.querySelector('#sl-rowtotals').checked = rowTotals;
+
       const report = shown();
-      root.querySelector('#sl-body').innerHTML = report.locations.length && group === 'grade' ? stockByGrade(report).map(gradeBlock).join('')
-        : !report.locations.length
+      root.querySelector('#sl-body').innerHTML = !report.locations.length
         ? `<div class="empty">${scope === 'off' ? 'Nothing is held off farm.' : scope === 'farm' ? 'Nothing is held in the silos and bunkers.' : 'Nothing is held in storage yet.'}</div>`
+        : group === 'table' ? gridHtml(stockMatrix(report), rowTotals)
+        : group === 'grade' ? stockByGrade(report).map(gradeBlock).join('')
         : `${report.locations.map((l) => `
           <div class="card" style="margin-bottom:10px">
             <div class="li-top" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><h2 style="margin:0">${esc(l.name)}</h2><div class="main">${num(l.tons, 1)} t</div></div>
@@ -57,25 +91,36 @@ export function openStockByLocationSheet() {
           </div>` : ''}`;
       root.querySelectorAll('.sl-scope').forEach((b) => b.classList.toggle('active', b.dataset.scope === scope));
       root.querySelectorAll('.sl-group').forEach((b) => b.classList.toggle('active', b.dataset.group === group));
+      root.querySelectorAll('#sl-chips [data-c]').forEach((b) => b.addEventListener('click', () => {
+        const id = b.dataset.c;
+        if (!id) picked.clear();
+        else if (picked.has(id)) picked.delete(id);
+        else picked.add(id);
+        paint();
+      }));
     };
 
     root.innerHTML = `
       <div class="segmented" style="margin-bottom:8px">${GROUPS.map(([k, label]) => `<button type="button" class="sl-group" data-group="${k}">${label}</button>`).join('')}</div>
       <div class="segmented" style="margin-bottom:10px">${SCOPES.map(([k, label]) => `<button type="button" class="sl-scope" data-scope="${k}">${label}</button>`).join('')}</div>
+      <div id="sl-chips" style="margin-bottom:10px"></div>
+      <label id="sl-totals-row" class="sw-row" style="margin:0 0 10px" hidden><input type="checkbox" id="sl-rowtotals" /><span>Show a total for each location</span></label>
       <div id="sl-body"></div>
       <div class="save-bar"><button type="button" class="btn secondary" id="sl-csv" style="flex:1;padding-left:12px;padding-right:12px">Excel (CSV)</button><button type="button" class="btn" id="sl-pdf" style="flex:1;padding-left:12px;padding-right:12px">PDF</button></div>`;
     root.querySelectorAll('.sl-scope').forEach((b) => b.addEventListener('click', () => { scope = b.dataset.scope; saveScope(scope); paint(); }));
     root.querySelectorAll('.sl-group').forEach((b) => b.addEventListener('click', () => { group = b.dataset.group; saveGroup(group); paint(); }));
+    root.querySelector('#sl-rowtotals').addEventListener('change', (e) => { rowTotals = e.target.checked; saveTotals(rowTotals); paint(); });
     root.querySelector('#sl-csv').addEventListener('click', () => {
       const report = shown();
       if (!report.locations.length) { toast('Nothing to export yet.'); return; }
-      exportRowsAsCSV(safeFileName(`grainflow-stock-by-location-${todayLocal()}`, 'csv'), stockRows(report), STOCK_COLUMNS);
+      const name = safeFileName(`grainflow-stock-by-location-${todayLocal()}`, 'csv');
+      if (group === 'table') { const s = matrixSheet(stockMatrix(report), { rowTotals }); exportRowsAsCSV(name, s.rows, s.columns); } else exportRowsAsCSV(name, stockRows(report), STOCK_COLUMNS);
       toast('Downloaded. It opens in Excel.');
     });
     root.querySelector('#sl-pdf').addEventListener('click', async () => {
       const report = shown();
       if (!report.locations.length) { toast('Nothing to put in the PDF yet.'); return; }
-      const bytes = stockPdf({ report, business: db.getBusinessDetails().entityName || '', today: dmy(todayLocal()), scope: SCOPE_TEXT[scope], group });
+      const bytes = stockPdf({ report, business: db.getBusinessDetails().entityName || '', today: dmy(todayLocal()), scope: SCOPE_TEXT[scope], group, rowTotals });
       const fileName = safeFileName(`Stock by location ${dmy(todayLocal())}`);
       if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
       await sharePdf(bytes, fileName, { title: 'Stock by location' });

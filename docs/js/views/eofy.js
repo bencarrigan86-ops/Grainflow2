@@ -2,11 +2,11 @@
 // one day (30 June by default). The sheet shows it; Download PDF keeps a frozen copy to hand to the accountant. The
 // arithmetic and the PDF are in eofy.js.
 
-import { db } from '../storage.js?v=437';
-import { openSheet, field, getVal } from '../ui.js?v=437';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=437';
-import { eofySnapshot, eofyPdf, financialYearEnd } from '../eofy.js?v=437';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=437';
+import { db } from '../storage.js?v=439';
+import { openSheet, field, getVal } from '../ui.js?v=439';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=439';
+import { eofySnapshot, eofyPdf, financialYearEnd } from '../eofy.js?v=439';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=439';
 
 const contractText = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);

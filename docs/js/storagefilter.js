@@ -11,6 +11,8 @@
 // number in it — leading zeros ignored — and only falls back to "the text
 // appears somewhere" when no silo has the number.
 
+import { gradeSorter } from './grades.js?v=439';
+
 export const NO_COMMODITY = '__none';
 
 const digitRuns = (name) => String(name ?? '').match(/\d+/g) || [];
@@ -76,6 +78,7 @@ export const SORTS = [
   { id: 'name', label: 'Name' },
   { id: 'grade', label: 'Grade' },
   { id: 'crop', label: 'Crop year' },
+  { id: 'location', label: 'Location' },
 ];
 
 const text = (v) => String(v ?? '').trim();
@@ -98,7 +101,7 @@ const natural = (a, b) => text(a).localeCompare(text(b), undefined, { numeric: t
  *
  * Returns a new array; the one passed in is not changed.
  */
-export function sortStorages(list, mode = 'volume', volumeOf = () => ({})) {
+export function sortStorages(list, mode = 'volume', volumeOf = () => ({}), commodities = []) {
   const byName = (a, b) => naturalByName(a, b);
   const blankLast = (field, dir) => (a, b) => {
     const x = text(a[field]); const y = text(b[field]);
@@ -116,14 +119,18 @@ export function sortStorages(list, mode = 'volume', volumeOf = () => ({})) {
     });
   }
   if (mode === 'name') return copy.sort(byName);
-  if (mode === 'grade') return copy.sort(blankLast('grade', 1));
+  // by grade follows the order Settings lists the grades in (wheat: APH1, APH2, H1, H2 ...), not A to Z
+  if (mode === 'grade') { const byGrade = gradeSorter(commodities); return copy.sort((a, b) => (!text(a.grade) || !text(b.grade) ? blankLast('grade', 1)(a, b) : byGrade(a.grade, b.grade) || byName(a, b))); }
   if (mode === 'crop') return copy.sort(blankLast('cropYear', -1));
+  // by location: farm or site ("Farm / site" on the storage), in number order, silos with none last
+  if (mode === 'location') return copy.sort(blankLast('property', 1));
   return copy.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0) || byName(a, b));
 }
 
-/** The heading a silo sits under when the list is sorted by grade or crop year; null for the other sorts. */
+/** The heading a silo sits under when the list is sorted by grade, crop year or location; null for the other sorts. */
 export function sortGroupLabel(storage, mode) {
   if (mode === 'grade') return text(storage.grade) || 'No grade';
   if (mode === 'crop') return text(storage.cropYear) || 'No crop year';
+  if (mode === 'location') return text(storage.property) || 'No farm / site';
   return null;
 }

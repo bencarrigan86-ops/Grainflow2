@@ -48,6 +48,8 @@ function tablesIn(src, file) {
   const out = [];
   const re = /<table(?:\s[^>]*)?>([\s\S]*?)<\/table>/g;
   for (const m of src.matchAll(re)) {
+    // a grid whose columns come from the data (the Stock by location grid) says so, and is not counted
+    if (m[0].slice(0, m[0].indexOf('>')).includes(' data-grid')) continue;
     const block = m[1];
     const section = (tag) => {
       const open = block.indexOf(`<${tag}>`);

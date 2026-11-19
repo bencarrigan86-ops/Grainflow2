@@ -2,10 +2,11 @@
 // totals for the whole farm. Pure: the figures come from the same places the Storage screen uses (the layers in a silo, the
 // holdings of an off-farm site), so the report cannot disagree with it.
 
-import { layersForStorage } from './outload.js?v=437';
-import { holdings, isOffFarm, commodityOfLoad } from './offfarm.js?v=437';
-import { isTransit } from './transit.js?v=437';
-import { createReport, fixed } from './reportpdf.js?v=437';
+import { layersForStorage } from './outload.js?v=439';
+import { holdings, isOffFarm, commodityOfLoad } from './offfarm.js?v=439';
+import { isTransit } from './transit.js?v=439';
+import { createReport, fixed } from './reportpdf.js?v=439';
+import { gradeComparer } from './grades.js?v=439';
 
 const EPS = 0.0005;
 const round3 = (n) => Math.round(n * 1000) / 1000;
@@ -15,7 +16,7 @@ const isCounted = (s) => s.kind === 'tally' && String(s.unitLabel ?? 't').trim()
 const natural = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
 
 /** Commodities by name, a commodity with no name last; grades A to Z with "No grade" last. */
-function groupLines(lines, names) {
+function groupLines(lines, byId) {
   const byCommodity = new Map();
   for (const l of lines) {
     const id = l.commodityId || '';
@@ -27,9 +28,12 @@ function groupLines(lines, names) {
     grades.get(key).tons += l.tons;
   }
   return [...byCommodity.entries()].map(([commodityId, grades]) => {
+    const c = byId.get(commodityId);
+    // grades in the order Settings lists them for this commodity
+    const byGrade = gradeComparer(c?.name, c?.customGrades);
     const list = [...grades.values()].map((g) => ({ ...g, tons: round3(g.tons) })).filter((g) => Math.abs(g.tons) > EPS)
-      .sort((a, b) => (a.grade === '') - (b.grade === '') || natural(a.grade, b.grade));
-    return { commodityId, name: names.get(commodityId) || 'No commodity', tons: round3(list.reduce((a, g) => a + g.tons, 0)), grades: list };
+      .sort((a, b) => byGrade(a.grade, b.grade));
+    return { commodityId, customGrades: c?.customGrades || [], name: c?.name || 'No commodity', tons: round3(list.reduce((a, g) => a + g.tons, 0)), grades: list };
   }).filter((c) => c.grades.length)
     .sort((a, b) => (a.commodityId === '') - (b.commodityId === '') || natural(a.name, b.name));
 }
@@ -40,7 +44,7 @@ function groupLines(lines, names) {
  * @returns {{locations: {id: string, name: string, kind: 'farm'|'off', operator: string, tons: number, commodities: object[]}[], total: {tons: number, commodities: object[]}}}
  */
 export function stockByLocation({ storages = [], movements = [], commodities = [], fields = [], sales = [] } = {}) {
-  const names = new Map(commodities.map((c) => [c.id, c.name]));
+  const names = new Map(commodities.map((c) => [c.id, c]));
   const ctx = { fields, storages, sales };
   const byId = new Map(movements.map((m) => [m.id, m]));
   const locations = [];
@@ -71,7 +75,7 @@ export function stockByGrade(report) {
   const by = new Map();
   for (const l of report.locations) {
     for (const c of l.commodities) {
-      if (!by.has(c.commodityId)) by.set(c.commodityId, { commodityId: c.commodityId, name: c.name, grades: new Map() });
+      if (!by.has(c.commodityId)) by.set(c.commodityId, { commodityId: c.commodityId, name: c.name, customGrades: c.customGrades, grades: new Map() });
       const grades = by.get(c.commodityId).grades;
       for (const g of c.grades) {
         const key = String(g.grade).trim().toLowerCase();
@@ -85,19 +89,80 @@ export function stockByGrade(report) {
   return [...by.values()].map((c) => {
     const grades = [...c.grades.values()]
       .map((g) => ({ ...g, tons: round3(g.tons), sites: g.sites.sort((a, b) => b.tons - a.tons || natural(a.name, b.name)) }))
-      .sort((a, b) => (a.grade === '') - (b.grade === '') || natural(a.grade, b.grade));
+      .sort((a, b) => gradeComparer(c.name, c.customGrades)(a.grade, b.grade));
     return { commodityId: c.commodityId, name: c.name, tons: round3(grades.reduce((a, g) => a + g.tons, 0)), grades };
   }).sort((a, b) => (a.commodityId === '') - (b.commodityId === '') || natural(a.name, b.name));
 }
 
 /** The same report, narrowed to on-farm or off-farm locations ('all' keeps everything), with the totals worked out again for what is left. */
-export function narrowed(report, kind, d) {
-  if (kind !== 'farm' && kind !== 'off') return report;
-  const locations = report.locations.filter((l) => l.kind === kind);
-  const names = new Map((d.commodities || []).map((c) => [c.id, c.name]));
+export function narrowed(report, kind, d, commodityIds = []) {
+  const want = new Set(commodityIds || []);
+  const byKind = kind === 'farm' || kind === 'off';
+  if (!byKind && !want.size) return report;
+  // a location keeps only the picked commodities (when some are picked); one with none left drops out
+  const locations = report.locations.filter((l) => !byKind || l.kind === kind).map((l) => {
+    if (!want.size) return l;
+    const commodities = l.commodities.filter((c) => want.has(c.commodityId));
+    return { ...l, commodities, tons: round3(commodities.reduce((a, c) => a + c.tons, 0)) };
+  }).filter((l) => l.commodities.length);
+  const names = new Map((d.commodities || []).map((c) => [c.id, c]));
   const lines = locations.flatMap((l) => l.commodities.flatMap((c) => c.grades.map((g) => ({ commodityId: c.commodityId, grade: g.grade, tons: g.tons }))));
   const all = groupLines(lines, names);
   return { locations, total: { tons: round3(all.reduce((a, c) => a + c.tons, 0)), commodities: all } };
+}
+
+/**
+ * The grid: a row for each location (on farm first, then off farm), a column for each commodity and grade, the tonnes in the cells,
+ * and the totals along the bottom. Columns with nothing in them are left out. `commodityIds` narrows it to those commodities.
+ * @returns {{columns: {key: string, commodityId: string, commodity: string, grade: string}[], groups: {commodityId: string, commodity: string, span: number}[],
+ *   rows: {id: string, name: string, kind: string, operator: string, cells: Record<string, number>, total: number}[], totals: Record<string, number>, grand: number}}
+ */
+export function stockMatrix(report, { commodityIds = [] } = {}) {
+  const want = new Set(commodityIds || []);
+  const columns = [];
+  for (const c of report.total.commodities) {
+    if (want.size && !want.has(c.commodityId)) continue;
+    for (const g of c.grades) columns.push({ key: `${c.commodityId}|${String(g.grade).trim().toLowerCase()}`, commodityId: c.commodityId, commodity: c.name, grade: g.grade });
+  }
+  const keys = new Set(columns.map((c) => c.key));
+  const groups = [];
+  for (const c of columns) {
+    const last = groups[groups.length - 1];
+    if (last && last.commodityId === c.commodityId) last.span += 1;
+    else groups.push({ commodityId: c.commodityId, commodity: c.commodity, span: 1 });
+  }
+  const totals = {};
+  const rows = [];
+  for (const l of report.locations) {
+    const cells = {};
+    let total = 0;
+    for (const c of l.commodities) {
+      for (const g of c.grades) {
+        const key = `${c.commodityId}|${String(g.grade).trim().toLowerCase()}`;
+        if (!keys.has(key)) continue;
+        cells[key] = round3((cells[key] || 0) + g.tons);
+        totals[key] = round3((totals[key] || 0) + g.tons);
+        total += g.tons;
+      }
+    }
+    if (Object.keys(cells).length) rows.push({ id: l.id, name: l.name, kind: l.kind, operator: l.operator, cells, total: round3(total) });
+  }
+  return { columns, groups, rows, totals, grand: round3(Object.values(totals).reduce((a, v) => a + v, 0)) };
+}
+
+/** The grid as rows and columns for a spreadsheet: a column for each commodity and grade, a row for each location, then the total. */
+export function matrixSheet(m, { rowTotals = false } = {}) {
+  const columns = [
+    { label: 'Location', get: (r) => r.name },
+    { label: 'On or off farm', get: (r) => r.where },
+    ...m.columns.map((c) => ({ label: `${c.commodity} ${c.grade || NO_GRADE}`, get: (r) => (r.cells[c.key] ?? '') })),
+    ...(rowTotals ? [{ label: 'Total', get: (r) => r.total }] : []),
+  ];
+  const rows = [
+    ...m.rows.map((r) => ({ name: r.operator ? `${r.name} (${r.operator})` : r.name, where: r.kind === 'off' ? 'Off farm' : 'On farm', cells: r.cells, total: r.total })),
+    { name: 'Total', where: '', cells: m.totals, total: m.grand },
+  ];
+  return { columns, rows };
 }
 
 /** One row a location, commodity and grade, for a spreadsheet. */
@@ -121,9 +186,31 @@ export const STOCK_COLUMNS = [
 const t1 = (v) => fixed(v, 1);
 
 /** The report as a PDF: a table of commodity, grade and tonnes under each location, then the farm total. */
-export function stockPdf({ report, business = '', today = '', scope = '', group = 'location' } = {}) {
+export function stockPdf({ report, business = '', today = '', scope = '', group = 'location', commodityIds = [], rowTotals = false } = {}) {
   const pdf = createReport({ title: 'Stock by location', business, season: scope, today, footerNote: 'Tonnes held now, by silo, bunker and off-farm site.' });
   if (!report || !report.locations.length) { pdf.message('Nothing is held in storage yet.'); return pdf.bytes(); }
+  if (group === 'table') {
+    const m = stockMatrix(report, { commodityIds });
+    const t0 = (v) => (v ? fixed(v, Math.abs(v - Math.round(v)) < 0.05 ? 0 : 1) : '');
+    const place = (r) => `${r.name}${r.kind === 'off' ? ' (off farm)' : ''}`;
+    // up to eight columns fit on one page across; more than that, each commodity gets a table of its own
+    const sets = m.columns.length <= 8 ? [m.columns] : m.groups.map((g) => m.columns.filter((c) => c.commodityId === g.commodityId));
+    for (const cols of sets) {
+      const one = sets.length > 1;
+      const rows = m.rows.filter((r) => cols.some((c) => r.cells[c.key])).map((r) => ({ ...r, total: cols.reduce((a, c) => a + (r.cells[c.key] || 0), 0) }));
+      const totals = Object.fromEntries(cols.map((c) => [c.key, m.totals[c.key] || 0]));
+      const grand = cols.reduce((a, c) => a + (totals[c.key] || 0), 0);
+      const w = (1 - 0.28 - (rowTotals ? 0.1 : 0)) / Math.max(1, cols.length);
+      const columns = [
+        { head: 'Location', w: 0.28, left: true, cell: (r) => place(r) },
+        ...cols.map((c) => ({ head: one ? (c.grade || NO_GRADE) : `${c.commodity.slice(0, 6)} ${c.grade || NO_GRADE}`, w, cell: (r) => t0(r.cells[c.key]) })),
+        ...(rowTotals ? [{ head: 'Total', w: 0.1, cell: (r) => t0(r.total) }] : []),
+      ];
+      if (one) pdf.heading(cols[0].commodity);
+      pdf.table(columns, rows, { total: { name: 'Total', kind: 'farm', cells: totals, total: grand }, name: one ? cols[0].commodity : 'Stock by location' });
+    }
+    return pdf.bytes();
+  }
   if (group === 'grade') {
     const siteName = (s) => `${s.name}${s.operator ? ` (${s.operator})` : s.kind === 'off' ? ' (off farm)' : ''}`;
     const gradeColumns = [

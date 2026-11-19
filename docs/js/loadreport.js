@@ -3,12 +3,13 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=437';
-import { drawBrandLogo } from './brand.js?v=437';
-import { dmy } from './fmt.js?v=437';
-import { SPECS, specOf } from './outload.js?v=437';
-import { ASPECT, strokesInBox } from './signature.js?v=437';
-import { SIGN_WORDS, cleanDriverSignature, signState, signedWhen } from './driversign.js?v=437';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=439';
+import { gradeSorter } from './grades.js?v=439';
+import { drawBrandLogo } from './brand.js?v=439';
+import { dmy } from './fmt.js?v=439';
+import { SPECS, specOf } from './outload.js?v=439';
+import { ASPECT, strokesInBox } from './signature.js?v=439';
+import { SIGN_WORDS, cleanDriverSignature, signState, signedWhen } from './driversign.js?v=439';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -156,7 +157,9 @@ export function loadFilterChoices(movements, ctx = {}) {
   }
   const named = (ids, list) => [...ids].map((id) => ({ id, name: list.find((x) => x.id === id)?.name })).filter((x) => x.name).sort(byName);
   const words = (map) => [...map.values()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-  return { fields: named(fieldIds, ctx.fields || []), storages: named(storageIds, ctx.storages || []), grades: words(grades), trucks: words(trucks), drivers: words(drivers) };
+  // grades in the order Settings lists them, not A to Z
+  const gradeWords = [...grades.values()].sort(gradeSorter(ctx.commodities || []));
+  return { fields: named(fieldIds, ctx.fields || []), storages: named(storageIds, ctx.storages || []), grades: gradeWords, trucks: words(trucks), drivers: words(drivers) };
 }
 
 /** "Storage Silo 1", "Storage out of Silo 1", "Loads into storage": what the storage filter says; '' when it is not used. */

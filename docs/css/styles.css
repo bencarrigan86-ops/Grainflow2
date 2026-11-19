@@ -1551,3 +1551,15 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
   .sheet.sheet-wide #fm-svg { max-height: calc(74vh / var(--zoom)) !important; }
 }
 @media (min-width: 1400px) { :root { --zoom: 1.07; } }
+
+/* Stock by location, grid view: a row for each location, a column for each commodity and grade */
+.sm { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; min-width: 100%; }
+.sm th, .sm td { padding: 7px 10px; border-bottom: 1px solid var(--border, rgba(0,0,0,.1)); text-align: right; white-space: nowrap; font-weight: 500; }
+.sm th { text-transform: none; letter-spacing: 0; font-size: 13px; }
+.sm thead th { background: var(--surface); color: var(--text); font-weight: 700; }
+.sm .sm-loc { text-align: left; position: sticky; left: 0; background: var(--surface); z-index: 1; font-weight: 600; }
+.sm .sm-grp { text-align: center; border-left: 1px solid var(--border, rgba(0,0,0,.1)); }
+.sm .sm-sec th { text-align: left; background: color-mix(in srgb, var(--accent-report, #2e7d32) 10%, var(--surface)); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; position: static; }
+.sm tfoot th, .sm tfoot td { font-weight: 800; border-top: 2px solid var(--text-dim); border-bottom: none; }
+.sm .sm-tot { font-weight: 700; border-left: 1px solid var(--border, rgba(0,0,0,.1)); }
+.sm .sm-op { color: var(--text-dim); font-weight: 400; font-size: 11px; }

@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=437';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=437';
-import { isHay, balesInStorage, describeBales } from '../hay.js?v=437';
-import { modulesReport } from '../modulesreport.js?v=437';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=437';
-import { isTransit } from '../transit.js?v=437';
-import { isOffFarm } from '../offfarm.js?v=437';
-import { paintOffFarmCard } from './offfarm.js?v=437';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=437';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=437';
-import { hasStorageQuality } from '../mapping.js?v=437';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=437';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=437';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=437';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=437';
-import { renderRelatedMovements } from './movements.js?v=437';
-import { openSiloSetupSheet } from './silosetup.js?v=437';
-import { openCalculatorSheet } from './calculator.js?v=437';
-import { commodityFills } from '../commodityfill.js?v=437';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=437';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=437';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=437';
+import { db } from '../storage.js?v=439';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=439';
+import { isHay, balesInStorage, describeBales } from '../hay.js?v=439';
+import { modulesReport } from '../modulesreport.js?v=439';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=439';
+import { isTransit } from '../transit.js?v=439';
+import { isOffFarm } from '../offfarm.js?v=439';
+import { paintOffFarmCard, openOffFarmSheet } from './offfarm.js?v=439';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=439';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=439';
+import { hasStorageQuality } from '../mapping.js?v=439';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=439';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=439';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=439';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=439';
+import { renderRelatedMovements } from './movements.js?v=439';
+import { openSiloSetupSheet } from './silosetup.js?v=439';
+import { openCalculatorSheet } from './calculator.js?v=439';
+import { commodityFills } from '../commodityfill.js?v=439';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=439';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=439';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=439';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=437';
+} from '../silolayers.js?v=439';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -187,6 +187,7 @@ function paintStorageParts(root) {
   const { commodities, storages: saved, movements } = db.get();
   const transits = saved.filter(isTransit);
   const storages = saved.filter((x) => !isTransit(x) && !isOffFarm(x)).map((x) => withLayers(x, movements));
+
   const found = searchStorages(storages, commodities, searchText);
 
   // ---- summary ----
@@ -225,7 +226,7 @@ function paintStorageParts(root) {
     const tabs = commodityTabs(found, commoditiesByStock(commodities, storages, movements));
     // A tab that has nothing left in it (after a search, or once its last silo moved) is not a place to be stuck.
     if (commodityTab && !tabs.some((t) => t.id === commodityTab)) commodityTab = '';
-    chipsEl.innerHTML = `<div class="chips" role="tablist">
+    chipsEl.innerHTML = !found.length ? "" : `<div class="chips" role="tablist">
       <button type="button" class="chip ${commodityTab ? '' : 'active'}" data-tab="" role="tab">All ${found.length}</button>
       ${tabs.map((t) => `<button type="button" class="chip ${commodityTab === t.id ? 'active' : ''}" data-tab="${esc(t.id)}" role="tab">${esc(t.name)} ${t.count}</button>`).join('')}
     </div>`;
@@ -373,7 +374,7 @@ function renderStorageList(storages, commodities, movements) {
   const volumeOf = (s) => ({ tracked: storageLedgerStock(s, movements), measured: computeStorageTons(s, commodities).tons });
   // By name is one flat list A to Z; otherwise the order chosen in Sort by
   const effectiveSort = listMode === 'name' ? 'name' : sortMode;
-  const sortBy = (list) => sortStorages(list, effectiveSort, volumeOf);
+  const sortBy = (list) => sortStorages(list, effectiveSort, volumeOf, commodities);
   const row = (s) => storageRow(s, commodities, movements);
 
   // Sorted by grade (or crop year) the rows are laid out in sections, one per
@@ -499,9 +500,14 @@ function qualityLine(s) {
   ].filter(Boolean).map(esc).join(' · ');
 }
 
+/** The Off farm choice on a new storage: the owner and manager set these up, the same form as Add a location under the list. */
+function offFarmChoice() {
+  return ['owner', 'manager'].includes(db.getRole()) ? '<button data-goto="offfarm">Off farm</button>' : '';
+}
+
 function kindLabel(kind) {
   if (kind === 'bunker') return 'Bunker / shed';
-  if (kind === 'tally') return 'Tally';
+  if (kind === 'tally') return 'Yard';
   return 'Silo';
 }
 
@@ -529,7 +535,7 @@ function storageRow(s, commodities, movements) {
     return `
       <div class="list-item storage-row" data-edit-storage="${s.id}">
         <div>
-          <div class="main">${esc(s.name)} <span class="badge muted">Tally</span></div>
+          <div class="main">${esc(s.name)} <span class="badge muted">Yard</span></div>
           <div class="meta">${esc(c ? c.name : 'No commodity set')}</div>
           ${baleLine(s, c, movements)}
           ${qualityLine(s) ? `<div class="meta">${qualityLine(s)}</div>` : ''}
@@ -1207,7 +1213,8 @@ export function openStorageSheet(existing) {
         <div class="segmented" id="s-kind">
           <button data-kind="silo" class="${kind === 'silo' ? 'active' : ''}">Silo</button>
           <button data-kind="bunker" class="${kind === 'bunker' ? 'active' : ''}">Bunker / shed</button>
-          ${!existing || existing.kind === 'tally' ? `<button data-kind="tally" class="${kind === 'tally' ? 'active' : ''}">Tally</button>` : ''}
+          ${!existing ? offFarmChoice() : ''}
+          ${!existing || existing.kind === 'tally' ? `<button data-kind="tally" class="${kind === 'tally' ? 'active' : ''}">Yard</button>` : ''}
         </div>
         ${field({ label: 'Name', id: 's-name', value: existing?.name, placeholder: existing?.kind === 'bunker' || kind === 'bunker' ? 'e.g. Bunker 1' : 'e.g. Silo 12 (155t)' })}
         ${siteField(existing)}
@@ -1277,8 +1284,9 @@ export function openStorageSheet(existing) {
       const kindSel = root.querySelector('#s-kind');
       if (kindSel) {
         kindSel.addEventListener('click', (e) => {
-          const btn = e.target.closest('button[data-kind]');
+          const btn = e.target.closest('button[data-kind], button[data-goto]');
           if (!btn) return;
+          if (btn.dataset.goto === 'offfarm') { closeSheet(); openOffFarmSheet(null); return; }
           kind = btn.dataset.kind;
           build();
         });
@@ -1391,13 +1399,14 @@ export function openStorageSheet(existing) {
         <div class="segmented" id="s-kind">
           <button data-kind="silo">Silo</button>
           <button data-kind="bunker">Bunker / shed</button>
-          <button data-kind="tally" class="active">Tally</button>
+          <button data-kind="tally" class="active">Yard</button>
         </div>` : ''}
         ${!existing ? `
         <div class="segmented" id="s-kind">
           <button data-kind="silo" class="${kind === 'silo' ? 'active' : ''}">Silo</button>
           <button data-kind="bunker" class="${kind === 'bunker' ? 'active' : ''}">Bunker / shed</button>
-          <button data-kind="tally" class="${kind === 'tally' ? 'active' : ''}">Tally</button>
+          ${offFarmChoice()}
+          <button data-kind="tally" class="${kind === 'tally' ? 'active' : ''}">Yard</button>
         </div>` : ''}
         ${field({ label: 'Name', id: 's-name', value: existing?.name, placeholder: 'e.g. SR1 round bales' })}
         ${siteField(existing)}
@@ -1418,8 +1427,9 @@ export function openStorageSheet(existing) {
       const kindSel = root.querySelector('#s-kind');
       if (kindSel) {
         kindSel.addEventListener('click', (e) => {
-          const btn = e.target.closest('button[data-kind]');
+          const btn = e.target.closest('button[data-kind], button[data-goto]');
           if (!btn) return;
+          if (btn.dataset.goto === 'offfarm') { closeSheet(); openOffFarmSheet(null); return; }
           kind = btn.dataset.kind;
           build();
         });

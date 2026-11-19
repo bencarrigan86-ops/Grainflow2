@@ -4,15 +4,16 @@
 // into and out of a location are ordinary movements (see the movement form); what a location holds is
 // worked out from them (offfarm.js).
 
-import { db } from '../storage.js?v=437';
-import { openSheet, closeSheet, openOver, field, getVal, confirmDelete, toast } from '../ui.js?v=437';
-import { num, esc, money, dmy, todayLocal } from '../fmt.js?v=437';
-import { storageFeesByMonth, feeTermsText, BASES, cleanFee } from '../storagefees.js?v=437';
-import { downloadCSV } from '../csv.js?v=437';
-import { safeFileName } from '../sharefile.js?v=437';
-import { isOffFarm, holdings, totalHeld, cleanOffFarm, filterHoldings } from '../offfarm.js?v=437';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=437';
-import { renderRelatedMovements } from './movements.js?v=437';
+import { db } from '../storage.js?v=439';
+import { openSheet, closeSheet, openOver, field, getVal, confirmDelete, toast } from '../ui.js?v=439';
+import { num, esc, money, dmy, todayLocal } from '../fmt.js?v=439';
+import { storageFeesByMonth, feeTermsText, BASES, cleanFee } from '../storagefees.js?v=439';
+import { downloadCSV } from '../csv.js?v=439';
+import { safeFileName } from '../sharefile.js?v=439';
+import { gradeComparer } from '../grades.js?v=439';
+import { isOffFarm, holdings, totalHeld, cleanOffFarm, filterHoldings } from '../offfarm.js?v=439';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=439';
+import { renderRelatedMovements } from './movements.js?v=439';
 
 const OPERATORS = ['GrainCorp', 'Viterra', 'Cargill', 'Emerald Grain', 'Louis Dreyfus', 'Olam', 'Bunge', 'CBH'];
 
@@ -26,11 +27,14 @@ const context = () => { const d = db.get(); return { fields: d.fields, storages:
 /** What a location holds: a heading for each commodity with its tonnes, and a row for each grade under it. */
 function holdingsLines(rows, commodities) {
   const names = new Map(commodities.map((c) => [c.id, c.name]));
+  const custom = new Map(commodities.map((c) => [c.id, c.customGrades]));
   const byCommodity = new Map();
   for (const h of rows) {
     if (!byCommodity.has(h.commodityId)) byCommodity.set(h.commodityId, []);
     byCommodity.get(h.commodityId).push(h);
   }
+  // each commodity's grades in the order Settings lists them (wheat: APH1, APH2, H2 ... )
+  for (const [id, list] of byCommodity) list.sort((a, b) => gradeComparer(names.get(id), custom.get(id))(a.grade, b.grade));
   return [...byCommodity.entries()].map(([id, list]) => `
     <div class="of-commodity"><span><strong>${esc(names.get(id) || 'Unknown commodity')}</strong></span><span><strong>${num(totalHeld(list), 1)} t</strong></span></div>
     ${list.map((h) => `<div class="of-grade"><span>${esc(h.grade || 'No grade')}</span><span>${num(h.tons, 1)} t${h.tons < 0 ? ' (over-drawn)' : ''}</span></div>`).join('')}`).join('');

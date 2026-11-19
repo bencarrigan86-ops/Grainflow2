@@ -162,7 +162,7 @@ check('tonnes held is what the list opens on, and is the first choice offered', 
   assert.equal(SORTS[0].id, 'volume');
   assert.equal(SORTS[0].label, 'Tonnes held');
   assert.ok(!SORTS.some((x) => x.id === 'newest'), 'newest added is gone');
-  assert.deepEqual(SORTS.map((x) => x.label), ['Tonnes held', 'Name', 'Grade', 'Crop year'], 'name stays in the list for the By commodity view');
+  assert.deepEqual(SORTS.map((x) => x.label), ['Tonnes held', 'Name', 'Grade', 'Crop year', 'Location'], 'name stays in the list for the By commodity view');
   // with no way to tell how much each holds, it falls back to name order rather than failing
   assert.deepEqual(names(sortStorages(GRADED)), names(sortStorages(GRADED, 'name')));
 });

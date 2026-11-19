@@ -202,6 +202,38 @@ export function gradesFor(commodityName, custom = []) {
 }
 
 /**
+ * A sort for grade names that follows the order Settings lists them in for a commodity: the published grades in their published
+ * order (wheat: APH1, APH2, H1, H2, AUH2, APW1, ASW1 ...), then the farm's own, then any grade that is on neither list A to Z,
+ * and "no grade" last.
+ */
+export function gradeComparer(commodityName, custom = []) {
+  const order = new Map(gradesFor(commodityName, custom).map((g, i) => [norm(g.code), i]));
+  const rank = (g) => (norm(g) === '' ? Infinity : order.has(norm(g)) ? order.get(norm(g)) : 1e6);
+  return (a, b) => {
+    const ra = rank(a);
+    const rb = rank(b);
+    if (ra !== rb) return ra < rb ? -1 : 1;
+    return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+  };
+}
+
+/**
+ * A sort for grade names across every commodity on the farm: each commodity in the order they are set up, its grades in Settings
+ * order, then grades on no list A to Z, and "no grade" last. For a list where the commodity is not known (silos, load filters).
+ */
+export function gradeSorter(commodities = []) {
+  const order = new Map();
+  allGradeCodes(commodities).forEach((g, i) => order.set(norm(g), i));
+  const rank = (g) => (norm(g) === '' ? Infinity : order.has(norm(g)) ? order.get(norm(g)) : 1e6);
+  return (a, b) => {
+    const ra = rank(a);
+    const rb = rank(b);
+    if (ra !== rb) return ra < rb ? -1 : 1;
+    return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+  };
+}
+
+/**
  * The options for a grade dropdown. A grade already on the record that is not on the list stays selectable, so
  * opening an old contract never loses what it says, and "Other" lets a one-off grade be typed in.
  */
