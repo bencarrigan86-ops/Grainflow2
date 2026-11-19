@@ -4,25 +4,25 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { canSeeBills, canSeeOrders } from '../nav.js?v=433';
-import { db } from '../storage.js?v=433';
-import { openSheet, openOver } from '../ui.js?v=433';
-import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=433';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=433';
-import { windowText } from '../orders.js?v=433';
-import { openOrderSheet } from './orders.js?v=433';
-import { openInvoiceListSheet } from './invoice.js?v=433';
-import { renderPayables, returnToAfterBill } from './payables.js?v=433';
-import { openXeroSheet } from './xero.js?v=433';
-import { cashflow } from '../cashflow.js?v=433';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=433';
-import { buyerStatements, statementPdf } from '../statement.js?v=433';
-import { buyerExposure } from '../exposure.js?v=433';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=433';
-import { exposurePdf } from '../exposurepdf.js?v=433';
-import { emailIn } from '../vendordec.js?v=433';
-import { invoiceLabel } from '../adjustment.js?v=433';
-import { matchesAll, amountText } from '../listsearch.js?v=433';
+import { canSeeBills, canSeeOrders } from '../nav.js?v=434';
+import { db } from '../storage.js?v=434';
+import { openSheet, openOver } from '../ui.js?v=434';
+import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=434';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=434';
+import { windowText } from '../orders.js?v=434';
+import { openOrderSheet } from './orders.js?v=434';
+import { openInvoiceListSheet } from './invoice.js?v=434';
+import { renderPayables, returnToAfterBill } from './payables.js?v=434';
+import { openXeroSheet } from './xero.js?v=434';
+import { cashflow } from '../cashflow.js?v=434';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=434';
+import { buyerStatements, statementPdf } from '../statement.js?v=434';
+import { buyerExposure } from '../exposure.js?v=434';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=434';
+import { exposurePdf } from '../exposurepdf.js?v=434';
+import { emailIn } from '../vendordec.js?v=434';
+import { invoiceLabel } from '../adjustment.js?v=434';
+import { matchesAll, amountText } from '../listsearch.js?v=434';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -63,7 +63,7 @@ function timelineHtml(shown, commodities, today) {
           <div class="gantt-sub">${r.end ? `${esc(shortDate(r.end))} &middot; ${esc(endText(r.daysToEnd).toLowerCase())}` : 'No end date'}${r.orders.count ? ` &middot; ${r.orders.count} order${r.orders.count === 1 ? '' : 's'}` : ''}</div>
         </div>`;
       }).join('')}
-      <div class="gantt-key"><span><i class="k-today"></i>Today</span><span><i class="k-tick"></i>Order due</span><span><i class="k-fill"></i>Delivered</span></div>
+      <div class="gantt-key"><span><i class="k-today"></i>Today</span><span><i class="k-tick"></i>Order due</span><span><i class="k-bar"></i>Delivered so far</span><span><i class="k-bar soon"></i>Ends soon</span><span><i class="k-bar ended"></i>Ended</span></div>
       ${tl.unplaced ? `<div class="hint" style="margin-top:6px">${tl.unplaced} contract${tl.unplaced === 1 ? ' has' : 's have'} no delivery dates, so ${tl.unplaced === 1 ? 'it is' : 'they are'} only in the list.</div>` : ''}
     </div>`;
 }

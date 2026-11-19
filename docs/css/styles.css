@@ -761,7 +761,12 @@ details.fold > summary .sub { font-size: 12px; color: var(--text-dim); margin-to
 .gantt-key i { display: inline-block; }
 .gantt-key .k-today { width: 2px; height: 12px; background: var(--text); }
 .gantt-key .k-tick { width: 3px; height: 12px; background: var(--surface); box-shadow: 0 0 0 1px var(--text-dim); }
-.gantt-key .k-fill { width: 14px; height: 8px; border-radius: 2px; background: var(--accent-report); }
+/* the key draws the same bar as the chart: the darker part is what has been delivered, and the colour says how close the contract is to ending */
+.gantt-key .k-bar { --c: var(--accent-report); flex: none; width: 18px; height: 10px; border-radius: 3px; box-sizing: border-box;
+  background: linear-gradient(90deg, var(--c) 50%, color-mix(in srgb, var(--c) 30%, var(--surface)) 50%); box-shadow: inset 0 0 0 1px var(--c); }
+.gantt-key .k-bar.soon { --c: var(--warn); }
+.gantt-key .k-bar.ended { --c: var(--danger); }
+.gantt-key .k-today, .gantt-key .k-tick { flex: none; }
 
 /* An empty screen with a next step. */
 .empty .btn { margin-top: 14px; width: auto; padding: 10px 20px; }
@@ -1353,10 +1358,10 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .com-green { color: var(--accent-summary); }
 .mv-searchrow { gap: 6px; }
 .mv-searchrow select.storage-sort { flex: none; width: auto; max-width: 92px; min-width: 0; font-size: 12.5px; padding-left: 6px; padding-right: 18px; margin: 0; }
-#storage-more-btn { padding: 0 10px; font-size: 13px; min-height: 40px; }
+#storage-more-btn, #sale-more-btn { padding: 0 10px; font-size: 13px; min-height: 40px; }
 /* Storage: search, sort and More are the same height */
-#storage-search, #storage-sort, #storage-more-btn { height: 40px; min-height: 40px; box-sizing: border-box; margin: 0; }
-#storage-search, #storage-sort { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text); font-family: inherit; font-size: 14px; padding: 0 10px; }
+#storage-search, #storage-sort, #storage-more-btn, #sale-search, #sale-sort, #sale-more-btn { height: 40px; min-height: 40px; box-sizing: border-box; margin: 0; }
+#storage-search, #storage-sort, #sale-search, #sale-sort { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text); font-family: inherit; font-size: 14px; padding: 0 10px; }
 .mv-searchrow select.storage-sort { font-size: 13px; padding: 0 18px 0 8px; }
 .dash-ringtext .n { font-size: 17px; }
 .dash-ringtext .n .s { display: inline; font-size: 12px; font-weight: 400; margin: 0; }

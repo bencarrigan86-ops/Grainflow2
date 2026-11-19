@@ -1,7 +1,7 @@
 // How the contracts on the Sales tab are ordered within each commodity. Pure apart from the remembered choice, which is a
 // per-device convenience and never needed (the list works without it).
 
-import { saleEconomics } from './derived.js?v=433';
+import { saleEconomics } from './derived.js?v=434';
 
 export const SALE_SORTS = [
   { value: 'newest', label: 'Newest first' },
@@ -53,6 +53,20 @@ export function sortSales(sales, sort, movements = []) {
     return list.sort((a, b) => value.get(b.id) - value.get(a.id) || byDateDesc(a, b));
   }
   return list.sort(byDateDesc);
+}
+
+/**
+ * The contracts that match what was typed in the search box: every word must be found somewhere in the buyer, contract number,
+ * our reference, commodity, grade, delivery place, broker note or notes (any case). Nothing typed gives them all back.
+ */
+export function searchSales(sales, commodities, text) {
+  const words = String(text || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return sales;
+  const name = new Map((commodities || []).map((c) => [c.id, c.name || '']));
+  return sales.filter((s) => {
+    const hay = [s.buyer, s.contractNo, s.ourRef, name.get(s.commodityId), s.grade, s.location, s.brokerNote, s.notes].filter(Boolean).join(' ').toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
 }
 
 export function readSaleSort() {

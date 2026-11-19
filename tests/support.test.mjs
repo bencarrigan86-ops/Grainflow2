@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { addError, errorEntry, buildReport, reportText, supportStatusText, logLine, whenText, MAX_ERRORS, accessNote, SUPPORT_TICK, SUPPORT_TICK_HINT } from '../docs/js/supportinfo.js';
+import { addError, errorEntry, buildReport, reportText, supportStatusText, logLine, whenText, MAX_ERRORS, accessNote, SUPPORT_TICK, SUPPORT_TICK_HINT, SUPPORT_OWNER_ONLY, SUPPORT_SENT_WAITING, waitingText } from '../docs/js/supportinfo.js';
 import { environmentFor, isTestHost, LIVE } from '../docs/js/env.js';
 import { tabsForRole, canOpen } from '../docs/js/nav.js';
 
@@ -107,6 +107,29 @@ check('Report a problem can give support access with the report: an owner ticks,
   assert.equal(accessNote(''), '');
   assert.match(SUPPORT_TICK, /read only, for 7 days/);
   assert.match(SUPPORT_TICK_HINT, /cannot change anything or see your bank details/);
+});
+check('a report from someone who is not the owner still goes, marked as waiting for the owner, and they are told so', () => {
+  const v = read('docs/js/views/support.js');
+  assert.ok(v.includes("wantsSupport = !st.on && role !== 'owner'"), 'only a non-owner, with support not already on');
+  assert.ok(v.includes("outcome = 'waiting'") && v.includes('wants_support: true'));
+  assert.ok(v.includes("/wants_support/.test(error.message"), 'a database without the column still takes the report');
+  assert.ok(v.includes("outcome === 'waiting' ? SUPPORT_SENT_WAITING"));
+  assert.match(SUPPORT_OWNER_ONLY, /still be sent/);
+  assert.match(SUPPORT_OWNER_ONLY, /until the owner allows it/);
+  assert.match(SUPPORT_SENT_WAITING, /owner has been told/);
+  assert.match(accessNote('waiting'), /not given/);
+});
+check('the owner is told a report is waiting: Settings, Position, and a database question only the owner can ask', () => {
+  const m = read('supabase/migrations/20261222000000_support_request.sql');
+  assert.match(m, /add column if not exists wants_support boolean not null default false/);
+  assert.ok(m.includes("app_role(p_farm_id) = 'owner'"));
+  assert.ok(!/create policy[sS]*on problem_reports/.test(m), 'the owner is not given the reports themselves');
+  assert.match(m, /action = 'granted'/, 'a report stops waiting once access is given after it');
+  assert.ok(read('supabase/paste-into-sql-editor.sql').includes('support_requests_waiting'));
+  assert.ok(read('docs/js/views/support.js').includes('id="support-waiting"'));
+  assert.ok(read('docs/js/views/position.js').includes('supportWaiting'));
+  assert.match(waitingText(1), /Someone on your farm has sent a problem report/);
+  assert.match(waitingText(3), /^3 problem reports/);
 });
 check('an empty report says so rather than printing blanks', () => {
   const t = reportText(buildReport({ build: 'b', role: 'owner' }));

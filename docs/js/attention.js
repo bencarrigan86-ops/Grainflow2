@@ -4,8 +4,8 @@
 // end, orders that missed their date, grain delivered but not invoiced, a backup that is due) and says it in a line each,
 // the worst first, so the farm is not left to go and look. Pure: it touches neither storage nor the page.
 
-import { receivables, payablesDue, deliveries, uninvoiced } from './outstanding.js?v=433';
-import { backupDue, backupAgeText } from './backup.js?v=433';
+import { receivables, payablesDue, deliveries, uninvoiced } from './outstanding.js?v=434';
+import { backupDue, backupAgeText } from './backup.js?v=434';
 
 const MONEY_ROLES = ['owner', 'manager', 'bookkeeper'];
 const SEVERITY = { bad: 0, warn: 1, info: 2 };
@@ -15,12 +15,12 @@ const money0 = (n) => `$${Math.round(Number(n) || 0).toLocaleString('en-AU')}`;
 
 /**
  * @param {{role: string, today: string, invoices?: object[], sales?: object[], movements?: object[], orders?: object[],
- *          payables?: object[], lastBackup?: number|null, now?: number}} s
+ *          payables?: object[], lastBackup?: number|null, supportWaiting?: number, now?: number}} s
  * @returns {{id: string, tone: 'bad'|'warn'|'info', title: string, detail: string, action: string}[]}
  *   `action` is what tapping it opens: 'money' (Receivables & payables), 'deliveries' (Delivery timeline) or 'settings'.
  */
 export function attentionItems(s) {
-  const { role, today, invoices = [], sales = [], movements = [], orders = [], payables = [], lastBackup = null, now = Date.now() } = s;
+  const { role, today, invoices = [], sales = [], movements = [], orders = [], payables = [], lastBackup = null, supportWaiting = 0, now = Date.now() } = s;
   const out = [];
 
   if (MONEY_ROLES.includes(role)) {
@@ -57,6 +57,12 @@ export function attentionItems(s) {
           title: `${plural(waited.length, 'contract')} delivered but not invoiced for over 2 weeks`, detail: `${money0(waited.reduce((a, r) => a + r.value, 0))} at the contract price` });
       }
     }
+  }
+
+  if (role === 'owner' && supportWaiting > 0) {
+    out.push({ id: 'support-waiting', tone: 'warn', action: 'settings',
+      title: supportWaiting === 1 ? 'A problem report is waiting for your OK' : `${supportWaiting} problem reports are waiting for your OK`,
+      detail: 'Support will not look at your farm until you give access, under Settings > Support access.' });
   }
 
   if (role === 'owner' && backupDue({ last: lastBackup, hasRecords: sales.length + movements.length > 0, now })) {

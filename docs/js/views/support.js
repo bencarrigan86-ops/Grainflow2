@@ -4,13 +4,13 @@
 // whether it is on, turns it on for 7 days or off early, and shows the log of what happened. A report sends the build,
 // the role, the sync state and the last few errors, with a message; the words are in supportinfo.js.
 
-import { supabase } from '../supabase.js?v=433';
-import { db } from '../storage.js?v=433';
-import { APP_VERSION } from '../version.js?v=433';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=433';
-import { esc } from '../fmt.js?v=433';
-import { buildReport, reportText, recentErrors, supportStatusText, standingStatus, logLine, SUPPORT_TICK, SUPPORT_TICK_HINT, SUPPORT_ALREADY, SUPPORT_OWNER_ONLY, accessNote } from '../supportinfo.js?v=433';
-import { trialWatched, standingText } from '../trials.js?v=433';
+import { supabase } from '../supabase.js?v=434';
+import { db } from '../storage.js?v=434';
+import { APP_VERSION } from '../version.js?v=434';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=434';
+import { esc } from '../fmt.js?v=434';
+import { buildReport, reportText, recentErrors, supportStatusText, standingStatus, logLine, SUPPORT_TICK, SUPPORT_TICK_HINT, SUPPORT_ALREADY, SUPPORT_OWNER_ONLY, SUPPORT_SENT_WAITING, waitingText, accessNote } from '../supportinfo.js?v=434';
+import { trialWatched, standingText } from '../trials.js?v=434';
 
 const UNAVAILABLE = 'Support access is not available yet. Ask whoever looks after Commodity Mate to finish setting it up.';
 
@@ -20,6 +20,14 @@ async function status(farmId) {
   // a trial farm: support was given standing access when it was made, with no end date
   if (await trialWatched(farmId)) return standingStatus(standingText());
   return supportStatusText(data);
+}
+
+/** How many problem reports from this farm are waiting for the owner's OK (0 for anyone but the owner, or if it cannot be asked). */
+export async function supportWaitingCount(farmId) {
+  try {
+    const { data, error } = await supabase.rpc('support_requests_waiting', { p_farm_id: farmId });
+    return error ? 0 : (Number(data) || 0);
+  } catch { return 0; }
 }
 
 async function logRows(farmId) {
@@ -43,9 +51,11 @@ export async function wireSupportCard(root) {
     let st;
     try { st = await status(farmId); } catch (e) { body.innerHTML = `<div class="hint">${esc(e.message)}</div>`; return; }
     const rows = await logRows(farmId);
+    const waiting = st.on ? 0 : await supportWaitingCount(farmId);
     if (!body.isConnected) return;
     body.innerHTML = `
       <div class="row"><span class="label">${esc(st.text)}</span></div>
+      ${waiting ? `<div class="hint" id="support-waiting" style="color:var(--danger)">${esc(waitingText(waiting))}</div>` : ''}
       ${st.on
         ? '<button type="button" class="btn secondary" id="support-off">Take support access away</button>'
         : '<button type="button" class="btn secondary" id="support-on">Give support access for 7 days</button>'}
@@ -90,9 +100,11 @@ export async function openReportProblemSheet() {
     // support access: an owner can give it with the report in one tap (not shown once it is already on, or to anyone but an owner)
     const accessBox = root.querySelector('#rp-access');
     const role = db.getRole();
-    if (role === 'owner' || role === 'manager' || role === 'bookkeeper' || role === 'farm_worker' || role === 'driver' || role === 'advisor') {
+    let wantsSupport = false;   // a report from anyone but the owner still goes, but support waits for the owner's OK
+    if (role) {
       status(db.getFarmId()).then((st) => {
         if (!accessBox.isConnected) return;
+        wantsSupport = !st.on && role !== 'owner';
         if (st.on) accessBox.innerHTML = `<div class="hint" style="margin:8px 0">${esc(SUPPORT_ALREADY)}</div>`;
         else if (role === 'owner') accessBox.innerHTML = `<label class="sw-row" style="padding:8px 0"><input type="checkbox" id="rp-access-tick" /><span><strong>${esc(SUPPORT_TICK)}</strong><span class="meta" style="display:block">${esc(SUPPORT_TICK_HINT)}</span></span></label>`;
         else accessBox.innerHTML = `<div class="hint" style="margin:8px 0">${esc(SUPPORT_OWNER_ONLY)}</div>`;
@@ -110,11 +122,15 @@ export async function openReportProblemSheet() {
         const { error: grantError } = await supabase.rpc('grant_support_access', { p_farm_id: db.getFarmId(), p_days: 7 });
         outcome = grantError ? 'failed' : 'given';
       }
+      if (!outcome && wantsSupport) outcome = 'waiting';
       const note = accessNote(outcome);
       const r = make(note ? `${msg()}\n\n${note}` : msg());
-      const { error } = await supabase.from('problem_reports').insert({ farm_id: db.getFarmId(), role: r.role, build: r.build, message: r.message, details: r.details });
+      const row = { farm_id: db.getFarmId(), role: r.role, build: r.build, message: r.message, details: r.details };
+      let { error } = await supabase.from('problem_reports').insert(outcome === 'waiting' ? { ...row, wants_support: true } : row);
+      // a database that has not had the "wants support" column added yet still takes the report (the note in the message says it)
+      if (error && /wants_support/.test(error.message || '')) ({ error } = await supabase.from('problem_reports').insert(row));
       if (error) { e.target.disabled = false; problem.textContent = 'Could not send it just now. Check your signal and try again, or use Copy instead and send it another way.'; return; }
-      toast(outcome === 'failed' ? 'Sent. Support access did not go through: you can give it under Settings.' : outcome === 'given' ? 'Sent. Support can look at your farm for 7 days' : 'Sent. Thank you');
+      toast(outcome === 'waiting' ? SUPPORT_SENT_WAITING : outcome === 'failed' ? 'Sent. Support access did not go through: you can give it under Settings.' : outcome === 'given' ? 'Sent. Support can look at your farm for 7 days' : 'Sent. Thank you');
       closeSheet();
     });
   });

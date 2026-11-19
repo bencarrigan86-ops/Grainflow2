@@ -1,17 +1,18 @@
-import { db } from '../storage.js?v=433';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=433';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=433';
-import { payablesCost } from '../payables.js?v=433';
-import { commodityClass } from '../commoditycolor.js?v=433';
-import { startProgress, missingLine } from '../helpcontent.js?v=433';
-import { openSetupWalk } from './setupwalk.js?v=433';
-import { attentionItems } from '../attention.js?v=433';
-import { lastBackup } from '../backup.js?v=433';
-import { todayLocal, dmy } from '../fmt.js?v=433';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=433';
-import { openSheet, closeSheet } from '../ui.js?v=433';
-import { positionPdf } from '../positionpdf.js?v=433';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=433';
+import { db } from '../storage.js?v=434';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=434';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=434';
+import { payablesCost } from '../payables.js?v=434';
+import { commodityClass } from '../commoditycolor.js?v=434';
+import { startProgress, missingLine } from '../helpcontent.js?v=434';
+import { openSetupWalk } from './setupwalk.js?v=434';
+import { attentionItems } from '../attention.js?v=434';
+import { lastBackup } from '../backup.js?v=434';
+import { supportWaitingCount } from './support.js?v=434';
+import { todayLocal, dmy } from '../fmt.js?v=434';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=434';
+import { openSheet, closeSheet } from '../ui.js?v=434';
+import { positionPdf } from '../positionpdf.js?v=434';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=434';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -22,7 +23,7 @@ const attentionOpen = () => { try { return localStorage.getItem(ATTN_KEY) !== '0
 /** The things that need looking at today, a line each; empty when there is nothing. */
 function attentionCard() {
   const { invoices, sales, movements } = db.get();
-  const items = attentionItems({ role: db.getRole(), today: todayLocal(), invoices, sales, movements, orders: db.getOrders(), payables: db.getPayables(), lastBackup: lastBackup() });
+  const items = attentionItems({ role: db.getRole(), today: todayLocal(), invoices, sales, movements, orders: db.getOrders(), payables: db.getPayables(), lastBackup: lastBackup(), supportWaiting });
   if (!items.length) return '';
   const worst = items.some((i) => i.tone === 'bad') ? 'bad' : items.some((i) => i.tone === 'warn') ? 'warn' : 'info';
   return `<div class="card" id="attention-card"><details class="fold" id="attention-fold" ${attentionOpen() ? 'open' : ''}>
@@ -35,6 +36,7 @@ function attentionCard() {
 }
 
 let unsub = null;
+let supportWaiting = 0;   // problem reports waiting for the owner's OK (asked when the screen is drawn)
 
 const START_HIDDEN = 'grainflow.start.hidden';
 const startHidden = () => { try { return localStorage.getItem(START_HIDDEN) === '1'; } catch { return false; } };
@@ -62,6 +64,10 @@ export function renderPosition(root) {
   if (unsub) unsub();
   paint(root);
   unsub = db.subscribe(() => paint(root));
+  // the owner is told when a report from the farm is waiting for their OK (asked once here, drawn again only if it changed)
+  if (db.getRole() === 'owner') {
+    supportWaitingCount(db.getFarmId()).then((n) => { if (n !== supportWaiting && root.isConnected) { supportWaiting = n; paint(root); } });
+  }
 }
 
 function paint(root) {

@@ -2,10 +2,10 @@
 // and give them the farm map. Choose the file of old name / new name rows, see what each season would become, then apply.
 // A backup beforehand is the way back: this changes names in the past seasons.
 
-import { db } from '../storage.js?v=433';
-import { openSheet, closeSheet, toast } from '../ui.js?v=433';
-import { esc } from '../fmt.js?v=433';
-import { parseLineup, planLineup, mapCopyReport } from '../lineup.js?v=433';
+import { db } from '../storage.js?v=434';
+import { openSheet, closeSheet, toast } from '../ui.js?v=434';
+import { esc } from '../fmt.js?v=434';
+import { parseLineup, planLineup, mapCopyReport } from '../lineup.js?v=434';
 
 export function openLineupSheet() {
   openSheet('Line up paddock names', (root) => {

@@ -1,36 +1,37 @@
-import { db } from '../storage.js?v=433';
-import { canDelete, canSeeBills, canSeeOrders, canSeeFreight, canAddContracts, canChangeArea } from '../nav.js?v=433';
-import { tileIcon } from '../tileicon.js?v=433';
+import { db } from '../storage.js?v=434';
+import { canDelete, canSeeBills, canSeeOrders, canSeeFreight, canAddContracts, canChangeArea } from '../nav.js?v=434';
+import { tileIcon } from '../tileicon.js?v=434';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=433';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=433';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=433';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify, freezeSheet } from '../ui.js?v=433';
-import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=433';
-import { patternsFor } from '../deliveryplan.js?v=433';
-import { INVOICING } from '../invoicing.js?v=433';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=433';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=433';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=433';
-import { renderRelatedMovements } from './movements.js?v=433';
-import { openInvoiceListSheet } from './invoice.js?v=433';
-import { openContractDocSheet } from './contract.js?v=433';
-import { wireJumps } from '../jump.js?v=433';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=433';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=433';
-import { freightState } from '../freight.js?v=433';
-import { activeSales, paidSales } from '../paidsales.js?v=433';
-import { openVendorDecSheet } from './vendordec.js?v=433';
-import { summarise as summariseOrders } from '../orders.js?v=433';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=433';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=433';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=433';
-import { standardFor } from '../grades.js?v=433';
-import { commodityClass } from '../commoditycolor.js?v=433';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort } from '../salesort.js?v=433';
+} from '../documents.js?v=434';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=434';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=434';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify, freezeSheet } from '../ui.js?v=434';
+import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=434';
+import { patternsFor } from '../deliveryplan.js?v=434';
+import { INVOICING } from '../invoicing.js?v=434';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=434';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=434';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=434';
+import { renderRelatedMovements } from './movements.js?v=434';
+import { openInvoiceListSheet } from './invoice.js?v=434';
+import { openContractDocSheet } from './contract.js?v=434';
+import { wireJumps } from '../jump.js?v=434';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=434';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=434';
+import { freightState } from '../freight.js?v=434';
+import { activeSales, paidSales } from '../paidsales.js?v=434';
+import { openVendorDecSheet } from './vendordec.js?v=434';
+import { summarise as summariseOrders } from '../orders.js?v=434';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=434';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=434';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=434';
+import { standardFor } from '../grades.js?v=434';
+import { commodityClass } from '../commoditycolor.js?v=434';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort, searchSales } from '../salesort.js?v=434';
 
 let unsub = null;
+let saleSearch = '';   // what is typed in the contracts search box (kept while the screen repaints)
 
 export function renderSales(root) {
   if (unsub) unsub();
@@ -42,7 +43,16 @@ function paint(root) {
   const { commodities, sales, movements } = db.get();
   const rollup = salesByCommodity(commodities, sales, movements).filter((r) => r.contractCount > 0).sort(bigFirst((r) => r.tons, (r) => r.commodity.name));   // most tonnes contracted first
   const saleSort = readSaleSort();
-  const groups = groupSalesByCommodity(commodities, activeSales(sales), movements, saleSort);
+  // the contracts shown: the active ones that match the search box, grouped by commodity
+  const contractsHtml = () => {
+    const found = searchSales(activeSales(sales), commodities, saleSearch);
+    const groups = groupSalesByCommodity(commodities, found, movements, saleSort);
+    if (groups.length === 0) return saleSearch.trim() && activeSales(sales).length ? `<div class="empty">No contracts match &ldquo;${esc(saleSearch.trim())}&rdquo;.</div>` : (sales.length ? `<div class="empty">Every contract is marked paid.</div>` : `<div class="empty">No contracts yet.<br/><button class="btn" id="empty-add">Add your first sale</button></div>`);
+    return groups.map((g) => `
+          <div class="group-label" id="grp-${esc(g.id ?? 'none')}"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
+          ${g.sales.map((s, i) => saleRow(s, movements, commodities, i)).join('')}
+        `).join('');
+  };
   const paidList = paidSales(sales);
   // and what buyers are waiting on, for the Orders button
   const ordersSum = summariseOrders(db.getOrders(), movements, todayLocal());
@@ -107,18 +117,16 @@ function paint(root) {
 
       <div class="card input">
         <h2><span class="dot input"></span>Contracts</h2>
-        ${(activeSales(sales).length > 1 || paidList.length || carryList.length) ? `<div class="sale-toolrow">
-          ${activeSales(sales).length > 1 ? `<div class="field"><label for="sale-sort">Sort contracts by</label><select id="sale-sort">${SALE_SORTS.map((o) => `<option value="${o.value}" ${o.value === saleSort ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></div>` : '<span class="sale-spacer"></span>'}
+        ${(activeSales(sales).length > 1 || paidList.length || carryList.length) ? `<div class="mv-searchrow">
+          ${activeSales(sales).length > 1 ? `<input type="search" id="sale-search" aria-label="Search contracts" placeholder="Search&hellip;" value="${esc(saleSearch)}" />
+          <select id="sale-sort" class="storage-sort" aria-label="Sort contracts by">${SALE_SORTS.map((o) => `<option value="${o.value}" ${o.value === saleSort ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select>` : '<span class="sale-spacer" style="flex:1"></span>'}
           ${(paidList.length || carryList.length) ? '<button type="button" class="btn secondary small mv-more-btn" id="sale-more-btn" aria-haspopup="true" aria-expanded="false">More &#9662;</button>' : ''}
         </div>
-        ${(paidList.length || carryList.length) ? `<div class="mv-menu" id="sale-more" hidden style="margin-bottom:10px">
+        ${(paidList.length || carryList.length) ? `<div class="mv-menu" id="sale-more" hidden style="margin-top:8px">
           ${paidList.length ? `<button type="button" id="open-paid">Paid contracts (${paidList.length})</button>` : ''}
           ${carryList.length ? `<button type="button" id="carry-contracts">Bring in ${esc(prevLabel)} contracts&hellip; (${carryList.length})</button>` : ''}
         </div>` : ''}` : ''}
-        ${groups.length === 0 ? (sales.length ? `<div class="empty">Every contract is marked paid.</div>` : `<div class="empty">No contracts yet.<br/><button class="btn" id="empty-add">Add your first sale</button></div>`) : groups.map((g) => `
-          <div class="group-label" id="grp-${esc(g.id ?? 'none')}"><span>${esc(g.name)}</span><span class="n">${money(g.totalValue, 0)}</span></div>
-          ${g.sales.map((s, i) => saleRow(s, movements, commodities, i)).join('')}
-        `).join('')}
+        <div id="sale-list" style="margin-top:10px">${contractsHtml()}</div>
       </div>
     </div>
     ${canAddContracts(db.getRole()) ? '<button class="fab" id="add-sale">+</button>' : ''}
@@ -127,8 +135,16 @@ function paint(root) {
   // The commodity rows in the table at the top jump to that commodity's contracts below.
   wireJumps(root);
 
-  root.querySelectorAll('[data-edit-sale]').forEach((el) => {
+  const wireRows = (scope) => scope.querySelectorAll('[data-edit-sale]').forEach((el) => {
     el.addEventListener('click', () => openSaleSheet(sales.find((s) => s.id === el.dataset.editSale)));
+  });
+  wireRows(root);
+  // typing redraws only the list, so the box keeps its cursor
+  root.querySelector('#sale-search')?.addEventListener('input', (e) => {
+    saleSearch = e.target.value;
+    const list = root.querySelector('#sale-list');
+    list.innerHTML = contractsHtml();
+    wireRows(list);
   });
   root.querySelector('#add-sale')?.addEventListener('click', () => openSaleSheet(null));
   root.querySelector('#open-orders')?.addEventListener('click', () => openOrdersSheet());

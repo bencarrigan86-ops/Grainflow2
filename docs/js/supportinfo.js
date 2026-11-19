@@ -91,12 +91,19 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 export const SUPPORT_TICK = 'Let support look at my farm, read only, for 7 days';
 export const SUPPORT_TICK_HINT = 'So they can see what you see. They cannot change anything or see your bank details. It switches itself off, and you can take it away in Settings.';
 export const SUPPORT_ALREADY = 'Support can already see your farm, read only.';
-export const SUPPORT_OWNER_ONLY = 'Only an owner can let support look at the farm. Ask the owner, who can do it from this same screen or under Settings.';
+export const SUPPORT_OWNER_ONLY = 'Your report will still be sent. Support will not look at your farm until the owner allows it, and the owner will be told.';
+export const SUPPORT_SENT_WAITING = 'Sent. Support will not look at your farm until the owner allows it. The owner has been told.';
+
+/** The owner's line when reports from the farm are waiting for their OK (n of them). */
+export function waitingText(n) {
+  return `${n === 1 ? 'Someone on your farm has sent a problem report' : `${n} problem reports have been sent from your farm`} and support will not look until you allow it.`;
+}
 
 /** What the report says about support access, added under the message so whoever reads it knows (given, or tried and failed). */
 export function accessNote(outcome) {
   if (outcome === 'given') return 'Support access: given for 7 days with this report.';
   if (outcome === 'failed') return 'Support access: the owner ticked the box but it did not go through.';
+  if (outcome === 'waiting') return 'Support access: not given. Support will not look at the farm until the owner allows it.';
   return '';
 }
 

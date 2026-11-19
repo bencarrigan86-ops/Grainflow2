@@ -207,5 +207,15 @@ check('the Production table has a share-of-area column that totals 100%', () => 
   assert.ok(p.includes('<th>% of area</th>') && p.includes('areaShare(r.area, productionTotals.area)') && p.includes("'100%'"));
 });
 
+check('the owner is told when problem reports are waiting for their OK, and nobody else is', () => {
+  const base = { today: '2026-11-19', now: Date.parse('2026-11-19T00:00:00Z'), lastBackup: Date.now() };
+  const one = attentionItems({ ...base, role: 'owner', supportWaiting: 1 }).find((i) => i.id === 'support-waiting');
+  assert.equal(one.title, 'A problem report is waiting for your OK');
+  assert.equal(one.action, 'settings');
+  assert.equal(attentionItems({ ...base, role: 'owner', supportWaiting: 3 }).find((i) => i.id === 'support-waiting').title, '3 problem reports are waiting for your OK');
+  assert.ok(!attentionItems({ ...base, role: 'owner', supportWaiting: 0 }).some((i) => i.id === 'support-waiting'));
+  assert.ok(!attentionItems({ ...base, role: 'manager', supportWaiting: 2 }).some((i) => i.id === 'support-waiting'));
+});
+
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
 console.log('\nall passed');

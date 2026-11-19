@@ -18,37 +18,37 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=433';
-import { setBrandLogo } from './brand.js?v=433';
+import { hydrate } from './hydrate.js?v=434';
+import { setBrandLogo } from './brand.js?v=434';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=433';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=433';
-import { isLegacyDirty } from './dirty.js?v=433';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=433';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=433';
-import { hasDeductions } from './deductions.js?v=433';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=433';
-import { hasHay, hasHayLoad } from './hay.js?v=433';
-import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=433';
-import { todayLocal } from './fmt.js?v=433';
-import { signLoad } from './driversign.js?v=433';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=433';
-import { settleLegs, dedupeLegs } from './legs.js?v=433';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=433';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=433';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=433';
-import { setCommodityOrder } from './commodityorder.js?v=433';
-import { setFarmSwitches, setFarmLevels } from './nav.js?v=433';
-import { readSwitches, readLevels } from './farmswitches.js?v=433';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=433';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=433';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=433';
-import { schedulePush, pushOnReconnect } from './sync.js?v=433';
-import { hasParts as hasAddressParts } from './address.js?v=433';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=433';
-import { linePayableId } from './ginoffset.js?v=433';
+} from './local.js?v=434';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=434';
+import { isLegacyDirty } from './dirty.js?v=434';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=434';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=434';
+import { hasDeductions } from './deductions.js?v=434';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=434';
+import { hasHay, hasHayLoad } from './hay.js?v=434';
+import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=434';
+import { todayLocal } from './fmt.js?v=434';
+import { signLoad } from './driversign.js?v=434';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=434';
+import { settleLegs, dedupeLegs } from './legs.js?v=434';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=434';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=434';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=434';
+import { setCommodityOrder } from './commodityorder.js?v=434';
+import { setFarmSwitches, setFarmLevels } from './nav.js?v=434';
+import { readSwitches, readLevels } from './farmswitches.js?v=434';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=434';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=434';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=434';
+import { schedulePush, pushOnReconnect } from './sync.js?v=434';
+import { hasParts as hasAddressParts } from './address.js?v=434';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=434';
+import { linePayableId } from './ginoffset.js?v=434';
 
 /**
  * A gin bill the lint buyer pays is settled once lint invoices have taken all of it off: the farm owes the gin nothing, the buyer settles

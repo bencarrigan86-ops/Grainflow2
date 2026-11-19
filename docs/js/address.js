@@ -5,7 +5,7 @@
 // stays in the old column and the parts ride beside it. An address that has never been split is read into parts when
 // it is next edited.
 
-import { field } from './ui.js?v=433';
+import { field } from './ui.js?v=434';
 
 export const STATES = ['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT'];
 export const PART_KEYS = ['line1', 'line2', 'town', 'state', 'postcode'];

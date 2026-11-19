@@ -2,14 +2,14 @@
 // underneath. Built from the seasons the farm already holds; nothing is entered here. Owner, manager and bookkeeper only
 // (it is yields and prices, the same line as Position).
 
-import { db } from '../storage.js?v=433';
-import { num, esc, money, todayLocal, dmy } from '../fmt.js?v=433';
-import { openSheet, toast } from '../ui.js?v=433';
-import { canSeeYield } from '../nav.js?v=433';
-import { exportRowsAsCSV } from '../csv.js?v=433';
-import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=433';
-import { averagesPdf } from '../averagespdf.js?v=433';
-import { seasonAverages, finishedSeasons, averagesRows, AVERAGES_COLUMNS } from '../seasonaverages.js?v=433';
+import { db } from '../storage.js?v=434';
+import { num, esc, money, todayLocal, dmy } from '../fmt.js?v=434';
+import { openSheet, toast } from '../ui.js?v=434';
+import { canSeeYield } from '../nav.js?v=434';
+import { exportRowsAsCSV } from '../csv.js?v=434';
+import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=434';
+import { averagesPdf } from '../averagespdf.js?v=434';
+import { seasonAverages, finishedSeasons, averagesRows, AVERAGES_COLUMNS } from '../seasonaverages.js?v=434';
 
 const KEY = 'grainflow.averages.seasons';
 const readPicked = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return Array.isArray(v) ? v : null; } catch { return null; } };

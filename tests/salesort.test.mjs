@@ -4,7 +4,7 @@
 // The order of the contracts on the Sales tab.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { sortSales, SALE_SORTS, DEFAULT_SALE_SORT, isSaleSort, readSaleSort } from '../docs/js/salesort.js';
+import { sortSales, SALE_SORTS, DEFAULT_SALE_SORT, isSaleSort, readSaleSort, searchSales } from '../docs/js/salesort.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -60,10 +60,36 @@ check('the choices are named, the first is the default, and a bad remembered val
 check('the Sales tab has the picker, sorts within each commodity and the paid list, and remembers the choice', () => {
   const v = read('docs/js/views/sales.js');
   assert.ok(v.includes('id="sale-sort"') && v.includes('Sort contracts by'));
-  assert.ok(v.includes('groupSalesByCommodity(commodities, activeSales(sales), movements, saleSort)'));
+  assert.ok(v.includes('groupSalesByCommodity(commodities, found, movements, saleSort)') && v.includes('searchSales(activeSales(sales), commodities, saleSearch)'));
   assert.ok(v.includes('sortSales(sales.filter((s) => s.commodityId === c.id), sort, movements)'));
   assert.ok(v.includes('sortSales(list, readSaleSort(), movements)'));
   assert.ok(v.includes('saveSaleSort(e.target.value)'));
+});
+
+check('the Sales tab has a search box beside the sort, like Storage, that redraws only the list so the cursor stays', () => {
+  const v = read('docs/js/views/sales.js');
+  assert.ok(v.includes('<div class="mv-searchrow">') && v.includes('id="sale-search"') && v.includes('class="storage-sort"'));
+  assert.ok(v.includes("root.querySelector('#sale-search')?.addEventListener('input'") && v.includes("list.innerHTML = contractsHtml();") && v.includes('wireRows(list);'));
+  assert.ok(v.indexOf('id="sale-search"') < v.indexOf('id="sale-sort"'), 'search first, then the sort');
+});
+check('searching finds a contract by any word of its buyer, number, commodity, grade, place or notes; every word must match', () => {
+  const commodities = [{ id: 'w', name: 'Wheat' }, { id: 'c', name: 'Canola' }];
+  const sales = [
+    { id: '1', buyer: 'GrainCorp', contractNo: 'GC-1001', commodityId: 'w', grade: 'APW1', location: 'Dubbo' },
+    { id: '2', buyer: 'Louis Dreyfus', contractNo: 'LD77', commodityId: 'c', grade: 'CAN1', notes: 'Ex farm' },
+    { id: '3', buyer: 'Emerald', ourRef: 'EG9', commodityId: 'w', grade: 'H2' },
+  ];
+  const ids = (t) => searchSales(sales, commodities, t).map((s) => s.id);
+  assert.deepEqual(ids(''), ['1', '2', '3']);
+  assert.deepEqual(ids('   '), ['1', '2', '3']);
+  assert.deepEqual(ids('graincorp'), ['1']);
+  assert.deepEqual(ids('gc-1001'), ['1']);
+  assert.deepEqual(ids('wheat'), ['1', '3']);
+  assert.deepEqual(ids('wheat apw'), ['1'], 'every word must match');
+  assert.deepEqual(ids('CANOLA ex farm'), ['2']);
+  assert.deepEqual(ids('dubbo'), ['1']);
+  assert.deepEqual(ids('eg9'), ['3']);
+  assert.deepEqual(ids('nothing like this'), []);
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
