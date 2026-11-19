@@ -55,7 +55,7 @@ check('the screens follow: no orders tile or contract orders, no overheads card,
   const prod = read('docs/js/views/production.js');
   assert.ok(prod.includes("canChangeProduction(db.getRole()) ? '<button class=\"fab\" id=\"add-field\">+</button>' : ''") && prod.includes('if (!canChangeProduction(db.getRole())) freezeSheet(root);'));
   const inp = read('docs/js/views/inputs.js');
-  assert.ok(inp.includes("if (!canChangeProduction(db.getRole()) || !canChangeArea(db.getRole(), 'inputs')) return '';"));
+  assert.ok(inp.includes("if (!canChangeInputs(db.getRole())) return '';"));
   const sy = read('docs/js/sync.js');
   const w = sy.slice(sy.indexOf('const WRITABLE'));
   assert.ok(!/bookkeeper: \[[^\]]*(overheads|'orders'|input_stock)/.test(w), 'a bookkeeper does not push those');

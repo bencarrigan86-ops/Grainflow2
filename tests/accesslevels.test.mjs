@@ -1,17 +1,17 @@
 // Run with:
 //   node tests/accesslevels.test.mjs
 //
-// What an owner can take away from a role, area by area: kept with the farm, only ever less than the standard rules give, applied to
-// the tabs and the screens, left out of what a phone sends, and enforced by the database beside the standard policies.
+// What an owner can set for a role, area by area, up or down from the standard rules: kept with the farm, applied to the tabs and the
+// screens, left out of (or added to) what a phone sends, and enforced by the database beside the standard policies.
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import {
-  LEVEL_ROLES, LEVEL_AREAS, LEVEL_TABLES, SCREEN_AREAS, AREA_TAB, readLevels, withLevel, withSwitch, readSwitches, narrowTo, levelChoices,
+  LEVEL_ROLES, LEVEL_AREAS, LEVEL_TABLES, SCREEN_AREAS, AREA_TAB, readLevels, withLevel, withSwitch, readSwitches, levelNow, levelChoices, pricesShown,
 } from '../docs/js/farmswitches.js';
 import { ACCESS, effectiveAccess } from '../docs/js/helpcontent.js';
 import {
   setFarmSwitches, setFarmLevels, tabsForRole, landingTabFor, canOpen, canSeeOrders, canSeeOverheads, canSeePrices, canSeeBills, canEditLoads,
-  canChangeProduction, canSeeArea, canChangeArea,
+  canChangeProduction, canSeeArea, canChangeArea, canSeeFreight, canAddContracts, canChangeInputs,
 } from '../docs/js/nav.js';
 
 let failures = 0;
@@ -40,29 +40,44 @@ check('nothing saved leaves the table as it was', () => {
   assert.deepEqual(effectiveAccess({}).map((r) => r.area), ACCESS.map((r) => r.area));
 });
 
-console.log('\n=== only ever less ===');
-check('a choice below the cell takes effect; one at or above it does nothing', () => {
-  assert.equal(narrowTo('full', 'view'), 'view');
-  assert.equal(narrowTo('full', 'none'), 'none');
-  assert.equal(narrowTo('view', 'full'), 'view', 'never more than the rules give');
-  assert.equal(narrowTo('own', 'full'), 'own');
-  assert.equal(narrowTo('none', 'view'), 'none');
-  assert.equal(narrowTo('full', ''), 'full');
+console.log('\n=== less, and more ===');
+check('a pick is the whole answer, above or below the standard; no pick is the standard', () => {
+  assert.equal(levelNow('full', 'view'), 'view');
+  assert.equal(levelNow('full', 'none'), 'none');
+  assert.equal(levelNow('view', 'full'), 'full', 'raised above what the rules give');
+  assert.equal(levelNow('none', 'view'), 'view');
+  assert.equal(levelNow('full', ''), 'full');
+  assert.equal(levelNow('own', undefined), 'own');
 });
-check('what an owner may pick runs from None up to the standard, with no prices only where prices are shown', () => {
+check('what an owner may pick runs from None up to Full; no prices only on contracts; own loads and used stock stay as they are', () => {
   assert.deepEqual(levelChoices('full'), ['none', 'view', 'full']);
+  assert.deepEqual(levelChoices('view'), ['none', 'view', 'full']);
+  assert.deepEqual(levelChoices('none'), ['none', 'view', 'full'], 'a cell at None can be raised');
   assert.deepEqual(levelChoices('own'), ['none', 'view', 'own']);
-  assert.deepEqual(levelChoices('view'), ['none', 'view']);
   assert.deepEqual(levelChoices('used'), ['none', 'used']);
-  assert.deepEqual(levelChoices('none'), ['none']);
-  assert.deepEqual(levelChoices('full', { area: 'contracts', prices: true }), ['none', 'tonnes', 'view', 'full']);
-  assert.deepEqual(levelChoices('full', { area: 'contracts', prices: false }), ['none', 'view', 'full']);
+  assert.deepEqual(levelChoices('draft'), ['none', 'view', 'draft', 'full']);
+  assert.deepEqual(levelChoices('tonnes', { area: 'contracts' }), ['none', 'tonnes', 'view', 'full']);
+  assert.deepEqual(levelChoices('full', { area: 'contracts' }), ['none', 'tonnes', 'view', 'full']);
 });
-check('the table follows: a bookkeeper set to See on contracts shows See, and an owner column never changes', () => {
-  const rows = effectiveAccess({}, { contracts: { bookkeeper: 'view' }, loads: { manager: 'none' }, position: { owner: 'none' } });
-  assert.equal(rows.find((r) => r.key === 'contracts').bookkeeper, 'view');
-  assert.equal(rows.find((r) => r.key === 'loads').manager, 'none');
-  assert.equal(rows.find((r) => r.key === 'position').owner, 'view');
+check('prices are shown by the standard rules to an owner, a bookkeeper, and a manager or advisor only with the switches', () => {
+  assert.equal(pricesShown('bookkeeper'), true);
+  assert.equal(pricesShown('manager', {}), false);
+  assert.equal(pricesShown('manager', { managerSeesPrices: true }), true);
+  assert.equal(pricesShown('advisor', { advisorSeesLoads: true }), false);
+  assert.equal(pricesShown('advisor', { advisorSeesLoads: true, advisorSeesPrices: true }), true);
+});
+check('the table follows: a manager without prices shows No prices, a pick shows as picked, and an owner column never changes', () => {
+  const cell = (rows, key, role) => rows.find((r) => r.key === key)[role];
+  assert.equal(cell(effectiveAccess({}), 'contracts', 'manager'), 'tonnes');
+  assert.equal(cell(effectiveAccess({ managerSeesPrices: true }), 'contracts', 'manager'), 'view');
+  const rows = effectiveAccess({}, { contracts: { bookkeeper: 'view', driver: 'full' }, loads: { manager: 'none', advisor: 'view' }, position: { owner: 'none', bookkeeper: 'view' }, production: { driver: 'view' } });
+  assert.equal(cell(rows, 'contracts', 'bookkeeper'), 'view');
+  assert.equal(cell(rows, 'contracts', 'driver'), 'full', 'raised from none');
+  assert.equal(cell(rows, 'loads', 'manager'), 'none');
+  assert.equal(cell(rows, 'loads', 'advisor'), 'view', 'raised from none');
+  assert.equal(cell(rows, 'position', 'bookkeeper'), 'view', 'raised from none');
+  assert.equal(cell(rows, 'position', 'owner'), 'view');
+  assert.equal(cell(rows, 'production', 'driver'), 'view');
 });
 check('every area a choice can be made in is a row of the table, with a key', () => {
   for (const a of LEVEL_AREAS) assert.ok(ACCESS.some((r) => r.key === a), a);
@@ -103,13 +118,45 @@ check('the gates follow: orders, overheads, prices, bills, loads, paddocks and s
   assert.equal(canSeePrices('bookkeeper'), true);
   assert.equal(canSeeBills('bookkeeper'), true);
 });
+check('raising: a pick above the standard gives the tab, the buttons and the tables the role did not have', () => {
+  reset();
+  assert.deepEqual(tabsForRole('driver'), ['movement']);
+  setFarmLevels({ production: { driver: 'view' }, contracts: { driver: 'tonnes' }, reports: { driver: 'full' } });
+  assert.deepEqual(tabsForRole('driver'), ['movement', 'production', 'sales', 'reports']);
+  assert.equal(canOpen('driver', 'production'), true);
+  assert.equal(canChangeProduction('driver'), false, 'See does not change');
+  assert.equal(canSeePrices('driver'), false, 'no prices');
+  setFarmLevels({ production: { driver: 'full' }, contracts: { driver: 'view' } });
+  assert.equal(canChangeProduction('driver'), true);
+  assert.equal(canSeePrices('driver'), true);
+  assert.equal(canAddContracts('driver'), false);
+  setFarmLevels({ contracts: { manager: 'full', advisor: 'full' }, grainorders: { bookkeeper: 'view' }, freightorders: { advisor: 'view' }, overheads: { manager: 'view' }, invoices: { advisor: 'view' }, loads: { advisor: 'full', bookkeeper: 'full' }, inputs: { bookkeeper: 'full' }, bills: { driver: 'view' } });
+  assert.equal(canAddContracts('manager'), true);
+  assert.equal(canSeeOrders('bookkeeper'), true);
+  assert.equal(canSeeFreight('advisor'), true);
+  assert.equal(canSeeOverheads('manager'), true);
+  assert.equal(canSeeBills('advisor'), true);
+  assert.equal(canSeeBills('driver'), true);
+  assert.equal(canEditLoads('advisor'), true);
+  assert.equal(canChangeInputs('bookkeeper'), true);
+  assert.equal(canSeePrices('manager'), true);
+  assert.equal(canSeeOrders('farm_worker'), false, 'nobody else is touched');
+  reset();
+  assert.equal(canAddContracts('manager'), false);
+  assert.equal(canAddContracts('bookkeeper'), true);
+  assert.equal(canChangeInputs('bookkeeper'), false);
+  assert.equal(canSeeFreight('bookkeeper'), true);
+  assert.equal(canSeeFreight('driver'), false);
+});
 check('the app hands the saved choices to nav.js, and the phone leaves out what it may not send', () => {
   assert.ok(read('docs/js/storage.js').includes('setFarmLevels(readLevels(data.businessDetails?.switches))'));
   const sy = read('docs/js/sync.js');
   assert.ok(sy.includes("for (const [area, tables] of Object.entries(LEVEL_TABLES)) if (['none', 'view'].includes(farmLevel(role, area)))"));
   assert.ok(sy.includes('return list.filter((x) => !held.has(x));'));
+  assert.ok(sy.includes("if (farmLevel(role, area) === 'full') tables.forEach"), 'a table raised to Full is sent');
   const v = read('docs/js/views/settingspeople.js');
-  assert.ok(v.includes('data-level="') && v.includes('withLevel(') && v.includes('data-level-reset'));
+  assert.ok(v.includes('data-level="') && v.includes('withLevel(') && v.includes('data-level-reset') && v.includes('class="ab-tap'), 'the oval is the button');
+  assert.ok(v.includes('ab-up') && v.includes('ab-down'), 'more and less are outlined differently');
   assert.ok(read('docs/js/views/help.js').includes('readLevels(db.getBusinessDetails().switches)'), 'Help shows the farm\'s own table');
 });
 
@@ -139,6 +186,31 @@ check('the policy test of help.test.mjs does not read these as standard policies
   const sql = readFileSync(new URL('20261220000000_access_levels.sql', dir), 'utf8');
   assert.ok(!/create policy \w+_(select|insert|update) on \w+ for /.test(sql));
   assert.ok(readdirSync(dir).includes('20261220000000_access_levels.sql'));
+});
+
+console.log('\n=== the database: raising ===');
+check('every table of every area has permissive policies that add See and Full, in a file the paste file carries', () => {
+  const sql = read('supabase/migrations/20261221000000_access_raise.sql');
+  for (const [area, tables] of Object.entries(LEVEL_TABLES)) {
+    for (const t of tables) {
+      assert.ok(new RegExp(`create policy ${t}_raise_select on ${t} for select\\s+using \\(app_cell\\(farm_id, '${area}'\\) in \\(`).test(sql), `${t} select`);
+      assert.ok(new RegExp(`create policy ${t}_raise_insert on ${t} for insert\\s+with check \\(app_cell\\(farm_id, '${area}'\\) = 'full'\\)`).test(sql), `${t} insert`);
+      assert.ok(new RegExp(`create policy ${t}_raise_update on ${t} for update\\s+using \\(app_cell\\(farm_id, '${area}'\\) = 'full'\\)\\s+with check \\(app_cell\\(farm_id, '${area}'\\) = 'full'\\)`).test(sql), `${t} update`);
+    }
+  }
+  assert.ok(sql.includes("create policy sale_terms_raise_select on sale_terms for select\n  using (app_cell(farm_id, 'contracts') in ('view', 'full') and deleted_at is null);"), 'the prices need See or Full, not No prices');
+  assert.ok(sql.includes("create policy sales_raise_select on sales for select\n  using (app_cell(farm_id, 'contracts') in ('tonnes', 'view', 'full')"));
+  assert.equal((sql.match(/create policy \w+_raise_/g) || []).length, Object.values(LEVEL_TABLES).flat().length * 3);
+  assert.ok(read('supabase/paste-into-sql-editor.sql').includes('create policy fields_raise_select'));
+});
+check('the switches that hold rows back from a kind of login give way to the pick for that login in that area', () => {
+  const sql = read('supabase/migrations/20261221000000_access_raise.sql');
+  for (const [t, area] of [['movements', 'loads'], ['movement_legs', 'loads'], ['movement_photos', 'loads'], ['sales', 'contracts'], ['orders', 'grainorders'], ['invoices', 'invoices'], ['payables', 'bills']]) {
+    const m = sql.match(new RegExp(`create policy ${t}_(advisor_\\w+|manager_hidden) on ${t} as restrictive for select\\s+using \\([^;]*app_cell\\(farm_id, '${area}'\\) in \\(`));
+    assert.ok(m, t);
+  }
+  assert.ok(!sql.includes("'owner'"), 'nothing names the owner');
+  for (const m of sql.matchAll(/app_cell\(farm_id, '(\w+)'\)/g)) assert.ok(LEVEL_AREAS.includes(m[1]) && !SCREEN_AREAS.includes(m[1]), m[1]);
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

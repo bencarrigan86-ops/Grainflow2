@@ -1470,10 +1470,13 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .area-block .ab-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
 .area-block .ab-roles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; text-align: center; margin-bottom: 4px; }
 .area-block .ab-roles > div { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.area-block .ab-role { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0; }
+.area-block .ab-role { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0; min-height: 22px; display: flex; align-items: flex-end; }
 .area-block .ab-roles span[title] { min-width: 0 !important; padding: 2px 4px !important; }
 .sw-row.sw-off { opacity: .55; cursor: default; }
-/* the owner's pick for a role in an area (Settings > People > Who can do what) */
-.area-block .ab-roles.ab-edit { grid-template-columns: repeat(3, 1fr); gap: 8px 6px; }
-.area-block .ab-pick { width: 100%; min-width: 0; padding: 6px 4px; font-size: 13px; text-align-last: center; }
-.area-block .ab-pick.ab-changed { border-color: var(--accent-summary); font-weight: 700; }
+/* the owner's pick for a role in an area: the oval is a button; a red outline is more than the standard, a dark one is less */
+.area-block .ab-tap { background: none; border: 2px solid transparent; border-radius: 14px; padding: 1px; cursor: pointer; line-height: 1; }
+.area-block .ab-tap.ab-up { border-color: var(--danger, #c62828); }
+.area-block .ab-tap.ab-down { border-color: var(--text); }
+.ab-opt { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; margin-bottom: 8px; }
+.ab-opt > span:first-child { flex: none; }
+.ab-opt.ab-now { border-color: var(--text); }

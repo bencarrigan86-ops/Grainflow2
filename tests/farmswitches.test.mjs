@@ -9,7 +9,7 @@ import { SWITCHES, readSwitches, withSwitch, switchGroups, switchesForArea } fro
 import { ACCESS, LEVELS, effectiveAccess } from '../docs/js/helpcontent.js';
 import { setFarmSwitches, tabsForRole, routesForRole, landingTabFor, canOpen, canSeeYield, canEditLoads, canDelete, canMarkFinal, canSeeBills } from '../docs/js/nav.js';
 import { hubGroups } from '../docs/js/reportshub.js';
-import { setFarmSwitches as setStampedSwitches } from '../docs/js/nav.js?v=424';   // the copy the app's own modules import
+import { setFarmSwitches as setStampedSwitches } from '../docs/js/nav.js?v=425';   // the copy the app's own modules import
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
 let failures = 0;
@@ -176,7 +176,7 @@ check('every switch sits under an area of the table, and one it needs is another
 
 check('the table for a farm with every switch off is the standard table', () => {
   const eff = effectiveAccess({});
-  assert.deepEqual(eff, ACCESS);
+  assert.deepEqual(eff, ACCESS.map((r) => (r.key === 'contracts' ? { ...r, manager: 'tonnes' } : r)), 'the standard table, with a manager shown No prices on contracts');
   assert.notEqual(eff[0], ACCESS[0], 'new rows: the standard table is never changed');
 });
 
@@ -228,7 +228,7 @@ check('the table agrees with the tab bar for those two, and a manager kept from 
   const sw = { driverSeesStorage: true, workerSeesSales: true, managerHidesBills: true };
   const rows = effectiveAccess(sw);
   assert.equal(cell(rows, 'Storage', 'driver'), 'view');
-  assert.equal(cell(rows, 'Contracts and prices', 'farm_worker'), 'view');
+  assert.equal(cell(rows, 'Contracts and prices', 'farm_worker'), 'tonnes', 'contracts without prices');
   assert.equal(cell(rows, 'Invoices', 'manager'), 'none'); assert.equal(cell(rows, 'Bills', 'manager'), 'none');
   assert.equal(cell(rows, 'Invoices', 'owner'), 'full');
   setFarmSwitches(sw);

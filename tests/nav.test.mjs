@@ -38,8 +38,9 @@ function readPolicies() {
   const out = new Map();
   for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) {
     const sql = readFileSync(join(dir, f), 'utf8');
-    for (const m of sql.matchAll(/create policy \w+_select on (\w+) for select\s*([\s\S]*?);/g)) {
-      const [, table, body] = m;
+    for (const m of sql.matchAll(/create policy (\w+)_select on (\w+) for select\s*([\s\S]*?);/g)) {
+      const [, , table, body] = m;
+      if (m[1].endsWith('_raise')) continue;   // an owner's pick giving one login more (20261221): the tab bar follows the standard policy
       const named = [...new Set([...body.matchAll(/'(owner|manager|bookkeeper|farm_worker|driver)'/g)]
         .map((x) => x[1]))];
       out.set(table, named.length ? named : null);   // null = every member

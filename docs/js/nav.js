@@ -15,7 +15,7 @@
 // Pulled out of main.js for the same reason as boot.js and reconcile.js: a
 // decision worth testing should not be trapped inside a render function.
 
-import { AREA_TAB } from './farmswitches.js?v=424';
+import { AREA_TAB, levelRank } from './farmswitches.js?v=425';
 
 export const ROLES = ['owner', 'manager', 'bookkeeper', 'farm_worker', 'driver', 'advisor'];
 
@@ -88,14 +88,16 @@ export const farmSwitch = (key) => switches[key] === true;
 // What the owner has taken away from a role in an area (farmswitches.js, readLevels), handed over the same way. Empty: the standard rules.
 let levels = {};
 export function setFarmLevels(obj) { levels = obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {}; }
-/** The owner's choice for this role in this area ('none', 'tonnes', 'view', 'full'), or '' when it is the standard. */
+/** The owner's pick for this role in this area ('none', 'tonnes', 'view', 'full'), or '' when it is the standard. */
 export const farmLevel = (role, area) => levels?.[area]?.[role] || '';
 const cut = (role, area) => farmLevel(role, area) === 'none';
-const noChange = (role, area) => ['none', 'view'].includes(farmLevel(role, area));
-/** May this role open this area at all? False only when the owner has set it to None. */
-export const canSeeArea = (role, area) => !cut(role, area);
-/** May this role add and change in this area? False when the owner has set it to See or None. */
-export const canChangeArea = (role, area) => !noChange(role, area);
+/**
+ * May this role see this area? The owner's pick is the whole answer when there is one (so it can give more than the standard rule
+ * as well as less); with none, `standard` is what the standard rule and the switches say (true where this is only used to take away).
+ */
+export const canSeeArea = (role, area, standard = true) => { const o = farmLevel(role, area); return o ? levelRank(o) >= 1 : standard; };
+/** May this role add and change in this area? Same shape: only Full does, when the owner has picked; else the standard. */
+export const canChangeArea = (role, area, standard = true) => { const o = farmLevel(role, area); return o ? o === 'full' : standard; };
 
 const known = (role) => (ROLES.includes(role) || role === 'support' ? role : 'driver');
 
@@ -110,8 +112,10 @@ export function tabsForRole(role) {
   if (r === 'farm_worker' && farmSwitch('workerSeesSales') && !bar.includes('sales')) bar.splice(bar.indexOf('production') + 1, 0, 'sales');
   // an advisor the owner has let see loads and contracts gets the rest of the bar, tonnes without prices unless those are on too
   if (r === 'advisor' && farmSwitch('advisorSeesLoads')) bar = ['position', 'production', 'sales', 'movement', 'storage', 'reports'];
-  // and what the owner has set to None for this role on this farm
-  return bar.filter((tab) => !Object.entries(AREA_TAB).some(([area, t]) => t === tab && cut(r, area)));
+  // and what the owner has picked for this role on this farm: None takes a tab away, See or Full gives one the role did not have
+  bar = bar.filter((tab) => !Object.entries(AREA_TAB).some(([area, t]) => t === tab && cut(r, area)));
+  for (const [area, tab] of Object.entries(AREA_TAB)) if (!bar.includes(tab) && levelRank(farmLevel(r, area)) >= 1) bar.push(tab);
+  return bar;
 }
 
 /** Everything the role may open, bar or not. */
@@ -173,31 +177,39 @@ export function canSeeYield(role) {
 }
 
 /** Grain orders (who is to deliver what, and when): an owner and a manager. A bookkeeper is not sent them. */
-export const canSeeOrders = (role) => (role === 'owner' || role === 'manager') && !cut(role, 'grainorders');
+export const canSeeOrders = (role) => canSeeArea(role, 'grainorders', role === 'owner' || role === 'manager');
+
+/** Freight orders (loads to cart, and the carrier): an owner, a manager and a bookkeeper. */
+export const canSeeFreight = (role) => canSeeArea(role, 'freightorders', ['owner', 'manager', 'bookkeeper'].includes(role));
+
+/** May this role add and change contracts? An owner and a bookkeeper. */
+export const canAddContracts = (role) => canChangeArea(role, 'contracts', role === 'owner' || role === 'bookkeeper');
 
 /** The whole farm's overheads: an owner; a manager once the farm has switched it on. A bookkeeper does not see them. */
 export function canSeeOverheads(role) {
-  if (cut(role, 'overheads')) return false;
-  if (role === 'owner' || role === 'support') return true;
-  if (role === 'manager') return farmSwitch('managerSeesOverheads');
-  if (role === 'advisor') return farmSwitch('advisorSeesLoads') && farmSwitch('advisorSeesOverheads');
-  return false;
+  let std = false;
+  if (role === 'owner' || role === 'support') std = true;
+  else if (role === 'manager') std = farmSwitch('managerSeesOverheads');
+  else if (role === 'advisor') std = farmSwitch('advisorSeesLoads') && farmSwitch('advisorSeesOverheads');
+  return canSeeArea(role, 'overheads', std);
 }
 
 /**
  * May this role change paddocks, yields and the stock of seed, fertiliser, fuel and chemical? A bookkeeper looks and changes
  * none of it (the database refuses the writes), and so does an advisor or the support login, so the screen offers no way to try.
  */
-export const canChangeProduction = (role) => !['bookkeeper', 'advisor', 'support'].includes(role) && !noChange(role, 'production');
+export const canChangeProduction = (role) => canChangeArea(role, 'production', !['bookkeeper', 'advisor', 'support'].includes(role));
+
+/** May this role record what is bought, used and counted of seed, fertiliser, fuel and chemical? Those who change production, unless the owner has picked otherwise. */
+export const canChangeInputs = (role) => canChangeArea(role, 'inputs', canChangeProduction(role));
 
 /**
  * May this role add and change loads? Owners, managers, workers and drivers always; a bookkeeper only on a farm that has switched
  * it on; an advisor or support never. (The database says the same: see 20261210000000_farm_switches_two.sql.)
  */
 export function canEditLoads(role) {
-  if (noChange(role, 'loads')) return false;
-  if (role === 'bookkeeper') return farmSwitch('bookkeeperEditsLoads');
-  return ['owner', 'manager', 'farm_worker', 'driver'].includes(role);
+  const std = role === 'bookkeeper' ? farmSwitch('bookkeeperEditsLoads') : ['owner', 'manager', 'farm_worker', 'driver'].includes(role);
+  return canChangeArea(role, 'loads', std);
 }
 
 /** May this role delete a load or a contract? An owner or manager always; the rest unless the farm has reserved it for them. */
@@ -216,7 +228,8 @@ export function canMarkFinal(role) {
  * would be sums with the prices left out.
  */
 export function canSeePrices(role) {
-  if (['none', 'tonnes'].includes(farmLevel(role, 'contracts'))) return false;   // the owner has kept the prices from this role
+  const picked = farmLevel(role, 'contracts');
+  if (picked) return picked === 'view' || picked === 'full';   // the owner has chosen: only See and Full show the prices
   if (role === 'owner' || role === 'bookkeeper') return true;
   if (role === 'manager') return farmSwitch('managerSeesPrices');
   if (role === 'advisor') return farmSwitch('advisorSeesLoads') && farmSwitch('advisorSeesPrices');
@@ -228,9 +241,9 @@ export function canSeePrices(role) {
  * once it has switched on loads and prices. Nobody else (as the standard rules already say).
  */
 export function canSeeBills(role) {
-  if (cut(role, 'invoices') && cut(role, 'bills')) return false;
-  if (role === 'owner' || role === 'bookkeeper') return true;
-  if (role === 'manager') return !farmSwitch('managerHidesBills');
-  if (role === 'advisor') return farmSwitch('advisorSeesLoads') && farmSwitch('advisorSeesPrices');
-  return false;
+  let std = false;
+  if (role === 'owner' || role === 'bookkeeper') std = true;
+  else if (role === 'manager') std = !farmSwitch('managerHidesBills');
+  else if (role === 'advisor') std = farmSwitch('advisorSeesLoads') && farmSwitch('advisorSeesPrices');
+  return canSeeArea(role, 'invoices', std) || canSeeArea(role, 'bills', std);
 }

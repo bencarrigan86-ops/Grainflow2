@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=424';
-import { tileIcon } from '../tileicon.js?v=424';
-import { cropCostPerHa } from '../grossmargin.js?v=424';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=424';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=424';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=424';
-import { describeMerge } from '../merge.js?v=424';
-import { renderRelatedMovements } from './movements.js?v=424';
-import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=424';
-import { wireJumps } from '../jump.js?v=424';
-import { openMapSheet } from './farmmap.js?v=424';
-import { openInputsSheet } from './inputs.js?v=424';
-import { openSprayFormSheet, canSpray } from './spray.js?v=424';
-import { stockLevels } from '../inputs.js?v=424';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=424';
-import { openModulesPickedSheet } from './modulespicked.js?v=424';
-import { openBalesBaledSheet } from './balesbaled.js?v=424';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=424';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=424';
+import { db } from '../storage.js?v=425';
+import { tileIcon } from '../tileicon.js?v=425';
+import { cropCostPerHa } from '../grossmargin.js?v=425';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=425';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=425';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=425';
+import { describeMerge } from '../merge.js?v=425';
+import { renderRelatedMovements } from './movements.js?v=425';
+import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=425';
+import { wireJumps } from '../jump.js?v=425';
+import { openMapSheet } from './farmmap.js?v=425';
+import { openInputsSheet } from './inputs.js?v=425';
+import { openSprayFormSheet, canSpray } from './spray.js?v=425';
+import { stockLevels } from '../inputs.js?v=425';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=425';
+import { openModulesPickedSheet } from './modulespicked.js?v=425';
+import { openBalesBaledSheet } from './balesbaled.js?v=425';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=425';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=425';
 
 let unsub = null;
 
@@ -30,7 +30,7 @@ function paint(root) {
   const showYield = canSeeYield(db.getRole());
   const { commodities, fields, movements } = db.get();
   // prices are money: the people who see the books see the stock
-  const canSeeInputs = ['owner', 'manager', 'bookkeeper', 'farm_worker'].includes(db.getRole()) && canSeeArea(db.getRole(), 'inputs');
+  const canSeeInputs = canSeeArea(db.getRole(), 'inputs', ['owner', 'manager', 'bookkeeper', 'farm_worker'].includes(db.getRole()));
   const inputProducts = canSeeInputs ? stockLevels(db.getInputMoves()).length : 0;
   const sprayAllowed = canSpray(db.getRole());
   const sprayOpen = sprayAllowed ? db.getSprayJobs().filter((j) => j.status !== 'done').length : 0;

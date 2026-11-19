@@ -4,14 +4,14 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=424';
-import { LEVEL_ROLES, narrowTo } from './farmswitches.js?v=424';
+import { ROLES, canOpen } from './nav.js?v=425';
+import { LEVEL_ROLES, levelNow, pricesShown } from './farmswitches.js?v=425';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
 export const LEVELS = {
   full: { label: 'Add and change', short: 'Full' },
-  view: { label: 'See only', short: 'See' },
+  view: { label: 'View only', short: 'View' },
   own: { label: 'Add loads, change open ones', short: 'Loads' },
   used: { label: 'See stock, record use and counts (no prices)', short: 'Use' },
   draft: { label: 'Write drafts for a manager to send', short: 'Draft' },
@@ -119,8 +119,11 @@ export function effectiveAccess(switches = {}, levels = {}) {
     if (on('advisorSeesPrices')) for (const a of ['Invoices', 'Bills', 'Grain orders', 'Freight orders']) set(a, 'advisor', 'view');
     if (on('advisorSeesOverheads')) set('Overheads', 'advisor', 'view');
   }
-  // what the owner has taken away on top of that (see farmswitches.js): only ever less than the cell had
-  for (const r of rows) for (const role of LEVEL_ROLES) { const chosen = levels?.[r.key]?.[role]; if (chosen) r[role] = narrowTo(r[role], chosen); }
+  // a role that sees contracts but is not shown the prices has "no prices" in that cell (the table above says View, with a note)
+  const contracts = rows.find((x) => x.key === 'contracts');
+  if (contracts) for (const role of LEVEL_ROLES) if (contracts[role] === 'view' && !pricesShown(role, switches)) contracts[role] = 'tonnes';
+  // and what the owner has picked on top of that (see farmswitches.js): the pick is the answer, more or less than the standard
+  for (const r of rows) for (const role of LEVEL_ROLES) { const chosen = levels?.[r.key]?.[role]; if (chosen) r[role] = levelNow(r[role], chosen); }
   return rows;
 }
 
