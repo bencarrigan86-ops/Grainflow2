@@ -9,9 +9,9 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase } from './supabase.js?v=418';
-import { pickMembership, recallMembership, farmChoices } from './membership.js?v=418';
-import { newToken, expiryFrom } from './invites.js?v=418';
+import { supabase } from './supabase.js?v=419';
+import { pickMembership, recallMembership, farmChoices } from './membership.js?v=419';
+import { newToken, expiryFrom } from './invites.js?v=419';
 
 /** The signed-in user, or null. */
 export async function getUser() {
@@ -303,13 +303,13 @@ export async function changeMemberRole(farmId, userId, role, canWriteProduction 
  *
  * Also a soft delete, and deliberately reversible: re-inviting them un-deletes
  * this same row, which is what bringing back a seasonal worker should do.
+ *
+ * Through remove_member(), not a plain update: Postgres checks the updated row against the select policy too, which
+ * hides rows with deleted_at set, so the update was refused for the owner as well. The function also keeps the farm
+ * from being left without an owner.
  */
 export async function removeMember(farmId, userId) {
-  const { error } = await supabase
-    .from('farm_users')
-    .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-    .eq('farm_id', farmId)
-    .eq('user_id', userId);
+  const { error } = await supabase.rpc('remove_member', { p_farm: farmId, p_user: userId });
   if (error) throw new Error(error.message);
 }
 

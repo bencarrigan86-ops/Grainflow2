@@ -1,13 +1,13 @@
 // The setup walk-through: a sheet that asks one thing at a time, in the order a farm gets set up, and saves as it goes.
 // Skip for now is always there; Continue setup on Position comes back to the first step not done.
 
-import { db } from '../storage.js?v=418';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, toast, notify } from '../ui.js?v=418';
-import { esc, todayLocal } from '../fmt.js?v=418';
-import { walkSteps, seasonLabel, businessPatch, commodityRecord, fieldRecord, storageRecord, saleRecord, loadRecord, invoiceable } from '../setupwalk.js?v=418';
-import { openInvoiceListSheet } from './invoice.js?v=418';
-import { openMapSheet } from './farmmap.js?v=418';
-import { openLoadImportSheet } from './importloads.js?v=418';
+import { db } from '../storage.js?v=419';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, toast, notify } from '../ui.js?v=419';
+import { esc, todayLocal } from '../fmt.js?v=419';
+import { walkSteps, seasonLabel, businessPatch, commodityRecord, fieldRecord, storageRecord, saleRecord, loadRecord, invoiceable } from '../setupwalk.js?v=419';
+import { openInvoiceListSheet } from './invoice.js?v=419';
+import { openMapSheet } from './farmmap.js?v=419';
+import { openLoadImportSheet } from './importloads.js?v=419';
 
 const QUESTIONS = {
   business: { q: 'What is the business called?', hint: 'These go on invoices, tickets and contracts.' },

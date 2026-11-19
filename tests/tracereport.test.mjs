@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { traceReportRows, traceTotals, traceSummary, traceBySale, sourceText, partsText, traceCsvRows, TRACE_CSV_COLUMNS, buildTraceReportPdf } from '../docs/js/tracereport.js?v=418';
-import { traceParts, traceText } from '../docs/js/trace.js?v=418';
+import { traceReportRows, traceTotals, traceSummary, traceBySale, sourceText, partsText, traceCsvRows, TRACE_CSV_COLUMNS, buildTraceReportPdf } from '../docs/js/tracereport.js?v=419';
+import { traceParts, traceText } from '../docs/js/trace.js?v=419';
 
 let failed = 0;
 function check(name, fn) { try { fn(); console.log('  PASS  ' + name); } catch (e) { failed++; console.log('  FAIL  ' + name + '\n        ' + e.message); } }

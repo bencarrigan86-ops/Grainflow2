@@ -267,6 +267,20 @@ check('goes through revoke_invitation, because a plain update is refused by the 
   assert.ok(paste.includes('function revoke_invitation('), 'not in the paste file');
 });
 
+console.log('\n=== removing someone from the farm ===');
+
+check('goes through remove_member, because a plain update is refused by the select policy; and a farm keeps an owner', () => {
+  const auth = readFileSync(new URL('../docs/js/auth.js', import.meta.url), 'utf8');
+  const fn = auth.slice(auth.indexOf('export async function removeMember'), auth.indexOf('export async function acceptInvitation') > 0 ? auth.indexOf('/**\n * Turn an invitation into a membership.') : undefined);
+  assert.ok(fn.includes("rpc('remove_member'"), 'does not call the function');
+  assert.ok(!fn.includes('.update('), 'still tries a plain update, which the server refuses');
+  const sql = readFileSync(new URL('../supabase/migrations/20261217000000_remove_member.sql', import.meta.url), 'utf8');
+  assert.ok(/security definer/.test(sql) && /app_role\(p_farm\) is distinct from 'owner'/.test(sql), 'not limited to the owner');
+  assert.ok(sql.includes('a farm needs at least one owner'), 'could leave the farm without an owner');
+  const paste = readFileSync(new URL('../supabase/paste-into-sql-editor.sql', import.meta.url), 'utf8');
+  assert.ok(paste.includes('function remove_member('), 'not in the paste file');
+});
+
 console.log('');
 if (failures) { console.log(`${failures} FAILURES`); process.exit(1); }
 console.log('ALL PASS');
