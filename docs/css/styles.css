@@ -768,6 +768,11 @@ details.fold > summary .sub { font-size: 12px; color: var(--text-dim); margin-to
 .gantt-key .k-bar.ended { --c: var(--danger); }
 .gantt-key .k-today, .gantt-key .k-tick { flex: none; }
 
+/* Off-farm storage: a commodity with its total, and a row for each grade under it */
+.of-commodity, .of-grade { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.of-commodity { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border, rgba(0,0,0,.08)); }
+.of-grade { padding: 2px 0 0 14px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
 /* An empty screen with a next step. */
 .empty .btn { margin-top: 14px; width: auto; padding: 10px 20px; }
 

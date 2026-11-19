@@ -10,7 +10,7 @@
 //
 // Pure. The only import is the storage fee terms, which are kept in the same part (see storagefees.js).
 
-import { cleanFee } from './storagefees.js?v=436';
+import { cleanFee } from './storagefees.js?v=437';
 
 const norm = (g) => String(g ?? '').trim().toLowerCase();
 const round3 = (n) => Math.round(n * 1000) / 1000;
@@ -88,6 +88,23 @@ export function holdings(location, movements, ctx = {}, { except = '' } = {}) {
     .map((h) => ({ ...h, tons: round3(h.tons) }))
     .filter((h) => Math.abs(h.tons) > EPS)
     .sort((a, b) => String(a.commodityId).localeCompare(String(b.commodityId)) || a.grade.localeCompare(b.grade, undefined, { numeric: true }));
+}
+
+/**
+ * The holdings a Storage filter leaves: only the picked commodity's rows when one is picked, and, for typed words, the rows where every
+ * word is found in the location's name or operator, or the row's commodity or grade (a word matching the location keeps all its rows).
+ * With no filter every row stays.
+ * @param {{commodityId: string, grade: string, tons: number}[]} rows
+ */
+export function filterHoldings(rows, location, commodities, { query = '', commodityId = '' } = {}) {
+  const names = new Map((commodities || []).map((c) => [c.id, c.name]));
+  const words = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
+  return (rows || []).filter((h) => {
+    if (commodityId && h.commodityId !== commodityId) return false;
+    if (!words.length) return true;
+    const hay = [location?.name, location?.offFarm?.operator, names.get(h.commodityId), h.grade].filter(Boolean).join(' ').toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
 }
 
 /** Tonnes of one commodity and grade held. `except` leaves one ticket out, for checking a ticket being edited. */

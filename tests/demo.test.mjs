@@ -503,5 +503,34 @@ check('it goes through the backup and typed confirmation, and keeps the farm\'s 
   assert.ok(block.includes('...(db.getBusinessDetails() || {})'), 'the farm keeps its name and details');
 });
 
+check('every grain ticket carries a grade and a quality test, so the reports have something in them', () => {
+  const grain = season.movements.filter((m) => ['wheat', 'barley', 'chickpeas', 'canola'].includes(m.commodityId));
+  assert.ok(grain.length >= 30);
+  for (const m of grain) {
+    assert.ok(m.grade, `ticket ${m.ticketNo} has no grade`);
+    assert.ok(m.moisturePct > 0, `ticket ${m.ticketNo} has no moisture`);
+  }
+  assert.ok(grain.filter((m) => m.commodityId === 'wheat').every((m) => m.proteinPct > 0 && m.testWeightKgHl > 0 && m.screeningsPct > 0 && m.fallingNumber > 0));
+  assert.ok(grain.filter((m) => m.commodityId === 'barley').every((m) => m.retentionPct > 0));
+  assert.ok(grain.filter((m) => m.commodityId === 'canola').every((m) => m.oilPct > 0));
+});
+check('the wheat silos hold layers of different grades, with the grade the contracts ask for on top', () => {
+  for (const id of ['silo-a', 'silo-b']) {
+    const loads = season.movements.filter((m) => m.tos?.[0]?.id === id && m.froms?.[0]?.type === 'field')
+      .sort((a, b) => a.date.localeCompare(b.date) || a.ticketNo - b.ticketNo);
+    assert.ok(new Set(loads.map((m) => m.grade)).size >= 3, `${id} should hold at least three grades`);
+    assert.equal(loads[loads.length - 1].grade, 'APW1', `${id} is topped with APW1`);
+  }
+});
+check('nothing the sample records is dated after the day before today, so the new loads a trial farm adds sit on top', () => {
+  const LAST = '2026-11-18';
+  const late = [
+    ...season.movements.map((m) => ['movement', m.date]),
+    ...season.invoices.flatMap((i) => [['invoice issued', i.issueDate], ['invoice paid', i.paidDate]]),
+    ...season.payables.flatMap((b) => [['bill', b.invoiceDate], ['bill paid', b.paidDate]]),
+  ].filter(([, d]) => d && d > LAST);
+  assert.deepEqual(late, []);
+});
+
 if (failures) { console.log(`${failures} FAILURES`); process.exit(1); }
 console.log('ALL PASS');

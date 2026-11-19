@@ -162,7 +162,7 @@
           "ureaRequiredKgHa": 304,
           "ureaApplications": [
             {
-              "date": "2026-06-02",
+              "date": "2026-04-08",
               "rateKgHa": 258,
               "product": "Urea"
             }
@@ -209,7 +209,7 @@
           "balesBaled": [
             {
               "id": "bb-w1",
-              "date": "2026-11-26",
+              "date": "2026-10-02",
               "label": "Behind the header",
               "bales": 160,
               "kg": 83200,
@@ -228,7 +228,7 @@
           "ureaRequiredKgHa": 296,
           "ureaApplications": [
             {
-              "date": "2026-05-18",
+              "date": "2026-03-24",
               "rateKgHa": 296,
               "product": "Urea"
             }
@@ -275,7 +275,7 @@
           "balesBaled": [
             {
               "id": "bb-w2",
-              "date": "2026-11-28",
+              "date": "2026-10-04",
               "label": "Behind the header",
               "bales": 120,
               "kg": 62400,
@@ -340,7 +340,7 @@
           "ureaRequiredKgHa": 287,
           "ureaApplications": [
             {
-              "date": "2026-05-18",
+              "date": "2026-03-24",
               "rateKgHa": 287,
               "product": "Urea"
             }
@@ -396,7 +396,7 @@
           "ureaRequiredKgHa": 276,
           "ureaApplications": [
             {
-              "date": "2026-06-02",
+              "date": "2026-04-08",
               "rateKgHa": 235,
               "product": "Urea"
             }
@@ -502,7 +502,7 @@
           "ureaRequiredKgHa": 251,
           "ureaApplications": [
             {
-              "date": "2026-06-02",
+              "date": "2026-04-08",
               "rateKgHa": 213,
               "product": "Urea"
             }
@@ -558,7 +558,7 @@
           "ureaRequiredKgHa": 217,
           "ureaApplications": [
             {
-              "date": "2026-05-18",
+              "date": "2026-03-24",
               "rateKgHa": 217,
               "product": "Urea"
             }
@@ -660,7 +660,7 @@
           "ureaRequiredKgHa": 78,
           "ureaApplications": [
             {
-              "date": "2026-05-18",
+              "date": "2026-03-24",
               "rateKgHa": 78,
               "product": "Urea"
             }
@@ -857,7 +857,7 @@
           "modulesPicked": [
             {
               "id": "pk-n1",
-              "date": "2026-04-06",
+              "date": "2026-02-10",
               "count": 130,
               "kg": 312000,
               "turnoutPct": 43,
@@ -865,7 +865,7 @@
             },
             {
               "id": "pk-n2",
-              "date": "2026-04-11",
+              "date": "2026-02-15",
               "count": 170,
               "kg": 408000,
               "turnoutPct": 43,
@@ -873,7 +873,7 @@
             },
             {
               "id": "pk-n3",
-              "date": "2026-04-19",
+              "date": "2026-02-23",
               "count": 60,
               "kg": 144000,
               "turnoutPct": 42,
@@ -933,7 +933,7 @@
           "modulesPicked": [
             {
               "id": "pk-s1",
-              "date": "2026-04-14",
+              "date": "2026-02-18",
               "count": 90,
               "kg": 216000,
               "turnoutPct": 43,
@@ -941,7 +941,7 @@
             },
             {
               "id": "pk-s2",
-              "date": "2026-04-22",
+              "date": "2026-02-26",
               "count": 60,
               "kg": 144000,
               "turnoutPct": 43,
@@ -1001,21 +1001,21 @@
           "balesBaled": [
             {
               "id": "bb-l1",
-              "date": "2026-10-20",
+              "date": "2026-08-26",
               "label": "Cut 1",
               "bales": 260,
               "kg": 124800
             },
             {
               "id": "bb-l2",
-              "date": "2026-11-25",
+              "date": "2026-10-01",
               "label": "Cut 2",
               "bales": 240,
               "kg": 115200
             },
             {
               "id": "bb-l3",
-              "date": "2026-12-18",
+              "date": "2026-10-24",
               "label": "Cut 3",
               "bales": 220,
               "kg": 105600
@@ -1061,7 +1061,7 @@
           "coneAngle": 35,
           "currentHeight": 10.2,
           "fillState": "decline",
-          "capacityTons": 1300
+          "capacityTons": 1310
         },
         {
           "openingStock": 0,
@@ -1087,7 +1087,7 @@
           "length": 29,
           "currentHeight": 4.1,
           "fillState": "peak",
-          "capacityTons": 740,
+          "capacityTons": 730,
           "tarpOverhangM": 1.5
         },
         {
@@ -1177,10 +1177,10 @@
           "grade": "APW1",
           "tons": 1200,
           "price": 379,
-          "date": "2026-06-14",
+          "date": "2026-04-20",
           "location": "Delivered Newbridge",
-          "deliveryStart": "2026-11-01",
-          "deliveryEnd": "2026-12-20",
+          "deliveryStart": "2026-09-07",
+          "deliveryEnd": "2026-10-26",
           "freight": 21.5,
           "leviesPct": 0.011
         },
@@ -1203,10 +1203,10 @@
           "grade": "H2",
           "tons": 800,
           "price": 402,
-          "date": "2026-07-02",
+          "date": "2026-05-08",
           "location": "Delivered Millgate",
-          "deliveryStart": "2026-11-15",
-          "deliveryEnd": "2027-01-31",
+          "deliveryStart": "2026-09-21",
+          "deliveryEnd": "2026-12-07",
           "freight": 18,
           "leviesPct": 0.011
         },
@@ -1229,10 +1229,10 @@
           "grade": "BAR1",
           "tons": 900,
           "price": 324,
-          "date": "2026-06-28",
+          "date": "2026-05-04",
           "location": "Ex farm",
-          "deliveryStart": "2026-11-01",
-          "deliveryEnd": "2026-12-31",
+          "deliveryStart": "2026-09-07",
+          "deliveryEnd": "2026-11-06",
           "freight": 0,
           "leviesPct": 0.011
         },
@@ -1255,10 +1255,10 @@
           "grade": "No.1 Chickpea",
           "tons": 400,
           "price": 771,
-          "date": "2026-08-05",
+          "date": "2026-06-11",
           "location": "Delivered Port",
-          "deliveryStart": "2026-12-01",
-          "deliveryEnd": "2027-02-28",
+          "deliveryStart": "2026-10-07",
+          "deliveryEnd": "2027-01-04",
           "freight": 46,
           "leviesPct": 0.011
         },
@@ -1281,10 +1281,10 @@
           "grade": "CAN",
           "tons": 350,
           "price": 828,
-          "date": "2026-07-19",
+          "date": "2026-05-25",
           "location": "Delivered Crushplant",
-          "deliveryStart": "2026-11-20",
-          "deliveryEnd": "2027-01-15",
+          "deliveryStart": "2026-09-26",
+          "deliveryEnd": "2026-11-21",
           "freight": 33,
           "leviesPct": 0.011
         },
@@ -1307,10 +1307,10 @@
           "grade": "APW1",
           "tons": 600,
           "price": 368,
-          "date": "2026-08-22",
+          "date": "2026-06-28",
           "location": "Delivered Newbridge",
-          "deliveryStart": "2027-01-05",
-          "deliveryEnd": "2027-02-28",
+          "deliveryStart": "2026-11-11",
+          "deliveryEnd": "2027-01-04",
           "freight": 21.5,
           "leviesPct": 0.011
         },
@@ -1333,10 +1333,10 @@
           "grade": "",
           "tons": 600,
           "price": 570,
-          "date": "2025-10-30",
+          "date": "2025-09-05",
           "location": "Delivered gin",
-          "deliveryStart": "2026-04-01",
-          "deliveryEnd": "2026-09-30",
+          "deliveryStart": "2026-02-05",
+          "deliveryEnd": "2026-08-06",
           "freight": 0,
           "leviesPct": 0,
           "deliveryPattern": "ginrun"
@@ -1360,10 +1360,10 @@
           "grade": "",
           "tons": 500,
           "price": 585,
-          "date": "2025-11-12",
+          "date": "2025-09-18",
           "location": "Delivered gin",
-          "deliveryStart": "2026-04-01",
-          "deliveryEnd": "2026-09-30",
+          "deliveryStart": "2026-02-05",
+          "deliveryEnd": "2026-08-06",
           "freight": 0,
           "leviesPct": 0,
           "deliveryPattern": "ginrun"
@@ -1388,10 +1388,10 @@
           "grade": "",
           "tons": 1350,
           "price": 118,
-          "date": "2025-11-20",
+          "date": "2025-09-26",
           "location": "Bimbi gin yard",
-          "deliveryStart": "2026-04-01",
-          "deliveryEnd": "2026-09-30",
+          "deliveryStart": "2026-02-05",
+          "deliveryEnd": "2026-08-06",
           "freight": 0,
           "leviesPct": 0,
           "deliveryPattern": "ginrun",
@@ -1422,10 +1422,10 @@
           "grade": "",
           "tons": 1500,
           "price": 0,
-          "date": "2026-09-10",
+          "date": "2026-07-17",
           "location": "Bimbi gin yard",
-          "deliveryStart": "2027-04-01",
-          "deliveryEnd": "2027-09-30",
+          "deliveryStart": "2027-02-05",
+          "deliveryEnd": "2027-08-06",
           "freight": 0,
           "leviesPct": 0,
           "deliveryPattern": "ginrun",
@@ -1455,10 +1455,10 @@
           "grade": "",
           "tons": 400,
           "price": 470,
-          "date": "2026-09-25",
+          "date": "2026-08-01",
           "location": "Ex the seed pad",
-          "deliveryStart": "2026-12-01",
-          "deliveryEnd": "2027-02-28",
+          "deliveryStart": "2026-10-07",
+          "deliveryEnd": "2027-01-04",
           "freight": 0,
           "leviesPct": 0
         },
@@ -1481,10 +1481,10 @@
           "grade": "Premium",
           "tons": 150,
           "price": 395,
-          "date": "2026-09-20",
+          "date": "2026-07-27",
           "location": "Ex farm",
-          "deliveryStart": "2026-12-01",
-          "deliveryEnd": "2027-02-28",
+          "deliveryStart": "2026-10-07",
+          "deliveryEnd": "2027-01-04",
           "freight": 0,
           "leviesPct": 0
         },
@@ -1507,10 +1507,10 @@
           "grade": "",
           "tons": 80,
           "price": 82,
-          "date": "2026-10-08",
+          "date": "2026-08-14",
           "location": "Ex farm",
-          "deliveryStart": "2026-12-01",
-          "deliveryEnd": "2027-01-31",
+          "deliveryStart": "2026-10-07",
+          "deliveryEnd": "2026-12-07",
           "freight": 0,
           "leviesPct": 0
         }
@@ -1519,7 +1519,7 @@
         {
           "id": "mv-1001",
           "ticketNo": 1001,
-          "date": "2026-11-14",
+          "date": "2026-09-20",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "XKR 17N",
@@ -1542,12 +1542,18 @@
               "tons": 430.5
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "H2",
+          "proteinPct": 12.8,
+          "moisturePct": 11.3,
+          "screeningsPct": 1.5,
+          "testWeightKgHl": 78.7,
+          "fallingNumber": 383
         },
         {
           "id": "mv-1002",
           "ticketNo": 1002,
-          "date": "2026-11-15",
+          "date": "2026-09-21",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "TDD 88Q",
@@ -1570,12 +1576,18 @@
               "tons": 430.5
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "APW1",
+          "proteinPct": 11.2,
+          "moisturePct": 11.7,
+          "screeningsPct": 1.3,
+          "testWeightKgHl": 81.3,
+          "fallingNumber": 385
         },
         {
           "id": "mv-1003",
           "ticketNo": 1003,
-          "date": "2026-11-16",
+          "date": "2026-09-22",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "JRP 06N",
@@ -1598,12 +1610,18 @@
               "tons": 261.07
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "ASW1",
+          "proteinPct": 9.5,
+          "moisturePct": 11.9,
+          "screeningsPct": 1.9,
+          "testWeightKgHl": 79.3,
+          "fallingNumber": 341
         },
         {
           "id": "mv-1004",
           "ticketNo": 1004,
-          "date": "2026-11-17",
+          "date": "2026-09-23",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "ABC 42Q",
@@ -1626,12 +1644,18 @@
               "tons": 261.07
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "H2",
+          "proteinPct": 12.6,
+          "moisturePct": 11.5,
+          "screeningsPct": 1.5,
+          "testWeightKgHl": 81.6,
+          "fallingNumber": 376
         },
         {
           "id": "mv-1005",
           "ticketNo": 1005,
-          "date": "2026-11-18",
+          "date": "2026-09-24",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "XKR 17N",
@@ -1654,12 +1678,18 @@
               "tons": 261.06
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "ASW1",
+          "proteinPct": 9.5,
+          "moisturePct": 11.7,
+          "screeningsPct": 1.9,
+          "testWeightKgHl": 81,
+          "fallingNumber": 344
         },
         {
           "id": "mv-1006",
           "ticketNo": 1006,
-          "date": "2026-11-19",
+          "date": "2026-09-25",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "TDD 88Q",
@@ -1682,12 +1712,18 @@
               "tons": 305.25
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "APW1",
+          "proteinPct": 11,
+          "moisturePct": 11.4,
+          "screeningsPct": 1.3,
+          "testWeightKgHl": 80.3,
+          "fallingNumber": 398
         },
         {
           "id": "mv-1007",
           "ticketNo": 1007,
-          "date": "2026-11-20",
+          "date": "2026-09-26",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "JRP 06N",
@@ -1710,12 +1746,18 @@
               "tons": 305.25
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "ASW1",
+          "proteinPct": 9.4,
+          "moisturePct": 11.8,
+          "screeningsPct": 1.9,
+          "testWeightKgHl": 79.7,
+          "fallingNumber": 339
         },
         {
           "id": "mv-1008",
           "ticketNo": 1008,
-          "date": "2026-11-21",
+          "date": "2026-09-27",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "ABC 42Q",
@@ -1738,12 +1780,18 @@
               "tons": 184.6
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "H2",
+          "proteinPct": 12.9,
+          "moisturePct": 11.5,
+          "screeningsPct": 1.5,
+          "testWeightKgHl": 81.2,
+          "fallingNumber": 380
         },
         {
           "id": "mv-1009",
           "ticketNo": 1009,
-          "date": "2026-11-22",
+          "date": "2026-09-28",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "XKR 17N",
@@ -1766,12 +1814,18 @@
               "tons": 184.6
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "APW1",
+          "proteinPct": 11.2,
+          "moisturePct": 11.3,
+          "screeningsPct": 1.3,
+          "testWeightKgHl": 80.4,
+          "fallingNumber": 396
         },
         {
           "id": "mv-1010",
           "ticketNo": 1010,
-          "date": "2026-11-23",
+          "date": "2026-09-29",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "TDD 88Q",
@@ -1794,12 +1848,18 @@
               "tons": 184.6
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "APW1",
+          "proteinPct": 10.9,
+          "moisturePct": 11.5,
+          "screeningsPct": 1.3,
+          "testWeightKgHl": 82.7,
+          "fallingNumber": 387
         },
         {
           "id": "mv-1011",
           "ticketNo": 1011,
-          "date": "2026-11-24",
+          "date": "2026-09-30",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "JRP 06N",
@@ -1822,12 +1882,18 @@
               "tons": 188.8
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "APW1",
+          "proteinPct": 10.9,
+          "moisturePct": 11.8,
+          "screeningsPct": 1.3,
+          "testWeightKgHl": 79.4,
+          "fallingNumber": 403
         },
         {
           "id": "mv-1012",
           "ticketNo": 1012,
-          "date": "2026-11-03",
+          "date": "2026-09-09",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "ABC 42Q",
@@ -1850,12 +1916,18 @@
               "tons": 188.8
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "ASW1",
+          "proteinPct": 9.8,
+          "moisturePct": 11.7,
+          "screeningsPct": 1.9,
+          "testWeightKgHl": 78.5,
+          "fallingNumber": 339
         },
         {
           "id": "mv-1013",
           "ticketNo": 1013,
-          "date": "2026-11-04",
+          "date": "2026-09-10",
           "commodityId": "barley",
           "status": "closed",
           "truckRego": "XKR 17N",
@@ -1878,12 +1950,18 @@
               "tons": 237.67
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "BAR1",
+          "proteinPct": 11.1,
+          "moisturePct": 11.3,
+          "screeningsPct": 2.6,
+          "testWeightKgHl": 67,
+          "retentionPct": 80
         },
         {
           "id": "mv-1014",
           "ticketNo": 1014,
-          "date": "2026-11-05",
+          "date": "2026-09-11",
           "commodityId": "barley",
           "status": "closed",
           "truckRego": "TDD 88Q",
@@ -1906,12 +1984,18 @@
               "tons": 237.67
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "BAR1",
+          "proteinPct": 11.2,
+          "moisturePct": 11.2,
+          "screeningsPct": 2.6,
+          "testWeightKgHl": 68,
+          "retentionPct": 79
         },
         {
           "id": "mv-1015",
           "ticketNo": 1015,
-          "date": "2026-11-06",
+          "date": "2026-09-12",
           "commodityId": "barley",
           "status": "closed",
           "truckRego": "JRP 06N",
@@ -1934,12 +2018,18 @@
               "tons": 237.66
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "BAR2",
+          "proteinPct": 12,
+          "moisturePct": 11.8,
+          "screeningsPct": 4.9,
+          "testWeightKgHl": 64.5,
+          "retentionPct": 71
         },
         {
           "id": "mv-1016",
           "ticketNo": 1016,
-          "date": "2026-11-07",
+          "date": "2026-09-13",
           "commodityId": "barley",
           "status": "closed",
           "truckRego": "ABC 42Q",
@@ -1962,12 +2052,18 @@
               "tons": 283.8
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "BAR1",
+          "proteinPct": 10.8,
+          "moisturePct": 10.9,
+          "screeningsPct": 2.6,
+          "testWeightKgHl": 65.5,
+          "retentionPct": 81
         },
         {
           "id": "mv-1017",
           "ticketNo": 1017,
-          "date": "2026-11-08",
+          "date": "2026-09-14",
           "commodityId": "barley",
           "status": "closed",
           "truckRego": "XKR 17N",
@@ -1990,12 +2086,18 @@
               "tons": 283.8
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "BAR2",
+          "proteinPct": 11.5,
+          "moisturePct": 11.7,
+          "screeningsPct": 4.8,
+          "testWeightKgHl": 66.1,
+          "retentionPct": 72
         },
         {
           "id": "mv-1018",
           "ticketNo": 1018,
-          "date": "2026-11-09",
+          "date": "2026-09-15",
           "commodityId": "barley",
           "status": "closed",
           "truckRego": "TDD 88Q",
@@ -2018,12 +2120,18 @@
               "tons": 128
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "BAR1",
+          "proteinPct": 10.6,
+          "moisturePct": 10.9,
+          "screeningsPct": 2.6,
+          "testWeightKgHl": 67.6,
+          "retentionPct": 82
         },
         {
           "id": "mv-1019",
           "ticketNo": 1019,
-          "date": "2026-11-10",
+          "date": "2026-09-16",
           "commodityId": "barley",
           "status": "closed",
           "truckRego": "JRP 06N",
@@ -2046,12 +2154,18 @@
               "tons": 128
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "BAR1",
+          "proteinPct": 11.1,
+          "moisturePct": 11.4,
+          "screeningsPct": 2.7,
+          "testWeightKgHl": 65.4,
+          "retentionPct": 80
         },
         {
           "id": "mv-1020",
           "ticketNo": 1020,
-          "date": "2026-11-11",
+          "date": "2026-09-17",
           "commodityId": "barley",
           "status": "closed",
           "truckRego": "ABC 42Q",
@@ -2074,12 +2188,18 @@
               "tons": 128
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "BAR1",
+          "proteinPct": 11,
+          "moisturePct": 11.1,
+          "screeningsPct": 2.6,
+          "testWeightKgHl": 67.6,
+          "retentionPct": 82
         },
         {
           "id": "mv-1021",
           "ticketNo": 1021,
-          "date": "2026-11-12",
+          "date": "2026-09-18",
           "commodityId": "chickpeas",
           "status": "closed",
           "truckRego": "XKR 17N",
@@ -2102,12 +2222,15 @@
               "tons": 155.4
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "No.1 Chickpea",
+          "moisturePct": 11.3,
+          "screeningsPct": 1.1
         },
         {
           "id": "mv-1022",
           "ticketNo": 1022,
-          "date": "2026-11-13",
+          "date": "2026-09-19",
           "commodityId": "chickpeas",
           "status": "closed",
           "truckRego": "TDD 88Q",
@@ -2130,12 +2253,15 @@
               "tons": 155.4
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "No.1 Chickpea",
+          "moisturePct": 11.9,
+          "screeningsPct": 1.1
         },
         {
           "id": "mv-1023",
           "ticketNo": 1023,
-          "date": "2026-11-14",
+          "date": "2026-09-20",
           "commodityId": "chickpeas",
           "status": "closed",
           "truckRego": "JRP 06N",
@@ -2158,12 +2284,15 @@
               "tons": 72.6
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "No.1 Chickpea",
+          "moisturePct": 11.4,
+          "screeningsPct": 1.1
         },
         {
           "id": "mv-1024",
           "ticketNo": 1024,
-          "date": "2026-11-15",
+          "date": "2026-09-21",
           "commodityId": "chickpeas",
           "status": "closed",
           "truckRego": "ABC 42Q",
@@ -2186,12 +2315,15 @@
               "tons": 72.6
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "No.1 Chickpea",
+          "moisturePct": 11.7,
+          "screeningsPct": 1.1
         },
         {
           "id": "mv-1025",
           "ticketNo": 1025,
-          "date": "2026-11-16",
+          "date": "2026-09-22",
           "commodityId": "chickpeas",
           "status": "closed",
           "truckRego": "XKR 17N",
@@ -2214,12 +2346,15 @@
               "tons": 72.6
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "No.1 Chickpea",
+          "moisturePct": 11.6,
+          "screeningsPct": 1.1
         },
         {
           "id": "mv-1026",
           "ticketNo": 1026,
-          "date": "2026-11-17",
+          "date": "2026-09-23",
           "commodityId": "canola",
           "status": "closed",
           "truckRego": "TDD 88Q",
@@ -2242,12 +2377,17 @@
               "tons": 154.1
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "CAN",
+          "moisturePct": 6.8,
+          "oilPct": 43.3,
+          "testWeightKgHl": 65.7,
+          "screeningsPct": 1.4
         },
         {
           "id": "mv-1027",
           "ticketNo": 1027,
-          "date": "2026-11-18",
+          "date": "2026-09-24",
           "commodityId": "canola",
           "status": "closed",
           "truckRego": "JRP 06N",
@@ -2270,12 +2410,17 @@
               "tons": 154.1
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "CAN",
+          "moisturePct": 6.7,
+          "oilPct": 44.3,
+          "testWeightKgHl": 65.8,
+          "screeningsPct": 1.4
         },
         {
           "id": "mv-1028",
           "ticketNo": 1028,
-          "date": "2026-11-19",
+          "date": "2026-09-25",
           "commodityId": "canola",
           "status": "closed",
           "truckRego": "ABC 42Q",
@@ -2298,12 +2443,17 @@
               "tons": 72
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "CAN",
+          "moisturePct": 6.8,
+          "oilPct": 42.4,
+          "testWeightKgHl": 64.9,
+          "screeningsPct": 1.4
         },
         {
           "id": "mv-1029",
           "ticketNo": 1029,
-          "date": "2026-11-20",
+          "date": "2026-09-26",
           "commodityId": "canola",
           "status": "closed",
           "truckRego": "XKR 17N",
@@ -2326,12 +2476,17 @@
               "tons": 72
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "CAN",
+          "moisturePct": 6.8,
+          "oilPct": 44,
+          "testWeightKgHl": 64.5,
+          "screeningsPct": 1.4
         },
         {
           "id": "mv-1030",
           "ticketNo": 1030,
-          "date": "2026-11-21",
+          "date": "2026-09-27",
           "commodityId": "canola",
           "status": "closed",
           "truckRego": "TDD 88Q",
@@ -2354,264 +2509,321 @@
               "tons": 72
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "CAN",
+          "moisturePct": 6.9,
+          "oilPct": 43.2,
+          "testWeightKgHl": 64.4,
+          "screeningsPct": 1.4
         },
         {
           "id": "mv-1031",
           "ticketNo": 1031,
-          "date": "2026-12-13",
+          "date": "2026-10-19",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "JRP 06N",
           "driver": "Casual Carter",
-          "tons": 40.13,
+          "tons": 35.16,
           "weightStatus": "final",
-          "grossWeight": 56.53,
+          "grossWeight": 51.56,
           "tareWeight": 16.4,
           "froms": [
             {
               "type": "silo",
               "id": "silo-a",
-              "tons": 40.13
+              "tons": 35.16
             }
           ],
           "tos": [
             {
               "type": "sale",
               "id": "sale-1",
-              "tons": 40.13
+              "tons": 35.16
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "APW1",
+          "proteinPct": 11,
+          "moisturePct": 11.8,
+          "screeningsPct": 1.3,
+          "testWeightKgHl": 79.8,
+          "fallingNumber": 386
         },
         {
           "id": "mv-1032",
           "ticketNo": 1032,
-          "date": "2026-12-14",
+          "date": "2026-10-20",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "ABC 42Q",
           "driver": "Sample Driver",
-          "tons": 37.39,
+          "tons": 36.21,
           "weightStatus": "final",
-          "grossWeight": 53.79,
+          "grossWeight": 52.61,
           "tareWeight": 16.4,
           "froms": [
             {
               "type": "silo",
               "id": "silo-b",
-              "tons": 37.39
+              "tons": 36.21
             }
           ],
           "tos": [
             {
               "type": "sale",
               "id": "sale-1",
-              "tons": 37.39
+              "tons": 36.21
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "APW1",
+          "proteinPct": 10.8,
+          "moisturePct": 11.7,
+          "screeningsPct": 1.3,
+          "testWeightKgHl": 80.3,
+          "fallingNumber": 387
         },
         {
           "id": "mv-1033",
           "ticketNo": 1033,
-          "date": "2026-12-15",
+          "date": "2026-10-21",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "XKR 17N",
           "driver": "Sample Driver",
-          "tons": 39.35,
+          "tons": 41.41,
           "weightStatus": "final",
-          "grossWeight": 55.75,
+          "grossWeight": 57.81,
           "tareWeight": 16.4,
           "froms": [
             {
               "type": "silo",
               "id": "bunker-1",
-              "tons": 39.35
+              "tons": 41.41
             }
           ],
           "tos": [
             {
               "type": "sale",
               "id": "sale-1",
-              "tons": 39.35
+              "tons": 41.41
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "APW1",
+          "proteinPct": 11.1,
+          "moisturePct": 11.5,
+          "screeningsPct": 1.3,
+          "testWeightKgHl": 83.2,
+          "fallingNumber": 407
         },
         {
           "id": "mv-1034",
           "ticketNo": 1034,
-          "date": "2026-12-16",
+          "date": "2026-10-22",
           "commodityId": "wheat",
           "status": "closed",
           "truckRego": "TDD 88Q",
           "driver": "Casual Carter",
-          "tons": 34.04,
+          "tons": 34.52,
           "weightStatus": "final",
-          "grossWeight": 50.44,
+          "grossWeight": 50.92,
           "tareWeight": 16.4,
           "froms": [
             {
               "type": "silo",
               "id": "silo-a",
-              "tons": 34.04
+              "tons": 34.52
             }
           ],
           "tos": [
             {
               "type": "sale",
               "id": "sale-1",
-              "tons": 34.04
+              "tons": 34.52
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "APW1",
+          "proteinPct": 11.2,
+          "moisturePct": 11.6,
+          "screeningsPct": 1.3,
+          "testWeightKgHl": 79.5,
+          "fallingNumber": 391
         },
         {
           "id": "mv-1035",
           "ticketNo": 1035,
-          "date": "2026-12-17",
+          "date": "2026-10-23",
           "commodityId": "barley",
           "status": "closed",
           "truckRego": "JRP 06N",
           "driver": "Casual Carter",
-          "tons": 39.13,
+          "tons": 36.85,
           "weightStatus": "final",
-          "grossWeight": 55.53,
+          "grossWeight": 53.25,
           "tareWeight": 16.4,
           "froms": [
             {
               "type": "silo",
               "id": "silo-c",
-              "tons": 39.13
+              "tons": 36.85
             }
           ],
           "tos": [
             {
               "type": "sale",
               "id": "sale-3",
-              "tons": 39.13
+              "tons": 36.85
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "BAR1",
+          "proteinPct": 10.8,
+          "moisturePct": 11.5,
+          "screeningsPct": 2.7,
+          "testWeightKgHl": 68.3,
+          "retentionPct": 83
         },
         {
           "id": "mv-1036",
           "ticketNo": 1036,
-          "date": "2026-12-18",
+          "date": "2026-10-24",
           "commodityId": "barley",
           "status": "closed",
           "truckRego": "ABC 42Q",
           "driver": "Sample Driver",
-          "tons": 37.07,
+          "tons": 38.44,
           "weightStatus": "final",
-          "grossWeight": 53.47,
+          "grossWeight": 54.84,
           "tareWeight": 16.4,
           "froms": [
             {
               "type": "silo",
               "id": "bunker-2",
-              "tons": 37.07
+              "tons": 38.44
             }
           ],
           "tos": [
             {
               "type": "sale",
               "id": "sale-3",
-              "tons": 37.07
+              "tons": 38.44
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "BAR1",
+          "proteinPct": 11.2,
+          "moisturePct": 10.9,
+          "screeningsPct": 2.6,
+          "testWeightKgHl": 69.1,
+          "retentionPct": 82
         },
         {
           "id": "mv-1037",
           "ticketNo": 1037,
-          "date": "2026-12-19",
+          "date": "2026-10-25",
           "commodityId": "barley",
           "status": "closed",
           "truckRego": "XKR 17N",
           "driver": "Sample Driver",
-          "tons": 38.85,
+          "tons": 36.34,
           "weightStatus": "final",
-          "grossWeight": 55.25,
+          "grossWeight": 52.74,
           "tareWeight": 16.4,
           "froms": [
             {
               "type": "silo",
               "id": "silo-c",
-              "tons": 38.85
+              "tons": 36.34
             }
           ],
           "tos": [
             {
               "type": "sale",
               "id": "sale-3",
-              "tons": 38.85
+              "tons": 36.34
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "BAR1",
+          "proteinPct": 10.9,
+          "moisturePct": 11,
+          "screeningsPct": 2.6,
+          "testWeightKgHl": 67.2,
+          "retentionPct": 81
         },
         {
           "id": "mv-1038",
           "ticketNo": 1038,
-          "date": "2026-12-20",
+          "date": "2026-10-26",
           "commodityId": "canola",
           "status": "closed",
           "truckRego": "TDD 88Q",
           "driver": "Casual Carter",
-          "tons": 35.23,
+          "tons": 33.84,
           "weightStatus": "final",
-          "grossWeight": 51.63,
+          "grossWeight": 50.24,
           "tareWeight": 16.4,
           "froms": [
             {
               "type": "silo",
               "id": "silo-d",
-              "tons": 35.23
+              "tons": 33.84
             }
           ],
           "tos": [
             {
               "type": "sale",
               "id": "sale-5",
-              "tons": 35.23
+              "tons": 33.84
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "CAN",
+          "moisturePct": 6.7,
+          "oilPct": 43.3,
+          "testWeightKgHl": 66.1,
+          "screeningsPct": 1.4
         },
         {
           "id": "mv-1039",
           "ticketNo": 1039,
-          "date": "2026-12-21",
+          "date": "2026-10-27",
           "commodityId": "canola",
           "status": "closed",
           "truckRego": "JRP 06N",
           "driver": "Casual Carter",
-          "tons": 38.29,
+          "tons": 36.73,
           "weightStatus": "final",
-          "grossWeight": 54.69,
+          "grossWeight": 53.13,
           "tareWeight": 16.4,
           "froms": [
             {
               "type": "silo",
               "id": "silo-d",
-              "tons": 38.29
+              "tons": 36.73
             }
           ],
           "tos": [
             {
               "type": "sale",
               "id": "sale-5",
-              "tons": 38.29
+              "tons": 36.73
             }
           ],
-          "notes": ""
+          "notes": "",
+          "grade": "CAN",
+          "moisturePct": 6.7,
+          "oilPct": 42.8,
+          "testWeightKgHl": 64.8,
+          "screeningsPct": 1.4
         },
         {
           "id": "mv-1040",
           "ticketNo": 1040,
-          "date": "2026-04-23",
+          "date": "2026-02-27",
           "commodityId": "cotton",
           "status": "closed",
           "truckRego": "ABC 42Q",
@@ -2643,7 +2855,7 @@
         {
           "id": "mv-1041",
           "ticketNo": 1041,
-          "date": "2026-04-25",
+          "date": "2026-03-01",
           "commodityId": "cotton",
           "status": "closed",
           "truckRego": "XKR 17N",
@@ -2675,7 +2887,7 @@
         {
           "id": "mv-1042",
           "ticketNo": 1042,
-          "date": "2026-04-27",
+          "date": "2026-03-03",
           "commodityId": "cotton",
           "status": "closed",
           "truckRego": "TDD 88Q",
@@ -2707,7 +2919,7 @@
         {
           "id": "mv-1043",
           "ticketNo": 1043,
-          "date": "2026-04-28",
+          "date": "2026-03-04",
           "commodityId": "cotton",
           "status": "closed",
           "truckRego": "JRP 06N",
@@ -2739,7 +2951,7 @@
         {
           "id": "mv-1044",
           "ticketNo": 1044,
-          "date": "2026-05-02",
+          "date": "2026-03-08",
           "commodityId": "cotton",
           "status": "closed",
           "truckRego": "",
@@ -2826,7 +3038,7 @@
         {
           "id": "mv-1045",
           "ticketNo": 1045,
-          "date": "2026-10-24",
+          "date": "2026-08-30",
           "commodityId": "lucerne",
           "status": "closed",
           "truckRego": "XKR 17N",
@@ -2856,7 +3068,7 @@
         {
           "id": "mv-1046",
           "ticketNo": 1046,
-          "date": "2026-10-26",
+          "date": "2026-09-01",
           "commodityId": "lucerne",
           "status": "closed",
           "truckRego": "TDD 88Q",
@@ -2886,7 +3098,7 @@
         {
           "id": "mv-1047",
           "ticketNo": 1047,
-          "date": "2026-11-28",
+          "date": "2026-10-04",
           "commodityId": "lucerne",
           "status": "closed",
           "truckRego": "JRP 06N",
@@ -2916,7 +3128,7 @@
         {
           "id": "mv-1048",
           "ticketNo": 1048,
-          "date": "2026-11-30",
+          "date": "2026-10-06",
           "commodityId": "lucerne",
           "status": "closed",
           "truckRego": "ABC 42Q",
@@ -2946,7 +3158,7 @@
         {
           "id": "mv-1049",
           "ticketNo": 1049,
-          "date": "2026-12-02",
+          "date": "2026-10-08",
           "commodityId": "lucerne",
           "status": "closed",
           "truckRego": "XKR 17N",
@@ -2976,7 +3188,7 @@
         {
           "id": "mv-1050",
           "ticketNo": 1050,
-          "date": "2026-12-08",
+          "date": "2026-10-14",
           "commodityId": "lucerne",
           "status": "closed",
           "truckRego": "TDD 88Q",
@@ -3006,7 +3218,7 @@
         {
           "id": "mv-1051",
           "ticketNo": 1051,
-          "date": "2026-12-10",
+          "date": "2026-10-16",
           "commodityId": "lucerne",
           "status": "closed",
           "truckRego": "JRP 06N",
@@ -3036,7 +3248,7 @@
         {
           "id": "mv-1052",
           "ticketNo": 1052,
-          "date": "2026-12-12",
+          "date": "2026-10-18",
           "commodityId": "lucerne",
           "status": "closed",
           "truckRego": "ABC 42Q",
@@ -3061,7 +3273,7 @@
         {
           "id": "mv-1053",
           "ticketNo": 1053,
-          "date": "2026-11-29",
+          "date": "2026-10-05",
           "commodityId": "wheatstraw",
           "status": "closed",
           "truckRego": "XKR 17N",
@@ -3091,7 +3303,7 @@
         {
           "id": "mv-1054",
           "ticketNo": 1054,
-          "date": "2026-12-01",
+          "date": "2026-10-07",
           "commodityId": "wheatstraw",
           "status": "closed",
           "truckRego": "TDD 88Q",
@@ -3121,7 +3333,7 @@
         {
           "id": "mv-1055",
           "ticketNo": 1055,
-          "date": "2026-11-30",
+          "date": "2026-10-06",
           "commodityId": "wheatstraw",
           "status": "closed",
           "truckRego": "JRP 06N",
@@ -3151,7 +3363,7 @@
         {
           "id": "mv-1056",
           "ticketNo": 1056,
-          "date": "2026-12-14",
+          "date": "2026-10-20",
           "commodityId": "wheatstraw",
           "status": "closed",
           "truckRego": "ABC 42Q",
@@ -3181,7 +3393,7 @@
         {
           "id": "mv-1057",
           "ticketNo": 1057,
-          "date": "2026-12-16",
+          "date": "2026-10-22",
           "commodityId": "cottonseed",
           "status": "closed",
           "truckRego": "XKR 17N",
@@ -3207,7 +3419,7 @@
         {
           "id": "mv-1058",
           "ticketNo": 1058,
-          "date": "2026-12-18",
+          "date": "2026-10-24",
           "commodityId": "cottonseed",
           "status": "closed",
           "truckRego": "TDD 88Q",
@@ -3236,8 +3448,8 @@
           "id": "inv-1",
           "saleId": "sale-1",
           "invoiceNo": 1,
-          "issueDate": "2026-12-18",
-          "dueDate": "2027-01-17",
+          "issueDate": "2026-10-24",
+          "dueDate": "2026-11-23",
           "status": "outstanding",
           "totalTons": 0,
           "subtotalExGST": 0,
@@ -3262,10 +3474,10 @@
           "id": "inv-2",
           "saleId": "sale-3",
           "invoiceNo": 2,
-          "issueDate": "2026-12-20",
-          "dueDate": "2027-01-19",
+          "issueDate": "2026-10-26",
+          "dueDate": "2026-11-25",
           "status": "paid",
-          "paidDate": "2027-01-12",
+          "paidDate": "2026-11-18",
           "totalTons": 0,
           "subtotalExGST": 0,
           "freightTotal": 0,
@@ -3288,8 +3500,8 @@
         {
           "id": "inv-3",
           "invoiceNo": 3,
-          "issueDate": "2026-05-08",
-          "dueDate": "2026-05-22",
+          "issueDate": "2026-03-14",
+          "dueDate": "2026-03-28",
           "status": "outstanding",
           "saleId": "sale-ct1",
           "totalTons": 599.119,
@@ -3300,7 +3512,7 @@
           "totalPayable": 256647.57,
           "lines": [
             {
-              "date": "2026-05-02",
+              "date": "2026-03-08",
               "rego": "—",
               "tons": 599.119,
               "movementId": "mv-1044",
@@ -3322,7 +3534,7 @@
               "freight": 0
             },
             {
-              "date": "2025-10-30",
+              "date": "2025-09-05",
               "rego": "Classing P&D",
               "tons": null,
               "movementId": null,
@@ -3336,7 +3548,7 @@
               }
             },
             {
-              "date": "2026-05-02",
+              "date": "2026-03-08",
               "rego": "—",
               "tons": null,
               "movementId": null,
@@ -3356,8 +3568,8 @@
         {
           "id": "inv-4",
           "invoiceNo": 4,
-          "issueDate": "2026-12-16",
-          "dueDate": "2027-01-15",
+          "issueDate": "2026-10-22",
+          "dueDate": "2026-11-21",
           "status": "outstanding",
           "saleId": "sale-hay1",
           "totalTons": 57.6,
@@ -3368,7 +3580,7 @@
           "totalPayable": 25027.2,
           "lines": [
             {
-              "date": "2026-12-08",
+              "date": "2026-10-14",
               "rego": "TDD 88Q",
               "tons": 28.8,
               "movementId": "mv-1050",
@@ -3383,7 +3595,7 @@
               "freight": 0
             },
             {
-              "date": "2026-12-10",
+              "date": "2026-10-16",
               "rego": "JRP 06N",
               "tons": 28.8,
               "movementId": "mv-1051",
@@ -3400,90 +3612,14 @@
           ]
         }
       ],
-      "orders": [
-        {
-          "id": "order-1",
-          "saleId": "sale-1",
-          "orderNo": "B-1001",
-          "tons": 300,
-          "deliverFrom": "2026-11-20",
-          "deliverBy": "2026-12-05",
-          "freightCompany": "Ace Haulage",
-          "status": "open",
-          "notes": "Gate 3, 7am to 4pm. Call the receival site before loading.",
-          "detail": {
-            "issuedBy": "Sample Trader",
-            "issuedOn": "2026-11-17",
-            "contractNo": "RGT-4471",
-            "comments": "Carriers must follow the receival site rules and wear high-vis.",
-            "grade": "APW1",
-            "deliveryRef": "B-1001",
-            "destination": "Newbridge Receival Site",
-            "address": {
-              "line1": "1 Rail Rd",
-              "line2": "",
-              "town": "Newbridge",
-              "state": "NSW",
-              "postcode": "2810"
-            },
-            "bookingContact": "The receival site bookings office",
-            "booking": "Book by email or phone, Monday to Friday, 6am to 4pm.\nA booking needs the order number, the transport company, the registration and the time to unload.\nRegistrations must be confirmed by 1:30pm the day before or the slot is released.",
-            "nilTolerance": "Any dead animals visible\nPhosphine tablets\nUrea: and proof of tipping elsewhere before re-entering\nLive insects (depending on count)"
-          }
-        }
-      ],
-      "freightOrders": [
-        {
-          "id": "freight-1",
-          "saleId": "sale-1",
-          "orderId": "order-1",
-          "freightNo": "RGT-4471-01",
-          "carrier": "Ace Haulage",
-          "carrierEmail": "",
-          "tons": 300,
-          "rate": 21.5,
-          "rateBasis": "per_t",
-          "flatRate": "",
-          "distanceKm": "",
-          "pickup": "Kurrajong Downs, 12 Back Rd, Newbridge NSW 2810",
-          "pickupParts": {
-            "line1": "12 Back Rd",
-            "line2": "Kurrajong Downs",
-            "town": "Newbridge",
-            "state": "NSW",
-            "postcode": "2810"
-          },
-          "deliverTo": "Newbridge Receival Site, 1 Rail Rd, Newbridge NSW 2810",
-          "deliverToParts": {
-            "line1": "1 Rail Rd",
-            "line2": "Newbridge Receival Site",
-            "town": "Newbridge",
-            "state": "NSW",
-            "postcode": "2810"
-          },
-          "loadFrom": "2026-11-20",
-          "loadBy": "2026-12-05",
-          "status": "open",
-          "notes": "Gate 3, 7am to 4pm.\nCarriers must follow the receival site rules and wear high-vis.",
-          "detail": {
-            "paymentTerms": "30 days end of week",
-            "deliveryInstructions": "Book the receival site before loading.",
-            "deliverCompany": "Riverina Grain Traders",
-            "bookingContact": "The receival site bookings office",
-            "orderIssuedBy": "Sample Trader, 17-11-2026",
-            "ownTerms": true,
-            "rejectedOnArrival": "Any dead animals visible\nPhosphine tablets\nUrea: and proof of tipping elsewhere before re-entering\nLive insects (depending on count)"
-          }
-        }
-      ],
       "payables": [
         {
           "id": "pay-1",
           "kind": "brokerage",
           "supplier": "Sample Grain Brokers",
           "reference": "BR-0231",
-          "invoiceDate": "2026-12-19",
-          "dueDate": "2027-01-18",
+          "invoiceDate": "2026-10-25",
+          "dueDate": "2026-11-24",
           "amount": 1824,
           "gst": 182.4,
           "saleId": "sale-1",
@@ -3499,8 +3635,8 @@
           "kind": "freight",
           "supplier": "Ace Haulage",
           "reference": "AH-5530",
-          "invoiceDate": "2026-12-05",
-          "dueDate": "2026-12-19",
+          "invoiceDate": "2026-10-11",
+          "dueDate": "2026-10-25",
           "amount": 1290,
           "gst": 129,
           "saleId": "sale-1",
@@ -3508,7 +3644,7 @@
           "tons": 60,
           "rate": 21.5,
           "status": "paid",
-          "paidDate": "2026-12-17",
+          "paidDate": "2026-10-23",
           "notes": ""
         },
         {
@@ -3516,8 +3652,8 @@
           "kind": "storage",
           "supplier": "Newbridge Storage Co",
           "reference": "NS-118",
-          "invoiceDate": "2026-12-10",
-          "dueDate": "2027-01-09",
+          "invoiceDate": "2026-10-16",
+          "dueDate": "2026-11-15",
           "amount": 960,
           "gst": 96,
           "saleId": "",
@@ -3533,7 +3669,7 @@
           "kind": "other",
           "supplier": "Bimbi Ginning",
           "reference": "I021/26",
-          "invoiceDate": "2026-05-02",
+          "invoiceDate": "2026-03-08",
           "dueDate": "",
           "amount": 106156.39,
           "gst": 10110.13,
@@ -3551,8 +3687,8 @@
           "kind": "other",
           "supplier": "Sample Ag Services",
           "reference": "AS-2204",
-          "invoiceDate": "2026-11-22",
-          "dueDate": "2026-12-22",
+          "invoiceDate": "2026-09-28",
+          "dueDate": "2026-10-28",
           "amount": 540,
           "gst": 54,
           "saleId": "",
@@ -3573,7 +3709,7 @@
           "type": "buy",
           "qty": 14.7,
           "unitCost": 640,
-          "date": "2026-05-02",
+          "date": "2026-03-08",
           "supplier": "Sample Seeds",
           "reference": "SS-8801",
           "notes": "",
@@ -3587,7 +3723,7 @@
           "type": "use",
           "qty": 14.1,
           "unitCost": "",
-          "date": "2026-05-20",
+          "date": "2026-03-26",
           "supplier": "",
           "reference": "",
           "notes": "Sown",
@@ -3601,7 +3737,7 @@
           "type": "buy",
           "qty": 75,
           "unitCost": 690,
-          "date": "2026-04-28",
+          "date": "2026-03-04",
           "supplier": "Sample Ag Supplies",
           "reference": "AG-4417",
           "notes": "",
@@ -3615,7 +3751,7 @@
           "type": "use",
           "qty": 68,
           "unitCost": "",
-          "date": "2026-06-02",
+          "date": "2026-04-08",
           "supplier": "",
           "reference": "",
           "notes": "Spread",
@@ -3629,7 +3765,7 @@
           "type": "adjust",
           "qty": -0.5,
           "unitCost": "",
-          "date": "2026-09-01",
+          "date": "2026-07-08",
           "supplier": "",
           "reference": "",
           "notes": "Stocktake",
@@ -3643,7 +3779,7 @@
           "type": "buy",
           "qty": 20000,
           "unitCost": 1.78,
-          "date": "2026-05-10",
+          "date": "2026-03-16",
           "supplier": "Sample Fuels",
           "reference": "SF-3321",
           "notes": "",
@@ -3657,7 +3793,7 @@
           "type": "use",
           "qty": 13400,
           "unitCost": "",
-          "date": "2026-10-30",
+          "date": "2026-09-05",
           "supplier": "",
           "reference": "",
           "notes": "Season to date",
@@ -3671,7 +3807,7 @@
           "type": "buy",
           "qty": 1200,
           "unitCost": 6.2,
-          "date": "2026-07-06",
+          "date": "2026-05-12",
           "supplier": "Sample Ag Supplies",
           "reference": "AG-4630",
           "notes": "",
@@ -3685,7 +3821,7 @@
           "type": "use",
           "qty": 900,
           "unitCost": "",
-          "date": "2026-08-12",
+          "date": "2026-06-18",
           "supplier": "",
           "reference": "",
           "notes": "Fallow spray",
@@ -3700,7 +3836,7 @@
           "contractorEmail": "",
           "form": "standard",
           "status": "sent",
-          "dateRequired": "2026-08-14",
+          "dateRequired": "2026-06-20",
           "tradingName": "Kurrajong Downs Pty Ltd",
           "address": "Sample address",
           "phone": "",
@@ -3785,7 +3921,7 @@
           ],
           "signedBy": "Sample User",
           "useSignature": false,
-          "today": "2026-08-10"
+          "today": "2026-06-16"
         }
       ],
       "overheads": {
@@ -3799,7 +3935,83 @@
         "insurance": 58000,
         "repairsMaintenance": 96000,
         "other": 22000
-      }
+      },
+      "orders": [
+        {
+          "id": "order-1",
+          "saleId": "sale-1",
+          "orderNo": "B-1001",
+          "tons": 300,
+          "deliverFrom": "2026-11-20",
+          "deliverBy": "2026-12-05",
+          "freightCompany": "Ace Haulage",
+          "status": "open",
+          "notes": "Gate 3, 7am to 4pm. Call the receival site before loading.",
+          "detail": {
+            "issuedBy": "Sample Trader",
+            "issuedOn": "2026-11-17",
+            "contractNo": "RGT-4471",
+            "comments": "Carriers must follow the receival site rules and wear high-vis.",
+            "grade": "APW1",
+            "deliveryRef": "B-1001",
+            "destination": "Newbridge Receival Site",
+            "address": {
+              "line1": "1 Rail Rd",
+              "line2": "",
+              "town": "Newbridge",
+              "state": "NSW",
+              "postcode": "2810"
+            },
+            "bookingContact": "The receival site bookings office",
+            "booking": "Book by email or phone, Monday to Friday, 6am to 4pm.\nA booking needs the order number, the transport company, the registration and the time to unload.\nRegistrations must be confirmed by 1:30pm the day before or the slot is released.",
+            "nilTolerance": "Any dead animals visible\nPhosphine tablets\nUrea: and proof of tipping elsewhere before re-entering\nLive insects (depending on count)"
+          }
+        }
+      ],
+      "freightOrders": [
+        {
+          "id": "freight-1",
+          "saleId": "sale-1",
+          "orderId": "order-1",
+          "freightNo": "RGT-4471-01",
+          "carrier": "Ace Haulage",
+          "carrierEmail": "",
+          "tons": 300,
+          "rate": 21.5,
+          "rateBasis": "per_t",
+          "flatRate": "",
+          "distanceKm": "",
+          "pickup": "Kurrajong Downs, 12 Back Rd, Newbridge NSW 2810",
+          "pickupParts": {
+            "line1": "12 Back Rd",
+            "line2": "Kurrajong Downs",
+            "town": "Newbridge",
+            "state": "NSW",
+            "postcode": "2810"
+          },
+          "deliverTo": "Newbridge Receival Site, 1 Rail Rd, Newbridge NSW 2810",
+          "deliverToParts": {
+            "line1": "1 Rail Rd",
+            "line2": "Newbridge Receival Site",
+            "town": "Newbridge",
+            "state": "NSW",
+            "postcode": "2810"
+          },
+          "loadFrom": "2026-11-20",
+          "loadBy": "2026-12-05",
+          "status": "open",
+          "notes": "Gate 3, 7am to 4pm.\nCarriers must follow the receival site rules and wear high-vis.",
+          "detail": {
+            "paymentTerms": "30 days end of week",
+            "deliveryInstructions": "Book the receival site before loading.",
+            "deliverCompany": "Riverina Grain Traders",
+            "bookingContact": "The receival site bookings office",
+            "orderIssuedBy": "Sample Trader, 17-11-2026",
+            "ownTerms": true,
+            "rejectedOnArrival": "Any dead animals visible\nPhosphine tablets\nUrea: and proof of tipping elsewhere before re-entering\nLive insects (depending on count)"
+          }
+        }
+      ]
     },
     "Sample 2025": {
       "commodities": [

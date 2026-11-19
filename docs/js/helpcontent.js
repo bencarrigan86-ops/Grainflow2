@@ -4,8 +4,8 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=436';
-import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=436';
+import { ROLES, canOpen } from './nav.js?v=437';
+import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=437';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -206,7 +206,7 @@ export const GUIDES = [
       'Tap a tile to open it. In All, tap a star to make a report a favourite.',
     ],
     tips: [
-      'Invoices, Sales timeline, Available storage, Silo blending, the Silo calculator, Traceability and the exports are all here.',
+      'Invoices, Sales timeline, Available storage, Stock by location, Silo blending, the Silo calculator, Traceability and the exports are all here.',
     ],
   },
   {

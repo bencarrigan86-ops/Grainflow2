@@ -21,10 +21,12 @@ export const naturalByName = (a, b) =>
 
 /**
  * Every word typed must appear in the silo's name, commodity, grade or crop year
- * — so "wheat 25/26" finds the wheat silos carried over from last season.
+ * — so "wheat 25/26" finds the wheat silos carried over from last season. A silo's grade also counts for every grade in its layers
+ * (`__mix`, set by the Storage screen), so "APW1" finds a silo that holds some APW1 under H2.
  */
 function matchesText(storage, commodityName, query) {
-  const hay = [storage.name, commodityName, storage.grade, storage.cropYear, storage.notes].filter(Boolean).join(' ').toLowerCase();
+  const layerGrades = (storage.__mix || []).filter((g) => g.key && g.tons > 0).map((g) => g.grade);
+  const hay = [storage.name, commodityName, storage.grade, ...layerGrades, storage.cropYear, storage.notes].filter(Boolean).join(' ').toLowerCase();
   return query.toLowerCase().split(/\s+/).filter(Boolean).every((word) => hay.includes(word));
 }
 

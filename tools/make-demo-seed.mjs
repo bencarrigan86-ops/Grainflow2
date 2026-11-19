@@ -302,6 +302,29 @@ const STORE_FOR = {
   canola: ['silo-d'],
 };
 
+// What the receival test said about a load of this grade: protein, moisture, screenings and test weight (plus the one extra
+// measurement a commodity has), each a little different from load to load. Invented, but inside what the grade allows.
+const QUALITY = {
+  wheat: {
+    APH1: { proteinPct: 14.3, moisturePct: 11.0, screeningsPct: 1.2, testWeightKgHl: 82.1, fallingNumber: 420 },
+    H2:   { proteinPct: 12.6, moisturePct: 11.3, screeningsPct: 1.5, testWeightKgHl: 80.8, fallingNumber: 380 },
+    APW1: { proteinPct: 11.0, moisturePct: 11.5, screeningsPct: 1.3, testWeightKgHl: 81.4, fallingNumber: 395 },
+    ASW1: { proteinPct: 9.6, moisturePct: 11.8, screeningsPct: 1.9, testWeightKgHl: 79.2, fallingNumber: 340 },
+  },
+  barley: {
+    BAR1: { proteinPct: 10.9, moisturePct: 11.2, screeningsPct: 2.6, testWeightKgHl: 67.4, retentionPct: 81 },
+    BAR2: { proteinPct: 11.8, moisturePct: 11.6, screeningsPct: 4.8, testWeightKgHl: 65.6, retentionPct: 70 },
+  },
+  chickpeas: { 'No.1 Chickpea': { moisturePct: 11.6, screeningsPct: 1.1 } },
+  canola: { CAN: { moisturePct: 6.7, oilPct: 43.2, testWeightKgHl: 66.0, screeningsPct: 1.4 } },
+};
+const qualityOf = (commodityId, grade) => {
+  const base = (QUALITY[commodityId] || {})[grade] || {};
+  const out = { grade };
+  for (const [k, v] of Object.entries(base)) out[k] = k === 'fallingNumber' || k === 'retentionPct' ? Math.round(jitter(v, 0.03)) : round(jitter(v, 0.03), 1);
+  return out;
+};
+
 const movements = [];
 let ticket = 1001;
 const intoStore = new Map();          // store id -> tonnes carted in
@@ -334,6 +357,29 @@ for (const f of fields.filter((q) => STORE_FOR[q.commodityId])) {
   }
 }
 
+// The grade of each harvest load. Wheat is not all one grade: a store is filled with whatever came off the paddock that day, so
+// Silo A and Silo B hold layers of H2, ASW1 and APW1, oldest at the bottom, and the top layer is APW1, the grade the
+// contracts being delivered ask for. Barley, chickpeas and canola are one grade, with barley's last load a feed-quality BAR2.
+const MIX = ['H2', 'ASW1', 'APW1'];
+// oldest first, the order the store fills in (by date, then ticket), so the last one is the top layer
+const harvestLoads = (store) => movements.filter((m) => m.tos?.[0]?.id === store && m.froms?.[0]?.type === 'field')
+  .sort((x, y) => x.date.localeCompare(y.date) || x.ticketNo - y.ticketNo);
+for (const store of ['silo-a', 'silo-b', 'bunker-1']) {
+  const list = harvestLoads(store);
+  list.forEach((m, j) => {
+    const grade = j === list.length - 1 ? 'APW1' : (store === 'bunker-1' ? ['ASW1', 'APW1'][j % 2] : MIX[(j + (store === 'silo-b' ? 1 : 0)) % MIX.length]);
+    Object.assign(m, qualityOf('wheat', grade));
+  });
+}
+for (const store of ['silo-c', 'bunker-2', 'silo-d']) {
+  const list = harvestLoads(store);
+  list.forEach((m, j) => {
+    const cid = m.commodityId;
+    const grade = cid === 'barley' ? (j === 1 && list.length > 2 ? 'BAR2' : 'BAR1') : cid === 'chickpeas' ? 'No.1 Chickpea' : 'CAN';
+    Object.assign(m, qualityOf(cid, grade));
+  });
+}
+
 // Delivery: part of three contracts goes out, drawn from the stores that
 // actually hold that commodity and never more than went in.
 const DELIVERIES = [
@@ -359,6 +405,7 @@ for (const [saleId, commodityId, loads] of DELIVERIES) {
       froms: [{ type: 'silo', id: store, tons }],
       tos: [{ type: 'sale', id: saleId, tons }],
       notes: '',
+      ...qualityOf(commodityId, sale.grade),
     });
     ticket += 1;
   }
@@ -704,18 +751,41 @@ const freightOrders = [
       deliveryInstructions: 'Book the receival site before loading.', deliverCompany: 'Riverina Grain Traders', bookingContact: 'The receival site bookings office', orderIssuedBy: 'Sample Trader, 17-11-2026', ownTerms: true, rejectedOnArrival: ['Any dead animals visible', 'Phosphine tablets', 'Urea: and proof of tipping elsewhere before re-entering', 'Live insects (depending on count)'].join('\n') } },
 ];
 
+// Nothing the sample records may be dated after the day it was made. A trial farm adds its own loads, invoices and bills dated
+// today, and anything the sample put later than that sorts above them and buries what they just entered. So the season is moved
+// back as a whole (contract windows and due dates too, so every gap between dates stays what it was) until the latest event
+// is the 18th of November.
+const LAST_DAY = '2026-11-18';
+const dayNo = (iso) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / 86400000;
+const isoOf = (n) => new Date(n * 86400000).toISOString().slice(0, 10);
+const events = [
+  ...movements.map((m) => m.date), ...invoices.flatMap((i) => [i.issueDate, i.paidDate]), ...payables.flatMap((b) => [b.invoiceDate, b.paidDate]),
+  ...fields.flatMap((f) => (f.balesBaled || []).map((b) => b.date)),
+].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d || ''));
+const SHIFT_DAYS = Math.max(0, dayNo(events.sort().slice(-1)[0]) - dayNo(LAST_DAY));
+const shiftDates = (o) => {
+  if (Array.isArray(o)) return o.map(shiftDates);
+  if (o && typeof o === 'object') return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, shiftDates(v)]));
+  if (typeof o === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o)) return isoOf(dayNo(o) - SHIFT_DAYS);
+  return o;
+};
+// The open grain order and freight order are plans for the days ahead, so they keep their dates.
+const season = shiftDates({
+  commodities, fields, storages, sales, movements, invoices, payables, inputStock, sprayJobs,
+  overheads: {
+    finance: 186000, equipmentRepayments: 214000, depreciation: 168000,
+    wages: 152000, drawings: 120000, admin: 34000, energy: 46000,
+    insurance: 58000, repairsMaintenance: 96000, other: 22000,
+  },
+});
+season.orders = orders;
+season.freightOrders = freightOrders;
+
 const state = {
   version: 2,
   currentYear: SEASON,
   years: {
-    [SEASON]: {
-      commodities, fields, storages, sales, movements, invoices, orders, freightOrders, payables, inputStock, sprayJobs,
-      overheads: {
-        finance: 186000, equipmentRepayments: 214000, depreciation: 168000,
-        wages: 152000, drawings: 120000, admin: 34000, energy: 46000,
-        insurance: 58000, repairsMaintenance: 96000, other: 22000,
-      },
-    },
+    [SEASON]: season,
     ...Object.fromEntries(HISTORY.map((h) => [h.label, pastSeason(h)])),
   },
   businessDetails: {

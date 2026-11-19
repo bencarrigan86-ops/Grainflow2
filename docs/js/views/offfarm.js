@@ -4,15 +4,15 @@
 // into and out of a location are ordinary movements (see the movement form); what a location holds is
 // worked out from them (offfarm.js).
 
-import { db } from '../storage.js?v=436';
-import { openSheet, closeSheet, openOver, field, getVal, confirmDelete, toast } from '../ui.js?v=436';
-import { num, esc, money, dmy, todayLocal } from '../fmt.js?v=436';
-import { storageFeesByMonth, feeTermsText, BASES, cleanFee } from '../storagefees.js?v=436';
-import { downloadCSV } from '../csv.js?v=436';
-import { safeFileName } from '../sharefile.js?v=436';
-import { isOffFarm, holdings, totalHeld, cleanOffFarm } from '../offfarm.js?v=436';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=436';
-import { renderRelatedMovements } from './movements.js?v=436';
+import { db } from '../storage.js?v=437';
+import { openSheet, closeSheet, openOver, field, getVal, confirmDelete, toast } from '../ui.js?v=437';
+import { num, esc, money, dmy, todayLocal } from '../fmt.js?v=437';
+import { storageFeesByMonth, feeTermsText, BASES, cleanFee } from '../storagefees.js?v=437';
+import { downloadCSV } from '../csv.js?v=437';
+import { safeFileName } from '../sharefile.js?v=437';
+import { isOffFarm, holdings, totalHeld, cleanOffFarm, filterHoldings } from '../offfarm.js?v=437';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=437';
+import { renderRelatedMovements } from './movements.js?v=437';
 
 const OPERATORS = ['GrainCorp', 'Viterra', 'Cargill', 'Emerald Grain', 'Louis Dreyfus', 'Olam', 'Bunge', 'CBH'];
 
@@ -23,7 +23,7 @@ const canSeeFees = () => ['owner', 'manager', 'bookkeeper'].includes(db.getRole(
 
 const context = () => { const d = db.get(); return { fields: d.fields, storages: d.storages, sales: d.sales }; };
 
-/** What a location holds, as lines grouped by commodity: "Wheat: APH1 450.0 t · H2 120.0 t". */
+/** What a location holds: a heading for each commodity with its tonnes, and a row for each grade under it. */
 function holdingsLines(rows, commodities) {
   const names = new Map(commodities.map((c) => [c.id, c.name]));
   const byCommodity = new Map();
@@ -31,28 +31,34 @@ function holdingsLines(rows, commodities) {
     if (!byCommodity.has(h.commodityId)) byCommodity.set(h.commodityId, []);
     byCommodity.get(h.commodityId).push(h);
   }
-  return [...byCommodity.entries()].map(([id, list]) => {
-    const parts = list.map((h) => `${esc(h.grade || 'No grade')} ${num(h.tons, 1)} t${h.tons < 0 ? ' (over-drawn)' : ''}`);
-    return `<div class="meta"><strong>${esc(names.get(id) || 'Unknown commodity')}</strong>: ${parts.join(' · ')}</div>`;
-  }).join('');
+  return [...byCommodity.entries()].map(([id, list]) => `
+    <div class="of-commodity"><span><strong>${esc(names.get(id) || 'Unknown commodity')}</strong></span><span><strong>${num(totalHeld(list), 1)} t</strong></span></div>
+    ${list.map((h) => `<div class="of-grade"><span>${esc(h.grade || 'No grade')}</span><span>${num(h.tons, 1)} t${h.tons < 0 ? ' (over-drawn)' : ''}</span></div>`).join('')}`).join('');
 }
 
-/** The Off-farm storage card on the Storage screen. `box` is an empty element to fill. */
-export function paintOffFarmCard(box) {
+/**
+ * The Off-farm storage card on the Storage screen. `box` is an empty element to fill. The Storage screen's search words and commodity
+ * tab narrow it the same way they narrow the silos: only the locations and grades that match are shown.
+ */
+export function paintOffFarmCard(box, filter = {}) {
+  const filtered = !!(String(filter.query || '').trim() || filter.commodityId);
   const { commodities, storages, movements } = db.get();
   const locations = storages.filter(isOffFarm).sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true }));
   const ctx = context();
   const canEdit = ['owner', 'manager'].includes(db.getRole());
   const payables = canSeeFees() ? db.getPayables() : [];
   const today = todayLocal();
+  // with a filter on, a location shows only the rows that match, and one with none left is out of the way
+  const shownLocations = locations.map((loc) => ({ loc, rows: filterHoldings(holdings(loc, movements, ctx), loc, commodities, filter) })).filter((x) => !filtered || x.rows.length);
   box.innerHTML = `
     <div class="card input">
       <h2><span class="dot input"></span>Off-farm storage</h2>
       <div class="hint" style="margin-bottom:8px">Grain held by a third party such as GrainCorp, kept by grade.</div>
       ${locations.length === 0
         ? '<div class="empty" style="padding:8px 0">No off-farm locations yet.</div>'
-        : locations.map((loc) => {
-          const rows = holdings(loc, movements, ctx);
+        : shownLocations.length === 0
+          ? '<div class="empty" style="padding:8px 0">Nothing off farm matches.</div>'
+          : shownLocations.map(({ loc, rows }) => {
           return `
             <div class="list-item stack" data-edit-offfarm="${esc(loc.id)}">
               <div class="li-top">
