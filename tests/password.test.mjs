@@ -113,5 +113,13 @@ check('Change password is on the Account screen, asks for the current one, and t
   assert.ok(cp.includes('cp-current') && cp.includes('cp-new') && cp.includes('cp-again') && cp.includes('changePassword(current'));
 });
 
+check('every password box offers Show / Hide: sign in, create account, new password, change password', () => {
+  const src = (f) => readFileSync(new URL('../docs/js/' + f, import.meta.url), 'utf8');
+  for (const f of ['views/login.js', 'views/newpassword.js', 'views/changepassword.js']) assert.ok(src(f).includes('addShowPassword(root)'), f);
+  const h = src('showpassword.js');
+  assert.ok(h.includes("input.type = showing ? 'text' : 'password'") && h.includes("'Show'") && h.includes("'Hide'") && h.includes('aria-pressed'));
+  assert.ok(h.includes("btn.type = 'button'"), 'a button that does not submit the form');
+});
+
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
 console.log('\nall passed');

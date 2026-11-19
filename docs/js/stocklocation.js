@@ -2,11 +2,11 @@
 // totals for the whole farm. Pure: the figures come from the same places the Storage screen uses (the layers in a silo, the
 // holdings of an off-farm site), so the report cannot disagree with it.
 
-import { layersForStorage } from './outload.js?v=439';
-import { holdings, isOffFarm, commodityOfLoad } from './offfarm.js?v=439';
-import { isTransit } from './transit.js?v=439';
-import { createReport, fixed } from './reportpdf.js?v=439';
-import { gradeComparer } from './grades.js?v=439';
+import { layersForStorage } from './outload.js?v=442';
+import { holdings, isOffFarm, commodityOfLoad } from './offfarm.js?v=442';
+import { isTransit } from './transit.js?v=442';
+import { createReport, fixed } from './reportpdf.js?v=442';
+import { gradeComparer } from './grades.js?v=442';
 
 const EPS = 0.0005;
 const round3 = (n) => Math.round(n * 1000) / 1000;
@@ -59,9 +59,10 @@ export function stockByLocation({ storages = [], movements = [], commodities = [
     const groups = groupLines(lines, names);
     if (!groups.length) continue;
     everything.push(...lines);
-    locations.push({ id: s.id, name: s.name || 'Unnamed', kind: off ? 'off' : 'farm', operator: off ? (s.offFarm?.operator || '') : '', tons: round3(groups.reduce((a, c) => a + c.tons, 0)), commodities: groups });
+    locations.push({ id: s.id, name: s.name || 'Unnamed', kind: off ? 'off' : 'farm', operator: off ? (s.offFarm?.operator || '') : '', property: off ? '' : String(s.property ?? '').trim(), tons: round3(groups.reduce((a, c) => a + c.tons, 0)), commodities: groups });
   }
-  locations.sort((a, b) => (a.kind === 'off') - (b.kind === 'off') || natural(a.name, b.name));
+  // on farm first, by farm or site (silos with none last), then off farm; each in name order
+  locations.sort((a, b) => (a.kind === 'off') - (b.kind === 'off') || (!a.property - !b.property) || natural(a.property, b.property) || natural(a.name, b.name));
   const all = groupLines(everything, names);
   return { locations, total: { tons: round3(all.reduce((a, c) => a + c.tons, 0)), commodities: all } };
 }
@@ -92,6 +93,24 @@ export function stockByGrade(report) {
       .sort((a, b) => gradeComparer(c.name, c.customGrades)(a.grade, b.grade));
     return { commodityId: c.commodityId, name: c.name, tons: round3(grades.reduce((a, g) => a + g.tons, 0)), grades };
   }).sort((a, b) => (a.commodityId === '') - (b.commodityId === '') || natural(a.name, b.name));
+}
+
+/**
+ * The report laid out as the farm is: each property (the "Farm / site" a silo is on), then Off farm, and under each the storages, then
+ * their commodities and grades. A farm with silos on one unnamed property is simply "On farm".
+ * @returns {{key: string, label: string, kind: 'farm'|'off', tons: number, locations: object[]}[]}
+ */
+export function propertyGroups(report) {
+  const out = [];
+  const find = (key, label, kind) => { let g = out.find((x) => x.key === key); if (!g) { g = { key, label, kind, tons: 0, locations: [] }; out.push(g); } return g; };
+  const farm = report.locations.filter((l) => l.kind !== 'off');
+  const onlyBlank = farm.length > 0 && farm.every((l) => !l.property);
+  for (const l of report.locations) {
+    const g = l.kind === 'off' ? find('off', 'Off farm', 'off') : find('farm:' + (l.property || ''), l.property || (onlyBlank ? 'On farm' : 'No farm / site'), 'farm');
+    g.locations.push(l);
+    g.tons = round3(g.tons + l.tons);
+  }
+  return out;
 }
 
 /** The same report, narrowed to on-farm or off-farm locations ('all' keeps everything), with the totals worked out again for what is left. */
@@ -207,7 +226,7 @@ export function stockPdf({ report, business = '', today = '', scope = '', group 
         ...(rowTotals ? [{ head: 'Total', w: 0.1, cell: (r) => t0(r.total) }] : []),
       ];
       if (one) pdf.heading(cols[0].commodity);
-      pdf.table(columns, rows, { total: { name: 'Total', kind: 'farm', cells: totals, total: grand }, name: one ? cols[0].commodity : 'Stock by location' });
+      pdf.table(columns, rows, { total: { name: 'Total', kind: 'farm', cells: totals, total: grand }, name: one ? cols[0].commodity : 'Stock by location', columnLines: true });
     }
     return pdf.bytes();
   }
@@ -235,9 +254,17 @@ export function stockPdf({ report, business = '', today = '', scope = '', group 
     { head: 'Grade', w: 0.35, left: true, cell: (r) => r.grade },
     { head: 'Tonnes', w: 0.25, cell: (r) => t1(r.tons) },
   ];
-  for (const l of report.locations) {
-    pdf.heading(`${l.name}${l.operator ? ` (${l.operator})` : l.kind === 'off' ? ' (off farm)' : ''}`);
-    pdf.table(columns, lineRows(l.commodities), { total: { commodity: 'Total', grade: '', tons: l.tons }, name: l.name });
+  // each property (or Off farm) is one table: its storages in turn, each with its commodities and grades
+  const placeColumns = [
+    { head: 'Storage', w: 0.28, left: true, cell: (r) => r.storage },
+    { head: 'Commodity', w: 0.27, left: true, cell: (r) => r.commodity },
+    { head: 'Grade', w: 0.25, left: true, cell: (r) => r.grade },
+    { head: 'Tonnes', w: 0.2, cell: (r) => t1(r.tons) },
+  ];
+  for (const g of propertyGroups(report)) {
+    pdf.heading(g.label);
+    const rows = g.locations.flatMap((l) => lineRows(l.commodities).map((r, i) => ({ ...r, storage: i === 0 ? `${l.name}${l.operator ? ` (${l.operator})` : ''}` : '' })));
+    pdf.table(placeColumns, rows, { total: { storage: 'Total', commodity: '', grade: '', tons: g.tons }, name: g.label, columnLines: true });
     pdf.gap(6);
   }
   pdf.heading('All locations');

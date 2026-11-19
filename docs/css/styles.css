@@ -1554,12 +1554,33 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 
 /* Stock by location, grid view: a row for each location, a column for each commodity and grade */
 .sm { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; min-width: 100%; }
-.sm th, .sm td { padding: 7px 10px; border-bottom: 1px solid var(--border, rgba(0,0,0,.1)); text-align: right; white-space: nowrap; font-weight: 500; }
+.sm th, .sm td { padding: 7px 10px; border-bottom: 1px solid var(--border, rgba(0,0,0,.1)); border-left: 1px solid var(--border, rgba(0,0,0,.1)); text-align: right; white-space: nowrap; font-weight: 500; }
 .sm th { text-transform: none; letter-spacing: 0; font-size: 13px; }
 .sm thead th { background: var(--surface); color: var(--text); font-weight: 700; }
 .sm .sm-loc { text-align: left; position: sticky; left: 0; background: var(--surface); z-index: 1; font-weight: 600; }
-.sm .sm-grp { text-align: center; border-left: 1px solid var(--border, rgba(0,0,0,.1)); }
+.sm .sm-grp { text-align: center; border-left-color: var(--text-dim); }
+.sm .sm-first { border-left-color: var(--text-dim); }
+.sm .sm-loc { border-left: 0; }
+.sm .sm-sec th { border-left: 0; }
 .sm .sm-sec th { text-align: left; background: color-mix(in srgb, var(--accent-report, #2e7d32) 10%, var(--surface)); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; position: static; }
 .sm tfoot th, .sm tfoot td { font-weight: 800; border-top: 2px solid var(--text-dim); border-bottom: none; }
-.sm .sm-tot { font-weight: 700; border-left: 1px solid var(--border, rgba(0,0,0,.1)); }
+.sm .sm-tot { font-weight: 700; border-left-color: var(--text-dim); }
+/* the grid scrolls inside its own box, so the two head rows and the Location column stay put */
+.sm-scroll { margin: 0; padding: 0; border: 1px solid var(--border, rgba(0,0,0,.1)); border-radius: 8px; max-height: max(240px, calc(100vh - 400px)); overflow: auto; }
+.sm thead th { position: sticky; top: 0; z-index: 2; height: 34px; box-sizing: border-box; }
+.sm thead tr:nth-child(2) th { top: 34px; }
+.sm thead .sm-loc { z-index: 4; }
+.sm tbody .sm-loc, .sm tfoot .sm-loc { z-index: 1; }
 .sm .sm-op { color: var(--text-dim); font-weight: 400; font-size: 11px; }
+
+/* Show / Hide on a password box */
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 64px; }
+.pw-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: 0; color: var(--accent-report); font: inherit; font-size: 13px; font-weight: 600; padding: 8px 10px; min-height: 36px; cursor: pointer; border-radius: 8px; }
+.pw-toggle:focus-visible { outline: 2px solid var(--accent-report); outline-offset: 1px; }
+
+/* A card heading that folds the card away (Cotton on hand on Storage) */
+.fold-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; background: none; border: 0; padding: 0 0 2px; color: inherit; font: inherit; text-align: left; cursor: pointer; min-height: 40px; }
+.fold-head .fold-sum { display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 13px; white-space: nowrap; }
+.fold-head .fold-chev { font-size: 11px; }
+.fold-head:focus-visible { outline: 2px solid var(--accent-report); outline-offset: 2px; border-radius: 8px; }

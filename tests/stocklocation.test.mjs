@@ -11,7 +11,7 @@ import { loadFilterChoices } from '../docs/js/loadreport.js';
 import { gradeSorter } from '../docs/js/grades.js';
 import { filterHoldings } from '../docs/js/offfarm.js';
 import { gradeComparer } from '../docs/js/grades.js';
-import { stockMatrix, matrixSheet, stockByLocation, stockByGrade, narrowed, stockRows, stockPdf, STOCK_COLUMNS } from '../docs/js/stocklocation.js';
+import { propertyGroups, stockMatrix, matrixSheet, stockByLocation, stockByGrade, narrowed, stockRows, stockPdf, STOCK_COLUMNS } from '../docs/js/stocklocation.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -200,6 +200,17 @@ check('Storage can sort by Location: silos grouped under their farm or site, num
   assert.deepEqual(sorted.map((x) => x.id), ['b', 'd', 'a', 'c']);
   assert.equal(sortGroupLabel(silos[0], 'location'), 'Home');
   assert.equal(sortGroupLabel(silos[2], 'location'), 'No farm / site');
+});
+
+check('By location: each property, then Off farm, and under each the storages with their commodities and grades', () => {
+  const mk = (id, name, kind, property, tons) => ({ id, name, kind, property, operator: kind === 'off' ? 'GrainCorp' : '', tons, commodities: [] });
+  const rep = { locations: [mk('a', 'Silo 1', 'farm', 'Home', 10), mk('b', 'Silo 2', 'farm', 'Home', 5), mk('c', 'Silo 3', 'farm', 'Back block', 7), mk('d', 'Shed', 'farm', '', 2), mk('e', 'Goondiwindi East', 'off', '', 50)], total: { tons: 74, commodities: [] } };
+  const g = propertyGroups(rep);
+  assert.deepEqual(g.map((x) => [x.label, x.tons, x.locations.length]), [['Home', 15, 2], ['Back block', 7, 1], ['No farm / site', 2, 1], ['Off farm', 50, 1]]);
+  const plain = propertyGroups({ locations: [mk('a', 'Silo 1', 'farm', '', 10), mk('e', 'Dalby', 'off', '', 5)], total: { tons: 15, commodities: [] } });
+  assert.deepEqual(plain.map((x) => x.label), ['On farm', 'Off farm'], 'one unnamed property is just On farm');
+  const real = stockByLocation({ storages: [{ id: 's', name: 'Silo A', kind: 'silo', property: 'Home farm', commodityId: 'w' }], movements: [{ id: 'm', date: '2026-11-01', grade: 'H2', commodityId: 'w', froms: [], tos: [{ type: 'silo', id: 's', tons: 40 }] }], commodities });
+  assert.equal(real.locations[0].property, 'Home farm');
 });
 
 console.log(`\n${failures === 0 ? 'ALL PASS' : failures + ' FAILURES'}`);

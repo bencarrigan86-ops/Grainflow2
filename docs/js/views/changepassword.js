@@ -1,8 +1,9 @@
 // Change password, from the Account screen: the current one, then the new one twice.
 
-import { openSheet, closeSheet, field, getVal, toast } from '../ui.js?v=439';
-import { changePassword } from '../auth.js?v=439';
-import { checkNewPassword } from '../recovery.js?v=439';
+import { openSheet, closeSheet, field, getVal, toast } from '../ui.js?v=442';
+import { changePassword } from '../auth.js?v=442';
+import { checkNewPassword } from '../recovery.js?v=442';
+import { addShowPassword } from '../showpassword.js?v=442';
 
 export function openChangePasswordSheet() {
   openSheet('Change password', (root) => {
@@ -15,6 +16,7 @@ export function openChangePasswordSheet() {
     // password boxes get the right autofill hints, so a phone offers to remember the new one
     root.querySelector('#cp-new')?.setAttribute('autocomplete', 'new-password');
     root.querySelector('#cp-again')?.setAttribute('autocomplete', 'new-password');
+    addShowPassword(root);
     const btn = root.querySelector('#cp-save');
     const problem = root.querySelector('#cp-problem');
     let busy = false;

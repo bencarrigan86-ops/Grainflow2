@@ -212,4 +212,10 @@ check('on a commodity tab, cotton on hand only shows for All and the cotton tabs
 
 console.log('');
 if (failures) { console.log(`${failures} FAILURES`); process.exit(1); }
+check('Cotton on hand folds away and stays as it was left', () => {
+  const src = fs.readFileSync(new URL('../docs/js/views/storage.js', import.meta.url), 'utf8');
+  assert.ok(src.includes("data-cotton-fold") && src.includes("grainflow.storage.cottonOpen") && src.includes("aria-expanded"));
+  assert.ok(src.includes('!cottonOpen ?'), 'the rows are left out when it is folded');
+});
+
 console.log('ALL PASS');

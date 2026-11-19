@@ -4,11 +4,11 @@
 // saved yet it says so and opens the pad, then the person ticks it again. The signature is theirs alone (see
 // mysignature.js), so a document is only ever signed by the person looking at it.
 
-import { loadMySignature, mySignatureOnDevice } from '../mysignature.js?v=439';
-import { notify } from '../ui.js?v=439';
-import { canSign, signerChoices } from '../signdoc.js?v=439';
-import { esc } from '../fmt.js?v=439';
-import { openMySignatureSheet } from './signaturepad.js?v=439';
+import { loadMySignature, mySignatureOnDevice } from '../mysignature.js?v=442';
+import { notify } from '../ui.js?v=442';
+import { canSign, signerChoices } from '../signdoc.js?v=442';
+import { esc } from '../fmt.js?v=442';
+import { openMySignatureSheet } from './signaturepad.js?v=442';
 
 export function signToggleHtml(id = 'sign-doc', label = 'Sign this document with my signature', checked = false) {
   return `<label class="row" style="gap:10px;align-items:center;cursor:pointer;margin:6px 0">

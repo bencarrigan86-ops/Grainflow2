@@ -1,8 +1,9 @@
 // "Choose a new password": the screen a password reset link opens on. The link has already signed the person in, for this one job.
 // Same plain card as the sign-in screen. When it is done (or set aside) the app carries on as normal.
 
-import { setNewPassword } from '../auth.js?v=439';
-import { checkNewPassword } from '../recovery.js?v=439';
+import { setNewPassword } from '../auth.js?v=442';
+import { checkNewPassword } from '../recovery.js?v=442';
+import { addShowPassword } from '../showpassword.js?v=442';
 
 export function renderNewPassword(root, { onDone } = {}) {
   let busy = false;
@@ -25,6 +26,7 @@ export function renderNewPassword(root, { onDone } = {}) {
       <div class="empty" style="padding:16px 10px"><button class="link-btn" id="np-skip">Not now</button></div>
     </div>`;
 
+  addShowPassword(root);
   const newEl = root.querySelector('#np-new');
   const againEl = root.querySelector('#np-again');
   const btn = root.querySelector('#np-save');

@@ -3,8 +3,8 @@
 // total row, a footer with the page number). The reports say what goes on it; this does the laying out, and runs a long
 // table on to the next page with its heading and table head repeated. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=439';
-import { drawBrandLogo } from './brand.js?v=439';
+import { Pdf, wrapText } from './pdf.js?v=442';
+import { drawBrandLogo } from './brand.js?v=442';
 
 const PAGE = { width: 595.28, height: 841.89 };
 const M = 36;
@@ -73,9 +73,9 @@ export function createReport({ title, business = '', season = '', today = '', fo
 
   /**
    * A table: columns are {head, w (share of the width), left (left-aligned), cell(row)}. `total`, when given, is a row
-   * shaded and ruled at the foot; its first cell reads "Total".
+   * shaded and ruled at the foot; its first cell reads "Total". `columnLines` rules a thin line between the columns.
    */
-  const table = (columns, rows, { total = null, name = '' } = {}) => {
+  const table = (columns, rows, { total = null, name = '', columnLines = false } = {}) => {
     const widths = columns.map((c) => c.w * W);
     const edges = widths.reduce((a, w, i) => { a.push(a[i] + w); return a; }, [0]);
     const put = (i, str, opts = {}) => {
@@ -83,8 +83,11 @@ export function createReport({ title, business = '', season = '', today = '', fo
       if (c.left) pdf.text(M + edges[i] + 5, y, wrapText(String(str ?? ''), widths[i] - 10, BODY, !!opts.bold)[0] || '', { size: BODY, ...opts });
       else pdf.text(M + edges[i] + widths[i] / 2, y, String(str ?? ''), { size: BODY, align: 'center', ...opts });
     };
+    // a thin line down the left of every column but the first, across the row about to be written
+    const lines = (h, gray) => { if (columnLines) edges.slice(1, -1).forEach((e) => pdf.line(M + e, y - 5, M + e, y - 5 + h, { width: 0.5, gray })); };
     const headRow = () => {
       pdf.rect(M, y - 5, W, 19, { stroke: null, fill: GREEN });
+      lines(19, 0.85);
       columns.forEach((c, i) => put(i, c.head, { bold: true, size: HEAD, gray: 1 }));
       y += 20;
     };
@@ -97,6 +100,7 @@ export function createReport({ title, business = '', season = '', today = '', fo
         headRow();
       }
       if (n % 2 === 1) pdf.rect(M, y - 5, W, 18, { stroke: null, fill: BAND });
+      lines(18, 0.75);
       columns.forEach((c, i) => put(i, c.cell(r), i === 0 ? { bold: true } : {}));
       y += 18;
     });
@@ -104,6 +108,7 @@ export function createReport({ title, business = '', season = '', today = '', fo
       ensure(26);
       pdf.rect(M, y - 5, W, 19, { stroke: null, fill: TOTAL });
       pdf.line(M, y - 5, M + W, y - 5, { width: 1.2, gray: GREEN });
+      lines(19, 0.75);
       columns.forEach((c, i) => put(i, i === 0 ? 'Total' : (c.left ? '' : c.cell(total)), { bold: true }));
       y += 24;
     }

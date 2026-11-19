@@ -2,12 +2,12 @@
 // Three ways to read it: a card for each location, a card for each grade with the locations under it, and a grid (a row for each
 // location, a column for each commodity and grade). Narrow it to on farm or off farm, and to the commodities ticked.
 
-import { db } from '../storage.js?v=439';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=439';
-import { openSheet, toast } from '../ui.js?v=439';
-import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=439';
-import { exportRowsAsCSV } from '../csv.js?v=439';
-import { stockByLocation, stockByGrade, stockMatrix, matrixSheet, narrowed, stockRows, STOCK_COLUMNS, stockPdf } from '../stocklocation.js?v=439';
+import { db } from '../storage.js?v=442';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=442';
+import { openSheet, toast } from '../ui.js?v=442';
+import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=442';
+import { exportRowsAsCSV } from '../csv.js?v=442';
+import { stockByLocation, propertyGroups, stockByGrade, stockMatrix, matrixSheet, narrowed, stockRows, STOCK_COLUMNS, stockPdf } from '../stocklocation.js?v=442';
 
 const SCOPES = [['all', 'All'], ['farm', 'On farm'], ['off', 'Off farm']];
 const SCOPE_TEXT = { all: '', farm: 'On farm', off: 'Off farm' };
@@ -40,18 +40,21 @@ const cell = (v) => (v ? num(v, Math.abs(v - Math.round(v)) < 0.05 ? 0 : 1) : ''
 /** The grid: commodities across the top with their grades under them, a row for each location, a total row along the bottom. */
 function gridHtml(m, rowTotals) {
   const span = 1 + m.columns.length + (rowTotals ? 1 : 0);
+  // the first grade of each commodity gets a heavier line on its left, so the commodities read as blocks
+  const first = new Set(m.columns.filter((c, i) => i === 0 || m.columns[i - 1].commodity !== c.commodity).map((c) => c.key));
+  const td = (c, v) => `<td${first.has(c.key) ? ' class="sm-first"' : ''}>${cell(v)}</td>`;
   const section = (kind, label) => {
     const rows = m.rows.filter((r) => r.kind === kind);
     if (!rows.length) return '';
-    return `<tr class="sm-sec"><th colspan="${span}">${label}</th></tr>${rows.map((r) => `<tr><th class="sm-loc">${esc(r.name)}${r.operator ? `<span class="sm-op"> ${esc(r.operator)}</span>` : ''}</th>${m.columns.map((c) => `<td>${cell(r.cells[c.key])}</td>`).join('')}${rowTotals ? `<td class="sm-tot">${cell(r.total)}</td>` : ''}</tr>`).join('')}`;
+    return `<tr class="sm-sec"><th colspan="${span}">${label}</th></tr>${rows.map((r) => `<tr><th class="sm-loc">${esc(r.name)}${r.operator ? `<span class="sm-op"> ${esc(r.operator)}</span>` : ''}</th>${m.columns.map((c) => td(c, r.cells[c.key])).join('')}${rowTotals ? `<td class="sm-tot">${cell(r.total)}</td>` : ''}</tr>`).join('')}`;
   };
-  return `<div class="table-scroll"><table class="sm" data-grid>
+  return `<div class="table-scroll sm-scroll"><table class="sm" data-grid>
     <thead>
       <tr><th class="sm-loc" rowspan="2">Location</th>${m.groups.map((g) => `<th colspan="${g.span}" class="sm-grp">${esc(g.commodity)}</th>`).join('')}${rowTotals ? '<th rowspan="2" class="sm-tot">Total</th>' : ''}</tr>
-      <tr>${m.columns.map((c) => `<th>${esc(c.grade || 'No grade')}</th>`).join('')}</tr>
+      <tr>${m.columns.map((c) => `<th${first.has(c.key) ? ' class="sm-first"' : ''}>${esc(c.grade || 'No grade')}</th>`).join('')}</tr>
     </thead>
     <tbody>${section('farm', 'On farm')}${section('off', 'Off farm')}</tbody>
-    <tfoot><tr><th class="sm-loc">Total</th>${m.columns.map((c) => `<td>${cell(m.totals[c.key])}</td>`).join('')}${rowTotals ? `<td class="sm-tot">${cell(m.grand)}</td>` : ''}</tr></tfoot>
+    <tfoot><tr><th class="sm-loc">Total</th>${m.columns.map((c) => td(c, m.totals[c.key])).join('')}${rowTotals ? `<td class="sm-tot">${cell(m.grand)}</td>` : ''}</tr></tfoot>
   </table></div>`;
 }
 
@@ -79,11 +82,12 @@ export function openStockByLocationSheet() {
         ? `<div class="empty">${scope === 'off' ? 'Nothing is held off farm.' : scope === 'farm' ? 'Nothing is held in the silos and bunkers.' : 'Nothing is held in storage yet.'}</div>`
         : group === 'table' ? gridHtml(stockMatrix(report), rowTotals)
         : group === 'grade' ? stockByGrade(report).map(gradeBlock).join('')
-        : `${report.locations.map((l) => `
+        : `${propertyGroups(report).map((g) => `
           <div class="card" style="margin-bottom:10px">
-            <div class="li-top" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><h2 style="margin:0">${esc(l.name)}</h2><div class="main">${num(l.tons, 1)} t</div></div>
-            <div class="meta">${l.kind === 'off' ? `Off farm${l.operator ? ` &middot; ${esc(l.operator)}` : ''}` : 'On farm'}</div>
-            ${l.commodities.map(commodityBlock).join('')}
+            <div class="li-top" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><h2 style="margin:0">${esc(g.label)}</h2><div class="main">${num(g.tons, 1)} t</div></div>
+            ${g.locations.map((l) => `
+              <div class="of-commodity" style="margin-top:12px"><span><strong>${esc(l.name)}</strong>${l.operator ? `<span class="meta"> &middot; ${esc(l.operator)}</span>` : ''}</span><span><strong>${num(l.tons, 1)} t</strong></span></div>
+              ${l.commodities.map(commodityBlock).join('')}`).join('')}
           </div>`).join('')}
           ${report.locations.length > 1 ? `<div class="card" style="margin-bottom:10px">
             <div class="li-top" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><h2 style="margin:0">${scope === 'all' ? 'All locations' : `All ${SCOPE_TEXT[scope].toLowerCase()} locations`}</h2><div class="main">${num(report.total.tons, 1)} t</div></div>

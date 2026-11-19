@@ -1,18 +1,18 @@
-import { db } from '../storage.js?v=439';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=439';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=439';
-import { payablesCost } from '../payables.js?v=439';
-import { commodityClass } from '../commoditycolor.js?v=439';
-import { startProgress, missingLine } from '../helpcontent.js?v=439';
-import { openSetupWalk } from './setupwalk.js?v=439';
-import { attentionItems } from '../attention.js?v=439';
-import { lastBackup } from '../backup.js?v=439';
-import { supportWaitingCount } from './support.js?v=439';
-import { todayLocal, dmy } from '../fmt.js?v=439';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=439';
-import { openSheet, closeSheet } from '../ui.js?v=439';
-import { positionPdf } from '../positionpdf.js?v=439';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=439';
+import { db } from '../storage.js?v=442';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=442';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=442';
+import { payablesCost } from '../payables.js?v=442';
+import { commodityClass } from '../commoditycolor.js?v=442';
+import { startProgress, missingLine } from '../helpcontent.js?v=442';
+import { openSetupWalk } from './setupwalk.js?v=442';
+import { attentionItems } from '../attention.js?v=442';
+import { lastBackup } from '../backup.js?v=442';
+import { supportWaitingCount } from './support.js?v=442';
+import { todayLocal, dmy } from '../fmt.js?v=442';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=442';
+import { openSheet, closeSheet } from '../ui.js?v=442';
+import { positionPdf } from '../positionpdf.js?v=442';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=442';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
