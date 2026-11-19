@@ -15,7 +15,7 @@
 // Pulled out of main.js for the same reason as boot.js and reconcile.js: a
 // decision worth testing should not be trapped inside a render function.
 
-import { AREA_TAB, levelRank } from './farmswitches.js?v=427';
+import { AREA_TAB, levelRank } from './farmswitches.js?v=428';
 
 export const ROLES = ['owner', 'manager', 'bookkeeper', 'farm_worker', 'driver', 'advisor'];
 
@@ -127,7 +127,7 @@ export function tabsForRole(role) {
     const next = bar.findIndex((x) => TAB_ORDER.indexOf(x) > TAB_ORDER.indexOf(tab));
     if (next < 0) bar.push(tab); else bar.splice(next, 0, tab);
   }
-  return bar;
+  return bar.sort((a, b) => TAB_ORDER.indexOf(a) - TAB_ORDER.indexOf(b));   // the same order for everyone; where a role opens is landingTabFor()
 }
 
 /** Everything the role may open, bar or not. */

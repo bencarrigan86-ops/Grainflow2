@@ -1,12 +1,12 @@
-import { db } from '../storage.js?v=427';
-import { esc } from '../fmt.js?v=427';
-import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=427';
-import { SWITCHES, switchesForArea, readSwitches, withSwitch, readLevels, withLevel, levelChoices, levelNow, levelRank, LEVEL_AREAS, LEVEL_ROLES, SCREEN_AREAS } from '../farmswitches.js?v=427';
-import { ACCESS, LEVELS, effectiveAccess, pickWarning } from '../helpcontent.js?v=427';
-import { pill, ROLE_SHORT } from './levelpill.js?v=427';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=427';
-import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=427';
-import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=427';
+import { db } from '../storage.js?v=428';
+import { esc } from '../fmt.js?v=428';
+import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=428';
+import { SWITCHES, switchesForArea, readSwitches, withSwitch, readLevels, withLevel, levelChoices, levelNow, levelRank, LEVEL_AREAS, LEVEL_ROLES, SCREEN_AREAS } from '../farmswitches.js?v=428';
+import { ACCESS, LEVELS, effectiveAccess, pickWarning } from '../helpcontent.js?v=428';
+import { pill, ROLE_SHORT } from './levelpill.js?v=428';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=428';
+import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=428';
+import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=428';
 
 // ---------------------------------------------------------------------------
 // People
@@ -187,7 +187,7 @@ function switchesFoldHtml() {
   const standardRows = effectiveAccess(on);            // what the rules and the switches give each role
   const rows = effectiveAccess(on, levels);            // and what it is once the owner's picks are in
   return `<details class="fold" id="switch-fold" ${switchesOpen ? 'open' : ''} style="margin-top:14px">
-    <summary><div><h2>Who can do what</h2><div class="sub">This farm's rules, area by area</div></div></summary>
+    <summary><div><h2>Set permission levels by role</h2><div class="sub">This farm's rules, area by area</div></div></summary>
     <div class="field hint" style="margin:8px 0">Tap an oval to change what that login can do in that area. A red outline is more than the standard, a dark one is less. The owner is always Full.</div>
     ${rows.map((r) => {
       const qs = switchesForArea(r.area);

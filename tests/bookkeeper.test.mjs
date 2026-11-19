@@ -13,7 +13,7 @@ const check = (name, fn) => {
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
 check('the bar is Sales, Production, Movement and Reports, and Sales is where they land', () => {
-  assert.deepEqual(tabsForRole('bookkeeper'), ['sales', 'production', 'movement', 'reports']);
+  assert.deepEqual(tabsForRole('bookkeeper'), ['production', 'sales', 'movement', 'reports']);
   assert.equal(landingTabFor('bookkeeper'), 'sales');
   assert.equal(canOpen('bookkeeper', 'position'), false);
   assert.equal(canOpen('bookkeeper', 'storage'), false);

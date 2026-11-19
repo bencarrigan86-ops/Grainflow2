@@ -9,10 +9,10 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase, isolatedClient } from './supabase.js?v=427';
-import { resetRedirect, accountGone } from './recovery.js?v=427';
-import { pickMembership, recallMembership, farmChoices } from './membership.js?v=427';
-import { newToken, expiryFrom } from './invites.js?v=427';
+import { supabase, isolatedClient } from './supabase.js?v=428';
+import { resetRedirect, accountGone } from './recovery.js?v=428';
+import { pickMembership, recallMembership, farmChoices } from './membership.js?v=428';
+import { newToken, expiryFrom } from './invites.js?v=428';
 
 /** The signed-in user, or null. */
 export async function getUser() {

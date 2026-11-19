@@ -3,15 +3,15 @@
 // The words are in helpcontent.js, checked against nav.js and the database policies by tests/help.test.mjs. This only lays
 // them out, and offers each guide only to the roles that have it.
 
-import { db } from '../storage.js?v=427';
-import { esc } from '../fmt.js?v=427';
-import { canOpen } from '../nav.js?v=427';
-import { ROLE_INFO, ACCESS, LEVELS, effectiveAccess, guidesForRole, startProgress } from '../helpcontent.js?v=427';
-import { readSwitches, readLevels } from '../farmswitches.js?v=427';
-import { openSetupWalk } from './setupwalk.js?v=427';
-import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=427';
+import { db } from '../storage.js?v=428';
+import { esc } from '../fmt.js?v=428';
+import { canOpen } from '../nav.js?v=428';
+import { ROLE_INFO, ACCESS, LEVELS, effectiveAccess, guidesForRole, startProgress } from '../helpcontent.js?v=428';
+import { readSwitches, readLevels } from '../farmswitches.js?v=428';
+import { openSetupWalk } from './setupwalk.js?v=428';
+import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=428';
 
-import { pill, ROLE_SHORT } from './levelpill.js?v=427';
+import { pill, ROLE_SHORT } from './levelpill.js?v=428';
 
 const SHORT = ROLE_SHORT;
 
@@ -63,7 +63,7 @@ export function renderHelp(root) {
 
       <div class="card">
         <h2>Who can do what</h2>
-        <div class="hint" style="margin-bottom:8px">There are five kinds of login, and a read-only Advisor. An owner chooses which one each person gets, under People in Settings. Your column is shaded. The table is this farm's rules. An owner can change some of them under Who can do what in Settings.</div>
+        <div class="hint" style="margin-bottom:8px">There are five kinds of login, and a read-only Advisor. An owner chooses which one each person gets, under People in Settings. Your column is shaded. The table is this farm's rules. An owner can change some of them under Set permission levels by role in Settings.</div>
         <div class="meta" style="margin-bottom:4px">What each kind of login sees along the bottom of the screen (it opens on the green one):</div>
         ${rolesSvg()}
         ${ROLE_INFO.map((r) => `<div class="row" style="align-items:flex-start"><span class="label" style="min-width:92px"><strong>${esc(r.label)}</strong></span><span class="value" style="font-weight:400;font-size:13px">${esc(r.summary)}</span></div>`).join('')}

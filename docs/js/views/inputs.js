@@ -4,19 +4,19 @@
 // and Bought, Used and Count record an entry. Seed and fertiliser also show what this season's paddocks call for
 // against what is in the shed. The arithmetic is in inputs.js.
 
-import { tileIcon } from '../tileicon.js?v=427';
-import { db } from '../storage.js?v=427';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=427';
-import { openSprayJobsSheet, canSpray } from './spray.js?v=427';
-import { canChangeInputs } from '../nav.js?v=427';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=427';
-import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=427';
-import { isTransit } from '../transit.js?v=427';
-import { isOffFarm } from '../offfarm.js?v=427';
+import { tileIcon } from '../tileicon.js?v=428';
+import { db } from '../storage.js?v=428';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=428';
+import { openSprayJobsSheet, canSpray } from './spray.js?v=428';
+import { canChangeInputs } from '../nav.js?v=428';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=428';
+import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=428';
+import { isTransit } from '../transit.js?v=428';
+import { isOffFarm } from '../offfarm.js?v=428';
 import {
   KINDS, UNITS, MOVE_TYPES, kindLabel, defaultUnit, productKey, stockLevels, productMoves, stockValue,
   plannedNeeds, planVsStock, inputProblems, adjustmentFor, moveDelta, qtyText, onHandAt,
-} from '../inputs.js?v=427';
+} from '../inputs.js?v=428';
 
 // A farm worker sees what is on hand and records what is used and counts. The prices are not sent to their phone
 // at all (see the migration); this keeps the screens from showing blanks where a price would be, and from offering a delivery.

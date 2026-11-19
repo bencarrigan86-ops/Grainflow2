@@ -91,7 +91,7 @@ check('every area a choice can be made in is a row of the table, with a key', ()
 console.log('\n=== the screens ===');
 check('None takes the tab away, and the person lands on the first one left', () => {
   reset();
-  assert.deepEqual(tabsForRole('bookkeeper'), ['sales', 'production', 'movement', 'reports']);
+  assert.deepEqual(tabsForRole('bookkeeper'), ['production', 'sales', 'movement', 'reports']);
   setFarmLevels({ production: { bookkeeper: 'none' }, reports: { bookkeeper: 'none' } });
   assert.deepEqual(tabsForRole('bookkeeper'), ['sales', 'movement']);
   assert.equal(canOpen('bookkeeper', 'production'), false);

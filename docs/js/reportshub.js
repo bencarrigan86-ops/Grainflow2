@@ -8,7 +8,7 @@
  *   go     another screen (a tab)
  */
 
-import { canSeePrices, canSeeBills } from './nav.js?v=427';
+import { canSeePrices, canSeeBills } from './nav.js?v=428';
 
 export const MODE_KEY = 'grainflow.reports.mode';
 
