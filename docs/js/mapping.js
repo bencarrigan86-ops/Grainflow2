@@ -27,16 +27,17 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=417';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=417';
-import { cleanCottonTerms } from './cottonkinds.js?v=417';
-import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=417';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=417';
-import { cleanPicked } from './modulespicked.js?v=417';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=417';
-import { cleanHistory, hasHistory } from './pricehistory.js?v=417';
-import { cleanOffFarm } from './offfarm.js?v=417';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=417';
+import { cleanGradeOptions } from './gradeprice.js?v=418';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=418';
+import { cleanCottonTerms } from './cottonkinds.js?v=418';
+import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=418';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=418';
+import { cleanPicked } from './modulespicked.js?v=418';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=418';
+import { cleanHistory, hasHistory } from './pricehistory.js?v=418';
+import { cleanOffFarm } from './offfarm.js?v=418';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=418';
+import { cleanDriverSignature } from './driversign.js?v=418';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -147,6 +148,8 @@ export function movementFromRow(m, legs = [], photo = null) {
     ...(m.load_time ? { loadTime: m.load_time, __hasLoadTime: true } : {}),
     ...(m.load_destination ? { destination: m.load_destination, __hasDestination: true } : {}),
     ...(m.truck_company ? { truckCompany: m.truck_company, __hasTruckCompany: true } : {}),
+    ...(m.driver_phone ? { driverPhone: m.driver_phone, __hasDriverPhone: true } : {}),
+    ...(cleanDriverSignature(m.driver_signature) ? { driverSignature: cleanDriverSignature(m.driver_signature), __hasDriverSig: true } : {}),
     ...(m.order_id ? { orderId: m.order_id, __hasOrderId: true } : {}),
     ...(m.freight_order_id ? { freightOrderId: m.freight_order_id, __hasFreightOrderId: true } : {}),
     ...loadQuality.fromRow(m),
@@ -558,6 +561,10 @@ export function stateToRows(state, farmId) {
         ...((m.destination || m.__hasDestination) ? { load_destination: orNull(m.destination) } : {}),
         // The trucking company, optional in the same way: left out until a load has one, so a database without the column still saves.
         ...((m.truckCompany || m.__hasTruckCompany) ? { truck_company: orNull(m.truckCompany) } : {}),
+        // The driver's phone number, optional in the same way.
+        ...((m.driverPhone || m.__hasDriverPhone) ? { driver_phone: orNull(m.driverPhone) } : {}),
+        // The driver's signature, optional in the same way: sent once there is one (or has been), null when it is taken off.
+        ...((m.driverSignature || m.__hasDriverSig) ? { driver_signature: cleanDriverSignature(m.driverSignature) } : {}),
         // The order this load was delivered against. Optional the same way: left out until a load has one.
         ...((m.orderId || m.__hasOrderId) ? { order_id: orNull(m.orderId) } : {}),
         // The freight order it was carted on, optional in the same way.

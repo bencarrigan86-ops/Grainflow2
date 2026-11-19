@@ -18,36 +18,37 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=417';
-import { setBrandLogo } from './brand.js?v=417';
+import { hydrate } from './hydrate.js?v=418';
+import { setBrandLogo } from './brand.js?v=418';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=417';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=417';
-import { isLegacyDirty } from './dirty.js?v=417';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=417';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=417';
-import { hasDeductions } from './deductions.js?v=417';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=417';
-import { hasHay, hasHayLoad } from './hay.js?v=417';
-import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=417';
-import { todayLocal } from './fmt.js?v=417';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=417';
-import { settleLegs, dedupeLegs } from './legs.js?v=417';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=417';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=417';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=417';
-import { setCommodityOrder } from './commodityorder.js?v=417';
-import { setFarmSwitches } from './nav.js?v=417';
-import { readSwitches } from './farmswitches.js?v=417';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=417';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=417';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=417';
-import { schedulePush, pushOnReconnect } from './sync.js?v=417';
-import { hasParts as hasAddressParts } from './address.js?v=417';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=417';
-import { linePayableId } from './ginoffset.js?v=417';
+} from './local.js?v=418';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=418';
+import { isLegacyDirty } from './dirty.js?v=418';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=418';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=418';
+import { hasDeductions } from './deductions.js?v=418';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=418';
+import { hasHay, hasHayLoad } from './hay.js?v=418';
+import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=418';
+import { todayLocal } from './fmt.js?v=418';
+import { signLoad } from './driversign.js?v=418';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=418';
+import { settleLegs, dedupeLegs } from './legs.js?v=418';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=418';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=418';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=418';
+import { setCommodityOrder } from './commodityorder.js?v=418';
+import { setFarmSwitches } from './nav.js?v=418';
+import { readSwitches } from './farmswitches.js?v=418';
+import { seasonYY, nextOutloadNo } from './outloadno.js?v=418';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=418';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=418';
+import { schedulePush, pushOnReconnect } from './sync.js?v=418';
+import { hasParts as hasAddressParts } from './address.js?v=418';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=418';
+import { linePayableId } from './ginoffset.js?v=418';
 
 /**
  * A gin bill the lint buyer pays is settled once lint invoices have taken all of it off: the farm owes the gin nothing, the buyer settles
@@ -211,6 +212,12 @@ let refreshing = false;
 function touch(kind, id) { touched.push(id === undefined ? { kind } : { kind, id }); }
 
 /** Once an oil figure has been recorded, keep sending the column, so clearing it reaches the server (see mapping.js). */
+/** A driver's signature just drawn has no print yet: take it from the load as it is now saved, so any later change to the load shows. */
+function stampSignature(m) {
+  if (m.driverSignature && !m.driverSignature.print) m.driverSignature = signLoad(m.driverSignature, m);
+  if (m.driverSignature) m.__hasDriverSig = true;
+}
+
 function markOil(rec) {
   if (rec.oilPct !== null && rec.oilPct !== undefined && rec.oilPct !== '' && Number.isFinite(Number(rec.oilPct))) rec.__hasOil = true;
   if (rec.retentionPct !== null && rec.retentionPct !== undefined && rec.retentionPct !== '' && Number.isFinite(Number(rec.retentionPct))) rec.__hasRetention = true;
@@ -234,6 +241,10 @@ function markOil(rec) {
   if (rec.destination) rec.__hasDestination = true;
   // and the trucking company
   if (rec.truckCompany) rec.__hasTruckCompany = true;
+  // and the driver's phone number
+  if (rec.driverPhone) rec.__hasDriverPhone = true;
+  // and the driver's signature
+  if (rec.driverSignature) rec.__hasDriverSig = true;
   // and the order it was delivered against, so taking a load off an order reaches the server
   if (rec.orderId) rec.__hasOrderId = true;
   // and the freight order it was carted on (a carrier's bill carries the same flag)
@@ -718,6 +729,7 @@ export const db = {
       markOil(made);
       made.froms = settleLegs([], made.froms, uid).legs;
       made.tos = settleLegs([], made.tos, uid).legs;
+      stampSignature(made);
       c.movements.push(made);
       data.nextMovementNo += 1;
       touch('movement', made.id);
@@ -1186,6 +1198,7 @@ export const db = {
           merged[side] = legs;
           retired.forEach((id) => tombstone('movement_legs', id));
         }
+        stampSignature(merged);
         c.movements[idx] = merged;
       }
       touch('movement', movement.id);

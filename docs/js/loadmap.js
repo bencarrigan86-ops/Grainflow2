@@ -38,6 +38,8 @@ export const FIELD_SPECS = [
     synonyms: ['rego', 'truck', 'registration', 'truckrego', 'pickuprego', 'vehicle', 'plate', 'trucknumber'] },
   { key: 'company', label: 'Transport company', required: false,
     synonyms: ['transportcompany', 'transport', 'truckcompany', 'carrier', 'carriername', 'transporter', 'haulier', 'freightcompany', 'cartage', 'cartagecompany', 'trucker', 'contractor'] },
+  { key: 'driverPhone', label: 'Driver phone', required: false,
+    synonyms: ['driverphone', 'driversphone', 'drivermobile', 'driversmobile', 'phone', 'phonenumber', 'mobile', 'mobilenumber', 'drivercontact', 'contactnumber'] },
   { key: 'grade', label: 'Grade', required: false,
     synonyms: ['grade', 'pickupgrade', 'deliverygrade', 'class', 'quality', 'gradename'] },
   { key: 'status', label: 'Status (to leave out loads that are not finished)', required: false,

@@ -3,10 +3,12 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=417';
-import { drawBrandLogo } from './brand.js?v=417';
-import { dmy } from './fmt.js?v=417';
-import { SPECS, specOf } from './outload.js?v=417';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=418';
+import { drawBrandLogo } from './brand.js?v=418';
+import { dmy } from './fmt.js?v=418';
+import { SPECS, specOf } from './outload.js?v=418';
+import { ASPECT, strokesInBox } from './signature.js?v=418';
+import { SIGN_WORDS, cleanDriverSignature, signState, signedWhen } from './driversign.js?v=418';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -110,7 +112,12 @@ export function loadReportRows(movements, ctx, opts = {}) {
       ticketNo: m.ticketNo ?? '',
       truck: m.truckRego || '',
       company: m.truckCompany || '',
+      // the driver's signature, for the ticket: whether it still matches the load, the signature itself, and when
+      signed: ({ signed: 'Yes', changed: 'Changed' })[signState(m)] || '',
+      signature: cleanDriverSignature(m.driverSignature),
+      signedAt: signedWhen(cleanDriverSignature(m.driverSignature)),
       driver: m.driver || '',
+      driverPhone: String(m.driverPhone || '').trim(),
       commodity: commodities.find((c) => c.id === m.commodityId)?.name || '',
       goingTo: (m.tos || []).map((t) => endName(t, ctx)).filter(Boolean).join(', '),
       // where the contract delivers to
@@ -372,9 +379,11 @@ export function buildLoadTicketPdf(row, { business = '', ngr = '', showOrigin = 
     card(L, y, third, 56, 'TRANSPORT COMPANY', row.company, { size: 13 });
     card(L + third + GAP, y, third, 56, 'TRUCK', row.truck, { size: 13 });
     card(L + 2 * (third + GAP), y, third, 56, 'DRIVER', row.driver, { size: 13 });
+    if (row.driverPhone) pdf.text(L + 2 * (third + GAP) + 12, y + 43, clipText(row.driverPhone, third - 24, 10, true), { size: 10, bold: true, gray: GREEN });
   } else {
     card(L, y, half, 56, 'TRUCK', row.truck);
     card(L + half + GAP, y, half, 56, 'DRIVER', row.driver);
+    if (row.driverPhone) pdf.text(L + half + GAP + 12, y + 43, clipText(row.driverPhone, half - 24, 10, true), { size: 10, bold: true, gray: GREEN });
   }
   y += 56 + GAP + 6;
 
@@ -444,13 +453,31 @@ export function buildLoadTicketPdf(row, { business = '', ngr = '', showOrigin = 
   if (showComments) {
     pdf.text(L, y, 'COMMENTS', { size: 7.5, bold: true, gray: DIM });
     y += 14;
-    const boxH = 168;
+    const boxH = row.signature ? Math.max(60, Math.min(168, 794 - 86 - y - 4)) : 168;   // a signature below it needs room
     pdf.rect(L, y, CW, boxH, { stroke: 0.7, fill: null, lineWidth: 0.8 });
     for (let ly = y + 36; ly < y + boxH - 6; ly += 26) pdf.line(L + 10, ly, R - 10, ly, { width: 0.4, gray: 0.8 });
     if (row.notes) {
       let ny = y + 22;
       for (const line of wrapText(row.notes, CW - 24, 11).slice(0, 5)) { pdf.text(L + 12, ny, line, { size: 11 }); ny += 26; }
     }
+    y += boxH + 10;
+  }
+
+  // the driver's signature, last before the foot
+  if (row.signature) {
+    const bh = 80; const sy = Math.min(y, 794 - bh);
+    pdf.rect(L, sy, CW, bh, { stroke: null, fill: CARD });
+    pdf.text(L + 12, sy + 10, 'DRIVER SIGNED', { size: 7.5, bold: true, gray: DIM });
+    const sw = 150;
+    for (const s of strokesInBox(row.signature.strokes, L + 12, sy + 22, sw, sw / ASPECT)) {
+      if (s.length === 1) s.push([s[0][0] + 0.2, s[0][1]]);
+      pdf.polyline(s, { width: 1.3, gray: 0.1 });
+    }
+    const tx = L + 12 + sw + 22;
+    pdf.text(tx, sy + 24, clipText(row.signature.name || row.driver || '-', R - tx - 12, 13, true), { size: 13, bold: true });
+    pdf.text(tx, sy + 42, row.signedAt, { size: 10 });
+    pdf.text(tx, sy + 58, SIGN_WORDS, { size: 8, gray: 0.4 });
+    if (row.signed === 'Changed') pdf.text(tx, sy + 70, 'The load was changed after it was signed', { size: 8, bold: true });
   }
 
   // foot

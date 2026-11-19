@@ -372,7 +372,7 @@ check('a sent declaration is filed with the contract, as a document kind the con
 });
 check('the signature belongs to the person: Settings opens it, and the farm rows never carry it', () => {
   assert.match(read('docs/js/views/settings.js'), /openMySignatureSheet\(/);
-  assert.ok(!/signature/i.test(read('docs/js/mapping.js')), 'nothing about signatures in the farm mapping');
+  assert.ok(!/user_signatures|mysignature/i.test(read('docs/js/mapping.js')), 'nothing about the saved personal signature in the farm mapping (a driver signature on a load belongs to the load)');
   assert.match(read('docs/js/mysignature.js'), /from\('user_signatures'\)/);
 });
 

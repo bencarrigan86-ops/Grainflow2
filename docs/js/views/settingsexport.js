@@ -1,18 +1,19 @@
-import { db } from '../storage.js?v=417';
-import { num, esc, todayLocal } from '../fmt.js?v=417';
-import { openSheet } from '../ui.js?v=417';
-import { exportRowsAsCSV } from '../csv.js?v=417';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=417';
-import { endpointLabel } from './movements.js?v=417';
-import { layersForStorage } from '../outload.js?v=417';
-import { traceLoads, traceText } from '../trace.js?v=417';
-import { holdings, totalHeld } from '../offfarm.js?v=417';
-import { kindLabel, billTotal } from '../payables.js?v=417';
-import { orderState, STATE_LABEL } from '../orders.js?v=417';
-import { fieldHarvest } from '../harvest.js?v=417';
-import { capacityFor } from '../storagecapacity.js?v=417';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=417';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=417';
+import { db } from '../storage.js?v=418';
+import { num, esc, todayLocal } from '../fmt.js?v=418';
+import { openSheet } from '../ui.js?v=418';
+import { cleanDriverSignature, signedWhen } from '../driversign.js?v=418';
+import { exportRowsAsCSV } from '../csv.js?v=418';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=418';
+import { endpointLabel } from './movements.js?v=418';
+import { layersForStorage } from '../outload.js?v=418';
+import { traceLoads, traceText } from '../trace.js?v=418';
+import { holdings, totalHeld } from '../offfarm.js?v=418';
+import { kindLabel, billTotal } from '../payables.js?v=418';
+import { orderState, STATE_LABEL } from '../orders.js?v=418';
+import { fieldHarvest } from '../harvest.js?v=418';
+import { capacityFor } from '../storagecapacity.js?v=418';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=418';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=418';
 
 function commodityName(commodities, id) {
   return commodities.find((c) => c.id === id)?.name || '';
@@ -139,7 +140,9 @@ function exportMovementsCSV(year, stamp) {
     { label: 'Tons', get: (m) => m.tons ?? '' },
     { label: 'Truck rego', get: (m) => m.truckRego ?? '' },
     { label: 'Transport company', get: (m) => m.truckCompany ?? '' },
+    { label: 'Driver signed', get: (m) => signedWhen(cleanDriverSignature(m.driverSignature)) },
     { label: 'Driver', get: (m) => m.driver ?? '' },
+    { label: 'Driver phone', get: (m) => m.driverPhone ?? '' },
     { label: 'Gross weight (t)', get: (m) => m.grossWeight ?? '' },
     { label: 'Tare weight (t)', get: (m) => m.tareWeight ?? '' },
     { label: 'Weight status', get: (m) => m.weightStatus ?? '' },

@@ -326,7 +326,7 @@ check('a row matches a load by its ticket number, or by the outload number it ha
 check('it is wired: the load form, the data layer, boot, People and the SQL', () => {
   const mv = read('docs/js/views/movements.js');
   assert.ok(!mv.includes('id="outloadNo"') && !mv.includes('id="ol-get"') && !mv.includes('id="get-outload"') && !mv.includes('wantOutload'), 'no separate outload box or button: the ticket number is the number');
-  assert.ok(mv.includes('db.nextTicketNo()') && mv.includes('Our ticket no.'), 'the sheet shows the ticket number a new load will get');
+  assert.ok(!mv.includes('Our ticket no.') && mv.includes('Edit movement #${existing.ticketNo') && mv.includes('`Add movement #${db.nextTicketNo()}`'), 'the ticket number (the one a new load will get) is in the sheet title, not repeated in the body');
   assert.ok(mv.includes("outloadNo: existing?.outloadNo || ''"), 'an old outload number is kept');
   const st = read('docs/js/storage.js');
   assert.ok(st.includes('nextTicket()') && st.includes('PLAIN_TICKET_LIMIT') && st.includes('__hasOutloadNo') && st.includes('__hasImportFormats'));

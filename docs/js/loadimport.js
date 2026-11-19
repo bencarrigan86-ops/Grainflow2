@@ -336,6 +336,7 @@ export function readFreightExport(text, setup = PLATFORM_SETUP) {
       field: cell(r, 'field'),
       silo: cell(r, 'silo'),
       rego: cell(r, 'rego'),
+      driverPhone: cell(r, 'driverPhone'),   // the driver's phone number: goes on the load
       company: cell(r, 'company'),   // the trucking company: goes on the load
       // The grade the load left the paddock as; the delivered grade if that is blank.
       grade: cell(r, 'grade') || cell(r, 'deliveryGrade'),
@@ -529,6 +530,7 @@ export function buildMovements(loads, maps, { existing = [], include = new Set()
       tos: [{ type: 'silo', id: siloId, tons: load.deliveryTons }],
       truckRego: load.rego || '',
       ...(load.company ? { truckCompany: load.company } : {}),
+      ...(load.driverPhone ? { driverPhone: load.driverPhone } : {}),
       driver: '',
       tons: load.deliveryTons,
       weightStatus: 'final',

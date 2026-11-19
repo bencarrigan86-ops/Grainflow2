@@ -4,10 +4,10 @@
 // typed is not lost); openMySignatureSheet() is the same thing on a screen of its own, for Settings.
 // The strokes are kept as lines, see signature.js; where they are saved is mysignature.js.
 
-import { openSheet, field, getVal, toast } from '../ui.js?v=417';
-import { esc } from '../fmt.js?v=417';
-import { ASPECT, cleanStrokes, hasSignature, strokesToSvgPath } from '../signature.js?v=417';
-import { loadMySignature, saveMySignature, clearMySignature } from '../mysignature.js?v=417';
+import { openSheet, field, getVal, toast } from '../ui.js?v=418';
+import { esc } from '../fmt.js?v=418';
+import { ASPECT, cleanStrokes, hasSignature, strokesToSvgPath } from '../signature.js?v=418';
+import { loadMySignature, saveMySignature, clearMySignature } from '../mysignature.js?v=418';
 
 /** The saved signature as a picture, for showing on screen. */
 export function signatureSvg(strokes, width = 150) {
@@ -16,25 +16,11 @@ export function signatureSvg(strokes, width = 150) {
 }
 
 /**
- * A pad inside `container`. `onSaved({strokes, name})` is called once it has been saved.
- * @param {HTMLElement} container
- * @param {{name?: string, onSaved?: Function}} [opts]
+ * The drawing part of a pad: a canvas inside `container` (an element holding a `.sig-canvas`), drawn on with a finger or a pen.
+ * Returns the strokes so far, a way to clear it, and a way to size it again.
  */
-export function mountSignaturePad(container, { name = '', onSaved = () => {} } = {}) {
-  container.innerHTML = `
-    <div class="hint" style="margin-bottom:6px">Sign inside the box with your finger or a pen.</div>
-    <div style="position:relative;width:100%;aspect-ratio:${ASPECT} / 1;background:var(--surface);border:1px solid var(--border);border-radius:8px;touch-action:none">
-      <canvas class="sig-canvas" style="position:absolute;inset:0;width:100%;height:100%;touch-action:none"></canvas>
-    </div>
-    ${field({ label: 'Name to print under it', id: 'sig-name', value: name, placeholder: 'e.g. Ben Carrigan' })}
-    <div class="row" style="gap:8px;margin-top:8px">
-      <button type="button" class="btn secondary" data-sig="clear" style="flex:1">Clear</button>
-      <button type="button" class="btn" data-sig="save" style="flex:1">Save signature</button>
-    </div>
-    <div class="hint sig-problem" style="color:var(--danger);margin-top:6px"></div>`;
-
+export function wireDrawing(container, { onDraw = () => {} } = {}) {
   const canvas = container.querySelector('.sig-canvas');
-  const problem = container.querySelector('.sig-problem');
   const ctx = canvas.getContext('2d');
   let strokes = [];
   let current = null;
@@ -76,6 +62,7 @@ export function mountSignaturePad(container, { name = '', onSaved = () => {} } =
     current = [point(e)];
     strokes.push(current);
     redraw();
+    onDraw();
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!current) return;
@@ -86,9 +73,39 @@ export function mountSignaturePad(container, { name = '', onSaved = () => {} } =
   canvas.addEventListener('pointerup', end);
   canvas.addEventListener('pointercancel', end);
 
-  container.querySelector('[data-sig="clear"]').addEventListener('click', () => { strokes = []; problem.textContent = ''; redraw(); });
+  size();
+  window.addEventListener('resize', size);
+  return { strokes: () => strokes, clear: () => { strokes = []; redraw(); }, redraw: size };
+}
+
+/** The box to draw in, shaped like a signature. */
+export const padBoxHtml = () => `
+    <div style="position:relative;width:100%;aspect-ratio:${ASPECT} / 1;background:var(--surface);border:1px solid var(--border);border-radius:8px;touch-action:none">
+      <canvas class="sig-canvas" style="position:absolute;inset:0;width:100%;height:100%;touch-action:none"></canvas>
+    </div>`;
+
+/**
+ * A pad inside `container`. `onSaved({strokes, name})` is called once it has been saved.
+ * @param {HTMLElement} container
+ * @param {{name?: string, onSaved?: Function}} [opts]
+ */
+export function mountSignaturePad(container, { name = '', onSaved = () => {} } = {}) {
+  container.innerHTML = `
+    <div class="hint" style="margin-bottom:6px">Sign inside the box with your finger or a pen.</div>
+    ${padBoxHtml()}
+    ${field({ label: 'Name to print under it', id: 'sig-name', value: name, placeholder: 'e.g. Ben Carrigan' })}
+    <div class="row" style="gap:8px;margin-top:8px">
+      <button type="button" class="btn secondary" data-sig="clear" style="flex:1">Clear</button>
+      <button type="button" class="btn" data-sig="save" style="flex:1">Save signature</button>
+    </div>
+    <div class="hint sig-problem" style="color:var(--danger);margin-top:6px"></div>`;
+
+  const problem = container.querySelector('.sig-problem');
+  const draw = wireDrawing(container);
+
+  container.querySelector('[data-sig="clear"]').addEventListener('click', () => { draw.clear(); problem.textContent = ''; });
   container.querySelector('[data-sig="save"]').addEventListener('click', async (e) => {
-    const clean = cleanStrokes(strokes);
+    const clean = cleanStrokes(draw.strokes());
     if (!clean.length) { problem.textContent = 'Draw your signature first.'; return; }
     e.target.disabled = true;
     problem.textContent = '';
@@ -102,9 +119,7 @@ export function mountSignaturePad(container, { name = '', onSaved = () => {} } =
     }
   });
 
-  size();
-  window.addEventListener('resize', size);
-  return { redraw: size };
+  return { redraw: draw.redraw };
 }
 
 /** "My signature" on a screen of its own: what is saved, with a way to draw it again or remove it. */

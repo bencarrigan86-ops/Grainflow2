@@ -1,29 +1,32 @@
-import { db } from '../storage.js?v=417';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=417';
-import { commodityClass } from '../commoditycolor.js?v=417';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=417';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=417';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=417';
-import { withholdingClash } from '../fumigation.js?v=417';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=417';
-import { compressAndStampImage } from '../img.js?v=417';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=417';
-import { specText, extraSpecKey } from '../outload.js?v=417';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=417';
-import { pickableSilos } from '../silopick.js?v=417';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=417';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=417';
-import { activeSales } from '../paidsales.js?v=417';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=417';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=417';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=417';
-import { nowTime } from '../loadreport.js?v=417';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=417';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=417';
-import { openGinRunSheet } from './ginrun.js?v=417';
-import { openModuleMoveSheet } from './modulemove.js?v=417';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=417';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=417';
+import { db } from '../storage.js?v=418';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=418';
+import { commodityClass } from '../commoditycolor.js?v=418';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=418';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=418';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=418';
+import { withholdingClash } from '../fumigation.js?v=418';
+import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=418';
+import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=418';
+import { cleanStrokes } from '../signature.js?v=418';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=418';
+import { compressAndStampImage } from '../img.js?v=418';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=418';
+import { specText, extraSpecKey } from '../outload.js?v=418';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=418';
+import { pickableSilos } from '../silopick.js?v=418';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=418';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=418';
+import { activeSales } from '../paidsales.js?v=418';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=418';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=418';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=418';
+import { nowTime } from '../loadreport.js?v=418';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=418';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=418';
+import { openGinRunSheet } from './ginrun.js?v=418';
+import { openModuleMoveSheet } from './modulemove.js?v=418';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=418';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=418';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -54,7 +57,7 @@ function ticketSearchText(m, ctx) {
   const fo = m.freightOrderId ? (ctx.freightOrders || []).find((f) => f.id === m.freightOrderId) : null;
   // a date is searchable as it is written on paperwork (05-11-2026) as well as stored (2026-11-05)
   const written = /^(\d{4})-(\d{2})-(\d{2})/.exec(m.date || '');
-  return [m.ticketNo, m.sourceRef, m.externalTicketNo, m.manualDocketNo, m.outloadNo, m.date, written ? `${written[3]}-${written[2]}-${written[1]} ${written[3]}/${written[2]}/${written[1]}` : '', m.truckRego, m.truckCompany, m.driver, m.notes, m.grade, m.tons, c?.name,
+  return [m.ticketNo, m.sourceRef, m.externalTicketNo, m.manualDocketNo, m.outloadNo, m.date, written ? `${written[3]}-${written[2]}-${written[1]} ${written[3]}/${written[2]}/${written[1]}` : '', m.truckRego, m.truckCompany, m.driver, m.driverPhone, m.notes, m.grade, m.tons, c?.name,
     ...linked.flatMap((s) => [s.buyer, s.contractNo, s.ourRef]), fo?.carrier, fo?.freightNo, ...ends].filter((x) => x !== undefined && x !== null && x !== '').join(' ').toLowerCase();
 }
 
@@ -303,7 +306,7 @@ export function movementRow(m, ctx) {
     : null;
   // the order it was delivered against, if any
   const order = m.orderId ? (ctx.orders || db.getOrders()).find((o) => o.id === m.orderId) : null;
-  const details = [ctx.grouped ? '' : commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `their #${m.externalTicketNo}` : '', m.manualDocketNo ? `docket ${m.manualDocketNo}` : '', m.outloadNo ? `outload ${m.outloadNo}${ctx.dupOutloads?.has(normaliseOutloadNo(m.outloadNo)) ? ' (used on more than one load)' : ''}` : '', order ? (order.orderNo ? `grain order #${order.orderNo}` : 'against a grain order') : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date, { tight: true }) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
+  const details = [ctx.grouped ? '' : commodity, m.ticketNo ? `#${m.ticketNo}` : '', m.externalTicketNo ? `delivery #${m.externalTicketNo}` : '', m.manualDocketNo ? `docket ${m.manualDocketNo}` : '', m.outloadNo ? `outload ${m.outloadNo}${ctx.dupOutloads?.has(normaliseOutloadNo(m.outloadNo)) ? ' (used on more than one load)' : ''}` : '', order ? (order.orderNo ? `grain order #${order.orderNo}` : 'against a grain order') : '', m.sourceRef, ctx.grouped ? '' : (shortDate(m.date, { tight: true }) || 'No date'), m.truckRego, m.driver].filter(Boolean).map(esc).join(' · ');
   return `
     <div class="list-item stack${ctx.bandIndex === undefined ? '' : ` band ${ctx.bandIndex % 2 ? 'alt' : ''}`}" data-edit-movement="${m.id}">
       <div class="li-top">
@@ -532,7 +535,7 @@ export function openMovementSheet(existing, template) {
     .filter((o) => saleOfOrder(o) && (o.id === existing?.orderId || orderState(o, movements, todayLocal()).active))
     .sort((a, b) => String(a.deliverBy || '9999').localeCompare(String(b.deliverBy || '9999')));
 
-  openSheet(existing ? `Edit movement #${existing.ticketNo ?? ''}` : 'Add movement', (root) => {
+  openSheet(existing ? `Edit movement #${existing.ticketNo ?? ''}` : `Add movement #${db.nextTicketNo()}`, (root) => {
     root.innerHTML = `
       <datalist id="dl-regos">${distinctOf(movements, 'truckRego').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
       <datalist id="dl-drivers">${distinctOf(movements, 'driver').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
@@ -586,18 +589,18 @@ export function openMovementSheet(existing, template) {
         <div class="subhead">Truck and tickets</div>
         <div class="grid-2">
           ${field({ label: 'Truck rego', id: 'truckRego', value: src?.truckRego, list: 'dl-regos' })}
-          ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
+          ${field({ label: 'Transport company', id: 'truckCompany', value: src?.truckCompany, list: 'dl-companies', placeholder: 'Who carted it' })}
         </div>
-        ${field({ label: 'Transport company', id: 'truckCompany', value: src?.truckCompany, list: 'dl-companies', placeholder: 'Who carted it', hint: 'Shown on the load ticket. Fills in from the freight order.' })}
         <div class="grid-2">
-          ${field({ label: 'Delivery no.', id: 'extTicket', value: existing?.externalTicketNo, placeholder: 'On their delivery ticket' })}
+          ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
+          ${field({ label: "Driver's phone", id: 'driverPhone', type: 'tel', value: src?.driverPhone, placeholder: '0412 345 678' })}
+        </div>
+        <div class="field" style="margin-top:-6px"><div class="hint">Shown on the load ticket. The company fills in from the freight order, the phone from this driver's last load.</div></div>
+        <div class="grid-2">
+          ${field({ label: 'Delivery no.', id: 'extTicket', value: existing?.externalTicketNo, placeholder: 'On their ticket' })}
           ${field({ label: 'Manual docket no.', id: 'manualDocket', value: existing?.manualDocketNo, placeholder: 'Our paper docket' })}
         </div>
-        <div class="field">
-          <label>Our ticket no.</label>
-          <div class="readout">${existing ? (existing.ticketNo ?? '-') : db.nextTicketNo()}${existing ? '' : ' (given when you save)'}</div>
-          <div class="hint">${existing?.outloadNo && String(existing.outloadNo) !== String(existing.ticketNo) ? `Old outload number: ${esc(existing.outloadNo)}. ` : ''}The number the driver gives the site. It matches the site's delivery file to this load.</div>
-        </div>
+        ${existing?.outloadNo && String(existing.outloadNo) !== String(existing.ticketNo) ? `<div class="field" style="margin-top:-6px"><div class="hint">Old outload number: ${esc(existing.outloadNo)}.</div></div>` : ''}
       </section>
 
       <section class="form-section alt">
@@ -648,6 +651,10 @@ export function openMovementSheet(existing, template) {
         <div id="ded-rows">${cleanDeductions(existing?.deductions).map(dedRowHtml).join('')}</div>
         <button type="button" class="btn secondary small" id="ded-add">Add a premium / discount</button>
         <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">For something the contract does not cover. Tap +/&minus; to make it a discount (minus) or a premium (plus), for example -10 or 4. It moves this load's price on the invoice, with the reason under the load.</div>
+      </details>
+      <details class="fold" id="ds-fold" ${existing?.driverSignature ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Driver signature</h2><div class="sub" id="ds-sub">The driver signs on the phone</div></div></summary>
+        <div id="ds-body" style="padding-top:6px"></div>
       </details>
       <details class="fold" id="np-fold" ${src?.notes || existing?.photoPath || existing?.photoDataUrl ? 'open' : ''}>
         <summary><div class="feature-head"><h2>Notes and photo</h2><div class="sub">${esc(src?.notes || 'A note, or a photo of the truck rego')}</div></div></summary>
@@ -790,6 +797,16 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
     // The destination on the ticket comes from the freight order chosen: the company, then the address. It only fills a blank
     // box, or one it filled itself; what was typed stays. `destAuto` is what it last put there.
     let destAuto = '';
+    // the phone fills in from the same driver's latest load, into a blank box or one it filled itself
+    let phoneAuto = '';
+    root.querySelector('#driver')?.addEventListener('change', () => {
+      const ph = root.querySelector('#driverPhone');
+      const name = String(getVal(root, 'driver') || '').trim().toLowerCase();
+      if (!ph || !name || !(ph.value === '' || ph.value === phoneAuto)) return;
+      const last = [...movements].filter((m) => m.driverPhone && String(m.driver || '').trim().toLowerCase() === name)
+        .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || (Number(b.ticketNo) || 0) - (Number(a.ticketNo) || 0))[0];
+      ph.value = last ? last.driverPhone : ''; phoneAuto = ph.value;
+    });
     let companyAuto = '';   // the same for the transport company, which is the freight order's carrier
     const applyFreightDestination = (saleId) => {
       const el = root.querySelector('#destination');
@@ -1074,6 +1091,55 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
     root.querySelector('#m-photo-take').addEventListener('click', () => root.querySelector('#m-photo-file').click());
     root.querySelector('#m-photo-pick').addEventListener('click', () => root.querySelector('#m-photo-lib').click());
 
+    // The driver's signature: drawn here, kept with the load when it is saved, with a print of the load as it was saved.
+    let sigPending = null;          // just drawn, not saved yet: { strokes, name, at }
+    let sigRemoved = false;         // taken off, not saved yet
+    let sigRedo = false;            // the pad is showing again for a new signature; the saved one stays until it is signed
+    const sigSaved = cleanDriverSignature(existing?.driverSignature);
+    const paintSign = () => {
+      const body = root.querySelector('#ds-body'); const sub = root.querySelector('#ds-sub');
+      if (!body) return;
+      const shown = sigPending || (sigRemoved || sigRedo ? null : sigSaved);
+      if (shown) {
+        const changed = !sigPending && !sigRemoved && signState(existing) === 'changed';
+        const who = [shown.name, signedWhen(shown) || (sigPending ? 'just now' : '')].filter(Boolean).join(' · ');
+        sub.textContent = sigPending ? 'Signed · save the load to keep it' : changed ? 'Signed, then the load was changed' : `Signed · ${who}`;
+        body.innerHTML = `${signatureSvg(shown.strokes, 240)}
+          <div class="meta" style="margin:6px 0">${esc(who)}</div>
+          <div class="hint">${esc(SIGN_WORDS)}.</div>
+          ${changed ? '<div class="hint" style="color:var(--danger);margin-top:6px"><strong>This load was changed after it was signed.</strong> Have the driver sign again.</div>' : ''}
+          ${lockedWhy ? '' : `<div class="row" style="gap:8px;margin-top:10px">
+            <button type="button" class="btn secondary" id="ds-again" style="flex:1">Sign again</button>
+            <button type="button" class="btn ghost-danger" id="ds-remove" style="flex:1">Remove</button></div>`}`;
+        body.querySelector('#ds-again')?.addEventListener('click', () => { sigPending = null; sigRedo = true; paintSign(); });
+        body.querySelector('#ds-remove')?.addEventListener('click', () => { sigPending = null; sigRemoved = true; sigRedo = false; sigCleared = true; paintSign(); });
+        return;
+      }
+      sub.textContent = sigCleared ? 'Signature removed · save the load' : 'The driver signs on the phone';
+      if (lockedWhy) { body.innerHTML = '<div class="hint">Not signed.</div>'; return; }
+      body.innerHTML = `<div class="hint" style="margin-bottom:8px">Hand the phone to the driver. Sign last: a change to the load after it is signed is flagged.</div>
+        <div style="margin-bottom:8px"><strong>${esc(SIGN_WORDS)}</strong></div>
+        ${padBoxHtml()}
+        ${field({ label: 'Driver name to print under it', id: 'ds-name', value: getVal(root, 'driver')?.trim() || '', placeholder: 'e.g. Sam Reid' })}
+        <div class="row" style="gap:8px;margin-top:8px">
+          <button type="button" class="btn secondary" id="ds-clear" style="flex:1">Clear</button>
+          <button type="button" class="btn" id="ds-sign" style="flex:1">Driver signs</button>
+        </div>
+        <div class="hint" id="ds-problem" style="color:var(--danger);margin-top:6px"></div>`;
+      const pad = wireDrawing(body);
+      body.querySelector('#ds-clear').addEventListener('click', () => { pad.clear(); body.querySelector('#ds-problem').textContent = ''; });
+      body.querySelector('#ds-sign').addEventListener('click', () => {
+        const strokes = cleanStrokes(pad.strokes());
+        if (!strokes.length) { body.querySelector('#ds-problem').textContent = 'The driver signs inside the box first.'; return; }
+        sigPending = { strokes, name: getVal(body, 'ds-name')?.trim() || '', at: new Date().toISOString() };
+        sigRemoved = false; sigRedo = false; sigCleared = false;
+        paintSign();
+      });
+    };
+    let sigCleared = false;
+    paintSign();
+    root.querySelector('#ds-fold')?.addEventListener('toggle', () => { if (root.querySelector('#ds-fold').open && !sigPending && !(sigSaved && !sigRemoved && !sigRedo)) paintSign(); });
+
     root.querySelector('#save').addEventListener('click', async () => {
       const froms = readFromRows(fromRowsEl).filter((f) => f.type && f.id);
       let tos;
@@ -1126,6 +1192,7 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
         truckRego: getVal(root, 'truckRego')?.trim(),
         truckCompany: getVal(root, 'truckCompany')?.trim() || '',
         driver: getVal(root, 'driver')?.trim(),
+        driverPhone: getVal(root, 'driverPhone')?.trim() || '',
         grossWeight: getVal(root, 'gross') ? getNum(root, 'gross') : null,
         tareWeight: getVal(root, 'tare') ? getNum(root, 'tare') : null,
         tons: getNum(root, 'tons'),
@@ -1148,6 +1215,8 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
         })(),
         photoDataUrl,
         photoPath,
+        // the driver's signature: a new one is stamped with a print of the load as it is saved (see storage.js); taking it off clears it
+        ...(sigPending ? { driverSignature: cleanDriverSignature(sigPending) } : sigRemoved ? { driverSignature: null } : {}),
       });
       closeSheet(); toast('Saved');
     });
@@ -1167,10 +1236,11 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
         moisturePct: num('lq-moisture'), proteinPct: num('lq-protein'), screeningsPct: num('lq-screenings'),
         testWeightKgHl: num('lq-tw'), fallingNumber: num('lq-fn'), oilPct: num('lq-oil'), ffaPct: num('lq-ffa'), retentionPct: num('lq-ret'),
         loadTime: getVal(root, 'loadTime') || '', destination: getVal(root, 'destination')?.trim() || '',
-        truckRego: getVal(root, 'truckRego')?.trim(), truckCompany: getVal(root, 'truckCompany')?.trim() || '', driver: getVal(root, 'driver')?.trim(),
+        truckRego: getVal(root, 'truckRego')?.trim(), truckCompany: getVal(root, 'truckCompany')?.trim() || '', driver: getVal(root, 'driver')?.trim(), driverPhone: getVal(root, 'driverPhone')?.trim() || '',
         grossWeight: num('gross'), tareWeight: num('tare'), tons: getNum(root, 'tons'), weightStatus,
         notes: getVal(root, 'notes')?.trim(),
       };
+      live.driverSignature = sigPending ? signLoad(sigPending, live) : sigRemoved ? null : existing?.driverSignature;
       try { await sendLoadTicket(live, { showOrigin: root.querySelector('#tk-origin').checked, showDestination: root.querySelector('#tk-dest').checked, showComments: root.querySelector('#tk-comments').checked, showQuality: root.querySelector('#tk-quality').checked, showSplit: root.querySelector('#tk-split').checked }); }
       catch (err) { notify(`The load ticket could not be made: ${err.message}`); }
       finally { btn.disabled = false; }

@@ -2528,3 +2528,24 @@ notify pgrst, 'reload schema';
 alter table storages add column if not exists property text;
 
 notify pgrst, 'reload schema';
+
+-- ===========================================================================
+-- Load tickets: the driver's signature
+-- ===========================================================================
+-- The driver's signature on a load, drawn on the phone: the lines it was drawn with, the name under it, when, and a short print of
+-- what the load said at that moment (so a later change to the load can be flagged). Optional: empty means not signed.
+-- Safe to run more than once. The same row security as the rest of the load applies.
+
+alter table movements add column if not exists driver_signature jsonb;
+
+notify pgrst, 'reload schema';
+
+-- ===========================================================================
+-- Load tickets: the driver's phone number
+-- ===========================================================================
+-- The driver's phone number on a load ticket, typed on the load (the truck's rego, the driver and the transport company are already there).
+-- Optional: empty means not said. Safe to run more than once. The same row security as the rest of the load applies.
+
+alter table movements add column if not exists driver_phone text;
+
+notify pgrst, 'reload schema';
