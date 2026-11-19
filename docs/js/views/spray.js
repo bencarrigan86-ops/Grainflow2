@@ -4,20 +4,20 @@
 // spray marked. What is on the form and where is decided in spray.js; the PDF is drawn in spraypdf.js. The job is saved
 // as it is filled in, so a request can be started in the paddock and finished at the desk.
 
-import { db } from '../storage.js?v=420';
-import { farmSwitch } from '../nav.js?v=420';
-import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=420';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=420';
-import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=420';
+import { db } from '../storage.js?v=421';
+import { farmSwitch } from '../nav.js?v=421';
+import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=421';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=421';
+import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=421';
 import {
   FORMS, RATE_UNITS, MAX_CHEMICALS, CHECKLIST, sprayDefaults, sprayProblems, sprayTotals, sprayTitle, usedChemicals, plain,
-} from '../spray.js?v=420';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=420';
-import { loadMySignature } from '../mysignature.js?v=420';
-import { signerNamesFor } from './signtoggle.js?v=420';
-import { signatureSvg } from './signaturepad.js?v=420';
-import { openMapSheet } from './farmmap.js?v=420';
-import { buildSprayPdf } from '../spraypdf.js?v=420';
+} from '../spray.js?v=421';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=421';
+import { loadMySignature } from '../mysignature.js?v=421';
+import { signerNamesFor } from './signtoggle.js?v=421';
+import { signatureSvg } from './signaturepad.js?v=421';
+import { openMapSheet } from './farmmap.js?v=421';
+import { buildSprayPdf } from '../spraypdf.js?v=421';
 
 // A farm worker can write spray requests on a farm that has switched it on (see farmswitches.js); sending one on is for an owner or manager.
 export const canSpray = (role) => ['owner', 'manager'].includes(role) || (role === 'farm_worker' && farmSwitch('workersRaiseSprays'));

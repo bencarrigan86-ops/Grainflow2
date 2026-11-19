@@ -15,14 +15,14 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=420';
-import { stateToRows } from './mapping.js?v=420';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=420';
-import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=420';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=420';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=420';
-import { readAllIn } from './pages.js?v=420';
-import { farmSwitch } from './nav.js?v=420';
+import { supabase } from './supabase.js?v=421';
+import { stateToRows } from './mapping.js?v=421';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=421';
+import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=421';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=421';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=421';
+import { readAllIn } from './pages.js?v=421';
+import { farmSwitch } from './nav.js?v=421';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -96,6 +96,9 @@ const CONFLICT_KEY = {
 };
 
 const CHUNK = 500;
+
+// how many deletes go to the server in one call (the server takes up to 200)
+const DELETE_BATCH = 100;
 
 function chunk(list, size = CHUNK) {
   const out = [];
@@ -212,7 +215,23 @@ export async function push(state, farmId, role = 'owner') {
     // soft_delete_row function — which applies the same ownership rule as the
     // definer — does it instead. See 20261111150000_soft_delete_function.sql.
     const stuck = new Set();
+    // Many at once first: a cleared sample farm or a deleted season is hundreds of deletes, and one request each, two a time, took a
+    // phone on a weak signal minutes. soft_delete_rows applies the same rules to a list; a list it refuses (or a server that does not
+    // have it yet) is simply done one at a time below, which names the one that is stuck.
+    const bulk = new Set();
+    const byTable = new Map();
+    for (const d of deletes) { if (!byTable.has(d.table)) byTable.set(d.table, []); byTable.get(d.table).push(d); }
+    for (const [table, list] of byTable) {
+      for (const part of chunk(list, DELETE_BATCH)) {
+        if (part.length < 2) continue;
+        const { error } = await supabase.rpc('soft_delete_rows', { p_table: table, p_ids: part.map((d) => d.id) });
+        if (error) continue;
+        for (const d of part) bulk.add(d.seq);
+        result.deleted += part.length;
+      }
+    }
     for (const d of deletes) {
+      if (bulk.has(d.seq)) continue;
       let { error } = await supabase
         .from(d.table)
         .update({ deleted_at: new Date().toISOString() })
