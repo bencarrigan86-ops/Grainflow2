@@ -2,11 +2,11 @@
 // totals for the whole farm. Pure: the figures come from the same places the Storage screen uses (the layers in a silo, the
 // holdings of an off-farm site), so the report cannot disagree with it.
 
-import { layersForStorage } from './outload.js?v=442';
-import { holdings, isOffFarm, commodityOfLoad } from './offfarm.js?v=442';
-import { isTransit } from './transit.js?v=442';
-import { createReport, fixed } from './reportpdf.js?v=442';
-import { gradeComparer } from './grades.js?v=442';
+import { layersForStorage } from './outload.js?v=443';
+import { holdings, isOffFarm, commodityOfLoad } from './offfarm.js?v=443';
+import { isTransit } from './transit.js?v=443';
+import { createReport, fixed } from './reportpdf.js?v=443';
+import { gradeComparer } from './grades.js?v=443';
 
 const EPS = 0.0005;
 const round3 = (n) => Math.round(n * 1000) / 1000;
@@ -96,19 +96,39 @@ export function stockByGrade(report) {
 }
 
 /**
- * The report laid out as the farm is: each property (the "Farm / site" a silo is on), then Off farm, and under each the storages, then
- * their commodities and grades. A farm with silos on one unnamed property is simply "On farm".
- * @returns {{key: string, label: string, kind: 'farm'|'off', tons: number, locations: object[]}[]}
+ * The report laid out the way you walk the farm: on farm or off farm, then the property (the "Farm / site" a silo is on; off farm, the
+ * site holding it), then each commodity, each grade, and last the silos holding that grade with their own tonnes. A farm with silos on
+ * one unnamed property skips the property step (its label is ''); an off-farm site has no silos to list.
+ * @returns {{kind: 'farm'|'off', label: string, tons: number, properties: {label: string, tons: number, commodities: {commodityId: string, name: string, tons: number, grades: {grade: string, tons: number, silos: {name: string, tons: number}[]}[]}[]}[]}[]}
  */
-export function propertyGroups(report) {
+export function stockTree(report) {
+  const names = new Map();
+  for (const l of report.locations) for (const c of l.commodities) names.set(c.commodityId, { name: c.name, customGrades: c.customGrades });
+  const same = (x, y) => String(x ?? '').trim().toLowerCase() === String(y ?? '').trim().toLowerCase();
+  const property = (label, locs, withSilos) => {
+    const lines = locs.flatMap((l) => l.commodities.flatMap((c) => c.grades.map((g) => ({ commodityId: c.commodityId, grade: g.grade, tons: g.tons, site: l.name }))));
+    const commodities = groupLines(lines, names).map((c) => ({
+      ...c,
+      grades: c.grades.map((g) => {
+        const sums = new Map();
+        if (withSilos) for (const x of lines) if (x.commodityId === c.commodityId && same(x.grade, g.grade)) sums.set(x.site, (sums.get(x.site) || 0) + x.tons);
+        return { ...g, silos: [...sums].map(([name, tons]) => ({ name, tons: round3(tons) })).sort((p, q) => natural(p.name, q.name)) };
+      }),
+    }));
+    return { label, tons: round3(commodities.reduce((acc, c) => acc + c.tons, 0)), commodities };
+  };
   const out = [];
-  const find = (key, label, kind) => { let g = out.find((x) => x.key === key); if (!g) { g = { key, label, kind, tons: 0, locations: [] }; out.push(g); } return g; };
   const farm = report.locations.filter((l) => l.kind !== 'off');
-  const onlyBlank = farm.length > 0 && farm.every((l) => !l.property);
-  for (const l of report.locations) {
-    const g = l.kind === 'off' ? find('off', 'Off farm', 'off') : find('farm:' + (l.property || ''), l.property || (onlyBlank ? 'On farm' : 'No farm / site'), 'farm');
-    g.locations.push(l);
-    g.tons = round3(g.tons + l.tons);
+  if (farm.length) {
+    const labels = [...new Set(farm.map((l) => l.property || ''))];   // already in order: named first, blank last
+    const onlyBlank = labels.length === 1 && labels[0] === '';
+    const properties = labels.map((p) => property(onlyBlank ? '' : p || 'No farm / site', farm.filter((l) => (l.property || '') === p), true));
+    out.push({ kind: 'farm', label: 'On farm', tons: round3(properties.reduce((acc, p) => acc + p.tons, 0)), properties });
+  }
+  const off = report.locations.filter((l) => l.kind === 'off');
+  if (off.length) {
+    const properties = off.map((l) => property(l.name + (l.operator ? ' (' + l.operator + ')' : ''), [l], false));
+    out.push({ kind: 'off', label: 'Off farm', tons: round3(properties.reduce((acc, p) => acc + p.tons, 0)), properties });
   }
   return out;
 }
@@ -254,17 +274,31 @@ export function stockPdf({ report, business = '', today = '', scope = '', group 
     { head: 'Grade', w: 0.35, left: true, cell: (r) => r.grade },
     { head: 'Tonnes', w: 0.25, cell: (r) => t1(r.tons) },
   ];
-  // each property (or Off farm) is one table: its storages in turn, each with its commodities and grades
+  // on farm and off farm are a table each: property, commodity, grade, then the silos holding it
   const placeColumns = [
-    { head: 'Storage', w: 0.28, left: true, cell: (r) => r.storage },
-    { head: 'Commodity', w: 0.27, left: true, cell: (r) => r.commodity },
-    { head: 'Grade', w: 0.25, left: true, cell: (r) => r.grade },
+    { head: 'Property', w: 0.22, left: true, cell: (r) => r.property },
+    { head: 'Commodity', w: 0.19, left: true, cell: (r) => r.commodity },
+    { head: 'Grade', w: 0.16, left: true, cell: (r) => r.grade },
+    { head: 'Silo', w: 0.23, left: true, cell: (r) => r.silo },
     { head: 'Tonnes', w: 0.2, cell: (r) => t1(r.tons) },
   ];
-  for (const g of propertyGroups(report)) {
-    pdf.heading(g.label);
-    const rows = g.locations.flatMap((l) => lineRows(l.commodities).map((r, i) => ({ ...r, storage: i === 0 ? `${l.name}${l.operator ? ` (${l.operator})` : ''}` : '' })));
-    pdf.table(placeColumns, rows, { total: { storage: 'Total', commodity: '', grade: '', tons: g.tons }, name: g.label, columnLines: true });
+  for (const top of stockTree(report)) {
+    pdf.heading(top.label);
+    const rows = [];
+    for (const p of top.properties) {
+      let firstP = true;
+      for (const c of p.commodities) {
+        let firstC = true;
+        for (const g of c.grades) {
+          const leaves = g.silos.length ? g.silos : [{ name: '', tons: g.tons }];
+          leaves.forEach((x, i) => {
+            rows.push({ property: firstP ? p.label : '', commodity: firstC ? c.name : '', grade: i === 0 ? (g.grade || NO_GRADE) : '', silo: x.name, tons: x.tons });
+            firstP = false; firstC = false;
+          });
+        }
+      }
+    }
+    pdf.table(placeColumns, rows, { total: { property: 'Total', commodity: '', grade: '', silo: '', tons: top.tons }, name: top.label, columnLines: true });
     pdf.gap(6);
   }
   pdf.heading('All locations');

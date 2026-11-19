@@ -11,7 +11,7 @@ import { loadFilterChoices } from '../docs/js/loadreport.js';
 import { gradeSorter } from '../docs/js/grades.js';
 import { filterHoldings } from '../docs/js/offfarm.js';
 import { gradeComparer } from '../docs/js/grades.js';
-import { propertyGroups, stockMatrix, matrixSheet, stockByLocation, stockByGrade, narrowed, stockRows, stockPdf, STOCK_COLUMNS } from '../docs/js/stocklocation.js';
+import { stockTree, stockMatrix, matrixSheet, stockByLocation, stockByGrade, narrowed, stockRows, stockPdf, STOCK_COLUMNS } from '../docs/js/stocklocation.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -202,15 +202,34 @@ check('Storage can sort by Location: silos grouped under their farm or site, num
   assert.equal(sortGroupLabel(silos[2], 'location'), 'No farm / site');
 });
 
-check('By location: each property, then Off farm, and under each the storages with their commodities and grades', () => {
-  const mk = (id, name, kind, property, tons) => ({ id, name, kind, property, operator: kind === 'off' ? 'GrainCorp' : '', tons, commodities: [] });
-  const rep = { locations: [mk('a', 'Silo 1', 'farm', 'Home', 10), mk('b', 'Silo 2', 'farm', 'Home', 5), mk('c', 'Silo 3', 'farm', 'Back block', 7), mk('d', 'Shed', 'farm', '', 2), mk('e', 'Goondiwindi East', 'off', '', 50)], total: { tons: 74, commodities: [] } };
-  const g = propertyGroups(rep);
-  assert.deepEqual(g.map((x) => [x.label, x.tons, x.locations.length]), [['Home', 15, 2], ['Back block', 7, 1], ['No farm / site', 2, 1], ['Off farm', 50, 1]]);
-  const plain = propertyGroups({ locations: [mk('a', 'Silo 1', 'farm', '', 10), mk('e', 'Dalby', 'off', '', 5)], total: { tons: 15, commodities: [] } });
-  assert.deepEqual(plain.map((x) => x.label), ['On farm', 'Off farm'], 'one unnamed property is just On farm');
-  const real = stockByLocation({ storages: [{ id: 's', name: 'Silo A', kind: 'silo', property: 'Home farm', commodityId: 'w' }], movements: [{ id: 'm', date: '2026-11-01', grade: 'H2', commodityId: 'w', froms: [], tos: [{ type: 'silo', id: 's', tons: 40 }] }], commodities });
-  assert.equal(real.locations[0].property, 'Home farm');
+check('By location: on farm / off farm, then property, commodity, grade and the silos holding it', () => {
+  const stock = stockByLocation({
+    storages: [
+      { id: 's1', name: 'Silo 1', kind: 'silo', property: 'Home', commodityId: 'w' },
+      { id: 's2', name: 'Silo 2', kind: 'silo', property: 'Home', commodityId: 'w' },
+      { id: 's3', name: 'Silo 3', kind: 'silo', property: 'Back block', commodityId: 'w' },
+      { id: 'o', name: 'Goondiwindi East', offFarm: { operator: 'GrainCorp', opening: [{ commodityId: 'w', grade: 'H2', tons: 50 }] } },
+    ],
+    movements: [
+      { id: 'm1', date: '2026-11-01', grade: 'H2', commodityId: 'w', froms: [], tos: [{ type: 'silo', id: 's1', tons: 100 }] },
+      { id: 'm2', date: '2026-11-02', grade: 'H2', commodityId: 'w', froms: [], tos: [{ type: 'silo', id: 's2', tons: 40 }] },
+      { id: 'm3', date: '2026-11-03', grade: 'APW1', commodityId: 'w', froms: [], tos: [{ type: 'silo', id: 's2', tons: 60 }] },
+      { id: 'm4', date: '2026-11-04', grade: 'H2', commodityId: 'w', froms: [], tos: [{ type: 'silo', id: 's3', tons: 7 }] },
+    ],
+    commodities,
+  });
+  const tree = stockTree(stock);
+  assert.deepEqual(tree.map((x) => [x.kind, x.label, x.tons]), [['farm', 'On farm', 207], ['off', 'Off farm', 50]]);
+  assert.deepEqual(tree[0].properties.map((p) => [p.label, p.tons]), [['Back block', 7], ['Home', 200]]);
+  const home = tree[0].properties[1];
+  assert.deepEqual(home.commodities.map((c) => c.name), ['Wheat']);
+  assert.deepEqual(home.commodities[0].grades.map((g) => [g.grade, g.tons]), [['H2', 140], ['APW1', 60]], 'grades in Settings order');
+  assert.deepEqual(home.commodities[0].grades[0].silos, [{ name: 'Silo 1', tons: 100 }, { name: 'Silo 2', tons: 40 }]);
+  assert.deepEqual(tree[1].properties[0].commodities[0].grades[0].silos, [], 'an off-farm site has no silos to list');
+  assert.equal(tree[1].properties[0].label, 'Goondiwindi East (GrainCorp)');
+  const plain = stockTree(stockByLocation({ storages: [{ id: 's', name: 'Silo A', kind: 'silo', commodityId: 'w' }], movements: [{ id: 'm', date: '2026-11-01', grade: 'H2', commodityId: 'w', froms: [], tos: [{ type: 'silo', id: 's', tons: 9 }] }], commodities }));
+  assert.equal(plain[0].properties[0].label, '', 'one unnamed property: no property step');
+  assert.ok(stockPdf({ report: stock, business: 'Farm', today: '19-11-2026', group: 'location' }).length > 1000);
 });
 
 console.log(`\n${failures === 0 ? 'ALL PASS' : failures + ' FAILURES'}`);
