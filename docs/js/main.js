@@ -1,35 +1,38 @@
-import { db } from './storage.js?v=419';
-import { supabase, ENV } from './supabase.js?v=419';
-import { installErrorLog } from './supportinfo.js?v=419';
-import { loadMySeries, rememberedSeries } from './outloadseries.js?v=419';
-import { initTheme } from './theme.js?v=419';
+import { db } from './storage.js?v=420';
+import { supabase, ENV } from './supabase.js?v=420';
+import { installErrorLog } from './supportinfo.js?v=420';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=420';
+import { initTheme } from './theme.js?v=420';
 initTheme();
-import { renderPosition } from './views/position.js?v=419';
-import { renderProduction } from './views/production.js?v=419';
-import { renderReports } from './views/reports.js?v=419';
-import { renderSales } from './views/sales.js?v=419';
-import { renderMovements } from './views/movements.js?v=419';
-import { renderStorage } from './views/storage.js?v=419';
-import { renderSettings } from './views/settings.js?v=419';
-import { renderLogin } from './views/login.js?v=419';
-import { renderAccount } from './views/account.js?v=419';
-import { renderHelp } from './views/help.js?v=419';
+import { renderPosition } from './views/position.js?v=420';
+import { renderProduction } from './views/production.js?v=420';
+import { renderReports } from './views/reports.js?v=420';
+import { renderSales } from './views/sales.js?v=420';
+import { renderMovements } from './views/movements.js?v=420';
+import { renderStorage } from './views/storage.js?v=420';
+import { renderSettings } from './views/settings.js?v=420';
+import { renderLogin } from './views/login.js?v=420';
+import { renderNewPassword } from './views/newpassword.js?v=420';
+import { isRecovering, endRecovery, takeResetExpired, noteRecoveryLink } from './recovery.js?v=420';
+import { RESET_EXPIRED } from './recovery.js?v=420';
+import { renderAccount } from './views/account.js?v=420';
+import { renderHelp } from './views/help.js?v=420';
 import {
-  getSession, getMembership, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=419';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=419';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=419';
-import { esc, todayLocal } from './fmt.js?v=419';
-import { isSheetOpen, notify } from './ui.js?v=419';
-import { describeMerges } from './ticketmerge.js?v=419';
-import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=419';
-import { addDays } from './fumigation.js?v=419';
-import { watchLists } from './band.js?v=419';
-import { APP_VERSION } from './version.js?v=419';
-import { startUpdateCheck } from './updatecheck.js?v=419';
-import { emailFromTrialHash } from './trialtext.js?v=419';
-import { installWatch, requestPersistence } from './pwa.js?v=419';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=419';
+  getSession, getMembership, sessionStillValid, onAuthChange, acceptInvitation, signOut, listMyInvitations,
+} from './auth.js?v=420';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=420';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=420';
+import { esc, todayLocal } from './fmt.js?v=420';
+import { isSheetOpen, notify, toast } from './ui.js?v=420';
+import { describeMerges } from './ticketmerge.js?v=420';
+import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=420';
+import { addDays } from './fumigation.js?v=420';
+import { watchLists } from './band.js?v=420';
+import { APP_VERSION } from './version.js?v=420';
+import { startUpdateCheck } from './updatecheck.js?v=420';
+import { emailFromTrialHash } from './trialtext.js?v=420';
+import { installWatch, requestPersistence } from './pwa.js?v=420';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=420';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -381,7 +384,16 @@ async function boot() {
     setChromeVisible(false);
     // The login screen says why they are looking at it. Arriving on an
     // invitation link and being shown a bare sign-in form reads as a dead link.
-    renderLogin(app, { onDone: boot, invited: !!pendingInvite, trialEmail: readTrialEmail() });
+    renderLogin(app, {
+      onDone: boot, invited: !!pendingInvite, trialEmail: readTrialEmail(),
+      notice: takeResetExpired() ? { text: RESET_EXPIRED, kind: 'error' } : null,
+    });
+    return;
+  }
+  // Arrived by a password reset link: the person is signed in only to choose a new password, so that comes before anything else
+  if (isRecovering()) {
+    setChromeVisible(false);
+    renderNewPassword(app, { onDone: ({ changed } = {}) => { endRecovery(); location.hash = '#/'; boot(); if (changed) toast('Password changed'); } });
     return;
   }
   clearTrialEmail();
@@ -404,6 +416,9 @@ async function boot() {
   const membership = await getMembership(session?.user?.id);
   if (!membership) {
     setChromeVisible(false);
+    // Somebody with no farm is being offered to create one: make sure the account is still there first. One that has been deleted
+    // on the server signs this phone out, and the sign-out starts the app again at the sign-in screen.
+    if (!(await sessionStillValid())) return;
 
     // Before offering to create a farm, ask whether one is already waiting for
     // this address. The link is a convenience, not the mechanism — and the
@@ -547,7 +562,11 @@ onAuthChange((event, session) => {
     if (signedInAs && id && signedInAs !== id) { location.reload(); return; }
     if (id) signedInAs = id;
     boot();
+  } else if (event === 'PASSWORD_RECOVERY') {
+    noteRecoveryLink('#type=recovery');
+    boot();
   } else if (event === 'SIGNED_OUT') {
+    endRecovery();
     boot();
   }
 });

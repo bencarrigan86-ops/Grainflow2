@@ -9,9 +9,10 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase } from './supabase.js?v=419';
-import { pickMembership, recallMembership, farmChoices } from './membership.js?v=419';
-import { newToken, expiryFrom } from './invites.js?v=419';
+import { supabase, isolatedClient } from './supabase.js?v=420';
+import { resetRedirect, accountGone } from './recovery.js?v=420';
+import { pickMembership, recallMembership, farmChoices } from './membership.js?v=420';
+import { newToken, expiryFrom } from './invites.js?v=420';
 
 /** The signed-in user, or null. */
 export async function getUser() {
@@ -172,8 +173,58 @@ export async function createFarm(entityName) {
     p_farm_id: farmId,
     p_entity_name: entityName.trim(),
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    // The account this phone is signed in as has been deleted: say what to do rather than show a database term
+    if (String(error.message || '').includes('farm_users_user_id_fkey')) {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      throw new Error('This sign-in is out of date: that account was removed. You have been signed out. Create the account again, or sign in.');
+    }
+    throw new Error(error.message);
+  }
   return farmId;
+}
+
+/**
+ * Email a link to choose a new password. Says nothing about whether the address has an account: the same answer either way, so
+ * nobody can use this to find out who is a member.
+ */
+export async function requestPasswordReset(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(String(email || '').trim(), { redirectTo: resetRedirect() });
+  if (error) throw new Error(friendly(error.message));
+}
+
+/** Choose a new password for whoever is signed in (the reset link signs them in for this). */
+export async function setNewPassword(password) {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw new Error(friendly(error.message));
+}
+
+/**
+ * Change the password from Settings: the current one is checked first, on a client of its own, so a wrong one is refused and a right
+ * one does not sign anybody in again.
+ */
+export async function changePassword(current, next) {
+  const { data } = await supabase.auth.getSession();
+  const email = data?.session?.user?.email;
+  if (!email) throw new Error('Sign in again first.');
+  const { error: wrong } = await isolatedClient().auth.signInWithPassword({ email, password: current });
+  if (wrong) throw new Error('That is not your current password.');
+  await setNewPassword(next);
+}
+
+/**
+ * Is the account this phone is signed in as still there? A login that has been deleted on the server (a test account being started
+ * again) keeps working on the phone until its pass runs out, and then every save is refused with a message about a foreign key.
+ * Asked of the server; if it says the account is gone, this phone is signed out here and now. A server that cannot be reached counts
+ * as "still there": being offline must never sign anybody out.
+ */
+export async function sessionStillValid() {
+  try {
+    const { error } = await supabase.auth.getUser();
+    if (!error) return true;
+    if (accountGone(error)) { await supabase.auth.signOut({ scope: 'local' }); return false; }
+  } catch { /* no signal: carry on */ }
+  return true;
 }
 
 export async function signOut() {
@@ -383,6 +434,15 @@ function friendly(message) {
   }
   if (m.includes('password should be at least')) {
     return 'Password needs to be at least 6 characters.';
+  }
+  if (m.includes('for security purposes') || m.includes('rate limit')) {
+    return 'Please wait a minute, then try again.';
+  }
+  if (m.includes('should be different')) {
+    return 'Choose a password you have not used on this account.';
+  }
+  if (m.includes('session missing') || m.includes('not authenticated')) {
+    return 'That reset link has expired. Ask for a new one.';
   }
   if (m.includes('unable to validate email') || m.includes('invalid email')) {
     return 'That does not look like a valid email address.';

@@ -5,12 +5,14 @@
 // rather than new styling, so it looks like the rest of Commodity Mate rather than
 // a login page bolted onto the front of it.
 
-import { signIn, signUp, createFarm } from '../auth.js?v=419';
-import { wantSampleData } from '../demo.js?v=419';
-import { hasTrialInvite, trialNoticeText, trialSampleText } from '../trials.js?v=419';
+import { signIn, signUp, createFarm, requestPasswordReset, signOut } from '../auth.js?v=420';
+import { RESET_SENT } from '../recovery.js?v=420';
+import { wantSampleData } from '../demo.js?v=420';
+import { hasTrialInvite, trialNoticeText, trialSampleText } from '../trials.js?v=420';
 
-export function renderLogin(root, { mode = 'signin', onDone, invited = false, trialEmail = null } = {}) {
+export function renderLogin(root, { mode = 'signin', onDone, invited = false, trialEmail = null, notice = null } = {}) {
   let busy = false;
+  let typedEmail = '';   // what was typed on the sign-in screen, carried to the reset screen
 
   // Someone arriving on an invitation link has no account, so the useful screen
   // is "create one" rather than "sign in". The banner stays across both, because
@@ -25,13 +27,14 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false, tr
   function draw(current, message, messageKind) {
     const isSignUp = current === 'signup';
     const isFarm = current === 'farm';
+    const isForgot = current === 'forgot';
 
     root.innerHTML = `
       <div class="topbar">
         <div>
           <h1>Commodity Mate</h1>
           <div class="sub">${
-            isFarm ? 'One last thing' : isSignUp ? 'Create an account' : 'Sign in to your farm'
+            isFarm ? 'One last thing' : isForgot ? 'Reset your password' : isSignUp ? 'Create an account' : 'Sign in to your farm'
           }</div>
         </div>
       </div>
@@ -48,12 +51,12 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false, tr
             <div class="hint">Use this email address: <b>${trialEmail.replace(/[<>&"]/g, '')}</b>. It is the one the trial was set up for. Already have an account? Sign in instead.</div>
           </div>` : ''}
         <div class="card">
-          ${isFarm ? farmForm() : credentialsForm(isSignUp)}
+          ${isFarm ? farmForm() : isForgot ? forgotForm() : credentialsForm(isSignUp)}
           ${message ? `<div class="hint" style="margin-top:12px;color:${
             messageKind === 'error' ? 'var(--danger)' : 'var(--text-dim)'
           }">${message}</div>` : ''}
         </div>
-        ${isFarm ? '' : `
+        ${isFarm ? `<div class="empty" style="padding:16px 10px"><button class="link-btn" id="farm-signout">Not you? Sign out</button></div>` : isForgot ? `<div class="empty" style="padding:16px 10px"><button class="link-btn" id="to-signin">Back to sign in</button></div>` : `
           <div class="empty" style="padding:16px 10px">
             ${isSignUp
               ? 'Already have an account? <button class="link-btn" id="to-signin">Sign in</button>'
@@ -79,9 +82,14 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false, tr
 
     if (isFarm) {
       wireFarm();
+      root.querySelector('#farm-signout')?.addEventListener('click', () => signOut());
+    } else if (isForgot) {
+      wireForgot();
+      root.querySelector('#to-signin')?.addEventListener('click', () => draw('signin'));
     } else {
       wireCredentials(isSignUp);
       root.querySelector('#to-signup')?.addEventListener('click', () => draw('signup'));
+      root.querySelector('#to-forgot')?.addEventListener('click', () => { typedEmail = root.querySelector('#email')?.value.trim() || typedEmail; draw('forgot'); });
       root.querySelector('#to-signin')?.addEventListener('click', () => draw('signin'));
     }
   }
@@ -97,10 +105,45 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false, tr
         <label>Password</label>
         <input id="password" type="password"
                autocomplete="${isSignUp ? 'new-password' : 'current-password'}" />
-        ${isSignUp ? '<div class="hint">At least 6 characters.</div>' : ''}
+        ${isSignUp ? '<div class="hint">At least 6 characters.</div>' : '<div style="margin-top:6px"><button type="button" class="link-btn" id="to-forgot">Forgot password?</button></div>'}
       </div>
       <button class="btn" id="submit">${isSignUp ? 'Create account' : 'Sign in'}</button>
     `;
+  }
+
+  function forgotForm() {
+    return `
+      <div class="field">
+        <label>Email</label>
+        <input id="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" />
+        <div class="hint">We email you a link to choose a new password.</div>
+      </div>
+      <button class="btn" id="send-reset">Send reset link</button>
+    `;
+  }
+
+  function wireForgot() {
+    const emailEl = root.querySelector('#email');
+    emailEl.value = typedEmail;
+    const btn = root.querySelector('#send-reset');
+    async function send() {
+      if (busy) return;
+      const email = emailEl.value.trim();
+      if (!email) { draw('forgot', 'Type the email address you signed up with.', 'error'); return; }
+      typedEmail = email;
+      busy = true; btn.textContent = 'Sending…';
+      try {
+        await requestPasswordReset(email);
+        busy = false;
+        draw('forgot', RESET_SENT, 'info');
+      } catch (err) {
+        busy = false;
+        draw('forgot', err.message, 'error');
+      }
+    }
+    btn.addEventListener('click', send);
+    emailEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+    if (!emailEl.value) emailEl.focus();
   }
 
   function farmForm() {
@@ -227,5 +270,5 @@ export function renderLogin(root, { mode = 'signin', onDone, invited = false, tr
     nameEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
   }
 
-  draw(mode);
+  draw(mode, notice?.text, notice?.kind);
 }

@@ -16,7 +16,12 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-import { environmentFor } from './env.js?v=419';
+import { environmentFor } from './env.js?v=420';
+import { noteRecoveryLink } from './recovery.js?v=420';
+
+// A password reset link arrives as "#access_token=…&type=recovery", which the library below reads and then removes from the address bar.
+// What it said is noted first, for the tab, so the app can ask for the new password (see main.js).
+noteRecoveryLink(globalThis.location?.hash);
 
 // The live database, or the test copy's when this is the test copy (see env.js).
 export const ENV = environmentFor(globalThis.location?.hostname);
@@ -34,6 +39,14 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     detectSessionInUrl: true,
   },
 });
+
+/**
+ * A second client that remembers nothing and announces nothing: used to check that a password is right (changing it asks for the
+ * current one) without signing in again, which would make the whole app start over.
+ */
+export function isolatedClient() {
+  return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+}
 
 /**
  * Who is signed in, or null. Async by necessity — this is the one place the
