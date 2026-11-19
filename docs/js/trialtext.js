@@ -1,6 +1,6 @@
 // The words and small checks for trial farms, kept apart from the server calls so they can be tested without a connection.
 
-import { APP_ADDRESS } from './env.js?v=429';
+import { APP_ADDRESS } from './env.js?v=430';
 
 export const asText = (v) => String(v ?? '').trim();
 

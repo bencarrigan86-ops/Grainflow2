@@ -1502,9 +1502,9 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
    The app is made for a phone, so on a wide screen it used to be the phone layout stretched across the window. From 700px the content
    keeps a comfortable width in the middle, with the buttons, the season and the cog tied to its edge; from 900px the tab bar becomes
    a rail down the left, and the windows that slide up from the bottom of a phone open in the middle. Nothing here changes a phone. */
-:root { --rail-w: 0px; --content-max: 1100px; --fab-x: 18px; }
+:root { --rail-w: 0px; --content-max: 1100px; --fab-x: 18px; --zoom: 1; }
 @media (min-width: 700px) {
-  :root { --content-max: 760px; --fab-x: calc(max(0px, (100vw - var(--rail-w) - var(--content-max)) / 2) + 18px); }
+  :root { --content-max: 760px; --fab-x: calc(max(0px, (100vw / var(--zoom) - var(--rail-w) - var(--content-max)) / 2) + 18px); }
   #app > .topbar, #app > .view { max-width: var(--content-max); margin-left: auto; margin-right: auto; width: 100%; }
   .fab { right: var(--fab-x); }
   .fab-secondary { right: calc(var(--fab-x) + 64px); }
@@ -1512,13 +1512,16 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
   .settings-btn { right: calc(var(--fab-x) - 8px); }
   .year-pill { right: calc(var(--fab-x) + 34px); }
   .sheet-backdrop { align-items: center; justify-content: center; }
-  .sheet { max-width: 640px; border-radius: 18px; max-height: 88vh; box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+  .sheet { max-width: 640px; border-radius: 18px; max-height: calc(88vh / var(--zoom)); box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+  .table-scroll { max-height: calc(70vh / var(--zoom)); }
   .sheet-handle { display: none; }
   .toast { left: calc(50% + var(--rail-w) / 2); }
   .update-bar { left: calc(var(--rail-w) + 8px); }
 }
 @media (min-width: 900px) {
-  :root { --rail-w: 92px; --content-max: 1100px; --tabbar-h: 0px; }
+  /* everything is drawn in pixels for a phone, so on a computer the whole page is scaled up a little (sizes in vw and vh are divided by --zoom to match) */
+  :root { --rail-w: 92px; --content-max: 1100px; --tabbar-h: 0px; --zoom: 1.12; }
+  html { zoom: var(--zoom); }
   #app { padding-left: var(--rail-w); }
   .tabbar {
     top: 0; right: auto; width: var(--rail-w); height: auto; flex-direction: column; justify-content: flex-start; gap: 6px;
@@ -1531,3 +1534,10 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
   .pos-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .tile-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 }
+
+/* the farm map is a picture to look into: on a wide screen its window takes most of the screen, and the map the most of the window */
+@media (min-width: 700px) {
+  .sheet.sheet-wide { max-width: min(1280px, calc(100vw / var(--zoom) - 48px)); max-height: calc(94vh / var(--zoom)); }
+  .sheet.sheet-wide #fm-svg { max-height: calc(74vh / var(--zoom)) !important; }
+}
+@media (min-width: 1400px) { :root { --zoom: 1.25; } }

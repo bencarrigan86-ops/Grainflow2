@@ -4,15 +4,15 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=429';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=429';
-import { esc, num, todayLocal, dmy } from '../fmt.js?v=429';
-import { sharePdf, safeFileName } from '../sharefile.js?v=429';
-import { APP_VERSION } from '../version.js?v=429';
-import { buildFarmMapPdf } from '../spraypdf.js?v=429';
+import { db } from '../storage.js?v=430';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=430';
+import { esc, num, todayLocal, dmy } from '../fmt.js?v=430';
+import { sharePdf, safeFileName } from '../sharefile.js?v=430';
+import { APP_VERSION } from '../version.js?v=430';
+import { buildFarmMapPdf } from '../spraypdf.js?v=430';
 import {
   readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx, farmLabelPx, commonLabelPx,
-} from '../farmmap.js?v=429';
+} from '../farmmap.js?v=430';
 
 const MAX_ZOOM = 40;
 const MIN_LABEL_PX = 6.5;    // the smallest writing a paddock's name is shown in, on screen
@@ -150,7 +150,7 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
       });
     };
     draw();
-  }, { askBeforeClose: false });   // the ticks on the import screen are not typing to lose: once saved, Close just closes
+  }, { askBeforeClose: false, wide: true });   // the ticks on the import screen are not typing to lose: once saved, Close just closes
 }
 
 /** Pan, pinch and button zoom on the map, by moving the viewBox. A tap on a paddock opens it. */

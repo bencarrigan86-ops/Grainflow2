@@ -229,7 +229,7 @@ await check('the file chooser puts no filter on the picker, so OneDrive and othe
 await check('the map sheet never asks "Close without saving?" after the paddock ticks, because it has nothing typed to lose', () => {
   const ui = read('docs/js/ui.js');
   assert.ok(ui.includes('askBeforeClose = true') && ui.includes('if (!askBeforeClose) return;'));
-  assert.ok(read('docs/js/views/farmmap.js').includes('{ askBeforeClose: false }'));
+  assert.ok(read('docs/js/views/farmmap.js').includes('{ askBeforeClose: false, wide: true }'));
 });
 await check('the map has tick boxes for the paddock names and their areas, remembered on the device', () => {
   const v = read('docs/js/views/farmmap.js');

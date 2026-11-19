@@ -69,7 +69,10 @@ export function freezeSheet(root, line = 'You can look at this but not change it
   root.prepend(note);
 }
 
-export function openSheet(title, buildBody, { askBeforeClose = true } = {}) {
+// The windows that are reports (tables, a map): on a wide screen they open large. Forms stay narrow. A window can also ask with { wide: true }.
+const WIDE_REPORTS = new Set(['Farm map', 'Pick paddocks', 'Averages by commodity', 'End of year snapshot', 'Delivery timeline', 'Invoices', 'MTM', 'Prices', 'Rotation and yield history', 'Silo blending', 'Traceability']);
+
+export function openSheet(title, buildBody, { askBeforeClose = true, wide = false } = {}) {
   removeTop();
   backdrop = document.createElement('div');
   backdrop.className = 'sheet-backdrop';
@@ -86,7 +89,7 @@ export function openSheet(title, buildBody, { askBeforeClose = true } = {}) {
   });
 
   const sheet = document.createElement('div');
-  sheet.className = 'sheet';
+  sheet.className = wide || WIDE_REPORTS.has(title) ? 'sheet sheet-wide' : 'sheet';
   sheet.innerHTML = `
     <div class="sheet-handle"></div>
     <div class="sheet-header">
