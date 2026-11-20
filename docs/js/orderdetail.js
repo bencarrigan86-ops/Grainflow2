@@ -5,8 +5,8 @@
 //
 // Pure: no screen and no storage in here.
 
-import { cleanParts, hasParts, joinAddress } from './address.js?v=454';
-import { splitContact } from './buyercontact.js?v=454';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=455';
+import { splitContact } from './buyercontact.js?v=455';
 
 const text = (v) => String(v ?? '').trim();
 const MAX = 4000;

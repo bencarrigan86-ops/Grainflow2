@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=454';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=454';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=454';
-import { payablesCost } from '../payables.js?v=454';
-import { commodityClass } from '../commoditycolor.js?v=454';
-import { hasCommodityOrder } from '../commodityorder.js?v=454';
-import { startProgress, missingLine } from '../helpcontent.js?v=454';
-import { openSetupWalk } from './setupwalk.js?v=454';
-import { attentionItems } from '../attention.js?v=454';
-import { lastBackup } from '../backup.js?v=454';
-import { supportWaitingCount } from './support.js?v=454';
-import { todayLocal, dmy } from '../fmt.js?v=454';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=454';
-import { openSheet, closeSheet } from '../ui.js?v=454';
-import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=454';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=454';
-import { viewPdf } from '../pdfview.js?v=454';
+import { db } from '../storage.js?v=455';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=455';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=455';
+import { payablesCost } from '../payables.js?v=455';
+import { commodityClass } from '../commoditycolor.js?v=455';
+import { hasCommodityOrder } from '../commodityorder.js?v=455';
+import { startProgress, missingLine } from '../helpcontent.js?v=455';
+import { openSetupWalk } from './setupwalk.js?v=455';
+import { attentionItems } from '../attention.js?v=455';
+import { lastBackup } from '../backup.js?v=455';
+import { supportWaitingCount } from './support.js?v=455';
+import { todayLocal, dmy } from '../fmt.js?v=455';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=455';
+import { openSheet, closeSheet } from '../ui.js?v=455';
+import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=455';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=455';
+import { viewPdf } from '../pdfview.js?v=455';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -95,15 +95,17 @@ function paint(root) {
       ${rows.length ? `<div class="pos-by"><span class="pos-season">${esc(db.getCurrentYear())} season</span><button type="button" class="btn secondary small pos-pdf" id="position-pdf"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>${canShareFiles() ? 'Share PDF' : 'PDF'}</button></div>` : ''}
       ${rows.length ? dashTop(totals) : ''}
       ${rows.length === 0 ? `<div class="empty">Nothing to report yet.<br/>Add a paddock in Production, or a contract in Sales, and your position appears here.</div>` : ''}
-      ${rows.length ? `<div class="pos-by"><span>${hasCommodityOrder() ? 'In your order' : 'Biggest first'} &middot; tap a crop for the detail</span></div><div class="pos-tiles">${cropTiles(rows)}</div>` : ''}
+      ${rows.length ? `<div class="pos-by"><span>${hasCommodityOrder() ? 'In your order' : 'Biggest first'} &middot; tap a crop for the detail</span><button type="button" class="btn secondary small" id="tile-figures">Figures</button></div><div class="pos-tiles">${cropTiles(rows)}</div>` : ''}
 
       ${rows.length > 0 ? farmSummaryCard(totals, overheads, pl, cost) : ''}
     </div>
   `;
-  root.querySelectorAll('[data-crop]').forEach((el) => el.addEventListener('click', () => {
+  const bindCrops = () => root.querySelectorAll('[data-crop]').forEach((el) => el.addEventListener('click', () => {
     const r = rows.find((x) => x.commodity.id === el.dataset.crop);
     if (r) openSheet(r.commodity.name, (body) => { body.innerHTML = cropDetail(r); });
   }));
+  bindCrops();
+  root.querySelector('#tile-figures')?.addEventListener('click', () => openTileSheet(() => { root.querySelector('.pos-tiles').innerHTML = cropTiles(rows); bindCrops(); }));
   root.querySelector('#position-pdf')?.addEventListener('click', () => openPdfSheet({ rows, totals, overheads, pl, cost }));
   root.querySelectorAll('[data-start-go]').forEach((el) => el.addEventListener('click', () => { location.hash = `#/${el.dataset.startGo}`; }));
   root.querySelector('#attention-fold')?.addEventListener('toggle', (e) => { root.querySelector('#attn-sub').hidden = e.target.open; try { localStorage.setItem(ATTN_KEY, e.target.open ? '1' : '0'); } catch { /* opens again next time */ } });
@@ -219,9 +221,61 @@ function cropTiles(rows) {
   return list.map((r) => cropTile(r)).join('');
 }
 
-/** A crop as a tile: its value and margin, then the ring with produced, unsold, average price and yield. Tap it for the detail. */
+/** The figures a crop tile can show, in the order they appear; which ones is each device's own choice (remembered here, not on the farm). */
+const dash = '&ndash;';
+const TILE_FIELDS = [
+  { key: 'produced', label: 'Produced', get: (r, b) => `${b.bales ? num(r.productionTons, 0) : b.qty(r.productionTons)}` },
+  { key: 'sold', label: 'Sold', get: (r, b) => `${b.bales ? num(r.soldTons, 0) : b.qty(r.soldTons)}` },
+  { key: 'unsold', label: 'Unsold', get: (r, b) => `${b.bales ? num(r.unsoldTons, 0) : b.qty(r.unsoldTons)}` },
+  { key: 'area', label: 'Area', get: (r) => (r.area > 0 ? `${num(r.area, 0)} ha` : dash) },
+  { key: 'yield', label: 'Yield', get: (r, b) => `${num(r.yieldTHa, 2)}${b.bales ? '' : ' t'}/ha` },
+  { key: 'price', label: 'Avg price', get: (r, b) => `${money(r.avgSoldPrice, 0)}/${b.per}` },
+  { key: 'margin', label: 'Margin', get: (r) => money(r.grossMargin, 0) },
+  { key: 'marginpct', label: 'Margin %', get: (r) => pct(r.grossMarginPct) },
+  { key: 'marginha', label: 'Margin /ha', get: (r) => (r.area > 0 ? money(r.grossMargin / r.area, 0) : dash) },
+];
+const TILE_PRESETS = [
+  { id: 'all', label: 'Everything', keys: TILE_FIELDS.map((f) => f.key) },
+  { id: 'short', label: 'Short', keys: ['produced', 'sold', 'unsold', 'yield', 'margin'] },
+];
+const TILE_KEY = 'grainflow.positiontile';
+export const tileKeys = () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(TILE_KEY) || 'null');
+    const keys = Array.isArray(saved) ? saved.filter((k) => TILE_FIELDS.some((f) => f.key === k)) : [];
+    if (keys.length) return keys;
+  } catch { /* all of them */ }
+  return TILE_FIELDS.map((f) => f.key);
+};
+
+/** The sheet that picks the figures on the crop tiles: ticks and two presets, remembered on this device. */
+function openTileSheet(onDone) {
+  openSheet('Tile figures', (root) => {
+    const chosen = new Set(tileKeys());
+    root.innerHTML = `
+      <div class="hint" style="margin:0 0 10px;font-size:12.5px;color:var(--text-dim)">Pick what shows on each crop tile on this device. The crop detail still has every figure.</div>
+      <div class="chips" style="margin:0 0 8px">${TILE_PRESETS.map((p) => `<button type="button" class="chip" data-preset="${p.id}">${esc(p.label)}</button>`).join('')}</div>
+      <div class="pp-cols">${TILE_FIELDS.map((f) => `<label class="pp-col"><input type="checkbox" data-tile="${f.key}" ${chosen.has(f.key) ? 'checked' : ''} /><span>${esc(f.label)}</span></label>`).join('')}</div>`;
+    const save = () => {
+      let keys = [...root.querySelectorAll('[data-tile]:checked')].map((el) => el.dataset.tile);
+      if (!keys.length) { keys = tileKeys(); root.querySelectorAll('[data-tile]').forEach((el) => { el.checked = keys.includes(el.dataset.tile); }); return; }   // at least one stays ticked
+      try { localStorage.setItem(TILE_KEY, JSON.stringify(keys)); } catch { /* not remembered */ }
+      onDone();
+    };
+    root.querySelectorAll('[data-tile]').forEach((el) => el.addEventListener('change', save));
+    root.querySelectorAll('[data-preset]').forEach((el) => el.addEventListener('click', () => {
+      const keys = TILE_PRESETS.find((p) => p.id === el.dataset.preset).keys;
+      root.querySelectorAll('[data-tile]').forEach((c) => { c.checked = keys.includes(c.dataset.tile); });
+      save();
+    }));
+  }, { askBeforeClose: false });
+}
+
+/** A crop as a tile: its value and margin, then the ring with the figures this device has picked. Tap it for the detail. */
 function cropTile(r) {
   const { bales, qty, per } = cropBits(r);
+  const bits = { bales, qty, per };
+  const keys = new Set(tileKeys());
   const sold = r.pctSold >= 1 ? 'Sold out' : `${pct(r.pctSold)} sold`;
   return `<button type="button" class="card dash-crop ${commodityClass(r.commodity.name)}" data-crop="${esc(r.commodity.id)}">
       <div class="dc-top"><div><div class="dc-name">${esc(r.commodity.name)}${bales ? ' <small>in bales</small>' : ''}</div><div class="dc-pct">${sold}</div></div>
@@ -229,15 +283,7 @@ function cropTile(r) {
       <div class="dc-body">${ring(r.pctSold, 44, 7)}
         <div class="dc-main">
           <div class="dc-stats">
-            <div><small>Produced</small><b>${bales ? num(r.productionTons, 0) : qty(r.productionTons)}</b></div>
-            <div><small>Sold</small><b>${bales ? num(r.soldTons, 0) : qty(r.soldTons)}</b></div>
-            <div><small>Unsold</small><b>${bales ? num(r.unsoldTons, 0) : qty(r.unsoldTons)}</b></div>
-            <div><small>Area</small><b>${r.area > 0 ? `${num(r.area, 0)} ha` : '&ndash;'}</b></div>
-            <div><small>Yield</small><b>${num(r.yieldTHa, 2)}${bales ? '' : ' t'}/ha</b></div>
-            <div><small>Avg price</small><b>${money(r.avgSoldPrice, 0)}/${per}</b></div>
-            <div><small>Margin</small><b>${money(r.grossMargin, 0)}</b></div>
-            <div><small>Margin %</small><b>${pct(r.grossMarginPct)}</b></div>
-            <div><small>Margin /ha</small><b>${r.area > 0 ? money(r.grossMargin / r.area, 0) : '&ndash;'}</b></div>
+            ${TILE_FIELDS.filter((f) => keys.has(f.key)).map((f) => `<div><small>${f.label}</small><b>${f.get(r, bits)}</b></div>`).join('')}
           </div></div></div></button>`;
 }
 
