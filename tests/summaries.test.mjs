@@ -11,7 +11,7 @@ const { groupFieldsByCommodity } = await import(`../docs/js/derived.js?v=${stamp
 const { fertPdf } = await import(`../docs/js/fertpdf.js?v=${stamp}`);
 const { seedPdf } = await import(`../docs/js/seedpdf.js?v=${stamp}`);
 const { buyerExposure, dueByWeek } = await import(`../docs/js/exposure.js?v=${stamp}`);
-const { exposurePdf, mtmText, mtmColour, EXPOSURE_COLUMNS } = await import(`../docs/js/exposurepdf.js?v=${stamp}`);
+const { exposurePdf, mtmText, mtmColour, EXPOSURE_COLUMNS, EXPOSURE_PRESETS, DEFAULT_EXPOSURE_COLUMNS, exposureLayout } = await import(`../docs/js/exposurepdf.js?v=${stamp}`);
 
 let failures = 0;
 const check = (name, fn) => {
@@ -124,6 +124,48 @@ check('the totals add the buyers up', () => {
   near(ex.total.dueValue, ex.buyers.reduce((s, b) => s + b.dueValue, 0));
   near(ex.total.mtmGap, ex.buyers.reduce((s, b) => s + b.mtmGap, 0));
   assert.equal(ex.total.buyers, 3);
+});
+
+check('total exposure is what the buyer owes now plus what is still to go, for each buyer and in total', () => {
+  for (const b of ex.buyers) near(b.exposure, b.owing + b.dueValue);
+  near(ex.total.exposure, ex.buyers.reduce((s, b) => s + b.exposure, 0));
+  near(ex.total.exposure, ex.total.owing + ex.total.dueValue);
+  assert.ok(ex.total.exposure > ex.total.owing, 'there is grain still to go in this data');
+});
+check('the PDF has a Total exposure column after Owing now, and the screen shows it for each buyer and in total', () => {
+  const heads = EXPOSURE_COLUMNS.map((c) => c.head[0]);
+  assert.equal(heads[heads.indexOf('Owing now') + 1], 'Total exposure');
+  const col = EXPOSURE_COLUMNS.find((c) => c.head[0] === 'Total exposure');
+  assert.equal(col.cell({ exposure: 12345.4 }), '$12,345');
+  assert.equal(col.line({ value: 30320 }), '$30,320', 'a contract line shows what is still to go on it');
+  assert.equal(col.line({ value: 0 }), '');
+  const s = text(exposurePdf(ex));
+  assert.ok(s.includes('(Total exposure') || s.includes('Total'), 'heading drawn');
+  const o = read('docs/js/views/outstanding.js');
+  assert.ok(o.includes('money(total.exposure, 0)') && o.includes('money(b.exposure, 0)'), 'the screen shows it for the farm and for each buyer');
+});
+
+check('the exposure PDF has the columns that were chosen: the buyer always, the rest in the table order, widths filling the page', () => {
+  assert.equal(exposureLayout().length, EXPOSURE_COLUMNS.length, 'all of them unless chosen');
+  const some = exposureLayout(['exposure', 'owing', 'share']);
+  assert.deepEqual(some.map((c) => c.key), ['buyer', 'owing', 'exposure', 'share']);
+  assert.equal(some.reduce((a, c) => a + c.w, 0).toFixed(6), '1.000000', 'fewer columns are wider');
+  assert.equal(exposureLayout(['buyer']).length, EXPOSURE_COLUMNS.length, 'nothing chosen gives them all');
+  assert.equal(DEFAULT_EXPOSURE_COLUMNS.length, EXPOSURE_COLUMNS.length);
+  for (const pr of EXPOSURE_PRESETS) {
+    assert.ok(pr.keys.every((k) => EXPOSURE_COLUMNS.some((c) => c.key === k)), pr.id + ' uses real columns');
+    assert.ok(pr.keys.includes('buyer'));
+  }
+  const full = text(exposurePdf(ex));
+  const slim = text(exposurePdf(ex, { show: { columns: ['owing', 'exposure'], lines: false, weeks: false } }));
+  assert.ok(full.includes('(Sale price') && !slim.includes('(Sale price') && !slim.includes('Unpaid'), 'a column left out is not drawn');
+  assert.ok(slim.includes('Total exposure'), 'one that was chosen is');
+  assert.ok(!slim.includes('Invoices due, by week'), 'the weeks table can be left out');
+  assert.ok(slim.length < full.length, 'and the contract lines');
+});
+check('the MTM screen opens a sheet to choose the columns, with View and Share inside, remembered on the device', () => {
+  const o = read('docs/js/views/outstanding.js');
+  assert.ok(o.includes('openExposurePdfSheet(') && o.includes('id="ex-view"') && o.includes('id="ex-go"') && o.includes('EXPOSURE_PRESETS') && o.includes("'grainflow.exposurepdf'"));
 });
 
 console.log('\n=== invoices due by week ===');

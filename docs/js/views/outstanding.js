@@ -4,26 +4,26 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { canSeeBills, canSeeOrders } from '../nav.js?v=450';
-import { db } from '../storage.js?v=450';
-import { openSheet, openOver } from '../ui.js?v=450';
-import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=450';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=450';
-import { windowText } from '../orders.js?v=450';
-import { openOrderSheet } from './orders.js?v=450';
-import { openInvoiceListSheet } from './invoice.js?v=450';
-import { renderPayables, returnToAfterBill } from './payables.js?v=450';
-import { openXeroSheet } from './xero.js?v=450';
-import { cashflow } from '../cashflow.js?v=450';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=450';
-import { buyerStatements, statementPdf } from '../statement.js?v=450';
-import { buyerExposure } from '../exposure.js?v=450';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=450';
-import { viewPdf } from '../pdfview.js?v=450';
-import { exposurePdf } from '../exposurepdf.js?v=450';
-import { emailIn } from '../vendordec.js?v=450';
-import { invoiceLabel } from '../adjustment.js?v=450';
-import { matchesAll, amountText } from '../listsearch.js?v=450';
+import { canSeeBills, canSeeOrders } from '../nav.js?v=451';
+import { db } from '../storage.js?v=451';
+import { openSheet, openOver, closeSheet } from '../ui.js?v=451';
+import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=451';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=451';
+import { windowText } from '../orders.js?v=451';
+import { openOrderSheet } from './orders.js?v=451';
+import { openInvoiceListSheet } from './invoice.js?v=451';
+import { renderPayables, returnToAfterBill } from './payables.js?v=451';
+import { openXeroSheet } from './xero.js?v=451';
+import { cashflow } from '../cashflow.js?v=451';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=451';
+import { buyerStatements, statementPdf } from '../statement.js?v=451';
+import { buyerExposure } from '../exposure.js?v=451';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=451';
+import { viewPdf } from '../pdfview.js?v=451';
+import { exposurePdf, EXPOSURE_COLUMNS, DEFAULT_EXPOSURE_COLUMNS, EXPOSURE_PRESETS } from '../exposurepdf.js?v=451';
+import { emailIn } from '../vendordec.js?v=451';
+import { invoiceLabel } from '../adjustment.js?v=451';
+import { matchesAll, amountText } from '../listsearch.js?v=451';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -164,8 +164,7 @@ export function openMoneySheet(side = null) {
       root.querySelectorAll('[data-invoice-sale]').forEach((el) => el.addEventListener('click', () => openOver(() => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.invoiceSale)), draw)));
       root.querySelectorAll('[data-open-invoices]').forEach((el) => el.addEventListener('click', () => openOver(() => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.openInvoices)), draw)));
       root.querySelector('#open-xero')?.addEventListener('click', () => openOver(() => openXeroSheet()));
-      root.querySelector('#exposure-pdf')?.addEventListener('click', () => exportExposurePdf(buyerExposure(invoices, sales, movements, commodities, today), today));
-      root.querySelector('#exposure-view')?.addEventListener('click', () => viewExposurePdf(buyerExposure(invoices, sales, movements, commodities, today), today));
+      root.querySelector('#exposure-pdf')?.addEventListener('click', () => openOver(() => openExposurePdfSheet(buyerExposure(invoices, sales, movements, commodities, today), today)));
       root.querySelectorAll('[data-statement]').forEach((b) => b.addEventListener('click', () => sendStatement(b.dataset.statement, { invoices, sales, movements, commodities, today })));
       root.querySelectorAll('[data-statement-view]').forEach((b) => b.addEventListener('click', () => sendStatement(b.dataset.statementView, { invoices, sales, movements, commodities, today }, true)));
       const bills = root.querySelector('#money-bills');
@@ -186,8 +185,7 @@ export function openMtmSheet() {
       const today = todayLocal();
       root.innerHTML = buyersHtml(buyerExposure(invoices, sales, movements, commodities, today), commodities);
       root.querySelectorAll('[data-open-invoices]').forEach((el) => el.addEventListener('click', () => openOver(() => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.openInvoices)), draw)));
-      root.querySelector('#exposure-pdf')?.addEventListener('click', () => exportExposurePdf(buyerExposure(invoices, sales, movements, commodities, today), today));
-      root.querySelector('#exposure-view')?.addEventListener('click', () => viewExposurePdf(buyerExposure(invoices, sales, movements, commodities, today), today));
+      root.querySelector('#exposure-pdf')?.addEventListener('click', () => openOver(() => openExposurePdfSheet(buyerExposure(invoices, sales, movements, commodities, today), today)));
       root.querySelectorAll('[data-statement]').forEach((b) => b.addEventListener('click', () => sendStatement(b.dataset.statement, { invoices, sales, movements, commodities, today })));
       root.querySelectorAll('[data-statement-view]').forEach((b) => b.addEventListener('click', () => sendStatement(b.dataset.statementView, { invoices, sales, movements, commodities, today }, true)));
     };
@@ -311,8 +309,9 @@ function buyersHtml({ buyers, total, weeks }, commodities) {
   if (!buyers.length) return '<div class="empty" style="padding:6px 0">No buyer owes you anything, and there is no grain still to deliver.</div>';
   const gapNote = total.noMtm ? ` ${total.noMtm} contract${total.noMtm === 1 ? ' has' : 's have'} no MTM price set on the commodity, so ${total.noMtm === 1 ? 'it is' : 'they are'} left out.` : '';
   return `
-    <button type="button" class="btn secondary small" id="exposure-view" style="margin-bottom:10px;margin-right:6px">View</button><button type="button" class="btn secondary small" id="exposure-pdf" style="margin-bottom:10px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>
+    <button type="button" class="btn secondary small" id="exposure-pdf" style="margin-bottom:10px">${canShareFiles() ? 'Share PDF' : 'PDF'}</button>
     <div class="stat-grid">
+      <div class="stat" style="grid-column:1 / -1"><div class="n">${money(total.exposure, 0)}</div><div class="l">Total exposure · owing now plus still to go</div></div>
       <div class="stat" style="grid-column:1 / -1"><div class="n">${money(total.owing, 0)}</div><div class="l">Owing now · ${total.overdueTotal ? `<span class="mtm neg">${money(total.overdueTotal, 0)} overdue</span>` : 'none overdue'}</div></div>
       <div class="stat"><div class="n">${money(total.unpaidTotal, 0)}</div><div class="l">Invoiced, unpaid</div></div>
       <div class="stat"><div class="n">${money(total.notInvoicedValue, 0)}</div><div class="l">Delivered, not invoiced (${num(total.notInvoicedTons, 0)} t)</div></div>
@@ -344,6 +343,7 @@ function buyersHtml({ buyers, total, weeks }, commodities) {
       <div class="list-item stack">
         <div class="li-top"><div class="main">${esc(b.buyer)}</div><div class="main">${money(b.owing, 0)}</div></div>
         <div class="meta">${b.unpaidCount ? `${b.unpaidCount} unpaid invoice${b.unpaidCount === 1 ? '' : 's'} · ${money(b.unpaidTotal, 0)}` : 'No unpaid invoices'}${b.notInvoicedValue ? ` · ${num(b.notInvoicedTons, 1)} t not invoiced · ${money(b.notInvoicedValue, 0)}` : ''}</div>
+        <div class="meta"><strong>Total exposure ${money(b.exposure, 0)}</strong> · owing now plus still to go</div>
         ${b.nextDue ? `<div class="meta">Next payment: ${money(b.nextDue.amount, 0)} due ${esc(shortDate(b.nextDue.date))}</div>` : ''}
         <div class="meta">${b.dueTons > 0 ? `To go: ${num(b.dueTons, 0)} t on ${b.contracts} contract${b.contracts === 1 ? '' : 's'} · ${money(b.dueValue, 0)}${b.contracts > b.noMtm ? ` · <strong>${mtmHtml(b.mtmGap)} vs MTM</strong>` : ' · no MTM price set'}` : 'Nothing left to deliver'}</div>
         <div class="li-foot"><span class="badges">${b.overdueTotal ? `<span class="badge neg">${money(b.overdueTotal, 0)} overdue</span>` : '<span class="badge muted">None overdue</span>'}${b.share >= 0.005 ? `<span class="badge muted">${Math.round(b.share * 100)}% of what is owed</span>` : ''}</span>
@@ -351,19 +351,60 @@ function buyersHtml({ buyers, total, weeks }, commodities) {
       </div>`).join('')}`;
 }
 
-/** The buyer exposure as a PDF: shared where the phone can share, downloaded elsewhere. */
-function makeExposurePdf(exposure, today) {
+/** The buyer exposure as a PDF: the columns and parts chosen on the sheet, remembered on this device. */
+const EXPOSURE_KEY = 'grainflow.exposurepdf';
+const readExposureShow = () => {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(EXPOSURE_KEY) || '{}') || {}; } catch { /* the defaults */ }
+  const keys = Array.isArray(saved.columns) ? saved.columns.filter((k) => EXPOSURE_COLUMNS.some((c) => c.key === k)) : [];
+  return { lines: true, weeks: true, ...saved, columns: keys.length > 1 ? keys : DEFAULT_EXPOSURE_COLUMNS };
+};
+const saveExposureShow = (v) => { try { localStorage.setItem(EXPOSURE_KEY, JSON.stringify(v)); } catch { /* not remembered */ } };
+
+function makeExposurePdf(exposure, today, show = readExposureShow()) {
   const biz = db.getBusinessDetails();
-  return { bytes: exposurePdf(exposure, { business: biz.entityName || biz.farmName || '', today: dmy(today) }), name: safeFileName(`Buyer exposure ${dmy(today)}`) };
+  return { bytes: exposurePdf(exposure, { business: biz.entityName || biz.farmName || '', today: dmy(today), show }), name: safeFileName(`Buyer exposure ${dmy(today)}`) };
 }
-async function exportExposurePdf(exposure, today) {
-  const { bytes, name } = makeExposurePdf(exposure, today);
-  if (!canShareFiles()) { downloadFile(bytes, name); return; }
-  await sharePdf(bytes, name, { title: 'Buyer exposure' });
-}
-function viewExposurePdf(exposure, today) {
-  const { bytes, name } = makeExposurePdf(exposure, today);
-  viewPdf(bytes, { title: 'Buyer exposure', fileName: name, share: { title: 'Buyer exposure' } });
+
+/** Which columns and parts the PDF has, then View it or share it. The buyer column is always there. */
+function openExposurePdfSheet(exposure, today) {
+  openSheet('Buyer exposure PDF', (root) => {
+    const d = readExposureShow();
+    const chosen = new Set(d.columns);
+    const colTick = (c) => `<label class="pp-col"><input type="checkbox" data-col="${c.key}" ${c.key === 'buyer' || chosen.has(c.key) ? 'checked' : ''} ${c.key === 'buyer' ? 'disabled' : ''} /><span>${esc(c.label)}</span></label>`;
+    const tick = (id, on, text) => `<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:0 0 12px"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} style="width:20px;height:20px;margin-top:1px;flex:none" /><span>${text}</span></label>`;
+    root.innerHTML = `
+      <div class="subhead">Columns</div>
+      <div class="chips" style="margin:0 0 8px">${EXPOSURE_PRESETS.map((p) => `<button type="button" class="chip" data-preset="${p.id}">${esc(p.label)}</button>`).join('')}</div>
+      <div class="pp-cols">${EXPOSURE_COLUMNS.map(colTick).join('')}</div>
+      <div class="subhead" style="margin-top:14px">Also in the PDF</div>
+      ${tick('ex-lines', d.lines, '<strong>Contracts under each buyer</strong><span class="meta" style="display:block">A line under the buyer for every contract</span>')}
+      ${tick('ex-weeks', d.weeks, '<strong>Invoices due, by week</strong><span class="meta" style="display:block">The table under the buyers</span>')}
+      <div class="pv-actions"><button type="button" class="btn secondary" id="ex-view">View</button><button type="button" class="btn" id="ex-go">${canShareFiles() ? 'Share PDF' : 'Download PDF'}</button></div>`;
+    const lines = root.querySelector('#ex-lines');
+    const setCols = (keys) => root.querySelectorAll('[data-col]').forEach((el) => { el.checked = el.dataset.col === 'buyer' || keys.includes(el.dataset.col); });
+    root.querySelectorAll('[data-preset]').forEach((el) => el.addEventListener('click', () => {
+      const p = EXPOSURE_PRESETS.find((x) => x.id === el.dataset.preset);
+      setCols(p.keys);
+      lines.checked = p.lines;
+    }));
+    const chosenShow = () => {
+      const columns = [...root.querySelectorAll('[data-col]:checked')].map((el) => el.dataset.col);
+      const show = { lines: lines.checked, weeks: root.querySelector('#ex-weeks').checked, columns: columns.length > 1 ? columns : DEFAULT_EXPOSURE_COLUMNS };
+      saveExposureShow(show);
+      return show;
+    };
+    root.querySelector('#ex-view').addEventListener('click', () => {
+      const { bytes, name } = makeExposurePdf(exposure, today, chosenShow());
+      viewPdf(bytes, { title: 'Buyer exposure', fileName: name, share: { title: 'Buyer exposure' } });
+    });
+    root.querySelector('#ex-go').addEventListener('click', async () => {
+      const { bytes, name } = makeExposurePdf(exposure, today, chosenShow());
+      closeSheet();
+      if (!canShareFiles()) { downloadFile(bytes, name); return; }
+      await sharePdf(bytes, name, { title: 'Buyer exposure' });
+    });
+  }, { askBeforeClose: false });
 }
 
 /** Makes the buyer's statement as a PDF and sends it on: the share sheet on a phone, a download and an email on a computer. */

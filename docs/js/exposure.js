@@ -4,6 +4,7 @@
 // Three things, kept apart because they are different kinds of risk:
 //   owing now      unpaid invoices, plus grain delivered to them that is not on an invoice yet (the credit already extended)
 //   still to go    the tonnes left on their open contracts, and what those are worth at the contract price (the commitment)
+//   total exposure owing now plus still to go: all the money riding on that buyer, what they already owe and what they are committed to buy
 //   against MTM    the contract price less the commodity's MTM price, over those tonnes. Above zero, the contracts are worth more than
 //                  the market today, which is what the farm is out if the buyer does not take the grain; below zero the buyer holds
 //                  the better side. Not added to the invoices owed: it is a market view, not a debt.
@@ -12,9 +13,9 @@
 // cannot be compared, so its tonnes are counted in "still to go" but left out of the gap, and the count of such contracts is kept.
 // Pure.
 
-import { buyerStatements } from './statement.js?v=450';
-import { deliveries } from './outstanding.js?v=450';
-import { saleEconomics } from './derived.js?v=450';
+import { buyerStatements } from './statement.js?v=451';
+import { deliveries } from './outstanding.js?v=451';
+import { saleEconomics } from './derived.js?v=451';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const round3 = (n) => Math.round(n * 1000) / 1000;
@@ -26,7 +27,7 @@ const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
  * @returns {{
  *   buyers: {buyer: string, key: string, owing: number, unpaidTotal: number, overdueTotal: number, unpaidCount: number,
  *            notInvoicedValue: number, notInvoicedTons: number, dueTons: number, dueValue: number, contracts: number,
- *            mtmGap: number, noMtm: number, share: number}[],
+ *            mtmGap: number, noMtm: number, share: number, exposure: number}[],
  *   total: {owing: number, overdueTotal: number, dueTons: number, dueValue: number, mtmGap: number, noMtm: number, buyers: number}
  * }}  the buyer owing or owed most first
  */
@@ -72,6 +73,7 @@ export function buyerExposure(invoices, sales, movements, commodities, today) {
 
   const buyers = [...by.values()].map((b) => ({
     ...b, dueTons: round3(b.dueTons), deliveredTons: round3(b.deliveredTons), dueValue: round2(b.dueValue), mtmGap: round2(b.mtmGap),
+    exposure: round2(b.owing + b.dueValue),
   }));
   const owingAll = buyers.reduce((s, b) => s + b.owing, 0);
   for (const b of buyers) b.share = owingAll > 0 ? b.owing / owingAll : 0;
@@ -83,7 +85,7 @@ export function buyerExposure(invoices, sales, movements, commodities, today) {
     weeks: dueByWeek(unpaidRows, today),
     total: {
       owing: round2(owingAll), overdueTotal: round2(sum('overdueTotal')), unpaidTotal: round2(sum('unpaidTotal')),
-      notInvoicedValue: round2(sum('notInvoicedValue')), notInvoicedTons: round3(sum('notInvoicedTons')),
+      notInvoicedValue: round2(sum('notInvoicedValue')), notInvoicedTons: round3(sum('notInvoicedTons')), exposure: round2(sum('exposure')),
       dueTons: round3(sum('dueTons')), deliveredTons: round3(sum('deliveredTons')), dueValue: round2(sum('dueValue')),
       mtmGap: round2(sum('mtmGap')), noMtm: sum('noMtm'), buyers: buyers.length,
     },

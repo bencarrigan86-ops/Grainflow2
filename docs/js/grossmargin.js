@@ -9,7 +9,7 @@
 //
 // Pure: it is given what the screen already holds and returns figures; nothing is saved here.
 
-import { positionRows, fieldTons } from './derived.js?v=450';
+import { positionRows, fieldTons } from './derived.js?v=451';
 
 const n = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 

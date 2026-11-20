@@ -10,7 +10,7 @@
 //
 // Pure: the screens and the storage layer use it; it touches neither.
 
-import { movementTonsToSale } from './derived.js?v=450';
+import { movementTonsToSale } from './derived.js?v=451';
 
 export const STATUSES = ['open', 'closed'];
 
