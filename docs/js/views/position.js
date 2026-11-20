@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=455';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=455';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=455';
-import { payablesCost } from '../payables.js?v=455';
-import { commodityClass } from '../commoditycolor.js?v=455';
-import { hasCommodityOrder } from '../commodityorder.js?v=455';
-import { startProgress, missingLine } from '../helpcontent.js?v=455';
-import { openSetupWalk } from './setupwalk.js?v=455';
-import { attentionItems } from '../attention.js?v=455';
-import { lastBackup } from '../backup.js?v=455';
-import { supportWaitingCount } from './support.js?v=455';
-import { todayLocal, dmy } from '../fmt.js?v=455';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=455';
-import { openSheet, closeSheet } from '../ui.js?v=455';
-import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=455';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=455';
-import { viewPdf } from '../pdfview.js?v=455';
+import { db } from '../storage.js?v=456';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=456';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=456';
+import { payablesCost } from '../payables.js?v=456';
+import { commodityClass } from '../commoditycolor.js?v=456';
+import { hasCommodityOrder } from '../commodityorder.js?v=456';
+import { startProgress, missingLine } from '../helpcontent.js?v=456';
+import { openSetupWalk } from './setupwalk.js?v=456';
+import { attentionItems } from '../attention.js?v=456';
+import { lastBackup } from '../backup.js?v=456';
+import { supportWaitingCount } from './support.js?v=456';
+import { todayLocal, dmy } from '../fmt.js?v=456';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=456';
+import { openSheet, closeSheet } from '../ui.js?v=456';
+import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=456';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=456';
+import { viewPdf } from '../pdfview.js?v=456';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -92,10 +92,10 @@ function paint(root) {
       ${missingLine(db.getRole(), 'position', db.getBusinessDetails().switches) ? `<div class="field hint" style="margin:0 0 10px">${esc(missingLine(db.getRole(), 'position', db.getBusinessDetails().switches))}</div>` : ''}
       ${attentionCard()}
       ${startCard()}
-      ${rows.length ? `<div class="pos-by"><span class="pos-season">${esc(db.getCurrentYear())} season</span><button type="button" class="btn secondary small pos-pdf" id="position-pdf"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>${canShareFiles() ? 'Share PDF' : 'PDF'}</button></div>` : ''}
+      ${rows.length ? `<div class="pos-by"><span class="pos-season">${esc(db.getCurrentYear())} season</span><span class="pos-actions"><button type="button" class="pos-display" id="tile-figures" aria-label="Display: choose the figures on the crop tiles" title="Display"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></button><button type="button" class="btn secondary small pos-pdf" id="position-pdf"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>${canShareFiles() ? 'Share PDF' : 'PDF'}</button></span></div>` : ''}
       ${rows.length ? dashTop(totals) : ''}
       ${rows.length === 0 ? `<div class="empty">Nothing to report yet.<br/>Add a paddock in Production, or a contract in Sales, and your position appears here.</div>` : ''}
-      ${rows.length ? `<div class="pos-by"><span>${hasCommodityOrder() ? 'In your order' : 'Biggest first'} &middot; tap a crop for the detail</span><button type="button" class="btn secondary small" id="tile-figures">Figures</button></div><div class="pos-tiles">${cropTiles(rows)}</div>` : ''}
+      ${rows.length ? `<div class="pos-by"><span>${hasCommodityOrder() ? 'In your order' : 'Biggest first'} &middot; tap a crop for the detail</span></div><div class="pos-tiles">${cropTiles(rows)}</div>` : ''}
 
       ${rows.length > 0 ? farmSummaryCard(totals, overheads, pl, cost) : ''}
     </div>
@@ -250,7 +250,7 @@ export const tileKeys = () => {
 
 /** The sheet that picks the figures on the crop tiles: ticks and two presets, remembered on this device. */
 function openTileSheet(onDone) {
-  openSheet('Tile figures', (root) => {
+  openSheet('Display', (root) => {
     const chosen = new Set(tileKeys());
     root.innerHTML = `
       <div class="hint" style="margin:0 0 10px;font-size:12.5px;color:var(--text-dim)">Pick what shows on each crop tile on this device. The crop detail still has every figure.</div>

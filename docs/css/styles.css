@@ -101,6 +101,10 @@ html, body {
   margin: 0;
 }
 
+/* Position's Display button: a small round icon beside the PDF button on the season row. */
+.pos-actions { display: flex; align-items: center; gap: 8px; }
+.pos-display { flex: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--btn-edge); border-radius: 50%; background: var(--btn-tint); color: var(--btn-ink); padding: 0; }
+.pos-display:active { background: var(--surface-2); }
 .topbar .sub {
   font-size: 13px;
   color: var(--text-dim);

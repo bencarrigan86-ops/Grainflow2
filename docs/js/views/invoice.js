@@ -1,21 +1,21 @@
-import { db } from '../storage.js?v=455';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=455';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=455';
-import { addressLinesOf } from '../address.js?v=455';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=455';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=455';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=455';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=455';
-import { docBandHTML } from '../docband.js?v=455';
-import { deductionNotes } from '../deductions.js?v=455';
-import { ginOffsetOptions, ginOffsetLine, linePayableId } from '../ginoffset.js?v=455';
-import { cottonInvoiceModel } from '../cottoninvoice.js?v=455';
-import { openMovementSheet } from './movements.js?v=455';
-import { invoicePdf, adjustmentPdf } from '../invoicepdf.js?v=455';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=455';
-import { viewPdf } from '../pdfview.js?v=455';
-import { splitContact } from '../buyercontact.js?v=455';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=455';
+import { db } from '../storage.js?v=456';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=456';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=456';
+import { addressLinesOf } from '../address.js?v=456';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=456';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=456';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=456';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=456';
+import { docBandHTML } from '../docband.js?v=456';
+import { deductionNotes } from '../deductions.js?v=456';
+import { ginOffsetOptions, ginOffsetLine, linePayableId } from '../ginoffset.js?v=456';
+import { cottonInvoiceModel } from '../cottoninvoice.js?v=456';
+import { openMovementSheet } from './movements.js?v=456';
+import { invoicePdf, adjustmentPdf } from '../invoicepdf.js?v=456';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=456';
+import { viewPdf } from '../pdfview.js?v=456';
+import { splitContact } from '../buyercontact.js?v=456';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=456';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
