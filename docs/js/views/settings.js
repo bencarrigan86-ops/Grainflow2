@@ -1,44 +1,44 @@
-import { db } from '../storage.js?v=465';
-import { tileIcon } from '../tileicon.js?v=465';
-import { getTheme, setTheme } from '../theme.js?v=465';
-import { num, money, esc } from '../fmt.js?v=465';
+import { db } from '../storage.js?v=467';
+import { tileIcon } from '../tileicon.js?v=467';
+import { getTheme, setTheme } from '../theme.js?v=467';
+import { num, money, esc } from '../fmt.js?v=467';
 import {
   openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast,
-} from '../ui.js?v=465';
-import { planYieldUpdate } from '../yieldupdate.js?v=465';
-import { openLoadImportSheet } from './importloads.js?v=465';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=465';
-import { openPastSeasonsSheet } from './pastseasons.js?v=465';
-import { openPastSalesSheet } from './pastsales.js?v=465';
-import { openLineupSheet } from './lineup.js?v=465';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=465';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=465';
-import { openDangerSheet } from './dangerconfirm.js?v=465';
+} from '../ui.js?v=467';
+import { planYieldUpdate } from '../yieldupdate.js?v=467';
+import { openLoadImportSheet } from './importloads.js?v=467';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=467';
+import { openPastSeasonsSheet } from './pastseasons.js?v=467';
+import { openPastSalesSheet } from './pastsales.js?v=467';
+import { openLineupSheet } from './lineup.js?v=467';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=467';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=467';
+import { openDangerSheet } from './dangerconfirm.js?v=467';
 import {
   sampleHistoryFrom, sampleHistoryOffered, sampleOrdersFrom, sampleOrdersOffered, sampleCottonHayFrom, sampleCottonHayOffered, sampleRefreshOffered, sampleStateFor,
-} from '../demo.js?v=465';
-import { seasonContents, contentsText } from '../seasondelete.js?v=465';
-import { openDeletedSheet } from './deleted.js?v=465';
-import { openAuditSheet } from './audit.js?v=465';
-import { canSeeAudit } from '../audit.js?v=465';
-import { canSeeOverheads } from '../nav.js?v=465';
-import { APP_VERSION } from '../version.js?v=465';
-import { checkNow } from '../updatecheck.js?v=465';
-import { logoFromFile } from '../logo.js?v=465';
+} from '../demo.js?v=467';
+import { seasonContents, contentsText } from '../seasondelete.js?v=467';
+import { openDeletedSheet } from './deleted.js?v=467';
+import { openAuditSheet } from './audit.js?v=467';
+import { canSeeAudit } from '../audit.js?v=467';
+import { canSeeOverheads } from '../nav.js?v=467';
+import { APP_VERSION } from '../version.js?v=467';
+import { checkNow } from '../updatecheck.js?v=467';
+import { logoFromFile } from '../logo.js?v=467';
 
-import { closingStock, position } from '../derived.js?v=465';
-import { cleanCotton } from '../ginning.js?v=465';
-import { cleanHay, hasHay, BALE_TYPES } from '../hay.js?v=465';
-import { orderedNames, moveName } from '../commodityorder.js?v=465';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=465';
-import { autoSeasonText } from '../harvestseason.js?v=465';
-import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=465';
-import { openMySignatureSheet } from './signaturepad.js?v=465';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=465';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=465';
-import { paintPeople } from './settingspeople.js?v=465';
-import { paintSyncCard } from './settingssync.js?v=465';
-import { openExportCsvSheet } from './settingsexport.js?v=465';
+import { closingStock, position } from '../derived.js?v=467';
+import { cleanCotton } from '../ginning.js?v=467';
+import { cleanHay, hasHay, BALE_TYPES } from '../hay.js?v=467';
+import { orderedNames, moveName } from '../commodityorder.js?v=467';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=467';
+import { autoSeasonText } from '../harvestseason.js?v=467';
+import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=467';
+import { openMySignatureSheet } from './signaturepad.js?v=467';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=467';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=467';
+import { paintPeople } from './settingspeople.js?v=467';
+import { paintSyncCard } from './settingssync.js?v=467';
+import { openExportCsvSheet } from './settingsexport.js?v=467';
 
 let unsub = null;
 

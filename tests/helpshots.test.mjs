@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { GUIDES } from '../docs/js/helpcontent.js?v=465';
+import { GUIDES } from '../docs/js/helpcontent.js?v=467';
 
 let failed = 0;
 function check(name, fn) { try { fn(); console.log('  PASS  ' + name); } catch (e) { failed++; console.log('  FAIL  ' + name + '\n        ' + e.message); } }

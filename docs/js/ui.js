@@ -195,6 +195,14 @@ export function field({ label, id, type = 'text', value = '', options = null, st
     </div>`;
 }
 
+/** Band the visible folds in each `.fold-bands.by-js` box: they alternate green and grey in the order they show, skipping any that are hidden. */
+export function bandFolds(root) {
+  root.querySelectorAll('.fold-bands.by-js').forEach((box) => {
+    let n = 0;
+    [...box.children].filter((d) => d.tagName === 'DETAILS' && !d.hidden).forEach((d) => d.classList.toggle('band-b', n++ % 2 === 1));
+  });
+}
+
 export function getVal(root, id) {
   const el = root.querySelector(`#${id}`);
   if (!el) return null;

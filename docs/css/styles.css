@@ -619,6 +619,9 @@ details.fold.fold-band.fold-alt {
 .area-row { align-items: end; }
 .area-row .dc-tick { margin-bottom: 14px; align-items: center; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.grid-3 > * { min-width: 0; }
+/* Town takes the room, State and Postcode are short */
+.grid-3.addr-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1.1fr) minmax(0, 1.1fr); gap: 8px; }
 
 .swipe-actions { display: flex; gap: 8px; margin-top: 8px; }
 
@@ -1036,13 +1039,13 @@ details.fold.feature > *:last-child { margin-bottom: 14px; }
 /* The sections of a storage, one after another, banded: each is a panel, and they alternate between the green tint and a plain grey, so
    two folded sections next to each other are never the same colour. */
 .fold-bands > details.fold { background: var(--btn-tint); border: 1.5px solid var(--btn-edge); border-radius: 12px; margin: 12px 0; padding: 0; }
-.fold-bands > details.fold:nth-of-type(even) { background: var(--surface-2); border-color: var(--border); }
+.fold-bands:not(.by-js) > details.fold:nth-of-type(even), .fold-bands.by-js > details.fold.band-b { background: var(--surface-2); border-color: var(--border); }
 .fold-bands > details.fold > summary { padding: 12px 14px; min-height: 56px; }
 .fold-bands > details.fold > summary h2 { font-size: 16px; font-weight: 800; color: var(--btn-ink); }
 .fold-bands > details.fold > summary .sub { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 3px; }
 .fold-bands > details.fold > summary::after { width: 10px; height: 10px; border-color: var(--btn-ink); border-width: 2.5px; }
 .fold-bands > details.fold[open] > summary { border-bottom: 1.5px solid var(--btn-edge); }
-.fold-bands > details.fold:nth-of-type(even)[open] > summary { border-bottom-color: var(--border); }
+.fold-bands:not(.by-js) > details.fold:nth-of-type(even)[open] > summary, .fold-bands.by-js > details.fold.band-b[open] > summary { border-bottom-color: var(--border); }
 .fold-bands > details.fold > *:not(summary) { margin-left: 14px; margin-right: 14px; }
 .fold-bands > details.fold > *:last-child { margin-bottom: 14px; }
 

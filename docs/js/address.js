@@ -5,7 +5,7 @@
 // stays in the old column and the parts ride beside it. An address that has never been split is read into parts when
 // it is next edited.
 
-import { field } from './ui.js?v=465';
+import { field } from './ui.js?v=467';
 
 export const STATES = ['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT'];
 export const PART_KEYS = ['line1', 'line2', 'town', 'state', 'postcode'];
@@ -79,8 +79,8 @@ export function addressFields(prefix, p, { label = 'Address', optional = false }
   return `
     ${field({ label: `${label}${sfx}: line 1`, id: `${prefix}-line1`, value: c.line1, placeholder: 'Street, PO Box or property name' })}
     ${field({ label: `${label}: line 2`, id: `${prefix}-line2`, value: c.line2, placeholder: 'Unit, lot or building (if any)' })}
-    ${field({ label: 'Town or suburb', id: `${prefix}-town`, value: c.town })}
-    <div class="grid-2">
+    <div class="grid-3 addr-row">
+      ${field({ label: 'Town or suburb', id: `${prefix}-town`, value: c.town })}
       ${field({ label: 'State', id: `${prefix}-state`, type: 'select', value: c.state, options: [{ value: '', label: '' }, ...STATES.map((s) => ({ value: s, label: s }))] })}
       ${field({ label: 'Postcode', id: `${prefix}-postcode`, value: c.postcode })}
     </div>`;

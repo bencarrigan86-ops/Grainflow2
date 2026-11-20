@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=465';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=465';
-import { commodityClass } from '../commoditycolor.js?v=465';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=465';
-import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=465';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=465';
-import { withholdingClash } from '../fumigation.js?v=465';
-import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=465';
-import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=465';
-import { cleanStrokes } from '../signature.js?v=465';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=465';
-import { compressAndStampImage } from '../img.js?v=465';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=465';
-import { specText, extraSpecKey } from '../outload.js?v=465';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=465';
-import { pickableSilos } from '../silopick.js?v=465';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=465';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=465';
-import { activeSales } from '../paidsales.js?v=465';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=465';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=465';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=465';
-import { nowTime } from '../loadreport.js?v=465';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=465';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=465';
-import { openGinRunSheet } from './ginrun.js?v=465';
-import { openModuleMoveSheet } from './modulemove.js?v=465';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=465';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=465';
+import { db } from '../storage.js?v=467';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=467';
+import { commodityClass } from '../commoditycolor.js?v=467';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=467';
+import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=467';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=467';
+import { withholdingClash } from '../fumigation.js?v=467';
+import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=467';
+import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=467';
+import { cleanStrokes } from '../signature.js?v=467';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=467';
+import { compressAndStampImage } from '../img.js?v=467';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=467';
+import { specText, extraSpecKey } from '../outload.js?v=467';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=467';
+import { pickableSilos } from '../silopick.js?v=467';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=467';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=467';
+import { activeSales } from '../paidsales.js?v=467';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=467';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=467';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=467';
+import { nowTime } from '../loadreport.js?v=467';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=467';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=467';
+import { openGinRunSheet } from './ginrun.js?v=467';
+import { openModuleMoveSheet } from './modulemove.js?v=467';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=467';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=467';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -605,11 +605,12 @@ export function openMovementSheet(existing, template) {
 
       <section class="form-section alt">
         <div class="subhead">Weight</div>
-        <div class="grid-2">
-          ${field({ label: 'Gross (t, optional)', id: 'gross', type: 'number', step: '0.01', value: src?.grossWeight })}
-          ${field({ label: 'Tare (t, optional)', id: 'tare', type: 'number', step: '0.01', value: src?.tareWeight })}
+        <div class="grid-3">
+          ${field({ label: 'Gross (t)', id: 'gross', type: 'number', step: '0.01', value: src?.grossWeight })}
+          ${field({ label: 'Tare (t)', id: 'tare', type: 'number', step: '0.01', value: src?.tareWeight })}
+          ${field({ label: 'Net (t)', id: 'tons', type: 'number', step: '0.01', value: src?.tons })}
         </div>
-        ${field({ label: 'Net weight (t)', id: 'tons', type: 'number', step: '0.01', value: src?.tons, hint: 'Fills from gross minus tare, or enter it directly.' })}
+        <div class="hint" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">Net fills from gross minus tare, or enter it directly. Gross and tare are optional.</div>
         <div id="hay-wrap" ${isHay(commodities.find((c) => c.id === ctx.commodityId)) || hasHayLoad(src) ? '' : 'hidden'}>
           ${field({ label: 'Bales', id: 'm-bales', type: 'number', step: '1', value: src?.hayLoad?.bales || '' })}
           <div class="field" style="margin-top:-6px"><div class="hint" id="m-bales-note"></div></div>
@@ -624,10 +625,11 @@ export function openMovementSheet(existing, template) {
         ${existing?.sourceRef ? `<div class="hint" style="margin-bottom:8px">Movement number from the freight platform: <strong>${esc(existing.sourceRef)}</strong></div>` : ''}
       </section>
 
+      <div class="fold-bands">
       <details class="fold feature" id="lq-fold" ${existing && (existing.grade || existing.proteinPct != null || existing.moisturePct != null || existing.oilPct != null || existing.ffaPct != null || existing.retentionPct != null) ? 'open' : ''}>
         <summary><div class="feature-head"><h2>Load quality</h2>
           <div class="sub" id="lq-sub">${esc(specText(existing) || 'Not recorded yet · tap to add grade, protein, moisture and more')}</div></div></summary>
-        <div class="hint" style="margin-bottom:8px">What was on the truck. Storage uses it to say what each load out will carry.</div>
+        <div class="hint" style="margin-bottom:8px;font-size:12px;color:var(--text-dim)">What was on the truck. Storage uses it to say what each load out will carry.</div>
         ${gradeFieldHtml({ id: 'lq-grade', commodity: commodities.find((c) => c.id === ctx.commodityId), value: existing?.grade })}
         <div class="grid-2">
           ${field({ label: 'Moisture (%)', id: 'lq-moisture', type: 'number', step: '0.1', value: existing?.moisturePct ?? '' })}
@@ -682,6 +684,7 @@ export function openMovementSheet(existing, template) {
         <button class="btn secondary" id="tk-view" type="button" style="margin-bottom:8px">View the PDF</button>
         <button class="btn secondary" id="tk-send" type="button">Send this load as a PDF</button>
         <div class="meta" style="margin-top:6px;font-size:12px">Sends the load as it is on the screen now. Save the ticket to keep any changes.</div></div></details>` : ''}
+      </div>
 ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete movement</button>` : ''}
       <div class="save-bar"><div class="total"><div class="l">Net load</div><div class="v" id="load-preview">—</div></div><button class="btn" id="save">Save</button></div>
     `;

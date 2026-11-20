@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=465';
-import { tileIcon } from '../tileicon.js?v=465';
-import { cropCostPerHa } from '../grossmargin.js?v=465';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=465';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=465';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=465';
-import { describeMerge } from '../merge.js?v=465';
-import { renderRelatedMovements } from './movements.js?v=465';
-import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=465';
-import { wireJumps } from '../jump.js?v=465';
-import { openMapSheet } from './farmmap.js?v=465';
-import { openInputsSheet } from './inputs.js?v=465';
-import { openSprayFormSheet, canSpray } from './spray.js?v=465';
-import { stockLevels } from '../inputs.js?v=465';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=465';
-import { openModulesPickedSheet } from './modulespicked.js?v=465';
-import { openBalesBaledSheet } from './balesbaled.js?v=465';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=465';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=465';
+import { db } from '../storage.js?v=467';
+import { tileIcon } from '../tileicon.js?v=467';
+import { cropCostPerHa } from '../grossmargin.js?v=467';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=467';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=467';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=467';
+import { describeMerge } from '../merge.js?v=467';
+import { renderRelatedMovements } from './movements.js?v=467';
+import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=467';
+import { wireJumps } from '../jump.js?v=467';
+import { openMapSheet } from './farmmap.js?v=467';
+import { openInputsSheet } from './inputs.js?v=467';
+import { openSprayFormSheet, canSpray } from './spray.js?v=467';
+import { stockLevels } from '../inputs.js?v=467';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=467';
+import { openModulesPickedSheet } from './modulespicked.js?v=467';
+import { openBalesBaledSheet } from './balesbaled.js?v=467';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=467';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=467';
 
 let unsub = null;
 
@@ -195,8 +195,8 @@ export function openFieldSheet(existing) {
       </div>
       <div style="display:none"><span id="tons-label">Total tons</span><span id="tons-preview">0.0 t</span><span id="actual-so-far">&ndash;</span></div>
       </div>
-      <details class="fold feature" ${existing?.harvestDone || (existing?.harvestHaLeft != null && existing.harvestHaLeft !== '') ? 'open' : ''}>
-        <summary><div class="feature-head"><h2>Harvest</h2><div class="sub">Finished, or part harvested</div></div></summary>
+      <details class="fold feature">
+        <summary><div class="feature-head"><h2>Harvest</h2><div class="sub">${existing?.harvestDone ? 'Finished: all of it is in' : (existing?.harvestHaLeft != null && existing.harvestHaLeft !== '' ? `Part harvested: ${num(existing.harvestHaLeft, 1)} ha left to cut` : 'Finished, or part harvested')}</div></div></summary>
       <div style="margin-top:10px">${field({ label: 'Harvest finished', id: 'harvestDone', type: 'select', value: existing?.harvestDone ? 'yes' : 'no', options: [{ value: 'no', label: 'No, still harvesting' }, { value: 'yes', label: 'Yes, all of it is in' }] })}</div>
       <div class="grid-2">
         ${field({ label: 'Hectares left', id: 'harvestHaLeft', type: 'number', step: '0.01', value: existing?.harvestHaLeft ?? '', placeholder: 'Blank: not part cut' })}
