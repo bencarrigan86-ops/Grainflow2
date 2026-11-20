@@ -1584,3 +1584,8 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .fold-head .fold-sum { display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 13px; white-space: nowrap; }
 .fold-head .fold-chev { font-size: 11px; }
 .fold-head:focus-visible { outline: 2px solid var(--accent-report); outline-offset: 2px; border-radius: 8px; }
+
+/* Position PDF sheet: the columns to print, two to a row */
+.pp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+.pp-col { display: flex; align-items: center; gap: 8px; min-height: 34px; cursor: pointer; }
+.pp-col input { width: 20px; height: 20px; flex: none; }

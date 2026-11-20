@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=447';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=447';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=447';
-import { payablesCost } from '../payables.js?v=447';
-import { commodityClass } from '../commoditycolor.js?v=447';
-import { hasCommodityOrder } from '../commodityorder.js?v=447';
-import { startProgress, missingLine } from '../helpcontent.js?v=447';
-import { openSetupWalk } from './setupwalk.js?v=447';
-import { attentionItems } from '../attention.js?v=447';
-import { lastBackup } from '../backup.js?v=447';
-import { supportWaitingCount } from './support.js?v=447';
-import { todayLocal, dmy } from '../fmt.js?v=447';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=447';
-import { openSheet, closeSheet } from '../ui.js?v=447';
-import { positionPdf } from '../positionpdf.js?v=447';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=447';
+import { db } from '../storage.js?v=448';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=448';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=448';
+import { payablesCost } from '../payables.js?v=448';
+import { commodityClass } from '../commoditycolor.js?v=448';
+import { hasCommodityOrder } from '../commodityorder.js?v=448';
+import { startProgress, missingLine } from '../helpcontent.js?v=448';
+import { openSetupWalk } from './setupwalk.js?v=448';
+import { attentionItems } from '../attention.js?v=448';
+import { lastBackup } from '../backup.js?v=448';
+import { supportWaitingCount } from './support.js?v=448';
+import { todayLocal, dmy } from '../fmt.js?v=448';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=448';
+import { openSheet, closeSheet } from '../ui.js?v=448';
+import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=448';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=448';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -119,7 +119,12 @@ function paint(root) {
 
 /** The screen as a PDF, shared from the phone's share sheet or downloaded on a computer. */
 const PDF_KEY = 'grainflow.positionpdf';
-const readShow = () => { try { return { result: true, overheads: true, ...JSON.parse(localStorage.getItem(PDF_KEY) || '{}') }; } catch { return { result: true, overheads: true }; } };
+const readShow = () => {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(PDF_KEY) || '{}') || {}; } catch { /* the defaults */ }
+  const keys = Array.isArray(saved.columns) ? saved.columns.filter((k) => POSITION_COLUMNS.some((c) => c.key === k)) : [];
+  return { result: true, overheads: true, ...saved, columns: keys.length ? keys : DEFAULT_COLUMNS };
+};
 const saveShow = (v) => { try { localStorage.setItem(PDF_KEY, JSON.stringify(v)); } catch { /* not remembered */ } };
 
 /** What goes at the bottom of the PDF: ticks, remembered on this device, then the file. The commodity table is always there. */
@@ -127,13 +132,21 @@ function openPdfSheet(data) {
   openSheet('Position PDF', (root) => {
     const d = readShow();
     const tick = (id, on, text) => `<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:0 0 12px"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} style="width:20px;height:20px;margin-top:1px;flex:none" /><span>${text}</span></label>`;
+    const chosen = new Set(d.columns);
+    const colTick = (c) => `<label class="pp-col"><input type="checkbox" data-col="${c.key}" ${c.key === 'commodity' || chosen.has(c.key) ? 'checked' : ''} ${c.key === 'commodity' ? 'disabled' : ''} /><span>${esc(c.label)}</span></label>`;
     root.innerHTML = `
-      <div class="hint" style="margin-bottom:12px">The table of commodities is always on the page. Choose what goes under it.</div>
+      <div class="subhead">Columns</div>
+      <div class="chips" style="margin:0 0 8px">${COLUMN_PRESETS.map((p) => `<button type="button" class="chip" data-preset="${p.id}">${esc(p.label)}</button>`).join('')}</div>
+      <div class="pp-cols">${POSITION_COLUMNS.map(colTick).join('')}</div>
+      <div class="subhead" style="margin-top:14px">Under the table</div>
       ${tick('pp-result', d.result, '<strong>Whole farm result</strong><span class="meta" style="display:block">Gross margin, overheads and the profit or loss</span>')}
       ${tick('pp-over', d.overheads, '<strong>Overheads and bills</strong><span class="meta" style="display:block">Each overhead, and the bills taken off profit</span>')}
       <button type="button" class="btn" id="pp-go" style="margin-top:6px">${canShareFiles() ? 'Share PDF' : 'Download PDF'}</button>`;
+    const setCols = (keys) => root.querySelectorAll('[data-col]').forEach((el) => { el.checked = el.dataset.col === 'commodity' || keys.includes(el.dataset.col); });
+    root.querySelectorAll('[data-preset]').forEach((el) => el.addEventListener('click', () => setCols(COLUMN_PRESETS.find((p) => p.id === el.dataset.preset).keys)));
     root.querySelector('#pp-go').addEventListener('click', () => {
-      const show = { result: root.querySelector('#pp-result').checked, overheads: root.querySelector('#pp-over').checked };
+      const columns = [...root.querySelectorAll('[data-col]:checked')].map((el) => el.dataset.col);
+      const show = { result: root.querySelector('#pp-result').checked, overheads: root.querySelector('#pp-over').checked, columns: columns.length > 1 ? columns : DEFAULT_COLUMNS };
       saveShow(show);
       closeSheet();
       exportPdf(data, show);

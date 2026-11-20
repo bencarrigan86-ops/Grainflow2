@@ -4,20 +4,20 @@
 // spray marked. What is on the form and where is decided in spray.js; the PDF is drawn in spraypdf.js. The job is saved
 // as it is filled in, so a request can be started in the paddock and finished at the desk.
 
-import { db } from '../storage.js?v=447';
-import { farmSwitch, canChangeArea } from '../nav.js?v=447';
-import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=447';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=447';
-import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=447';
+import { db } from '../storage.js?v=448';
+import { farmSwitch, canChangeArea } from '../nav.js?v=448';
+import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=448';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=448';
+import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=448';
 import {
   FORMS, RATE_UNITS, MAX_CHEMICALS, CHECKLIST, sprayDefaults, sprayProblems, sprayTotals, sprayTitle, usedChemicals, plain,
-} from '../spray.js?v=447';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=447';
-import { loadMySignature } from '../mysignature.js?v=447';
-import { signerNamesFor } from './signtoggle.js?v=447';
-import { signatureSvg } from './signaturepad.js?v=447';
-import { openMapSheet } from './farmmap.js?v=447';
-import { buildSprayPdf } from '../spraypdf.js?v=447';
+} from '../spray.js?v=448';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=448';
+import { loadMySignature } from '../mysignature.js?v=448';
+import { signerNamesFor } from './signtoggle.js?v=448';
+import { signatureSvg } from './signaturepad.js?v=448';
+import { openMapSheet } from './farmmap.js?v=448';
+import { buildSprayPdf } from '../spraypdf.js?v=448';
 
 // A farm worker can write spray requests on a farm that has switched it on (see farmswitches.js); sending one on is for an owner or manager.
 export const canSpray = (role) => canChangeArea(role, 'sprays', ['owner', 'manager'].includes(role) || (role === 'farm_worker' && farmSwitch('workersRaiseSprays')));

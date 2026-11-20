@@ -13,8 +13,8 @@
 // (a freight of -25 and of 25 are both $25 a tonne off). Premium / Discount keeps its sign: -5.61 is a discount.
 // Levies are $/t, or a percentage under the heading "Levies (%)". Pure.
 
-import { parseCsv, detectDelimiter, matchCommodity, parseDate } from './loadimport.js?v=447';
-import { saleEconomics } from './derived.js?v=447';
+import { parseCsv, detectDelimiter, matchCommodity, parseDate } from './loadimport.js?v=448';
+import { saleEconomics } from './derived.js?v=448';
 
 const ALIASES = {
   season: ['season', 'year', 'crop year'],

@@ -5,7 +5,7 @@
 // whole-farm lines follow, and an empty farm and a loss are handled.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { positionPdf, POSITION_COLUMNS, BODY, HEAD, PAD, blendedPrice } from '../docs/js/positionpdf.js';
+import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS, layoutFor, blendedPrice } from '../docs/js/positionpdf.js';
 import { textWidth } from '../docs/js/pdf.js';
 import { positionRows, positionTotals, farmProfitLoss } from '../docs/js/derived.js';
 
@@ -66,22 +66,26 @@ check('every figure and heading fits its column, even on a farm forty times the 
   }));
   const totals = positionTotals(rows);
   const W = 841.89 - 72;
-  POSITION_COLUMNS.forEach((c, i) => {
-    const heading = textWidth(c.label, HEAD, true);
-    const body = Math.max(...[...rows.map((r) => c.cell(r)), c.total(totals)].map((s) => textWidth(String(s), BODY, true)));
-    const room = c.w * W - PAD;
-    assert.ok(heading <= room + 4 && body <= room, `${c.label}: needs ${Math.max(heading, body).toFixed(1)} of ${room.toFixed(1)}`);
-  });
+  for (const keys of [POSITION_COLUMNS.map((c) => c.key), DEFAULT_COLUMNS, ...COLUMN_PRESETS.map((p) => p.keys)]) {
+    const { columns, body: BODY, head: HEAD, pad: PAD } = layoutFor(keys);
+    columns.forEach((c) => {
+      const heading = textWidth(c.label, HEAD, true);
+      const body = Math.max(...[...rows.map((r) => c.cell(r)), c.total(totals)].map((s) => textWidth(String(s), BODY, true)));
+      const room = c.w * W - PAD;
+      assert.ok(heading <= room + 4 && body <= room, `${columns.length} columns, ${c.label}: needs ${Math.max(heading, body).toFixed(1)} of ${room.toFixed(1)}`);
+    });
+  }
 });
 
 check('headings and figures are centred in their columns, the commodity name on the left', () => {
   const s = text(positionPdf(build()));
   const W = 841.89 - 72;
-  const edges = POSITION_COLUMNS.reduce((a, c) => { a.push(a[a.length - 1] + c.w * W); return a; }, [36]);
+  const { columns: shown, head: HEAD } = layoutFor();
+  const edges = shown.reduce((a, c) => { a.push(a[a.length - 1] + c.w * W); return a; }, [36]);
   const items = [...s.matchAll(/\/F\d ([\d.]+) Tf ([\d.-]+) [\d.-]+ Td \((.*?)\) Tj/g)].map((m) => ({ size: +m[1], x: +m[2], t: m[3].replace(/\\/g, '') }));   // the file escapes ( and ) with a backslash
   const widthOf = (t, size) => textWidth(t, size, true);
   // the heading of every figure column: the middle of the text sits on the middle of the column
-  POSITION_COLUMNS.slice(1).forEach((c, k) => {
+  shown.slice(1).forEach((c, k) => {
     const i = k + 1;
     const mid = (edges[i] + edges[i + 1]) / 2;
     const it = items.find((q) => q.t === c.label && q.size === HEAD);
@@ -261,6 +265,46 @@ check('the Position screen offers it, and shares or downloads the file by device
   assert.ok(v.includes('id="position-pdf"') && v.includes('positionPdf('), 'no button or no call');
   assert.ok(v.includes('canShareFiles()') && v.includes('downloadFile(') && v.includes('sharePdf('), 'not shared or downloaded');
   assert.ok(v.includes('rows.length ?'), 'offered with nothing to report');
+});
+
+check('which columns print is a choice: the standard set by default, the commodity always, widths fill the page, in the table own order', () => {
+  const std = layoutFor();
+  assert.deepEqual(std.columns.map((c) => c.key), DEFAULT_COLUMNS);
+  assert.ok(!DEFAULT_COLUMNS.includes('opening') && !DEFAULT_COLUMNS.includes('avgAll'), 'the added columns are opt-in');
+  for (const keys of [undefined, [], ['nonsense'], ['gross', 'sold'], POSITION_COLUMNS.map((c) => c.key), COLUMN_PRESETS[1].keys]) {
+    const l = layoutFor(keys);
+    assert.equal(l.columns[0].key, 'commodity', 'the commodity is always first');
+    assert.ok(Math.abs(l.columns.reduce((a, c) => a + c.w, 0) - 1) < 1e-9, 'the widths fill the table');
+  }
+  assert.deepEqual(layoutFor(['grossMargin', 'sold']).columns.map((c) => c.key), ['commodity', 'sold', 'grossMargin'], 'table order, not the order asked for');
+  assert.deepEqual(layoutFor(['nonsense']).columns.map((c) => c.key), DEFAULT_COLUMNS, 'nothing real chosen: the defaults');
+  assert.ok(layoutFor(DEFAULT_COLUMNS).body > layoutFor(POSITION_COLUMNS.map((c) => c.key)).body, 'fewer columns, larger type');
+  assert.equal(layoutFor(POSITION_COLUMNS.map((c) => c.key)).columns.length, 18);
+});
+
+check('the presets: Standard is the default set, Summary is short, Everything is all eighteen', () => {
+  assert.deepEqual(COLUMN_PRESETS.map((p) => p.label), ['Standard', 'Summary', 'Everything']);
+  assert.deepEqual(COLUMN_PRESETS[0].keys, DEFAULT_COLUMNS);
+  assert.equal(COLUMN_PRESETS[2].keys.length, 18);
+  assert.ok(COLUMN_PRESETS[1].keys.length < 10 && COLUMN_PRESETS[1].keys.includes('avgAll'));
+  for (const p of COLUMN_PRESETS) for (const k of p.keys) assert.ok(POSITION_COLUMNS.some((c) => c.key === k), `${p.id} names a column that is not there: ${k}`);
+});
+
+check('the PDF prints only the columns chosen', () => {
+  const data = build();
+  const s = text(positionPdf(data, { show: { columns: ['sold', 'avgAll'], result: false, overheads: false } }));
+  for (const w of ['(Commodity)', '(Sold)', '(Avg $/t)']) assert.ok(s.includes(w), `missing ${w}`);
+  for (const w of ['(Cost)', '(Gross margin)', '(Produced)', '(Opening)']) assert.ok(!s.includes(w), `${w} should be off`);
+  const everything = text(positionPdf(data, { show: { columns: POSITION_COLUMNS.map((c) => c.key), result: false, overheads: false } }));
+  for (const w of ['(Opening)', '(Opening value)', '(Avg $/t)', '(Gross margin)']) assert.ok(everything.includes(w), `missing ${w}`);
+  assert.ok(!text(positionPdf(data)).includes('(Opening value)'), 'by default the opening columns are not printed');
+});
+
+check('the sheet offers the presets and a tick for every column, remembers them, and sends them to the PDF', () => {
+  const v = readFileSync(new URL('../docs/js/views/position.js', import.meta.url), 'utf8');
+  assert.ok(v.includes('COLUMN_PRESETS.map') && v.includes('POSITION_COLUMNS.map(colTick)'), 'presets and a tick for each column');
+  assert.ok(v.includes('data-col') && v.includes("columns: columns.length > 1 ? columns : DEFAULT_COLUMNS"), 'the choice is read from the ticks');
+  assert.ok(v.includes('saveShow(show)') && v.includes('columns: keys.length ? keys : DEFAULT_COLUMNS'), 'remembered on this device');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

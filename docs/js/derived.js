@@ -1,13 +1,13 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=447';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=447';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=447';
-import { isGinContract } from './cottonkinds.js?v=447';
-import { ginTakenOff } from './ginoffset.js?v=447';
-import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=447';
-import { commoditySort } from './commodityorder.js?v=447';
-import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=447';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=448';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=448';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=448';
+import { isGinContract } from './cottonkinds.js?v=448';
+import { ginTakenOff } from './ginoffset.js?v=448';
+import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=448';
+import { commoditySort } from './commodityorder.js?v=448';
+import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=448';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
