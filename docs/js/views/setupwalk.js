@@ -1,13 +1,13 @@
 // The setup walk-through: a sheet that asks one thing at a time, in the order a farm gets set up, and saves as it goes.
 // Skip for now is always there; Continue setup on Position comes back to the first step not done.
 
-import { db } from '../storage.js?v=484';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, toast, notify } from '../ui.js?v=484';
-import { esc, todayLocal } from '../fmt.js?v=484';
-import { walkSteps, seasonLabel, businessPatch, commodityRecord, fieldRecord, storageRecord, saleRecord, loadRecord, invoiceable } from '../setupwalk.js?v=484';
-import { openInvoiceListSheet } from './invoice.js?v=484';
-import { openMapSheet } from './farmmap.js?v=484';
-import { openLoadImportSheet } from './importloads.js?v=484';
+import { db } from '../storage.js?v=485';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, toast, notify } from '../ui.js?v=485';
+import { esc, todayLocal } from '../fmt.js?v=485';
+import { walkSteps, seasonLabel, businessPatch, commodityRecord, fieldRecord, storageRecord, saleRecord, loadRecord, invoiceable } from '../setupwalk.js?v=485';
+import { openInvoiceListSheet } from './invoice.js?v=485';
+import { openMapSheet } from './farmmap.js?v=485';
+import { openLoadImportSheet } from './importloads.js?v=485';
 
 const QUESTIONS = {
   business: { q: 'What is the business called?', hint: 'These go on invoices, tickets and contracts.' },
@@ -99,8 +99,10 @@ const BODIES = {
     const b = data.business || {};
     return {
       html: `${field({ label: 'Business name', id: 'sw-name', value: b.entityName, placeholder: 'e.g. Smith Farming Pty Ltd' })}
-        ${field({ label: 'ABN', id: 'sw-abn', value: b.abn })}
-        ${field({ label: 'NGR', id: 'sw-ngr', value: b.ngr, hint: 'Your National Grower Registration number' })}`,
+        <div class="grid-2">
+          ${field({ label: 'ABN', id: 'sw-abn', value: b.abn })}
+          ${field({ label: 'NGR', id: 'sw-ngr', value: b.ngr, placeholder: 'Grower registration' })}
+        </div>`,
       save: (root) => {
         const patch = businessPatch({ entityName: getVal(root, 'sw-name'), abn: getVal(root, 'sw-abn'), ngr: getVal(root, 'sw-ngr') });
         if (Object.keys(patch).length) db.updateBusinessDetails(patch);
@@ -120,8 +122,10 @@ const BODIES = {
 
   commodities: (data) => ({
     html: `<div class="sw-chips">${names(data.commodities) || '<span class="sw-none">None yet</span>'}</div>
-      ${field({ label: 'Add another', id: 'sw-cname', placeholder: 'e.g. Lupins' })}
-      ${field({ label: 'Sold in', id: 'sw-cunit', type: 'select', value: 't', options: [{ value: 't', label: 'Tonnes' }, { value: 'bale', label: 'Bales (cotton)' }] })}
+      <div class="grid-2">
+        ${field({ label: 'Add another', id: 'sw-cname', placeholder: 'e.g. Lupins' })}
+        ${field({ label: 'Sold in', id: 'sw-cunit', type: 'select', value: 't', options: [{ value: 't', label: 'Tonnes' }, { value: 'bale', label: 'Bales (cotton)' }] })}
+      </div>
       <button type="button" class="btn secondary" id="sw-add">Add commodity</button>`,
     wire: (root, again) => root.querySelector('#sw-add').addEventListener('click', () => {
       const rec = commodityRecord({ name: getVal(root, 'sw-cname'), unit: getVal(root, 'sw-cunit') });
@@ -137,18 +141,23 @@ const BODIES = {
 
   paddocks: (data) => ({
     html: `<div class="sw-chips">${names(data.fields) || '<span class="sw-none">None yet</span>'}</div>
-      ${field({ label: 'Paddock name', id: 'sw-fname' })}
-      ${field({ label: 'Hectares', id: 'sw-farea', type: 'number', step: '0.1' })}
-      ${field({ label: 'Crop', id: 'sw-fcom', type: 'select', value: '', options: options(data.commodities, 'Not sown / not decided') })}
+      <div class="grid-2">
+        ${field({ label: 'Paddock name', id: 'sw-fname' })}
+        ${field({ label: 'Farm', id: 'sw-fprop', placeholder: 'Optional' })}
+      </div>
+      <div class="grid-2">
+        ${field({ label: 'Hectares', id: 'sw-farea', type: 'number', step: '0.1' })}
+        ${field({ label: 'Crop', id: 'sw-fcom', type: 'select', value: '', options: options(data.commodities, 'Not sown / not decided') })}
+      </div>
       <button type="button" class="btn secondary" id="sw-add">Add paddock</button>`,
     wire: (root, again) => root.querySelector('#sw-add').addEventListener('click', () => {
-      const rec = fieldRecord({ name: getVal(root, 'sw-fname'), areaHa: getVal(root, 'sw-farea'), commodityId: getVal(root, 'sw-fcom') });
+      const rec = fieldRecord({ name: getVal(root, 'sw-fname'), areaHa: getVal(root, 'sw-farea'), commodityId: getVal(root, 'sw-fcom'), property: getVal(root, 'sw-fprop') });
       if (!rec) { root.querySelector('#sw-fname').focus(); return; }
       db.upsertField(rec);
       again();
     }),
     save: (root) => {
-      const rec = fieldRecord({ name: getVal(root, 'sw-fname'), areaHa: getVal(root, 'sw-farea'), commodityId: getVal(root, 'sw-fcom') });
+      const rec = fieldRecord({ name: getVal(root, 'sw-fname'), areaHa: getVal(root, 'sw-farea'), commodityId: getVal(root, 'sw-fcom'), property: getVal(root, 'sw-fprop') });
       if (rec) db.upsertField(rec);
     },
   }),
@@ -157,11 +166,15 @@ const BODIES = {
     const read = (root) => storageRecord({ name: getVal(root, 'sw-sname'), kind: getVal(root, 'sw-skind'), volumeM3: getVal(root, 'sw-scap'), commodityId: getVal(root, 'sw-scom'), openingStock: getVal(root, 'sw-sstock') });
     return {
       html: `<div class="sw-chips">${names(data.storages) || '<span class="sw-none">None yet</span>'}</div>
-        ${field({ label: 'Name', id: 'sw-sname', placeholder: 'e.g. Silo 1' })}
-        ${field({ label: 'Type', id: 'sw-skind', type: 'select', value: 'silo', options: [{ value: 'silo', label: 'Silo' }, { value: 'bunker', label: 'Bunker / shed' }] })}
-        ${field({ label: 'Volume (m³)', id: 'sw-scap', type: 'number', step: '1', hint: 'Optional. The commodity’s test weight sets the most tonnes it holds. Measure it properly later in Storage.' })}
-        ${field({ label: 'Holding now', id: 'sw-scom', type: 'select', value: '', options: options(data.commodities, 'Empty') })}
-        ${field({ label: 'Tonnes in it now', id: 'sw-sstock', type: 'number', step: '0.1' })}
+        <div class="grid-2">
+          ${field({ label: 'Name', id: 'sw-sname', placeholder: 'e.g. Silo 1' })}
+          ${field({ label: 'Type', id: 'sw-skind', type: 'select', value: 'silo', options: [{ value: 'silo', label: 'Silo' }, { value: 'bunker', label: 'Bunker / shed' }] })}
+        </div>
+        <div class="grid-2">
+          ${field({ label: 'Volume (m³)', id: 'sw-scap', type: 'number', step: '1', placeholder: 'Optional' })}
+          ${field({ label: 'Holding now', id: 'sw-scom', type: 'select', value: '', options: options(data.commodities, 'Empty') })}
+        </div>
+        ${field({ label: 'Tonnes in it now', id: 'sw-sstock', type: 'number', step: '0.1', hint: 'The volume and the test weight set the most it holds. Measure it properly later in Storage.' })}
         <button type="button" class="btn secondary" id="sw-add">Add silo or bunker</button>`,
       wire: (root, again) => root.querySelector('#sw-add').addEventListener('click', () => {
         const rec = read(root);
@@ -177,10 +190,14 @@ const BODIES = {
     if (!data.commodities.length) return { html: '<div class="sw-none">Add a commodity first, then come back to this.</div>', save: () => {} };
     return {
       html: `<div class="sw-chips">${data.sales.map((s) => `<span class="sw-chip">${esc(s.buyer || 'Contract')}</span>`).join('') || '<span class="sw-none">None yet</span>'}</div>
-        ${field({ label: 'Buyer', id: 'sw-buyer' })}
-        ${field({ label: 'Commodity', id: 'sw-com', type: 'select', value: data.commodities[0].id, options: options(data.commodities) })}
-        ${field({ label: 'Tonnes', id: 'sw-tons', type: 'number', step: '1' })}
-        ${field({ label: 'Price ($/t)', id: 'sw-price', type: 'number', step: '0.01' })}
+        <div class="grid-2">
+          ${field({ label: 'Buyer', id: 'sw-buyer' })}
+          ${field({ label: 'Commodity', id: 'sw-com', type: 'select', value: data.commodities[0].id, options: options(data.commodities) })}
+        </div>
+        <div class="grid-2">
+          ${field({ label: 'Tonnes', id: 'sw-tons', type: 'number', step: '1' })}
+          ${field({ label: 'Price ($/t)', id: 'sw-price', type: 'number', step: '0.01' })}
+        </div>
         ${field({ label: 'Deliver by', id: 'sw-by', type: 'date' })}`,
       save: (root) => {
         const rec = saleRecord({ buyer: getVal(root, 'sw-buyer'), commodityId: getVal(root, 'sw-com'), tons: getNum(root, 'sw-tons'), price: getNum(root, 'sw-price'), date: todayLocal(), deliveryEnd: getVal(root, 'sw-by') });
@@ -200,10 +217,12 @@ const BODIES = {
     if (!froms.length || !tos.length) return { html: '<div class="sw-none">A load needs somewhere to come from and somewhere to go. Add a paddock or silo, and a silo or contract, then come back.</div>', save: () => {} };
     const end = (v) => { const [type, id] = String(v).split(':'); return { type, id }; };
     return {
-      html: `${field({ label: 'Date', id: 'sw-date', type: 'date', value: todayLocal() })}
+      html: `<div class="grid-2">
+          ${field({ label: 'Date', id: 'sw-date', type: 'date', value: todayLocal() })}
+          ${field({ label: 'Tonnes', id: 'sw-ltons', type: 'number', step: '0.01' })}
+        </div>
         ${field({ label: 'From', id: 'sw-from', type: 'select', value: froms[0].value, options: froms })}
-        ${field({ label: 'To', id: 'sw-to', type: 'select', value: tos[0].value, options: tos })}
-        ${field({ label: 'Tonnes', id: 'sw-ltons', type: 'number', step: '0.01' })}`,
+        ${field({ label: 'To', id: 'sw-to', type: 'select', value: tos[0].value, options: tos })}`,
       save: (root) => {
         if (!getNum(root, 'sw-ltons')) return true;
         const rec = loadRecord({ date: getVal(root, 'sw-date'), tons: getNum(root, 'sw-ltons'), from: end(getVal(root, 'sw-from')), to: end(getVal(root, 'sw-to')), data });

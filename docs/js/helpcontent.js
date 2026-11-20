@@ -4,8 +4,8 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=484';
-import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=484';
+import { ROLES, canOpen } from './nav.js?v=485';
+import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=485';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -176,7 +176,7 @@ export const GUIDES = [
     blurb: 'One walk-through sets the farm up.',
     steps: [
       'Tap Start setup on Position, or Open the walk-through at the top of this page.',
-      'It asks one thing at a time: business, season, crops, paddocks, silos, a contract, a load and an invoice.',
+      'It asks one thing at a time: business, season, crops, paddocks, silos, a contract, a load and an invoice. Short answers sit side by side, and the Farm box appears only if you run more than one property.',
       'Skip what you do not have yet. Continue setup picks up where you stopped.',
     ],
     tips: [
@@ -184,29 +184,135 @@ export const GUIDES = [
     ],
   },
   {
-    id: 'position', title: 'Position', roles: OFFICE, open: 'position', openLabel: 'Open Position',
-    shot: 'help/position.jpg', shotAlt: 'The Position screen',
-    blurb: 'Where the season stands, crop by crop.',
+    id: 'install', title: 'Putting Commodity Mate on your phone', roles: ALL, open: 'account', openLabel: 'Open Account',
+    blurb: 'Add it to the home screen so it opens like any other app.',
     steps: [
-      'The top boxes give the current crop value, what was produced, how much is sold and unsold, and the gross margin.',
-      'Each crop has a tile with its value, margin and share sold. Tap one for the full breakdown.',
-      'The PDF button saves the screen as a report.',
+      'iPhone: Safari, Share, Add to Home Screen. Android: Chrome menu, Install app.',
+      'Open it from the new icon. Sign in once; it is the same farm and login.',
     ],
     tips: [
-      'Needs attention sits above the boxes when something needs you: overdue invoices or bills, contracts past their end, grain delivered but not invoiced. Tap a line to deal with it.',
-      'Unsold grain is valued at the MTM price (Reports, Prices).',
+      'On Account, This device says whether the phone will keep your saved data. If not, tap Keep my saved data.',
     ],
   },
   {
-    id: 'reports', title: 'Reports', roles: [...OFFICE, 'farm_worker'], open: 'reports', openLabel: 'Open Reports',
-    shot: 'help/reports.jpg', shotAlt: 'The Reports screen showing every report as a tile',
-    blurb: 'Every report in one place.',
+    id: 'offline', title: 'Working without signal', roles: ALL, open: '', openLabel: '',
+    blurb: 'The app is built for the paddock.',
     steps: [
-      'Favourites shows the reports you use most. All shows every report, in groups.',
-      'Tap a tile to open it. In All, tap a star to make a report a favourite.',
+      'Everything you enter is saved on the device first, so it works with no signal.',
+      'The dot beside the season is white when everything has been sent and amber when something is waiting. It sends when you are back in range.',
     ],
     tips: [
-      'Invoices, Sales timeline, Available storage, Stock by location, Silo blending, the Silo calculator, Traceability and the exports are all here.',
+      'After an update, reload the app twice so the newest version is on screen.',
+    ],
+  },
+  {
+    id: 'paddocks', title: 'Paddocks and production', roles: ['owner', 'manager', 'bookkeeper', 'farm_worker'], open: 'production', openLabel: 'Open Production',
+    blurb: 'Area, crop, yield, fertiliser and seed for each paddock.',
+    steps: [
+      'On Production, tap + to add a paddock: name, farm, hectares and crop. Tick Double crop if it was sown straight after another crop.',
+      'Yield estimate sits beside the crop\'s default yield. Tap Use it to take the default.',
+      'Drive tons from says where the tonnes come from. Estimate is hectares times the yield estimate. Actual (movements) is the loads recorded from the paddock.',
+      'Harvest: mark it finished, or enter the hectares still to cut.',
+      'Fertiliser planning: enter a target yield and the soil test N. It works out the N needed, and Use as Urea required fills in the urea to hit the target. Starter and seed has the sums for those.',
+    ],
+    tips: [
+      'Rotation and Averages (Reports) compare seasons. A double crop shows its own yield beside the normal one. Yields are hidden from farm workers.',
+      'Open a paddock and tap Add a movement to start a load already filled in. Merge two paddocks from the paddock sheet.',
+    ],
+  },
+  {
+    id: 'map', title: 'The farm map', roles: ['owner', 'manager', 'bookkeeper', 'farm_worker'], open: 'production', openLabel: 'Open Production',
+    blurb: 'Your paddock outlines, coloured by crop.',
+    steps: [
+      'Export your paddock boundaries as a shapefile from any mapping software. Any shapefile works, with its .dbf.',
+      'Open the Farm map (Reports or Production) and choose the .shp and .dbf files together, or the zip.',
+      'Paddocks match yours by name. Tick the ones that take their area from the map, then save.',
+    ],
+    tips: [
+      'The map can be sent as a PDF. A new season carries the outlines over.',
+    ],
+  },
+  {
+    id: 'storage', title: 'Silos and bunkers', roles: ['owner', 'manager', 'farm_worker'], open: 'storage', openLabel: 'Open Storage',
+    shot: 'help/storage.jpg', shotAlt: 'The Storage screen: search, sort and More, and two silos holding several grades each, shown as coloured bars',
+    blurb: 'What is in each store and how full it is.',
+    steps: [
+      'On Storage, tap + to add a silo or a bunker.',
+      'Enter its volume in cubic metres. The tonnes it holds come from the volume and the commodity\'s test weight. Or measure it instead.',
+      'Set what is in it and its opening stock. Loads move the stock.',
+    ],
+    tips: [
+      'Search, Sort by and More (measured view, grouping, the Silo calculator) are at the top.',
+      'Grain held by a third party is an off-farm store, with storage fees worked out for you.',
+    ],
+  },
+  {
+    id: 'inputs', title: 'Inputs and spraying', roles: [...OFFICE, 'farm_worker'], open: 'production', openLabel: 'Open Production',
+    blurb: 'Seed, fertiliser, fuel and chemical on hand.',
+    steps: [
+      'On Production, open Inputs and spraying.',
+      'Record what you buy and use, and counts that fix the stock. Say which shed or silo it is in.',
+    ],
+    tips: [
+      'A farm worker records use and counts only. They never see prices or suppliers.',
+    ],
+  },
+  {
+    id: 'spray', title: 'Spray requests', roles: ['owner', 'manager'], open: 'production', openLabel: 'Open Production',
+    blurb: 'A spray form and a map for the contractor.',
+    steps: [
+      'On the farm map tick the paddocks, then Spray request. Or open Spray requests under Inputs and spraying on Production.',
+      'Paddocks to spray lists your properties. Tap a property to open its paddocks, or tick the property to take them all.',
+      'Add the products with a rate per hectare, and the water rate.',
+      'Who and when: the contractor and their email, the form to send it on, and the date required. The job has the property, crop, purchase order and who supplies the chemical.',
+      'Tap View to look at the PDF, then send it. The map is the last page.',
+    ],
+    tips: [
+      'A different rate on some paddocks is under the product list, and is optional.',
+      'The owner can switch on Aircair\'s own form in Settings, under Farm.',
+    ],
+  },
+  {
+    id: 'hay', title: 'Hay and straw: tonnes and bales', roles: ['owner', 'manager', 'farm_worker'], open: 'production', openLabel: 'Open Production',
+    blurb: 'Sold by the tonne, with the bales counted as well.',
+    steps: [
+      'In Settings, add each kind (lucerne, oaten hay, barley straw...) as its own commodity, sold in Tonnes. Set Baled hay to Yes, then the bale type and an average bale weight.',
+      'On the paddock, tap + Log bales baled for each cut or run. It shows baled, moved and still in the field.',
+      'Straw or hay off a grain paddock: use Straw and hay baled off this paddock, and pick the kind.',
+      'On a load, enter the Bales. The weight is the bales times the bale weight until you type in the weighbridge weight.',
+      'Hay fed on the farm: on the load, choose Used on farm as the destination and say what it was used for. It comes out of the stock and goes on no contract.',
+    ],
+    tips: [
+      'Contracts and invoices stay in tonnes and show the bale count as well.',
+      'Storage shows the bales held, and Position takes hay used on the farm out of the unsold.',
+    ],
+  },
+  {
+    id: 'contracts', title: 'Contracts', roles: ['owner', 'manager', 'bookkeeper'], open: 'sales', openLabel: 'Open Sales',
+    shot: 'help/sales.jpg', shotAlt: 'The Sales screen with a card for each contract',
+    blurb: 'Each sale: buyer, tonnes, price and terms.',
+    steps: [
+      'On Sales, tap + (the owner or bookkeeper adds contracts). Enter the buyer, commodity, grade, tonnes and price.',
+      'Delivery: the start and finish dates. Weights and quality says whose weights govern, and sits beside Delivery option, how it is delivered. Freight paid by sits beside the freight rate.',
+      'Payment terms and brokerage: We invoice (you, or the buyer by RCTI), trade rules such as GTA 3, payment days, carry and the broker.',
+      'Price adjustments, Multigrade and Oil (canola) are further down, closed until you need them.',
+      'Confirmation of sale makes a printable confirmation, signed if you tick the box. Loads against the contract count as delivered, and its card shows what is still to go.',
+    ],
+    tips: [
+      'More has Paid contracts and Bring in last season\'s contracts. Delivery option feeds Sales timeline and the cash forecast. Type the buyer\'s address in its parts so documents fill in.',
+      'Carry ($/t/month) and Carry starts print on the confirmation of sale. They are not added to invoices, so add the carry as an extra line when you invoice.',
+    ],
+  },
+  {
+    id: 'orders', title: 'Orders, deliveries and bills', roles: OFFICE, open: 'sales', openLabel: 'Open Sales',
+    blurb: 'What is still to deliver, and what is owed.',
+    steps: [
+      'Grain orders and Freight orders are on Sales. A freight order can be signed before it goes to the carrier.',
+      'Sales timeline (Reports) shows tonnes still to deliver and how near each delivery period is to ending.',
+      'Invoices (Reports) shows invoices owed to you and bills you owe. By month shows when the money lands, with a forecast in italics.',
+    ],
+    tips: [
+      'The forecast uses each contract\'s delivery pattern. With none set, the grain shows as Not yet scheduled.',
     ],
   },
   {
@@ -250,41 +356,16 @@ export const GUIDES = [
     ],
   },
   {
-    id: 'paddocks', title: 'Paddocks and production', roles: ['owner', 'manager', 'bookkeeper', 'farm_worker'], open: 'production', openLabel: 'Open Production',
-    blurb: 'Area, crop, yield, urea and seed for each paddock.',
+    id: 'invoices', title: 'Invoices and the buyer\'s RCTI', roles: OFFICE, open: 'sales', openLabel: 'Open Sales',
+    blurb: 'Invoice a contract, then check it against the buyer\'s paperwork.',
     steps: [
-      'On Production, tap + to add a paddock: name, hectares and crop.',
-      'Tap a paddock for its yield, urea, starter fertiliser and seed.',
+      'Open a contract, then Invoices and New invoice. Tick the loads, add any extra line, and create it.',
+      'Print or save it as a PDF (tick the signing box to sign). Mark it paid when the money arrives.',
+      'Enter the buyer\'s RCTI number and total. It says Agrees or shows the difference; if they differ, make an adjustment note.',
     ],
     tips: [
-      'Rotation and Averages (Reports) compare seasons. Yields are hidden from farm workers.',
-      'Open a paddock and tap Add a movement to start a load already filled in. Merge two paddocks from the paddock sheet.',
-    ],
-  },
-  {
-    id: 'map', title: 'The farm map', roles: ['owner', 'manager', 'bookkeeper', 'farm_worker'], open: 'production', openLabel: 'Open Production',
-    blurb: 'Your paddock outlines, coloured by crop.',
-    steps: [
-      'Export your paddock boundaries as a shapefile from any mapping software. Any shapefile works, with its .dbf.',
-      'Open the Farm map (Reports or Production) and choose the .shp and .dbf files together, or the zip.',
-      'Paddocks match yours by name. Tick the ones that take their area from the map, then save.',
-    ],
-    tips: [
-      'The map can be sent as a PDF. A new season carries the outlines over.',
-    ],
-  },
-  {
-    id: 'storage', title: 'Silos and bunkers', roles: ['owner', 'manager', 'farm_worker'], open: 'storage', openLabel: 'Open Storage',
-    shot: 'help/storage.jpg', shotAlt: 'The Storage screen: search, sort and More, and two silos holding several grades each, shown as coloured bars',
-    blurb: 'What is in each store and how full it is.',
-    steps: [
-      'On Storage, tap + to add a silo or a bunker.',
-      'Enter its volume in cubic metres. The tonnes it holds come from the volume and the commodity\'s test weight. Or measure it instead.',
-      'Set what is in it and its opening stock. Loads move the stock.',
-    ],
-    tips: [
-      'Search, Sort by and More (measured view, grouping, the Silo calculator) are at the top.',
-      'Grain held by a third party is an off-farm store, with storage fees worked out for you.',
+      'The invoice stays as sent. The note says what changed and counts in what the buyer owes.',
+      'Payment details print only for the owner and the bookkeeper.',
     ],
   },
   {
@@ -318,65 +399,55 @@ export const GUIDES = [
     ],
   },
   {
-    id: 'contracts', title: 'Contracts', roles: ['owner', 'manager', 'bookkeeper'], open: 'sales', openLabel: 'Open Sales',
-    shot: 'help/sales.jpg', shotAlt: 'The Sales screen with a card for each contract',
-    blurb: 'Each sale: buyer, tonnes, price and terms.',
+    id: 'position', title: 'Position', roles: OFFICE, open: 'position', openLabel: 'Open Position',
+    shot: 'help/position.jpg', shotAlt: 'The Position screen',
+    blurb: 'Where the season stands, crop by crop.',
     steps: [
-      'On Sales, tap + (the owner or bookkeeper adds contracts). Enter the buyer, commodity, grade, tonnes and price.',
-      'Add the delivery period and payment terms. Advanced has tolerance, carry and Multigrade.',
-      'Confirmation of sale makes a printable confirmation, signed if you tick the box.',
-      'Loads against the contract count as delivered. Its card shows what is still to go.',
+      'The top boxes give the current crop value, what was produced, how much is sold and unsold, and the gross margin.',
+      'Each crop has a tile with its value, margin and share sold. Tap one for the full breakdown.',
+      'The PDF button saves the screen as a report.',
+      'Display, above the tiles, picks the figures each tile shows: Everything, Short, or your own ticks. It is kept on this phone, and the crop detail still has every figure.',
     ],
     tips: [
-      'More has Paid contracts, and Bring in last season\'s contracts. Say how a contract is delivered and Sales timeline and the cash forecast use it.',
-      'Type the buyer\'s address in its parts so documents and the Xero export fill in.',
+      'Needs attention sits above the boxes when something needs you: overdue invoices or bills, contracts past their end, grain delivered but not invoiced. Tap a line to deal with it.',
+      'Unsold grain is valued at the MTM price (Reports, Prices).',
     ],
   },
   {
-    id: 'invoices', title: 'Invoices and the buyer\'s RCTI', roles: OFFICE, open: 'sales', openLabel: 'Open Sales',
-    blurb: 'Invoice a contract, then check it against the buyer\'s paperwork.',
+    id: 'reports', title: 'Reports', roles: [...OFFICE, 'farm_worker'], open: 'reports', openLabel: 'Open Reports',
+    shot: 'help/reports.jpg', shotAlt: 'The Reports screen showing every report as a tile',
+    blurb: 'Every report in one place.',
     steps: [
-      'Open a contract, then Invoices and New invoice. Tick the loads, add any extra line, and create it.',
-      'Print or save it as a PDF (tick the signing box to sign). Mark it paid when the money arrives.',
-      'Enter the buyer\'s RCTI number and total. It says Agrees or shows the difference; if they differ, make an adjustment note.',
+      'Favourites shows the reports you use most. All shows every report, in groups.',
+      'Tap a tile to open it. In All, tap a star to make a report a favourite.',
     ],
     tips: [
-      'The invoice stays as sent. The note says what changed and counts in what the buyer owes.',
-      'Payment details print only for the owner and the bookkeeper.',
+      'Invoices, Sales timeline, Available storage, Stock by location, Silo blending, the Silo calculator, Traceability and the exports are all here.',
     ],
   },
   {
-    id: 'orders', title: 'Orders, deliveries and bills', roles: OFFICE, open: 'sales', openLabel: 'Open Sales',
-    blurb: 'What is still to deliver, and what is owed.',
+    id: 'season', title: 'Starting a new season', roles: ['owner', 'manager'], open: 'settings', openLabel: 'Open Settings',
+    blurb: 'Carry the farm over and keep the old season\'s records.',
     steps: [
-      'Grain orders and Freight orders are on Sales. A freight order can be signed before it goes to the carrier.',
-      'Sales timeline (Reports) shows tonnes still to deliver and how near each delivery period is to ending.',
-      'Invoices (Reports) shows invoices owed to you and bills you owe. By month shows when the money lands, with a forecast in italics.',
+      'Tap the season at the top right, then Start new year and enter the label, such as 2027.',
+      'Paddocks, outlines, silos and commodities carry over. Yields, contracts, loads and overheads start empty.',
+      'The old season stays: pick it in the Viewing box. On Sales, More, Bring in last season\'s contracts carries unfinished ones across.',
     ],
     tips: [
-      'The forecast uses each contract\'s delivery pattern. With none set, the grain shows as Not yet scheduled.',
+      'Past seasons and past sales can be imported from CSV in Settings, and Line up paddock names matches renamed paddocks. Rename a season with the button beside Viewing.',
     ],
   },
   {
-    id: 'spray', title: 'Spray requests', roles: ['owner', 'manager'], open: 'production', openLabel: 'Open Production',
-    blurb: 'A spray form and a map for the contractor.',
+    id: 'people', title: 'Inviting people', roles: ['owner'], open: 'settings', openLabel: 'Open Settings',
+    blurb: 'Give someone their own login, with only what they need.',
     steps: [
-      'On the farm map tick the paddocks, then Spray request. Or open Spray requests under Inputs and spraying on Production.',
-      'Fill in the product, rate, dates and contact, then send the PDF. The map is the last page.',
+      'In Settings, open People and permissions. Enter their email and choose their role.',
+      'Send the invitation link. It lasts 14 days; you can resend or withdraw it.',
+      'Tap a person to change what they can do.',
     ],
     tips: [
-      'The owner can switch on Aircair\'s own form in Settings, under Farm.',
-    ],
-  },
-  {
-    id: 'inputs', title: 'Inputs and spraying', roles: [...OFFICE, 'farm_worker'], open: 'production', openLabel: 'Open Production',
-    blurb: 'Seed, fertiliser, fuel and chemical on hand.',
-    steps: [
-      'On Production, open Inputs and spraying.',
-      'Record what you buy and use, and counts that fix the stock. Say which shed or silo it is in.',
-    ],
-    tips: [
-      'A farm worker records use and counts only. They never see prices or suppliers.',
+      'You cannot change or remove yourself, so there is always an owner. Bank details are never sent to a manager, worker or driver.',
+      'Audit history in Settings lists who changed what, and when.',
     ],
   },
   {
@@ -411,53 +482,6 @@ export const GUIDES = [
     ],
     tips: [
       'Support cannot change anything or see bank details.',
-    ],
-  },
-  {
-    id: 'season', title: 'Starting a new season', roles: ['owner', 'manager'], open: 'settings', openLabel: 'Open Settings',
-    blurb: 'Carry the farm over and keep the old season\'s records.',
-    steps: [
-      'Tap the season at the top right, then Start new year and enter the label, such as 2027.',
-      'Paddocks, outlines, silos and commodities carry over. Yields, contracts, loads and overheads start empty.',
-      'The old season stays: pick it in the Viewing box. On Sales, More, Bring in last season\'s contracts carries unfinished ones across.',
-    ],
-    tips: [
-      'Past seasons and past sales can be imported from CSV in Settings, and Line up paddock names matches renamed paddocks. Rename a season with the button beside Viewing.',
-    ],
-  },
-  {
-    id: 'people', title: 'Inviting people', roles: ['owner'], open: 'settings', openLabel: 'Open Settings',
-    blurb: 'Give someone their own login, with only what they need.',
-    steps: [
-      'In Settings, open People and permissions. Enter their email and choose their role.',
-      'Send the invitation link. It lasts 14 days; you can resend or withdraw it.',
-      'Tap a person to change what they can do.',
-    ],
-    tips: [
-      'You cannot change or remove yourself, so there is always an owner. Bank details are never sent to a manager, worker or driver.',
-      'Audit history in Settings lists who changed what, and when.',
-    ],
-  },
-  {
-    id: 'install', title: 'Putting Commodity Mate on your phone', roles: ALL, open: 'account', openLabel: 'Open Account',
-    blurb: 'Add it to the home screen so it opens like any other app.',
-    steps: [
-      'iPhone: Safari, Share, Add to Home Screen. Android: Chrome menu, Install app.',
-      'Open it from the new icon. Sign in once; it is the same farm and login.',
-    ],
-    tips: [
-      'On Account, This device says whether the phone will keep your saved data. If not, tap Keep my saved data.',
-    ],
-  },
-  {
-    id: 'offline', title: 'Working without signal', roles: ALL, open: '', openLabel: '',
-    blurb: 'The app is built for the paddock.',
-    steps: [
-      'Everything you enter is saved on the device first, so it works with no signal.',
-      'The dot beside the season is white when everything has been sent and amber when something is waiting. It sends when you are back in range.',
-    ],
-    tips: [
-      'After an update, reload the app twice so the newest version is on screen.',
     ],
   },
 ];

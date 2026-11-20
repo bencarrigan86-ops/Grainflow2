@@ -11,7 +11,7 @@
 // number in it — leading zeros ignored — and only falls back to "the text
 // appears somewhere" when no silo has the number.
 
-import { gradeSorter } from './grades.js?v=484';
+import { gradeSorter } from './grades.js?v=485';
 
 export const NO_COMMODITY = '__none';
 

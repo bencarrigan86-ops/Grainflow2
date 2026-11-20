@@ -2,7 +2,7 @@
 // This file is the thinking (which step is next, the records each answer makes); views/setupwalk.js is the screens.
 // Pure, so it can be tested without a browser.
 
-import { startProgress } from './helpcontent.js?v=484';
+import { startProgress } from './helpcontent.js?v=485';
 
 /**
  * The steps this person can do, each with whether the farm already has it, and the position of the first one not done.
@@ -45,9 +45,9 @@ export function commodityRecord({ name, unit }) {
 }
 
 /** A paddock: name, hectares and crop. Yield and the rest are filled in later in Production. */
-export function fieldRecord({ name, areaHa, commodityId }) {
+export function fieldRecord({ name, areaHa, commodityId, property }) {
   if (!text(name)) return null;
-  return { name: text(name), property: '', areaHa: numberOr0(areaHa), commodityId: commodityId || null, yieldMode: 'actual', yieldTHa: 0 };
+  return { name: text(name), property: text(property), areaHa: numberOr0(areaHa), commodityId: commodityId || null, yieldMode: 'actual', yieldTHa: 0 };
 }
 
 /** A silo or bunker, with its volume (capacity works out from it and the test weight) and what is in it now. */

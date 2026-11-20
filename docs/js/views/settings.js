@@ -1,44 +1,44 @@
-import { db } from '../storage.js?v=484';
-import { tileIcon } from '../tileicon.js?v=484';
-import { getTheme, setTheme } from '../theme.js?v=484';
-import { num, money, esc } from '../fmt.js?v=484';
+import { db } from '../storage.js?v=485';
+import { tileIcon } from '../tileicon.js?v=485';
+import { getTheme, setTheme } from '../theme.js?v=485';
+import { num, money, esc } from '../fmt.js?v=485';
 import {
   openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast,
-} from '../ui.js?v=484';
-import { planYieldUpdate } from '../yieldupdate.js?v=484';
-import { openLoadImportSheet } from './importloads.js?v=484';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=484';
-import { openPastSeasonsSheet } from './pastseasons.js?v=484';
-import { openPastSalesSheet } from './pastsales.js?v=484';
-import { openLineupSheet } from './lineup.js?v=484';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=484';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=484';
-import { openDangerSheet } from './dangerconfirm.js?v=484';
+} from '../ui.js?v=485';
+import { planYieldUpdate } from '../yieldupdate.js?v=485';
+import { openLoadImportSheet } from './importloads.js?v=485';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=485';
+import { openPastSeasonsSheet } from './pastseasons.js?v=485';
+import { openPastSalesSheet } from './pastsales.js?v=485';
+import { openLineupSheet } from './lineup.js?v=485';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=485';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=485';
+import { openDangerSheet } from './dangerconfirm.js?v=485';
 import {
   sampleHistoryFrom, sampleHistoryOffered, sampleOrdersFrom, sampleOrdersOffered, sampleCottonHayFrom, sampleCottonHayOffered, sampleRefreshOffered, sampleStateFor,
-} from '../demo.js?v=484';
-import { seasonContents, contentsText } from '../seasondelete.js?v=484';
-import { openDeletedSheet } from './deleted.js?v=484';
-import { openAuditSheet } from './audit.js?v=484';
-import { canSeeAudit } from '../audit.js?v=484';
-import { canSeeOverheads } from '../nav.js?v=484';
-import { APP_VERSION } from '../version.js?v=484';
-import { checkNow } from '../updatecheck.js?v=484';
-import { logoFromFile } from '../logo.js?v=484';
+} from '../demo.js?v=485';
+import { seasonContents, contentsText } from '../seasondelete.js?v=485';
+import { openDeletedSheet } from './deleted.js?v=485';
+import { openAuditSheet } from './audit.js?v=485';
+import { canSeeAudit } from '../audit.js?v=485';
+import { canSeeOverheads } from '../nav.js?v=485';
+import { APP_VERSION } from '../version.js?v=485';
+import { checkNow } from '../updatecheck.js?v=485';
+import { logoFromFile } from '../logo.js?v=485';
 
-import { closingStock, position } from '../derived.js?v=484';
-import { cleanCotton } from '../ginning.js?v=484';
-import { cleanHay, hasHay, BALE_TYPES } from '../hay.js?v=484';
-import { orderedNames, moveName } from '../commodityorder.js?v=484';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=484';
-import { autoSeasonText } from '../harvestseason.js?v=484';
-import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=484';
-import { openMySignatureSheet } from './signaturepad.js?v=484';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=484';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=484';
-import { paintPeople } from './settingspeople.js?v=484';
-import { paintSyncCard } from './settingssync.js?v=484';
-import { openExportCsvSheet } from './settingsexport.js?v=484';
+import { closingStock, position } from '../derived.js?v=485';
+import { cleanCotton } from '../ginning.js?v=485';
+import { cleanHay, hasHay, BALE_TYPES } from '../hay.js?v=485';
+import { orderedNames, moveName } from '../commodityorder.js?v=485';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=485';
+import { autoSeasonText } from '../harvestseason.js?v=485';
+import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=485';
+import { openMySignatureSheet } from './signaturepad.js?v=485';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=485';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=485';
+import { paintPeople } from './settingspeople.js?v=485';
+import { paintSyncCard } from './settingssync.js?v=485';
+import { openExportCsvSheet } from './settingsexport.js?v=485';
 
 let unsub = null;
 
@@ -663,10 +663,12 @@ function openCommoditySheet(existing) {
   const gmArea = commodityAreaHa(fields, existing?.id);
   openSheet(existing ? 'Edit commodity' : 'Add commodity', (root) => {
     root.innerHTML = `
-      ${field({ label: 'Name', id: 'name', value: existing?.name, placeholder: 'e.g. Wheat' })}
-      ${field({ label: 'Sold &amp; measured in', id: 'unit', type: 'select', value: existing?.unit ?? 't', options: [{ value: 't', label: 'Tonnes' }, { value: 'bale', label: 'Bales' }], hint: 'Bales — for cotton lint. Changes the units shown in Production and Sales for this commodity.' })}
+      <div class="grid-2">
+        ${field({ label: 'Name', id: 'name', value: existing?.name, placeholder: 'e.g. Wheat' })}
+        ${field({ label: 'Sold &amp; measured in', id: 'unit', type: 'select', value: existing?.unit ?? 't', options: [{ value: 't', label: 'Tonnes' }, { value: 'bale', label: 'Bales (cotton lint)' }] })}
+      </div>
       <div id="hay-wrap" style="display:none">
-        ${field({ label: 'Baled hay', id: 'isHay', type: 'select', value: hasHay(existing?.hay) ? 'yes' : 'no', options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes, count the bales as well' }], hint: 'Sold in tonnes. The bales are counted as well, with an approximate weight for each.' })}
+        ${field({ label: 'Baled hay', id: 'isHay', type: 'select', value: hasHay(existing?.hay) ? 'yes' : 'no', options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes, count the bales as well' }], hint: 'Sold in tonnes, with the bales counted too.' })}
         <div id="hay-fields" style="display:none" class="grid-2">
           ${field({ label: 'Bale type', id: 'baleType', type: 'select', value: existing?.hay?.baleType || 'round', options: BALE_TYPES.map((b) => ({ value: b.value, label: b.label })) })}
           ${field({ label: 'Bale weight (kg)', id: 'baleKg', type: 'number', step: '1', value: existing?.hay?.baleKg || '', placeholder: '500', hint: 'Average, for every paddock' })}
@@ -689,36 +691,38 @@ function openCommoditySheet(existing) {
         </div>
       </div>
       <div class="grid-2">
-        ${field({ label: 'Angle of repose (°)', id: 'angle', type: 'number', step: '1', value: existing?.angleOfRepose, hint: 'For silo/bunker peak calc' })}
+        ${field({ label: 'Angle of repose (°)', id: 'angle', type: 'number', step: '1', value: existing?.angleOfRepose })}
         ${field({ label: 'Test weight (t/m³)', id: 'tw', type: 'number', step: '0.01', value: existing?.testWeight })}
       </div>
       ${field({ label: 'Harvested in', id: 'harvestSeason', type: 'select', value: existing?.harvestSeason ?? '',
         options: [{ value: '', label: 'Automatic' }, { value: 'winter', label: 'Winter (wheat, barley, canola...)' }, { value: 'summer', label: 'Summer (sorghum, cotton, maize...)' }],
-        hint: 'Harvest progress is read for winter and summer crops separately as well as for the whole farm. Automatic goes by the name.' })}
-      ${field({ label: 'MTM price ($/t)', id: 'mtm', type: 'number', step: '0.01', value: existing?.mtmPrice ?? 0, hint: 'Used to value unsold position' })}
+        hint: 'Harvest progress is read for winter and summer separately. Automatic goes by the name.' })}
       <div class="grid-2">
         ${field({ label: 'Opening stock (t)', id: 'opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0 })}
         ${field({ label: 'Retained seed (t)', id: 'seed', type: 'number', step: '0.01', value: existing?.retainedSeed ?? 0 })}
       </div>
-      ${field({ label: 'Opening stock value ($)', id: 'openingValue', type: 'number', step: '1', value: existing?.openingValue ?? 0,
-        hint: "What the opening stock was worth at last season's closing (opening MTM) price. It shows on the Position tab as 'Less opening stock' and comes off this season's total, so grain already counted last year is not counted twice." })}
-      <div id="carry-from-last"></div>
-      ${field({ label: 'Default yield estimate (t/ha)', id: 'defaultYield', type: 'number', step: '0.1', value: existing?.defaultYieldTHa ?? 0, hint: 'Pre-fills new fields\' production yield estimate, in Production — separate from the fert target yield below' })}
-      ${existing ? '<div id="yield-apply"></div>' : ''}
-      <hr class="sep" />
       <div class="grid-2">
-        ${field({ label: 'Target yield (t/ha)', id: 'targetYield', type: 'number', step: '0.1', value: existing?.targetYieldTHa ?? 0, hint: 'Default fert planning target — separate from the production yield estimate above' })}
-        ${field({ label: 'N required (kg/t)', id: 'nPerTonne', type: 'number', step: '1', value: existing?.nPerTonne ?? 0, hint: 'For the Fert calculator' })}
+        ${field({ label: 'MTM price ($/t)', id: 'mtm', type: 'number', step: '0.01', value: existing?.mtmPrice ?? 0 })}
+        ${field({ label: 'Opening stock value ($)', id: 'openingValue', type: 'number', step: '1', value: existing?.openingValue ?? 0 })}
       </div>
-      ${existing ? `
-        <div class="row"><span class="label">Fields using this commodity</span><span class="value">${fields.filter((f) => f.commodityId === existing.id).length}</span></div>
-      ` : ''}
+      <div style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">Opening value is what the opening stock was worth at last season's closing MTM price. Position shows it as 'Less opening stock', so grain counted last year is not counted twice.</div>
+      <div id="carry-from-last"></div>
+      <div class="grid-2">
+        ${field({ label: 'Yield estimate (t/ha)', id: 'defaultYield', type: 'number', step: '0.1', value: existing?.defaultYieldTHa ?? 0 })}
+        ${field({ label: 'Fert target yield (t/ha)', id: 'targetYield', type: 'number', step: '0.1', value: existing?.targetYieldTHa ?? 0 })}
+      </div>
+      <div style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">The estimate pre-fills new fields in Production. The target yield is for fertiliser planning.</div>
+      ${existing ? '<div id="yield-apply"></div>' : ''}
+      <div class="grid-2">
+        ${field({ label: 'N required (kg/t)', id: 'nPerTonne', type: 'number', step: '1', value: existing?.nPerTonne ?? 0 })}
+        ${existing ? `<div class="field"><label>Fields using it</label><div class="readout">${fields.filter((f) => f.commodityId === existing.id).length}</div></div>` : ''}
+      </div>
       <hr class="sep" />
       <div class="grid-2">
         ${field({ label: 'Gross margin cost ($/ha)', id: 'gmCostHa', type: 'number', step: '0.01', value: perHaFromTotal(existing?.grossMarginCost, gmArea) || '' })}
         ${field({ label: 'Gross margin cost ($)', id: 'gmCost', type: 'number', step: '1', value: existing?.grossMarginCost ?? 0 })}
       </div>
-      <div class="field hint" id="gm-hint" style="margin-top:-6px"></div>
+      <div id="gm-hint" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)"></div>
       ${field({ label: 'Notes', id: 'notes', value: existing?.notes })}
       ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete commodity</button>` : ''}
       <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
@@ -732,7 +736,7 @@ function openCommoditySheet(existing) {
       const plan = planYieldUpdate(db.get().fields, existing.id, typed);
       const waiting = plan.count + plan.same;
       if (waiting === 0 || !(typed > 0)) {
-        applyBox.innerHTML = waiting === 0 ? '<div class="field hint">No paddocks of this commodity are on an estimate.</div>' : '';
+        applyBox.innerHTML = waiting === 0 ? '<div style="margin:0 0 10px;font-size:11.5px;color:var(--text-dim)">No paddocks of this commodity are on an estimate.</div>' : '';
         return;
       }
       applyBox.innerHTML = plan.count === 0
@@ -774,7 +778,7 @@ function openCommoditySheet(existing) {
       balesWrap.style.display = bales ? 'block' : 'none';
       root.querySelector('#hay-wrap').style.display = bales ? 'none' : 'block';
       root.querySelector('#hay-fields').style.display = !bales && getVal(root, 'isHay') === 'yes' ? '' : 'none';
-      if (mtmLabel) mtmLabel.textContent = bales ? 'Lint MTM price ($/bale)' : 'MTM price ($/t)';
+      if (mtmLabel) mtmLabel.textContent = bales ? 'Lint MTM ($/bale)' : 'MTM price ($/t)';
     };
     root.querySelector('#unit').addEventListener('change', syncUnitFields);
     root.querySelector('#isHay').addEventListener('change', syncUnitFields);
