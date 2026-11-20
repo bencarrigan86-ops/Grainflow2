@@ -1,0 +1,14 @@
+# Security headers for the app page.
+#
+# Only script is restricted: the app's own files, the one small script in index.html (by its fingerprint, so a script
+# injected into a page cannot ride along with it) and the libraries loaded from esm.sh. Inline handlers such as
+# onfocus="..." are therefore refused, which is what stops a name or note that holds a quote mark from running code.
+# If index.html's inline script ever changes, its fingerprint here has to change with it (tests/csp.test.mjs checks).
+/
+  Content-Security-Policy: script-src 'self' 'sha256-vm4KnX3vupnW8+c1/aYmLD8bgmfqgrrxBlaZq3xYxW4=' https://esm.sh; object-src 'none'; base-uri 'self'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: same-origin
+/index.html
+  Content-Security-Policy: script-src 'self' 'sha256-vm4KnX3vupnW8+c1/aYmLD8bgmfqgrrxBlaZq3xYxW4=' https://esm.sh; object-src 'none'; base-uri 'self'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: same-origin

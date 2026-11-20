@@ -4,8 +4,8 @@
 // end, orders that missed their date, grain delivered but not invoiced, a backup that is due) and says it in a line each,
 // the worst first, so the farm is not left to go and look. Pure: it touches neither storage nor the page.
 
-import { receivables, payablesDue, deliveries, uninvoiced } from './outstanding.js?v=495';
-import { backupDue, backupAgeText } from './backup.js?v=495';
+import { receivables, payablesDue, deliveries, uninvoiced } from './outstanding.js?v=496';
+import { backupDue, backupAgeText } from './backup.js?v=496';
 
 const MONEY_ROLES = ['owner', 'manager', 'bookkeeper'];
 const SEVERITY = { bad: 0, warn: 1, info: 2 };

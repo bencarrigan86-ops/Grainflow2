@@ -5,8 +5,8 @@
 // sold, the prices, the values and the gross margin. Under it the whole farm: gross margin, overheads, bills and the
 // profit or loss. Pure: it builds bytes and touches nothing else.
 
-import { Pdf } from './pdf.js?v=495';
-import { drawBrandLogo } from './brand.js?v=495';
+import { Pdf } from './pdf.js?v=496';
+import { drawBrandLogo } from './brand.js?v=496';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;

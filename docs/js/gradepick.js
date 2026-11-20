@@ -4,9 +4,9 @@
 // one-off, which reveals a box to type it in. A grade already on the record that is not on the list stays
 // selectable, so opening an old contract never loses what it says.
 
-import { gradeOptions, OTHER_GRADE } from './grades.js?v=495';
+import { gradeOptions, OTHER_GRADE } from './grades.js?v=496';
 
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const optionsHtml = (opts, selected) => opts
   .map((o) => `<option value="${esc(o.value)}" ${String(o.value) === String(selected) ? 'selected' : ''}>${esc(o.label)}</option>`)

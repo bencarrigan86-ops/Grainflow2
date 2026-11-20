@@ -41,8 +41,12 @@ export function downloadBackup(json, now = new Date()) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `grainflow-backup-${now.toISOString().slice(0, 10)}.json`;
+  const p = (n) => String(n).padStart(2, '0');
+  a.download = `grainflow-backup-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}.json`;
+  // attached while it is clicked, and the file kept for a few seconds: Safari can cancel a download whose address is revoked at once
+  a.style.display = 'none';
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 10000);
   markBackup(now.getTime());
 }

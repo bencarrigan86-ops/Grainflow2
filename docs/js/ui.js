@@ -48,7 +48,7 @@ export function isSheetOpen() {
 
 /** HTML-escape for text dropped into a template string. */
 export function escHtml(v) {
-  return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 /**
@@ -93,7 +93,7 @@ export function openSheet(title, buildBody, { askBeforeClose = true, wide = fals
   sheet.innerHTML = `
     <div class="sheet-handle"></div>
     <div class="sheet-header">
-      <h2>${title}</h2>
+      <h2>${escHtml(title)}</h2>
       <button class="link-btn" data-close>Close</button>
     </div>
     <div class="sheet-body"></div>

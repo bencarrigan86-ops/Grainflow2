@@ -2,13 +2,13 @@
 // Three ways to read it: a card for each location, a card for each grade with the locations under it, and a grid (a row for each
 // location, a column for each commodity and grade). Narrow it to on farm or off farm, and to the commodities ticked.
 
-import { db } from '../storage.js?v=495';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=495';
-import { openSheet, toast } from '../ui.js?v=495';
-import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=495';
-import { viewPdf } from '../pdfview.js?v=495';
-import { exportRowsAsCSV } from '../csv.js?v=495';
-import { stockByLocation, stockTree, stockByGrade, stockMatrix, matrixSheet, narrowed, stockRows, STOCK_COLUMNS, stockPdf } from '../stocklocation.js?v=495';
+import { db } from '../storage.js?v=496';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=496';
+import { openSheet, toast } from '../ui.js?v=496';
+import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=496';
+import { viewPdf } from '../pdfview.js?v=496';
+import { exportRowsAsCSV } from '../csv.js?v=496';
+import { stockByLocation, stockTree, stockByGrade, stockMatrix, matrixSheet, narrowed, stockRows, STOCK_COLUMNS, stockPdf } from '../stocklocation.js?v=496';
 
 const SCOPES = [['all', 'All'], ['farm', 'On farm'], ['off', 'Off farm']];
 const SCOPE_TEXT = { all: '', farm: 'On farm', off: 'Off farm' };

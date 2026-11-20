@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=495';
-import { num, esc, todayLocal } from '../fmt.js?v=495';
-import { openSheet } from '../ui.js?v=495';
-import { cleanDriverSignature, signedWhen } from '../driversign.js?v=495';
-import { exportRowsAsCSV } from '../csv.js?v=495';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=495';
-import { endpointLabel } from './movements.js?v=495';
-import { layersForStorage } from '../outload.js?v=495';
-import { traceLoads, traceText } from '../trace.js?v=495';
-import { holdings, totalHeld } from '../offfarm.js?v=495';
-import { kindLabel, billTotal } from '../payables.js?v=495';
-import { orderState, STATE_LABEL } from '../orders.js?v=495';
-import { fieldHarvest } from '../harvest.js?v=495';
-import { capacityFor } from '../storagecapacity.js?v=495';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=495';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=495';
+import { db } from '../storage.js?v=496';
+import { num, esc, todayLocal } from '../fmt.js?v=496';
+import { openSheet } from '../ui.js?v=496';
+import { cleanDriverSignature, signedWhen } from '../driversign.js?v=496';
+import { exportRowsAsCSV } from '../csv.js?v=496';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=496';
+import { endpointLabel } from './movements.js?v=496';
+import { layersForStorage } from '../outload.js?v=496';
+import { traceLoads, traceText } from '../trace.js?v=496';
+import { holdings, totalHeld } from '../offfarm.js?v=496';
+import { kindLabel, billTotal } from '../payables.js?v=496';
+import { orderState, STATE_LABEL } from '../orders.js?v=496';
+import { fieldHarvest } from '../harvest.js?v=496';
+import { capacityFor } from '../storagecapacity.js?v=496';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=496';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=496';
 
 function commodityName(commodities, id) {
   return commodities.find((c) => c.id === id)?.name || '';
@@ -27,7 +27,7 @@ function endpointsLabel(entries, ctx) {
 
 export function openExportCsvSheet() {
   const year = db.getCurrentYear();
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = todayLocal();
 
   openSheet('Export CSV', (root) => {
     root.innerHTML = `

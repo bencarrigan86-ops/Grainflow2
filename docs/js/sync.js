@@ -15,15 +15,15 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=495';
-import { stateToRows } from './mapping.js?v=495';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=495';
-import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=495';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=495';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=495';
-import { readAllIn } from './pages.js?v=495';
-import { farmSwitch, farmLevel } from './nav.js?v=495';
-import { LEVEL_TABLES } from './farmswitches.js?v=495';
+import { supabase } from './supabase.js?v=496';
+import { stateToRows } from './mapping.js?v=496';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems, setSending } from './local.js?v=496';
+import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=496';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=496';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=496';
+import { readAllIn } from './pages.js?v=496';
+import { farmSwitch, farmLevel } from './nav.js?v=496';
+import { LEVEL_TABLES } from './farmswitches.js?v=496';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -114,11 +114,15 @@ function chunk(list, size = CHUNK) {
 
 let inFlight = null;
 let timer = null;
+let latestArgs = null;   // how to push again, if something was queued while a push was running
+let lastSent = new Set(); // the outbox entries the push that just finished took
+let lastClean = false;    // that push went through whole, with nothing left waiting on it
 
 /** Queue a push. Debounced, because saving on every keystroke should not mean
  *  a request on every keystroke. */
 export function schedulePush(getState, farmId, role, { delay = 1500, touches = [] } = {}) {
   markDirty(touches);
+  latestArgs = { getState, farmId, role };
   clearTimeout(timer);
   timer = setTimeout(() => { push(getState(), farmId, role); }, delay);
 }
@@ -140,6 +144,8 @@ export async function push(state, farmId, role = 'owner') {
     if (items.length === 0) return { skipped: true };
 
     const sentSeqs = items.map((i) => i.seq);
+    lastSent = new Set(sentSeqs);
+    lastClean = false;
     const dirty = items.filter((i) => i.type === 'dirty');
     const deletes = items.filter((i) => i.type === 'delete');
     // Photos first. A movement_photos row pointing at an object that does not
@@ -175,6 +181,8 @@ export async function push(state, farmId, role = 'owner') {
     }
 
     const rows = selectDirtyRows(stateToRows(state, farmId), state, dirty);
+    // From here the rows are fixed: an edit to something already queued needs a fresh entry, not a skip.
+    setSending(sentSeqs);
     // What each ticket was as it went, so that is what the server's version is remembered against.
     const sentAs = new Map();
     for (const year of Object.values(state?.years || {})) {
@@ -315,6 +323,7 @@ export async function push(state, farmId, role = 'owner') {
     }
     if (stuck.size) return result;
     result.ok = true;
+    lastClean = !result.photosWaiting;
     return result;
   })();
 
@@ -332,7 +341,20 @@ export async function push(state, farmId, role = 'owner') {
     return out;
   } finally {
     inFlight = null;
+    setSending([]);
+    // Anything queued while that push ran was not in it (a second push asked for meanwhile just got the running one).
+    // Look again, once the answer has been dealt with, so it does not wait for the next edit.
+    followUp();
   }
+}
+
+async function followUp() {
+  if (!latestArgs || !navigator.onLine) return;
+  try {
+    if (!lastClean) return;   // a push that failed, or is waiting on a photo, is retried by the usual triggers, not in a loop
+    const left = (await outboxItems()).filter((i) => !isLegacyDirty(i) && !lastSent.has(i.seq));
+    if (left.length) setTimeout(() => { const a = latestArgs; if (a) push(a.getState(), a.farmId, a.role); }, 400);
+  } catch { /* the next edit or the next start looks again */ }
 }
 
 /**

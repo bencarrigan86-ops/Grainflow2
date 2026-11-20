@@ -18,39 +18,39 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=495';
-import { setBrandLogo } from './brand.js?v=495';
+import { hydrate } from './hydrate.js?v=496';
+import { setBrandLogo } from './brand.js?v=496';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
-  loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=495';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=495';
-import { isLegacyDirty } from './dirty.js?v=495';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=495';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=495';
-import { hasDeductions } from './deductions.js?v=495';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=495';
-import { hasHay, hasHayLoad } from './hay.js?v=495';
-import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=495';
-import { todayLocal } from './fmt.js?v=495';
-import { signLoad } from './driversign.js?v=495';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=495';
-import { settleLegs, dedupeLegs } from './legs.js?v=495';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=495';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=495';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=495';
-import { setCommodityOrder } from './commodityorder.js?v=495';
-import { setShrinkSource } from './shrink.js?v=495';
-import { storageLedgerStock } from './derived.js?v=495';
-import { setFarmSwitches, setFarmLevels } from './nav.js?v=495';
-import { readSwitches, readLevels } from './farmswitches.js?v=495';
-import { seasonYY, nextOutloadNo, isPlainNumber, renumberPlan, outloadParts } from './outloadno.js?v=495';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=495';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=495';
-import { schedulePush, pushOnReconnect } from './sync.js?v=495';
-import { hasParts as hasAddressParts } from './address.js?v=495';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=495';
-import { linePayableId } from './ginoffset.js?v=495';
+  loadFarmStamp, setAsideState, clearOutbox, clearState, loadOwner, saveOwner,
+} from './local.js?v=496';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=496';
+import { isLegacyDirty } from './dirty.js?v=496';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=496';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=496';
+import { hasDeductions } from './deductions.js?v=496';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=496';
+import { hasHay, hasHayLoad } from './hay.js?v=496';
+import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=496';
+import { todayLocal } from './fmt.js?v=496';
+import { signLoad } from './driversign.js?v=496';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=496';
+import { settleLegs, dedupeLegs } from './legs.js?v=496';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=496';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=496';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=496';
+import { setCommodityOrder } from './commodityorder.js?v=496';
+import { setShrinkSource } from './shrink.js?v=496';
+import { storageLedgerStock } from './derived.js?v=496';
+import { setFarmSwitches, setFarmLevels } from './nav.js?v=496';
+import { readSwitches, readLevels } from './farmswitches.js?v=496';
+import { seasonYY, nextOutloadNo, isPlainNumber, renumberPlan, outloadParts } from './outloadno.js?v=496';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=496';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=496';
+import { schedulePush, pushOnReconnect } from './sync.js?v=496';
+import { hasParts as hasAddressParts } from './address.js?v=496';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=496';
+import { linePayableId } from './ginoffset.js?v=496';
 
 /**
  * A gin bill the lint buyer pays is settled once lint invoices have taken all of it off: the farm owes the gin nothing, the buyer settles
@@ -78,7 +78,7 @@ function syncGinBills(c, reopen = []) {
     if (p.payer !== 'buyer' || !carried.has(p.id)) continue;
     const e = paid.get(p.id);
     const settled = !!e && e.sum >= Math.round(((Number(p.amount) || 0) + (Number(p.gst) || 0)) * 100) / 100 - 0.05;
-    if (settled && p.status !== 'paid') { p.status = 'paid'; p.paidDate = e.date || new Date().toISOString().slice(0, 10); touch('payable', p.id); }
+    if (settled && p.status !== 'paid') { p.status = 'paid'; p.paidDate = e.date || todayLocal(); touch('payable', p.id); }
     else if (!settled && p.status === 'paid') { p.status = 'unpaid'; p.paidDate = ''; touch('payable', p.id); }
   }
 }
@@ -188,7 +188,7 @@ let role = 'owner';
  * { no, plain }: plain is true when it came from the plain count, which then moves on.
  */
 function nextTicket() {
-  const yy = seasonYY(data.currentYear, new Date().toISOString().slice(0, 10));
+  const yy = seasonYY(data.currentYear, todayLocal());
   // numbers already used in either way: a ticket, or an outload number from before the two were one
   const used = Object.values(data.years || {}).flatMap((y) => y.movements || []).flatMap((m) => [{ outloadNo: m.ticketNo }, { outloadNo: m.outloadNo }]);
   const kept = nextOutloadNo({ series: outloadSeries, yy, movements: used });
@@ -355,12 +355,23 @@ function tombstone(table, id) {
 
 // ---------------------------------------------------------------------------
 
+function throwIfProblems(after) {
+  if (after.ok) return;
+  const err = new Error(
+    `${after.problems.length} problem(s) in that file:\n\n` +
+    after.problems.slice(0, 8).join('\n') +
+    (after.problems.length > 8 ? `\n… and ${after.problems.length - 8} more` : '')
+  );
+  err.problems = after.problems;
+  throw err;
+}
+
 export const db = {
   /**
    * Load the farm. Server first, local copy as the fallback — a phone out of
    * range still opens with everything it had.
    */
-  async init({ farmId: fid, role: r = 'owner' } = {}) {
+  async init({ farmId: fid, role: r = 'owner', userId = null } = {}) {
     farmId = fid;
     role = r;
 
@@ -368,11 +379,24 @@ export const db = {
     // pure function so it can be tested against every combination without a
     // browser or a server — see tests/boot.test.mjs. What used to be here was
     // three lines of implicit policy that quietly preferred the server.
-    const localState = await loadState().catch(() => null);
+    let localState = await loadState().catch(() => null);
     const localFarm = await loadFarmStamp().catch(() => null);
     const allItems = await outboxItems().catch(() => []);
     const legacyCount = allItems.filter(isLegacyDirty).length;
     const pending = allItems.length - legacyCount;
+    // A copy left by someone else who used this device (a shared ute laptop, a lent phone) is not this person's to open:
+    // it holds the farm as that person saw it, prices and bank details included. With nothing owed it is dropped and the
+    // server is asked, as for a new device. (Offline it stays: there is no other copy to open, and signing in took signal.)
+    // A copy with unsent work is never touched: that work belongs to the farm, and it is sent when the farm's own person signs in.
+    if (userId && localState && pending === 0 && navigator.onLine) {
+      const localUser = await loadOwner().catch(() => null);
+      if (localUser && localUser !== userId) {
+        console.info('The copy on this device was left by someone else; it is dropped and the server is read instead.');
+        await clearState().catch(() => {});
+        localState = null;
+      }
+    }
+    if (userId) saveOwner(userId).catch(() => {});
 
     // Reachable and reachable-but-empty are different answers, and boot.js
     // needs both: an account with no seasons is a real "this farm is new",
@@ -1087,7 +1111,7 @@ export const db = {
     if (!src || src === dst) return { made: [], skipped: picks.length };
     const made = [];
     let skipped = 0;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
     for (const pick of picks) {
       const sale = (src.sales || []).find((s) => s.id === pick.saleId);
       const wasName = (src.commodities || []).find((c) => c.id === sale?.commodityId)?.name;
@@ -1263,7 +1287,7 @@ export const db = {
     const c = current();
     const onInvoice = new Set();
     for (const inv of c.invoices || []) for (const l of inv.lines || []) if (l.movementId) onInvoice.add(l.movementId);
-    const yy = seasonYY(data.currentYear, new Date().toISOString().slice(0, 10));
+    const yy = seasonYY(data.currentYear, todayLocal());
     const inSeries = (m) => { const p = outloadParts(m.ticketNo); return !!p && p.yy === yy && p.series === Number(outloadSeries); };
     const imported = (c.movements || []).filter((m) => m.sourceRef && isPlainNumber(m.ticketNo));
     const mine = (c.movements || []).filter(inSeries);   // already numbered in this person's series this season
@@ -1336,7 +1360,7 @@ export const db = {
     if (idx < 0) return;
     c.invoices[idx] = {
       ...c.invoices[idx], status,
-      paidDate: status === 'paid' ? new Date().toISOString().slice(0, 10) : null,
+      paidDate: status === 'paid' ? todayLocal() : null,
     };
     touch('invoice', id);
     settleGin();
@@ -1539,7 +1563,7 @@ export const db = {
    * Nothing is stored until the load is saved with it. Null when this person has no digit yet.
    */
   nextOutloadNo() {
-    const yy = seasonYY(data.currentYear, new Date().toISOString().slice(0, 10));
+    const yy = seasonYY(data.currentYear, todayLocal());
     const all = Object.values(data.years || {}).flatMap((y) => y.movements || []);
     return nextOutloadNo({ series: outloadSeries, yy, movements: all });
   },
@@ -1580,17 +1604,9 @@ export const db = {
    * of. Better to refuse the file than to import a season that looks fine.
    */
   importJSON(json) {
+    if (role !== 'owner') throw new Error('Only the farm owner can restore a backup.');   // it replaces the farm's records, as Reset does
     const { state, after, remapped, filled } = prepareImport(json);
-
-    if (!after.ok) {
-      const err = new Error(
-        `${after.problems.length} problem(s) in that file:\n\n` +
-        after.problems.slice(0, 8).join('\n') +
-        (after.problems.length > 8 ? `\n… and ${after.problems.length - 8} more` : '')
-      );
-      err.problems = after.problems;
-      throw err;
-    }
+    throwIfProblems(after);
 
     const retired = reconcileImport(data, state, tombstone);
 
@@ -1599,6 +1615,19 @@ export const db = {
     touch('all');
     persist();
     return { remapped, filled, retired, stats: after.stats };
+  },
+
+  /**
+   * What importJSON would do, without doing it: the counts the file holds and, for each kind of record, how many on this
+   * device it would retire (in a season the file also holds, but not in the file). Lets the person see the cost first.
+   */
+  previewImport(json) {
+    if (role !== 'owner') throw new Error('Only the farm owner can restore a backup.');
+    const { state, after } = prepareImport(json);
+    throwIfProblems(after);
+    const willRetire = {};
+    reconcileImport(data, state, (table) => { willRetire[table] = (willRetire[table] || 0) + 1; });
+    return { stats: after.stats, willRetire };
   },
 
   resetAll() {

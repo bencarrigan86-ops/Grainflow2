@@ -32,10 +32,10 @@ export function pct(n, dp = 0) {
   return `${num(n * 100, dp)}%`;
 }
 
+// Escapes the quote marks too: esc() is used inside attribute values (value="${esc(x)}"), and a name holding a quote
+// could otherwise close the attribute and add one of its own (an onfocus that runs script).
 export function esc(s) {
-  const d = document.createElement('div');
-  d.textContent = s ?? '';
-  return d.innerHTML;
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 /**
@@ -66,6 +66,13 @@ export function dmyOfDate(date, full = false) {
 export function todayLocal() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** A 'YYYY-MM-DD' date and so many whole days on, worked on the calendar and not through any time zone. */
+export function addDaysTo(iso, days) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+  if (!m) return '';
+  return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + Math.round(Number(days) || 0))).toISOString().slice(0, 10);
 }
 
 /** "30-01-2026" for a 'YYYY-MM-DD' date, as it is written on paperwork. Anything else comes back as it was. */

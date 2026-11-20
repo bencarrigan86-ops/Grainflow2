@@ -11,10 +11,11 @@
 // hydration has to produce a working state object with those parts simply
 // absent. Throwing there would mean the app only runs for owners.
 
-import { supabase } from './supabase.js?v=495';
-import { rowsToState } from './mapping.js?v=495';
-import { stampBase } from './ticketmerge.js?v=495';
-import { readAllPages } from './pages.js?v=495';
+import { supabase } from './supabase.js?v=496';
+import { rowsToState } from './mapping.js?v=496';
+import { stampBase } from './ticketmerge.js?v=496';
+import { readAllPages } from './pages.js?v=496';
+import { isDenial } from './denial.js?v=496';
 
 // Scoped by farm_id; the child tables hang off their parents. Everything a push writes has to be read back
 // here too (tests/hydrate.test.mjs checks it): movement_photos was missing, so photos were uploaded and then
@@ -43,8 +44,10 @@ async function fetchTable(table, farmId, role) {
   const { data, error } = table === 'farm_bank' ? await build() : await readAllPages(build);
 
   if (error) {
-    // Denied is an expected outcome for the restricted tables, not a fault.
-    return { table, rows: [], denied: true, message: error.message };
+    // Denied is an expected outcome for the restricted tables, not a fault. A read that failed for any other reason
+    // (no signal, a timeout, a server error) is NOT an empty table: it says nothing about what the server holds.
+    if (isDenial(error)) return { table, rows: [], denied: true, message: error.message };
+    return { table, rows: [], denied: false, failed: true, message: error.message };
   }
   return { table, rows: data ?? [], denied: false };
 }
@@ -56,6 +59,16 @@ async function fetchTable(table, farmId, role) {
  */
 export async function fetchFarmRows(farmId, role = null) {
   const results = await Promise.all(FARM_SCOPED.map((t) => fetchTable(t, farmId, role)));
+
+  // One table that could not be read leaves the farm incomplete, and an incomplete farm must never be taken for the
+  // server's copy (a missing sale_terms table would show every contract at $0, and the next save would send that
+  // back). Callers keep the copy on the device when this throws.
+  const failed = results.filter((r) => r.failed);
+  if (failed.length) {
+    const err = new Error(`Could not read ${failed.map((r) => r.table).join(', ')} from the server: ${failed[0].message}`);
+    err.failedTables = failed.map((r) => r.table);
+    throw err;
+  }
 
   const rows = {};
   const denied = [];

@@ -3,7 +3,7 @@
 // Pure: each function returns an <svg> string. The figures are illustrations of how a part of the app works, with made-up
 // numbers, not live data. The wording they carry is checked by tests/help.test.mjs along with the rest of the guide.
 
-import { TABS_BY_ROLE } from './nav.js?v=495';
+import { TABS_BY_ROLE } from './nav.js?v=496';
 
 const W = 340;
 const C = {
@@ -13,7 +13,7 @@ const C = {
 };
 const TAB_LABEL = { position: 'Position', production: 'Production', sales: 'Sales', movement: 'Movement', storage: 'Storage', reports: 'Reports' };
 
-const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const f1 = (n) => Math.round(n * 10) / 10;
 
 const svg = (h, label, body) => `<svg viewBox="0 0 ${W} ${h}" role="img" aria-label="${esc(label)}" style="width:100%;height:auto;display:block;font-family:inherit">${body}</svg>`;

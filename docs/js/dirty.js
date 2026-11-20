@@ -182,3 +182,25 @@ export function pushRowsFor(table, role, list) {
   if (table === 'input_stock' && role === 'farm_worker') return list.filter((r) => r.move_type === 'use' || r.move_type === 'adjust');
   return list;
 }
+
+/**
+ * Which of these touches need a new outbox entry?
+ *
+ * One entry stands for a thing touched twice, so a touch is skipped when the same thing is already queued — unless that
+ * entry is one a running push has taken the rows for (`sending`, a set of sequence numbers). The rows that went up are the
+ * copy from before this edit, and the push clears its entries when it ends; an edit that was skipped because of one of them
+ * would never be sent, and the next refresh from the server would swap it away.
+ */
+export function touchesToQueue(entries = [], sending = new Set(), touches = []) {
+  const have = new Set(entries
+    .filter((o) => o.type === 'dirty' && o.kind && !sending.has(o.seq))
+    .map((o) => `${o.kind}:${o.id ?? ''}`));
+  const out = [];
+  for (const t of touches) {
+    const key = `${t.kind}:${t.id ?? ''}`;
+    if (have.has(key)) continue;
+    have.add(key);
+    out.push(t);
+  }
+  return out;
+}

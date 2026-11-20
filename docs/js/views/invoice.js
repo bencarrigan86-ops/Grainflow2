@@ -1,21 +1,21 @@
-import { db } from '../storage.js?v=495';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=495';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=495';
-import { addressLinesOf } from '../address.js?v=495';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=495';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=495';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=495';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=495';
-import { docBandHTML } from '../docband.js?v=495';
-import { deductionNotes } from '../deductions.js?v=495';
-import { ginOffsetOptions, ginOffsetLine, linePayableId } from '../ginoffset.js?v=495';
-import { cottonInvoiceModel } from '../cottoninvoice.js?v=495';
-import { openMovementSheet } from './movements.js?v=495';
-import { invoicePdf, adjustmentPdf } from '../invoicepdf.js?v=495';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=495';
-import { viewPdf } from '../pdfview.js?v=495';
-import { splitContact } from '../buyercontact.js?v=495';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=495';
+import { db } from '../storage.js?v=496';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=496';
+import { num, money, esc, dmy, todayLocal, addDaysTo } from '../fmt.js?v=496';
+import { addressLinesOf } from '../address.js?v=496';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=496';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=496';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=496';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=496';
+import { docBandHTML } from '../docband.js?v=496';
+import { deductionNotes } from '../deductions.js?v=496';
+import { ginOffsetOptions, ginOffsetLine, linePayableId } from '../ginoffset.js?v=496';
+import { cottonInvoiceModel } from '../cottoninvoice.js?v=496';
+import { openMovementSheet } from './movements.js?v=496';
+import { invoicePdf, adjustmentPdf } from '../invoicepdf.js?v=496';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=496';
+import { viewPdf } from '../pdfview.js?v=496';
+import { splitContact } from '../buyercontact.js?v=496';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=496';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -341,8 +341,9 @@ function openInvoiceBuilderSheet(sale, existingInvoice) {
       const totalPayable = subtotalExGST + gst - levies - freightTotal - ginTotal;
 
       const business = db.getBusinessDetails();
-      const today = new Date().toISOString().slice(0, 10);
-      const dueDate = new Date(Date.now() + (Number(business.paymentTermsDays) || 0) * 86400000).toISOString().slice(0, 10);
+      // the farm's own calendar day (the UTC day is yesterday until about 10-11am in Australia, which can be the wrong financial year)
+      const today = todayLocal();
+      const dueDate = addDaysTo(today, Number(business.paymentTermsDays) || 0);
       if (existingInvoice) {
         // an invoice that lost its dates (see mapping.js) gets them back when it is worked out again
         db.updateInvoice(existingInvoice.id, {

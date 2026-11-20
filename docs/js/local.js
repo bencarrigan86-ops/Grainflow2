@@ -15,6 +15,7 @@
 //             leaves no trace for a later upsert to find.
 
 import { openDB } from 'https://esm.sh/idb@8';
+import { touchesToQueue } from './dirty.js?v=496';
 
 const DB_NAME = 'grainflow';
 const DB_VERSION = 1;
@@ -67,6 +68,25 @@ export async function loadFarmStamp() {
   return (await d.get('state', 'farm')) ?? null;
 }
 
+/** Which signed-in person the saved copy was last used by (null for a copy saved before this was kept). */
+export async function loadOwner() {
+  const d = await db();
+  return (await d.get('state', 'user')) ?? null;
+}
+export async function saveOwner(userId) {
+  const d = await db();
+  await d.put('state', userId ?? null, 'user');
+}
+
+/** Take the saved copy off the device, but only when nothing on it is still owed to the server. Returns whether it did. */
+export async function clearStateIfSettled() {
+  const d = await db();
+  if ((await d.count('outbox')) > 0) return false;
+  await d.delete('state', 'current');
+  await d.delete('state', 'user');
+  return true;
+}
+
 export async function clearState() {
   const d = await db();
   await d.delete('state', 'current');
@@ -103,18 +123,19 @@ export async function loadAsideState() {
  * everything, so a device that was behind sent its stale copy of rows it had
  * never edited, over the top of newer ones. See dirty.js for the kinds.
  *
- * Touching the same thing twice queues it once.
+ * Touching the same thing twice queues it once, EXCEPT when the first entry is already being sent: the row that
+ * went up is the copy from before this edit, and the push clears its entry when it finishes, so an edit made
+ * meanwhile needs an entry of its own or it is never sent (and the next refresh swaps it away).
  */
+let sending = new Set();
+/** The outbox entries a running push has taken the rows for (an empty list when none is running). */
+export function setSending(seqs = []) { sending = new Set(seqs); }
+
 export async function markDirty(touches = []) {
   if (!touches.length) return;
   const d = await db();
-  const have = new Set((await d.getAll('outbox'))
-    .filter((o) => o.type === 'dirty' && o.kind)
-    .map((o) => `${o.kind}:${o.id ?? ''}`));
-  for (const t of touches) {
-    const key = `${t.kind}:${t.id ?? ''}`;
-    if (have.has(key)) continue;
-    have.add(key);
+  // read after the await: a push that took its rows while this was waiting must still be seen
+  for (const t of touchesToQueue(await d.getAll('outbox'), sending, touches)) {
     await d.add('outbox', { type: 'dirty', kind: t.kind, id: t.id ?? null, at: Date.now() });
   }
 }

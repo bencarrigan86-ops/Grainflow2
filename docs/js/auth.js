@@ -9,10 +9,11 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase, isolatedClient } from './supabase.js?v=495';
-import { resetRedirect, accountGone } from './recovery.js?v=495';
-import { pickMembership, recallMembership, farmChoices } from './membership.js?v=495';
-import { newToken, expiryFrom } from './invites.js?v=495';
+import { supabase, isolatedClient } from './supabase.js?v=496';
+import { resetRedirect, accountGone } from './recovery.js?v=496';
+import { pickMembership, recallMembership, farmChoices } from './membership.js?v=496';
+import { newToken, expiryFrom } from './invites.js?v=496';
+import { clearStateIfSettled } from './local.js?v=496';
 
 /** The signed-in user, or null. */
 export async function getUser() {
@@ -229,6 +230,9 @@ export async function sessionStillValid() {
 
 export async function signOut() {
   await supabase.auth.signOut();
+  // The farm saved on this device (prices, invoices, bank details) must not wait there for whoever signs in next.
+  // Anything still unsent stays, because it has not reached the server and is the farm's work.
+  await clearStateIfSettled().catch(() => {});
 }
 
 // ---------------------------------------------------------------------------

@@ -7,7 +7,7 @@
 //
 // Pure. The stack itself comes from outload.js (layersForStorage).
 
-import { STANDARDS } from './grades.js?v=495';
+import { STANDARDS } from './grades.js?v=496';
 
 export const NO_GRADE = 'No grade';
 const NO_GRADE_COLOR = '#9aa3ad';
@@ -103,7 +103,7 @@ export function cleanBands(rows) {
 /** What the layers add up to, in tonnes. */
 export const layersTotal = (rows) => (rows || []).reduce((a, r) => a + (Number(r?.tons) || 0), 0);
 
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /**
  * A silo with its layers in it, as SVG markup: grain from the bottom up, each layer

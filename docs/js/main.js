@@ -1,38 +1,38 @@
-import { db } from './storage.js?v=495';
-import { supabase, ENV } from './supabase.js?v=495';
-import { installErrorLog } from './supportinfo.js?v=495';
-import { loadMySeries, rememberedSeries } from './outloadseries.js?v=495';
-import { initTheme } from './theme.js?v=495';
+import { db } from './storage.js?v=496';
+import { supabase, ENV } from './supabase.js?v=496';
+import { installErrorLog } from './supportinfo.js?v=496';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=496';
+import { initTheme } from './theme.js?v=496';
 initTheme();
-import { renderPosition } from './views/position.js?v=495';
-import { renderProduction } from './views/production.js?v=495';
-import { renderReports } from './views/reports.js?v=495';
-import { renderSales } from './views/sales.js?v=495';
-import { renderMovements } from './views/movements.js?v=495';
-import { renderStorage } from './views/storage.js?v=495';
-import { renderSettings } from './views/settings.js?v=495';
-import { renderLogin } from './views/login.js?v=495';
-import { renderNewPassword } from './views/newpassword.js?v=495';
-import { isRecovering, endRecovery, takeResetExpired, noteRecoveryLink } from './recovery.js?v=495';
-import { RESET_EXPIRED } from './recovery.js?v=495';
-import { renderAccount } from './views/account.js?v=495';
-import { renderHelp } from './views/help.js?v=495';
+import { renderPosition } from './views/position.js?v=496';
+import { renderProduction } from './views/production.js?v=496';
+import { renderReports } from './views/reports.js?v=496';
+import { renderSales } from './views/sales.js?v=496';
+import { renderMovements } from './views/movements.js?v=496';
+import { renderStorage } from './views/storage.js?v=496';
+import { renderSettings } from './views/settings.js?v=496';
+import { renderLogin } from './views/login.js?v=496';
+import { renderNewPassword } from './views/newpassword.js?v=496';
+import { isRecovering, endRecovery, takeResetExpired, noteRecoveryLink } from './recovery.js?v=496';
+import { RESET_EXPIRED } from './recovery.js?v=496';
+import { renderAccount } from './views/account.js?v=496';
+import { renderHelp } from './views/help.js?v=496';
 import {
   getSession, getMembership, sessionStillValid, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=495';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=495';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=495';
-import { esc, todayLocal } from './fmt.js?v=495';
-import { isSheetOpen, notify, toast } from './ui.js?v=495';
-import { describeMerges } from './ticketmerge.js?v=495';
-import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=495';
-import { addDays } from './fumigation.js?v=495';
-import { watchLists } from './band.js?v=495';
-import { APP_VERSION } from './version.js?v=495';
-import { startUpdateCheck } from './updatecheck.js?v=495';
-import { emailFromTrialHash } from './trialtext.js?v=495';
-import { installWatch, requestPersistence } from './pwa.js?v=495';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=495';
+} from './auth.js?v=496';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=496';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=496';
+import { esc, todayLocal } from './fmt.js?v=496';
+import { isSheetOpen, notify, toast } from './ui.js?v=496';
+import { describeMerges } from './ticketmerge.js?v=496';
+import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=496';
+import { addDays } from './fumigation.js?v=496';
+import { watchLists } from './band.js?v=496';
+import { APP_VERSION } from './version.js?v=496';
+import { startUpdateCheck } from './updatecheck.js?v=496';
+import { emailFromTrialHash } from './trialtext.js?v=496';
+import { installWatch, requestPersistence } from './pwa.js?v=496';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=496';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -461,7 +461,7 @@ async function boot() {
   app.innerHTML = '<div class="empty">Loading your farm…</div>';
   try {
     currentRole = membership.role;
-    await db.init({ farmId: membership.farmId, role: membership.role });
+    await db.init({ farmId: membership.farmId, role: membership.role, userId: session?.user?.id ?? null });
     // this person's digit for outload numbers: what the phone last knew at once, then the server's word when it can be asked
     const myId = session?.user?.id;
     db.setOutloadSeries(rememberedSeries(myId, membership.farmId));
