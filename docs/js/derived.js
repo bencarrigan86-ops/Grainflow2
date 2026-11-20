@@ -1,13 +1,16 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=485';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=485';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=485';
-import { isGinContract } from './cottonkinds.js?v=485';
-import { ginTakenOff } from './ginoffset.js?v=485';
-import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=485';
-import { commoditySort } from './commodityorder.js?v=485';
-import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=485';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=494';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=494';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=494';
+import { carryAdjustment, carryRateFor } from './carry.js?v=494';
+import { lateAdjustment, lateDiscountFor } from './cottonlate.js?v=494';
+import { isGinContract } from './cottonkinds.js?v=494';
+import { ginTakenOff } from './ginoffset.js?v=494';
+import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=494';
+import { commoditySort } from './commodityorder.js?v=494';
+import { shrinkInSilo, shrinkForCommodity } from './shrink.js?v=494';
+import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=494';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -74,7 +77,8 @@ export function movementsForEndpoint(type, id, movements) {
 export function movementNetForStorage(storageId, movements) {
   const into = (movements || []).reduce((s, m) => s + toTonsForEndpoint(m, 'silo', storageId), 0);
   const outOf = (movements || []).reduce((s, m) => s + fromTonsForEndpoint(m, 'silo', storageId), 0);
-  return into - outOf;
+  // grain put in from a paddock weighs less than it did on the truck: the commodity's shrink comes off what goes in
+  return into - outOf - shrinkInSilo(storageId, movements);
 }
 
 /**
@@ -112,11 +116,15 @@ export function saleEconomics(sale, movements = [], invoices = []) {
   const oil = oilAdjustment(sale, movements);
   // and a load can carry deductions of its own for faults the contract does not price
   const deductions = deductionAdjustment(sale, movements);
+  // and carry: the monthly rate for grain left on the farm, added to the price of each load by the month it was delivered
+  const carry = carryAdjustment(sale, movements);
+  // and cotton delivered after the delivery finish, which takes a discount by the month it is late
+  const late = lateAdjustment(sale, movements);
   // and for cotton, the gin invoices the buyer of the lint pays, which are taken off this contract's lint invoices (the lines the invoices
   // carry, passed in). That is a deduction from the payment at the foot of the invoice, not part of the price: the contract's value
   // stays what the lint is worth, and `netPayment` is what the buyer actually pays after the gin comes off.
   const gin = ginTakenOff(invoices);
-  const totalValue = tons * priceExFarm - ginning + grades.total + oil.total + deductions.total;
+  const totalValue = tons * priceExFarm - ginning + grades.total + oil.total + deductions.total + carry.total + late.total;
   const netPayment = totalValue - gin.total;
   const tonsDue = tons - tonsDelivered;
 
@@ -129,7 +137,7 @@ export function saleEconomics(sale, movements = [], invoices = []) {
   return {
     netOfFreight, levies, priceExFarm, ginning, totalValue, netPayment, tonsDue,
     gradeAdjustment: grades.total, gradeLines: grades.lines, gradeOtherTons: grades.otherTons,
-    oilAdjustment: oil.total, oilSummary: oil, deductionAdjustment: deductions.total, deductionLoads: deductions.loads, ginDeduction: gin.total, ginInvoices: gin.lines,
+    oilAdjustment: oil.total, oilSummary: oil, deductionAdjustment: deductions.total, carryAdjustment: carry.total, carryLoads: carry.loads, lateAdjustment: late.total, lateLoads: late.loads, deductionLoads: deductions.loads, ginDeduction: gin.total, ginInvoices: gin.lines,
     manualDelivered, movementDelivered, tonsDelivered,
     toleranceTons, minTons, maxTons, isFull, isOverDelivered, tonsToFill, tonsRemainingMax,
   };
@@ -163,7 +171,7 @@ export function invoiceLineItems(sale, movements, freightRates = {}) {
     .map((m) => {
       const t = toTonsForEndpoint(m, 'sale', sale.id);
       // each load at its own grade's rate, when the contract lists several
-      const loadRate = rate + gradeRateFor(sale, m) + oilRateFor(sale, m) + deductionRateFor(m);
+      const loadRate = rate + gradeRateFor(sale, m) + oilRateFor(sale, m) + deductionRateFor(m) + carryRateFor(sale, m) - lateDiscountFor(sale, m);
       const own = freightRates[m.id];
       const freightRate = !freightOnInvoice(sale) ? 0
         : own === undefined || own === null || own === '' || !Number.isFinite(Number(own)) ? contractFreight : Number(own);
@@ -513,7 +521,9 @@ export function position(commodities, fields, sales, movements = []) {
     const retainedSeed = Number(c.retainedSeed) || 0;
     // hay used on the farm leaves the stock without being sold
     const usedTons = usedOnFarmTons(c.id, movements);
-    const unsoldTons = opening + p.tons - s.tons - retainedSeed - usedTons;
+    // and the shrink on what went into silos
+    const shrinkTons = shrinkForCommodity(c, movements);
+    const unsoldTons = opening + p.tons - s.tons - retainedSeed - usedTons - shrinkTons;
     const mtmPrice = Number(c.mtmPrice) || 0;
     const unsoldValue = unsoldTons * mtmPrice;
     // What the opening stock was worth when last season closed. That income was
@@ -541,6 +551,7 @@ export function position(commodities, fields, sales, movements = []) {
       openingValue,
       retainedSeed,
       usedTons,
+      shrinkTons,
       strawTons: p.strawTons,
       strawArea: p.strawArea,
       unsoldTons,
@@ -600,7 +611,7 @@ export function positionAtYield(rows, adjustPct = 0) {
   const k = 1 + (Number(adjustPct) || 0) / 100;
   return rows.map((r) => {
     const productionTons = r.productionTons * k;
-    const unsoldTons = r.opening + productionTons - r.soldTons - r.retainedSeed - (r.usedTons || 0);
+    const unsoldTons = r.opening + productionTons - r.soldTons - r.retainedSeed - (r.usedTons || 0) - (r.shrinkTons || 0) * k;
     const unsoldValue = unsoldTons * r.mtmPrice;
     // a cotton crop that comes in lighter or heavier has more or less seed and ginning with it
     const cotton = r.cotton ? cottonComponents(r.commodity.cotton, r.opening + productionTons, r.cotton.ginned) : null;

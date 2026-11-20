@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=485';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=485';
-import { commodityClass } from '../commoditycolor.js?v=485';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=485';
-import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=485';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=485';
-import { withholdingClash } from '../fumigation.js?v=485';
-import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=485';
-import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=485';
-import { cleanStrokes } from '../signature.js?v=485';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=485';
-import { compressAndStampImage } from '../img.js?v=485';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=485';
-import { specText, extraSpecKey } from '../outload.js?v=485';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=485';
-import { pickableSilos } from '../silopick.js?v=485';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=485';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=485';
-import { activeSales } from '../paidsales.js?v=485';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=485';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=485';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=485';
-import { nowTime } from '../loadreport.js?v=485';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=485';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=485';
-import { openGinRunSheet } from './ginrun.js?v=485';
-import { openModuleMoveSheet } from './modulemove.js?v=485';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=485';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=485';
+import { db } from '../storage.js?v=494';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=494';
+import { commodityClass } from '../commoditycolor.js?v=494';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=494';
+import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=494';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=494';
+import { withholdingClash } from '../fumigation.js?v=494';
+import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=494';
+import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=494';
+import { cleanStrokes } from '../signature.js?v=494';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=494';
+import { compressAndStampImage } from '../img.js?v=494';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=494';
+import { specText, extraSpecKey } from '../outload.js?v=494';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=494';
+import { pickableSilos } from '../silopick.js?v=494';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=494';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=494';
+import { activeSales } from '../paidsales.js?v=494';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=494';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=494';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=494';
+import { nowTime } from '../loadreport.js?v=494';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=494';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=494';
+import { openGinRunSheet } from './ginrun.js?v=494';
+import { openModuleMoveSheet } from './modulemove.js?v=494';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=494';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=494';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -598,7 +598,7 @@ export function openMovementSheet(existing, template) {
           ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
           ${field({ label: "Driver's phone", id: 'driverPhone', type: 'tel', value: src?.driverPhone, placeholder: '0412 345 678' })}
         </div>
-        <div class="field" style="margin-top:-6px"><div class="hint">Shown on the load ticket. Company and phone fill in from the freight order and the driver's last load.</div></div>
+        <div class="field" style="margin-top:-6px"><div class="hint">Shown on the load ticket. A truck carted before fills in its company, driver and phone; the freight order fills the company.</div></div>
         <div class="grid-2">
           ${field({ label: 'Delivery no.', id: 'extTicket', value: existing?.externalTicketNo, placeholder: 'On their ticket' })}
           ${field({ label: 'Manual docket no.', id: 'manualDocket', value: existing?.manualDocketNo, placeholder: 'Our paper docket' })}
@@ -815,6 +815,24 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
       ph.value = last ? last.driverPhone : ''; phoneAuto = ph.value;
     });
     let companyAuto = '';   // the same for the transport company, which is the freight order's carrier
+    // a truck is remembered: picking a rego fills the company and driver (and the driver's phone) from the latest load of that truck,
+    // into blank boxes or ones it filled itself. What was typed stays.
+    let driverAuto = '';
+    root.querySelector('#truckRego')?.addEventListener('change', () => {
+      const key = String(getVal(root, 'truckRego') || '').replace(/\s+/g, '').toLowerCase();
+      if (!key) return;
+      const last = [...movements].filter((m) => String(m.truckRego || '').replace(/\s+/g, '').toLowerCase() === key && (m.truckCompany || m.driver))
+        .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || (Number(b.ticketNo) || 0) - (Number(a.ticketNo) || 0))[0];
+      if (!last) return;
+      const co = root.querySelector('#truckCompany');
+      if (co && last.truckCompany && (co.value === '' || co.value === companyAuto)) { co.value = last.truckCompany; companyAuto = co.value; }
+      const dr = root.querySelector('#driver');
+      if (dr && last.driver && (dr.value === '' || dr.value === driverAuto)) {
+        dr.value = last.driver; driverAuto = dr.value;
+        const ph = root.querySelector('#driverPhone');
+        if (ph && last.driverPhone && (ph.value === '' || ph.value === phoneAuto)) { ph.value = last.driverPhone; phoneAuto = ph.value; }
+      }
+    });
     const applyFreightDestination = (saleId) => {
       const el = root.querySelector('#destination');
       if (!el) return;

@@ -4,8 +4,8 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=485';
-import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=485';
+import { ROLES, canOpen } from './nav.js?v=494';
+import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=494';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -207,6 +207,7 @@ export const GUIDES = [
   },
   {
     id: 'paddocks', title: 'Paddocks and production', roles: ['owner', 'manager', 'bookkeeper', 'farm_worker'], open: 'production', openLabel: 'Open Production',
+    shot: 'help/field.jpg', shotAlt: 'The Add field form: name, farm, crop, area, yield and the folds below',
     blurb: 'Area, crop, yield, fertiliser and seed for each paddock.',
     steps: [
       'On Production, tap + to add a paddock: name, farm, hectares and crop. Tick Double crop if it was sown straight after another crop.',
@@ -234,12 +235,13 @@ export const GUIDES = [
   },
   {
     id: 'storage', title: 'Silos and bunkers', roles: ['owner', 'manager', 'farm_worker'], open: 'storage', openLabel: 'Open Storage',
-    shot: 'help/storage.jpg', shotAlt: 'The Storage screen: search, sort and More, and two silos holding several grades each, shown as coloured bars',
+    shot: 'help/storage-form.jpg', shotAlt: 'The Add storage form: silo, bunker, off farm or yard, with its name, commodity and opening stock',
     blurb: 'What is in each store and how full it is.',
     steps: [
       'On Storage, tap + to add a silo or a bunker.',
       'Enter its volume in cubic metres. The tonnes it holds come from the volume and the commodity\'s test weight. Or measure it instead.',
       'Set what is in it and its opening stock. Loads move the stock.',
+      'Shrink: give the commodity a Shrink in silos % in Settings (normally 0.7). It comes off grain going from a paddock into a silo, and shows on Position as its own line.',
     ],
     tips: [
       'Search, Sort by and More (measured view, grouping, the Silo calculator) are at the top.',
@@ -248,6 +250,7 @@ export const GUIDES = [
   },
   {
     id: 'inputs', title: 'Inputs and spraying', roles: [...OFFICE, 'farm_worker'], open: 'production', openLabel: 'Open Production',
+    shot: 'help/inputs.jpg', shotAlt: 'The Bought form for seed, fertiliser, fuel and chemical',
     blurb: 'Seed, fertiliser, fuel and chemical on hand.',
     steps: [
       'On Production, open Inputs and spraying.',
@@ -259,6 +262,7 @@ export const GUIDES = [
   },
   {
     id: 'spray', title: 'Spray requests', roles: ['owner', 'manager'], open: 'production', openLabel: 'Open Production',
+    shot: 'help/spray.jpg', shotAlt: 'The New spray request form: who and when, the paddocks by property, and the products',
     blurb: 'A spray form and a map for the contractor.',
     steps: [
       'On the farm map tick the paddocks, then Spray request. Or open Spray requests under Inputs and spraying on Production.',
@@ -289,7 +293,7 @@ export const GUIDES = [
   },
   {
     id: 'contracts', title: 'Contracts', roles: ['owner', 'manager', 'bookkeeper'], open: 'sales', openLabel: 'Open Sales',
-    shot: 'help/sales.jpg', shotAlt: 'The Sales screen with a card for each contract',
+    shot: 'help/contract.jpg', shotAlt: 'The Add sale form: buyer, date, commodity, tonnes and price',
     blurb: 'Each sale: buyer, tonnes, price and terms.',
     steps: [
       'On Sales, tap + (the owner or bookkeeper adds contracts). Enter the buyer, commodity, grade, tonnes and price.',
@@ -300,11 +304,12 @@ export const GUIDES = [
     ],
     tips: [
       'More has Paid contracts and Bring in last season\'s contracts. Delivery option feeds Sales timeline and the cash forecast. Type the buyer\'s address in its parts so documents fill in.',
-      'Carry ($/t/month) and Carry starts print on the confirmation of sale. They are not added to invoices, so add the carry as an extra line when you invoice.',
+      'Carry (grain in tonnes) is added to the price of each load by the month it is delivered: the start month counts one month, then one more each month. Cotton has no carry: a lint sale has a Late delivery discount per bale, by month late.',
     ],
   },
   {
     id: 'orders', title: 'Orders, deliveries and bills', roles: OFFICE, open: 'sales', openLabel: 'Open Sales',
+    shot: 'help/order.jpg', shotAlt: 'The Add a grain order form',
     blurb: 'What is still to deliver, and what is owed.',
     steps: [
       'Grain orders and Freight orders are on Sales. A freight order can be signed before it goes to the carrier.',
@@ -322,8 +327,9 @@ export const GUIDES = [
     steps: [
       'On Movement, tap + Add load.',
       'Choose the commodity, where it came from and where it is going, with the tonnes.',
-      'Add the truck and driver, and gross and tare if it was weighed.',
+      'Add the truck and driver, and gross and tare if it was weighed. A truck carted before fills in its company, driver and phone.',
       'Save. The load gets the next ticket number.',
+      'The driver can sign on the phone (Driver signature). Open the load and tap Send this load as a PDF to text or email the ticket, signature on it, as the load docket.',
     ],
     tips: [
       'It works with no signal. The dot beside the season shows what is still to send.',
@@ -430,7 +436,7 @@ export const GUIDES = [
     blurb: 'Carry the farm over and keep the old season\'s records.',
     steps: [
       'Tap the season at the top right, then Start new year and enter the label, such as 2027.',
-      'Paddocks, outlines, silos and commodities carry over. Yields, contracts, loads and overheads start empty.',
+      'Paddocks, outlines, silos and commodities carry over, and a silo still holding grain opens with it. Yields, contracts, loads and overheads start empty.',
       'The old season stays: pick it in the Viewing box. On Sales, More, Bring in last season\'s contracts carries unfinished ones across.',
     ],
     tips: [

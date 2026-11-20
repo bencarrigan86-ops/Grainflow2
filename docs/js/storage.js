@@ -18,37 +18,39 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=485';
-import { setBrandLogo } from './brand.js?v=485';
+import { hydrate } from './hydrate.js?v=494';
+import { setBrandLogo } from './brand.js?v=494';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=485';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=485';
-import { isLegacyDirty } from './dirty.js?v=485';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=485';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=485';
-import { hasDeductions } from './deductions.js?v=485';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=485';
-import { hasHay, hasHayLoad } from './hay.js?v=485';
-import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=485';
-import { todayLocal } from './fmt.js?v=485';
-import { signLoad } from './driversign.js?v=485';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=485';
-import { settleLegs, dedupeLegs } from './legs.js?v=485';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=485';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=485';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=485';
-import { setCommodityOrder } from './commodityorder.js?v=485';
-import { setFarmSwitches, setFarmLevels } from './nav.js?v=485';
-import { readSwitches, readLevels } from './farmswitches.js?v=485';
-import { seasonYY, nextOutloadNo, isPlainNumber, renumberPlan, outloadParts } from './outloadno.js?v=485';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=485';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=485';
-import { schedulePush, pushOnReconnect } from './sync.js?v=485';
-import { hasParts as hasAddressParts } from './address.js?v=485';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=485';
-import { linePayableId } from './ginoffset.js?v=485';
+} from './local.js?v=494';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=494';
+import { isLegacyDirty } from './dirty.js?v=494';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=494';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=494';
+import { hasDeductions } from './deductions.js?v=494';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=494';
+import { hasHay, hasHayLoad } from './hay.js?v=494';
+import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=494';
+import { todayLocal } from './fmt.js?v=494';
+import { signLoad } from './driversign.js?v=494';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=494';
+import { settleLegs, dedupeLegs } from './legs.js?v=494';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=494';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=494';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=494';
+import { setCommodityOrder } from './commodityorder.js?v=494';
+import { setShrinkSource } from './shrink.js?v=494';
+import { storageLedgerStock } from './derived.js?v=494';
+import { setFarmSwitches, setFarmLevels } from './nav.js?v=494';
+import { readSwitches, readLevels } from './farmswitches.js?v=494';
+import { seasonYY, nextOutloadNo, isPlainNumber, renumberPlan, outloadParts } from './outloadno.js?v=494';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=494';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=494';
+import { schedulePush, pushOnReconnect } from './sync.js?v=494';
+import { hasParts as hasAddressParts } from './address.js?v=494';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=494';
+import { linePayableId } from './ginoffset.js?v=494';
 
 /**
  * A gin bill the lint buyer pays is settled once lint invoices have taken all of it off: the farm owes the gin nothing, the buyer settles
@@ -175,6 +177,7 @@ function deriveCounters(state) {
 // ---------------------------------------------------------------------------
 
 let data = defaultData();
+setShrinkSource(() => { const y = data.years?.[data.currentYear]; return { commodities: y?.commodities || [], fields: y?.fields || [], storages: y?.storages || [] }; });   // the silo sums read each commodity's shrink, and the paddock and silo a load without a commodity belongs to
 /** The farm's commodity order is read by the sorts in derived.js, so whenever the data is swapped or its details change it is handed over. */
 const shareOrder = () => { setCommodityOrder(data.businessDetails?.commodityOrder); setFarmSwitches(readSwitches(data.businessDetails?.switches)); setFarmLevels(readLevels(data.businessDetails?.switches)); };   // also the farm's switches, for the tabs
 let farmId = null;
@@ -645,6 +648,8 @@ export const db = {
       idMap.set(c.id, id);
       return {
         id, name: c.name, angleOfRepose: c.angleOfRepose, testWeight: c.testWeight,
+        // the shrink in silos is a setting of the commodity, so it goes with it
+        ...(Number(c.shrinkPct) > 0 ? { shrinkPct: c.shrinkPct, __hasShrink: true } : {}),
         nPerTonne: c.nPerTonne, mtmPrice: 0, openingStock: 0, retainedSeed: 0,
         grossMarginCost: 0,
         // the farm's own grades carry into the new season with the commodity
@@ -663,6 +668,7 @@ export const db = {
       ...(f.property ? { property: f.property, __hasProperty: true } : {}),
     }));
 
+    const carriedStock = (s, movements) => { if (s.kind === 'tally') return 0; const held = storageLedgerStock(s, movements); return held > 0.005 ? Math.round(held * 100) / 100 : 0; };
     const storages = src.storages.filter((s) => !isTransit(s)).map((s) => ({
       id: uid(), kind: s.kind, name: s.name, commodityId: mapCommodity(s.commodityId),
       radius: s.radius, coneAngle: s.coneAngle, width: s.width,
@@ -670,7 +676,8 @@ export const db = {
       ...(Number(s.volumeM3) > 0 ? { volumeM3: s.volumeM3, __hasVolume: true } : {}),
       testWeight: s.testWeight, tarpOverhangM: s.tarpOverhangM,
       ...(Number(s.wallHeight) > 0 ? { wallHeight: s.wallHeight, __hasWallHeight: true } : {}),
-      currentHeight: 0, length: 0, fillState: 'peak', openingStock: 0,
+      // a silo or bunker still holding grain carries it over: what the books say it holds now is what it opens with (off-farm stores do it below)
+      currentHeight: 0, length: 0, fillState: 'peak', openingStock: isOffFarm(s) ? 0 : carriedStock(s, src.movements),
       // grain held by a third party is still held when the season turns: what it holds now is what it opens with
       ...(isOffFarm(s) ? { offFarm: carryOffFarm(s, src.movements, { fields: src.fields, storages: src.storages, sales: src.sales }, idMap), __hasOffFarm: true } : {}),
     }));
@@ -711,7 +718,7 @@ export const db = {
     const c = current();
     if (!pack || c.sales.some((s) => pack.sales.some((p) => p.contractNo === s.contractNo))) return null;
     for (const x of pack.commodities) {
-      c.commodities.push({ ...x, ...(hasCotton(x.cotton) ? { __hasCotton: true } : {}), ...(hasHay(x.hay) ? { __hasHay: true } : {}) });
+      c.commodities.push({ ...x, ...(hasCotton(x.cotton) ? { __hasCotton: true } : {}), ...(hasHay(x.hay) ? { __hasHay: true } : {}), ...(Number(x.shrinkPct) > 0 ? { __hasShrink: true } : {}) });
       touch('commodity', x.id);
     }
     for (const f of pack.fields) { c.fields.push(f); touch('field', f.id); }
@@ -891,6 +898,7 @@ export const db = {
         if (merged.harvestSeason) merged.__hasHarvestSeason = true;   // so going back to automatic still reaches the server
         if (hasCotton(merged.cotton)) merged.__hasCotton = true;      // and clearing the cotton settings does too
         if (hasHay(merged.hay)) merged.__hasHay = true;               // and the hay settings
+        if (Number(merged.shrinkPct) > 0) merged.__hasShrink = true;  // and the shrink, so clearing it reaches the server
         c.commodities[idx] = merged;
       }
       touch('commodity', commodity.id);
@@ -901,6 +909,7 @@ export const db = {
       if (made.harvestSeason) made.__hasHarvestSeason = true;
       if (hasCotton(made.cotton)) made.__hasCotton = true;
       if (hasHay(made.hay)) made.__hasHay = true;
+      if (Number(made.shrinkPct) > 0) made.__hasShrink = true;
       if (Number(made.mtmPrice) > 0) { made.priceHistory = recordPrice(made.priceHistory, { date: todayLocal(), price: made.mtmPrice }); made.__hasPriceHistory = true; }
       c.commodities.push(made);
       touch('commodity', id);
@@ -1046,6 +1055,7 @@ export const db = {
         if (merged.deliveryPattern) merged.__hasDeliveryPattern = true;   // and clearing how it is delivered
         if (merged.cottonKind) merged.__hasCottonKind = true;             // and going back to a lint sale
         if (merged.cottonTerms) merged.__hasCottonTerms = true;
+        if (merged.lateDiscounts?.length) merged.__hasLate = true;        // so clearing the late discounts reaches the server
         if (merged.invoicing) merged.__hasInvoicing = true;               // and clearing who invoices
         if (hasAddressParts(merged.buyerAddressParts)) merged.__hasBuyerAddressParts = true;   // and clearing the buyer's address parts
         c.sales[idx] = merged;
@@ -1053,7 +1063,7 @@ export const db = {
       touch('sale', sale.id);
     } else {
       const id = uid();
-      c.sales.push({ ...sale, id, ...(Number(sale.brokerageRate) ? { __hasBrokerageRate: true } : {}), ...(sale.freightPaidBy === 'buyer' ? { __hasFreightPaidBy: true } : {}), ...(sale.ourRef ? { __hasOurRef: true } : {}), ...(sale.paid ? { __hasPaid: true } : {}), ...(sale.deliveryPattern ? { __hasDeliveryPattern: true } : {}), ...(sale.invoicing ? { __hasInvoicing: true } : {}), ...(sale.cottonKind ? { __hasCottonKind: true } : {}), ...(sale.cottonTerms ? { __hasCottonTerms: true } : {}), ...(hasAddressParts(sale.buyerAddressParts) ? { __hasBuyerAddressParts: true } : {}) });
+      c.sales.push({ ...sale, id, ...(sale.lateDiscounts?.length ? { __hasLate: true } : {}), ...(Number(sale.brokerageRate) ? { __hasBrokerageRate: true } : {}), ...(sale.freightPaidBy === 'buyer' ? { __hasFreightPaidBy: true } : {}), ...(sale.ourRef ? { __hasOurRef: true } : {}), ...(sale.paid ? { __hasPaid: true } : {}), ...(sale.deliveryPattern ? { __hasDeliveryPattern: true } : {}), ...(sale.invoicing ? { __hasInvoicing: true } : {}), ...(sale.cottonKind ? { __hasCottonKind: true } : {}), ...(sale.cottonTerms ? { __hasCottonTerms: true } : {}), ...(hasAddressParts(sale.buyerAddressParts) ? { __hasBuyerAddressParts: true } : {}) });
       touch('sale', id);
     }
     persist();

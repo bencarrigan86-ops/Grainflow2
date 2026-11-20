@@ -3,18 +3,19 @@
 // The same terms, in the same order, as the page on screen (views/contract.js reads its rows from here too, so the two can
 // never say different things). Pure: it builds bytes from the sale and the farm's details and touches nothing else.
 
-import { Pdf, wrapText } from './pdf.js?v=485';
-import { drawBrandLogo } from './brand.js?v=485';
-import { letterheadLine } from './docband.js?v=485';
-import { addressLinesOf } from './address.js?v=485';
-import { num, money, dmy } from './fmt.js?v=485';
-import { PATTERN_ON_CONTRACT } from './deliveryplan.js?v=485';
-import { INVOICING_ON_CONTRACT } from './invoicing.js?v=485';
-import { contactLines } from './buyercontact.js?v=485';
-import { signerName } from './signdoc.js?v=485';
-import { toleranceText, gradeTermsLines, gradeNamesText } from './contractterms.js?v=485';
-import { cottonKind, cleanCottonTerms, netPerBale } from './cottonkinds.js?v=485';
-import { hasSignature, strokesInBox } from './signature.js?v=485';
+import { Pdf, wrapText } from './pdf.js?v=494';
+import { drawBrandLogo } from './brand.js?v=494';
+import { letterheadLine } from './docband.js?v=494';
+import { addressLinesOf } from './address.js?v=494';
+import { num, money, dmy } from './fmt.js?v=494';
+import { PATTERN_ON_CONTRACT } from './deliveryplan.js?v=494';
+import { INVOICING_ON_CONTRACT } from './invoicing.js?v=494';
+import { contactLines } from './buyercontact.js?v=494';
+import { signerName } from './signdoc.js?v=494';
+import { toleranceText, gradeTermsLines, gradeNamesText } from './contractterms.js?v=494';
+import { cottonKind, cleanCottonTerms, netPerBale } from './cottonkinds.js?v=494';
+import { cleanLate } from './cottonlate.js?v=494';
+import { hasSignature, strokesInBox } from './signature.js?v=494';
 
 export const DASH = '—';
 
@@ -59,12 +60,20 @@ export function brokerText(sale) {
   return bits.join(', ');
 }
 
+/** "Discount per bale if delivered after 30 Nov: month 1 $10.00, month 2 $25.00", or nothing. */
+export function lateText(sale) {
+  const list = cleanLate(sale.lateDiscounts).filter((v) => v > 0);
+  if (!list.length || !sale.deliveryEnd) return '';
+  const rows = list.map((v, i) => `month ${i + 1} ${money(v, 2)}`).join(', ');
+  return `Discount per bale if delivered after ${longDate(sale.deliveryEnd)}: ${rows}`;
+}
+
 export function carryText(sale) {
   const rate = Number(sale.carryRate) || 0;
   if (!rate) return '';
   const from = longDate(sale.carryFrom);
   return from
-    ? `${money(rate, 2)} per tonne per month for grain held from ${from}`
+    ? `${money(rate, 2)} per tonne per month, added to the price of grain delivered from ${from} (the first month counts as a full month)`
     : `${money(rate, 2)} per tonne per month`;
 }
 
@@ -98,6 +107,7 @@ export function termRows(sale, commodity, { showFreight = true, showComments = t
     ['Weights and quality to govern', sale.weightsToGovern ? sale.weightsToGovern.charAt(0).toUpperCase() + sale.weightsToGovern.slice(1) : ''],
     ['Payment terms', paymentText(sale)],
     ['Carry', carryText(sale)],
+    ['Late delivery', lateText(sale)],
     ['Broker', brokerText(sale)],
     ['Trade rules', sale.tradeRules || (cotton ? `${ICA_NAME} Bylaws and Rules apply` : 'Grain Trade Australia Trade Rules apply')],
     ['Comments', showComments ? sale.notes : ''],

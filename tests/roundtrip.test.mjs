@@ -115,6 +115,7 @@ function markerFor(key, ids) {
   if (key === 'invoicing') return 'rcti';                       // only 'seller' and 'rcti' are stored
   if (key === 'cottonKind') return 'ginforseed';               // only 'ginforseed' and 'ginning' are stored
   if (key === 'cottonTerms') return { ginRate: 75, researchLevy: 2.25, voluntaryLevy: 1.5, gstOnGin: true };
+  if (key === 'lateDiscounts') return [10, 25, 40];            // a list of dollars per bale, by month late
   if (key === 'gradeOptions') return [{ grade: 'APW1', adjust: 0 }, { grade: 'H2', adjust: 15 }, { grade: 'ASW1', adjust: -20 }];
   if (key === 'offFarm') return { operator: 'GrainCorp', opening: [{ commodityId: ids.commodity, grade: 'APH1', tons: 450 }] };
   if (key === 'fumigations') return [{ id: 'f1', date: '2026-11-10', product: 'Phosphine', days: 14, endsOn: '2026-11-24' }];

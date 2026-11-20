@@ -1,4 +1,4 @@
--- Test database, part 4 of 4: 20261210000000_farm_switches_two.sql to 20261223000000_field_double_crop.sql.
+-- Test database, part 4 of 4: 20261210000000_farm_switches_two.sql to 20261224100000_late_discounts.sql.
 -- Paste ALL of this into the Supabase SQL editor of the TEST project and press Run. Run the parts in order.
 
 -- ---------------------------------------------------------------------------
@@ -913,7 +913,6 @@ grant execute on function support_requests_waiting(uuid) to authenticated;
 
 notify pgrst, 'reload schema';
 
-
 -- ---------------------------------------------------------------------------
 -- 20261223000000_field_double_crop.sql
 -- ---------------------------------------------------------------------------
@@ -924,3 +923,25 @@ notify pgrst, 'reload schema';
 alter table fields add column if not exists double_crop boolean;
 
 notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------------
+-- 20261224000000_commodity_shrink.sql
+-- ---------------------------------------------------------------------------
+-- Shrink in silos: the percentage of the grain going from a paddock into a silo that is lost (normally 0.7%), one figure per
+-- commodity. Empty means no shrink. Safe to run more than once. The same row security as the rest of the commodity applies.
+
+alter table commodities add column if not exists shrink_pct numeric;
+
+notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------------
+-- 20261224100000_late_discounts.sql
+-- ---------------------------------------------------------------------------
+-- Cotton delivered after the contract's delivery finish can take a discount: a list of dollars per bale, one figure for each month
+-- late (they do not add up). Empty means none. Kept with the contract's prices, so a field device never receives it. Safe to run
+-- more than once. The same row security as the rest of the contract's prices applies.
+
+alter table sale_terms add column if not exists late_discounts jsonb;
+
+notify pgrst, 'reload schema';
+

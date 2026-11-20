@@ -14,6 +14,8 @@
 //
 // Pure functions over plain records. Nothing here touches the farm.
 
+import { shrinkIntoSilo } from './shrink.js?v=494';
+
 const num = (v) => Number(v) || 0;
 const EPS = 1e-9;
 
@@ -115,7 +117,8 @@ export function layersForStorage(storage, movements) {
   let shortfall = 0;
   for (const m of inOrder(movements || [])) {
     const out = (m.froms || []).filter((l) => l.type === 'silo' && l.id === storage.id).reduce((a, l) => a + num(l.tons), 0);
-    const into = (m.tos || []).filter((l) => l.type === 'silo' && l.id === storage.id).reduce((a, l) => a + num(l.tons), 0);
+    // what lands in the silo from a paddock is less than what was on the truck: the shrink comes off, so the layers add up to the tracked stock
+    const into = Math.max(0, (m.tos || []).filter((l) => l.type === 'silo' && l.id === storage.id).reduce((a, l) => a + num(l.tons), 0) - shrinkIntoSilo(m, storage.id));
 
     // Out first: grain that leaves comes off what was already there, never off the load that is arriving.
     // Last in, first out takes off the top; a storage that is emptied from its back end takes the oldest first.

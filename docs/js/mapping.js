@@ -27,17 +27,18 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=485';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=485';
-import { cleanCottonTerms } from './cottonkinds.js?v=485';
-import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=485';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=485';
-import { cleanPicked } from './modulespicked.js?v=485';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=485';
-import { cleanHistory, hasHistory } from './pricehistory.js?v=485';
-import { cleanOffFarm } from './offfarm.js?v=485';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=485';
-import { cleanDriverSignature } from './driversign.js?v=485';
+import { cleanGradeOptions } from './gradeprice.js?v=494';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=494';
+import { cleanCottonTerms } from './cottonkinds.js?v=494';
+import { cleanLate } from './cottonlate.js?v=494';
+import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=494';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=494';
+import { cleanPicked } from './modulespicked.js?v=494';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=494';
+import { cleanHistory, hasHistory } from './pricehistory.js?v=494';
+import { cleanOffFarm } from './offfarm.js?v=494';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=494';
+import { cleanDriverSignature } from './driversign.js?v=494';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -351,6 +352,8 @@ export function stateToRows(state, farmId) {
         ...((hasCotton(c.cotton) || c.__hasCotton) ? { cotton: hasCotton(c.cotton) ? cleanCotton(c.cotton) : null } : {}),
         // Hay: the kind of bale and its average weight. Optional in the same way.
         ...((hasHay(c.hay) || c.__hasHay) ? { hay: hasHay(c.hay) ? cleanHay(c.hay) : null } : {}),
+        // Shrink in silos, as a percentage. Optional in the same way: left out until one is set.
+        ...((Number(c.shrinkPct) > 0 || c.__hasShrink) ? { shrink_pct: Number(c.shrinkPct) > 0 ? n(c.shrinkPct) : null } : {}),
         // The weekly price history. Optional in the same way: left out until there is one.
         ...((hasHistory(c.priceHistory) || c.__hasPriceHistory) ? { price_history: hasHistory(c.priceHistory) ? cleanHistory(c.priceHistory) : null } : {}),
         gross_margin_cost: n(c.grossMarginCost),
@@ -512,6 +515,8 @@ export function stateToRows(state, farmId) {
         // columns: left out until a grade is listed, kept once one has been, so clearing the list reaches the server.
         // Brokerage in $/t, charged on the tonnes delivered. Optional like the other later columns.
         ...((Number(sale.brokerageRate) || sale.__hasBrokerageRate) ? { brokerage_rate: n(sale.brokerageRate) } : {}),
+        // Cotton delivered after the delivery finish: a discount per bale for each month late. Optional in the same way.
+        ...((sale.lateDiscounts?.length || sale.__hasLate) ? { late_discounts: sale.lateDiscounts?.length ? cleanLate(sale.lateDiscounts) : null } : {}),
         // Who pays the freight: 'we' (a bill in Payables) or 'buyer' (taken off the invoice). Sent once it is 'buyer', or
         // has been stored, so a contract that is never changed from the default never needs the column.
         ...((sale.freightPaidBy === 'buyer' || sale.__hasFreightPaidBy) ? { freight_paid_by: sale.freightPaidBy === 'buyer' ? 'buyer' : 'we' } : {}),
@@ -802,6 +807,7 @@ export function rowsToState(rows) {
         ...(c.harvest_season ? { harvestSeason: c.harvest_season, __hasHarvestSeason: true } : {}),
         ...(c.cotton && typeof c.cotton === 'object' ? { cotton: cleanCotton(c.cotton), __hasCotton: true } : {}),
         ...(c.hay && typeof c.hay === 'object' ? { hay: cleanHay(c.hay), __hasHay: true } : {}),
+        ...(c.shrink_pct != null ? { shrinkPct: n(c.shrink_pct), __hasShrink: true } : {}),
         ...(Array.isArray(c.price_history) ? { priceHistory: cleanHistory(c.price_history), __hasPriceHistory: true } : {}),
         grossMarginCost: n(c.gross_margin_cost),
         unit: c.unit ?? 't',
@@ -912,6 +918,7 @@ export function rowsToState(rows) {
           paymentTermsBasis: t.payment_terms_basis ?? '',
           tradeRules: t.trade_rules ?? '',
           ...(t.brokerage_rate != null ? { brokerageRate: n(t.brokerage_rate), __hasBrokerageRate: true } : {}),
+          ...(Array.isArray(t.late_discounts) ? { lateDiscounts: cleanLate(t.late_discounts), __hasLate: true } : {}),
           ...(t.freight_paid_by != null ? { freightPaidBy: t.freight_paid_by === 'buyer' ? 'buyer' : 'we', __hasFreightPaidBy: true } : {}),
           ...(Array.isArray(t.grade_options) ? { gradeOptions: cleanGradeOptions(t.grade_options), __hasGradeOptions: true } : {}),
           ...(t.oil_adjust_pct != null ? { oilBasePct: n(t.oil_base_pct), oilAdjustPct: n(t.oil_adjust_pct), __hasOilTerms: true } : {}),

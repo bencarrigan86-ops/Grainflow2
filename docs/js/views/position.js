@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=485';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=485';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=485';
-import { payablesCost } from '../payables.js?v=485';
-import { commodityClass } from '../commoditycolor.js?v=485';
-import { hasCommodityOrder } from '../commodityorder.js?v=485';
-import { startProgress, missingLine } from '../helpcontent.js?v=485';
-import { openSetupWalk } from './setupwalk.js?v=485';
-import { attentionItems } from '../attention.js?v=485';
-import { lastBackup } from '../backup.js?v=485';
-import { supportWaitingCount } from './support.js?v=485';
-import { todayLocal, dmy } from '../fmt.js?v=485';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=485';
-import { openSheet, closeSheet } from '../ui.js?v=485';
-import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=485';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=485';
-import { viewPdf } from '../pdfview.js?v=485';
+import { db } from '../storage.js?v=494';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=494';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=494';
+import { payablesCost } from '../payables.js?v=494';
+import { commodityClass } from '../commoditycolor.js?v=494';
+import { hasCommodityOrder } from '../commodityorder.js?v=494';
+import { startProgress, missingLine } from '../helpcontent.js?v=494';
+import { openSetupWalk } from './setupwalk.js?v=494';
+import { attentionItems } from '../attention.js?v=494';
+import { lastBackup } from '../backup.js?v=494';
+import { supportWaitingCount } from './support.js?v=494';
+import { todayLocal, dmy } from '../fmt.js?v=494';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=494';
+import { openSheet, closeSheet } from '../ui.js?v=494';
+import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=494';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=494';
+import { viewPdf } from '../pdfview.js?v=494';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -374,6 +374,7 @@ function cropDetail(r) {
       <div class="row"><span class="label">Gross margin per ha</span><span class="value">${money(r.grossMargin / r.area, 0)}/ha</span></div>` : ''}
       <details class="fold" open>
         <summary><div><h2>Full breakdown</h2><div class="sub">Values, stock and costs</div></div></summary>
+        ${r.shrinkTons > 0 ? `<div class="row"><span class="label">Shrink in silos<span class="sub">${num(r.commodity.shrinkPct, 2)}% lost going in from the paddock</span></span><span class="value">${qty(r.shrinkTons)}</span></div>` : ''}
         ${r.usedTons > 0 ? `<div class="row"><span class="label">Used on the farm<span class="sub">Out of the stock, not sold</span></span><span class="value">${qty(r.usedTons)}</span></div>` : ''}
         ${r.strawTons > 0 ? `<div class="row"><span class="label">Baled off crop paddocks<span class="sub">On ${ha(r.strawArea, 0)} ha, already counted in the crop's area</span></span><span class="value">${qty(r.strawTons)}</span></div>` : ''}
         <div class="row"><span class="label">Avg sold price</span><span class="value">${money(r.avgSoldPrice, 2)}/${per}</span></div>

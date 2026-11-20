@@ -1,44 +1,44 @@
-import { db } from '../storage.js?v=485';
-import { tileIcon } from '../tileicon.js?v=485';
-import { getTheme, setTheme } from '../theme.js?v=485';
-import { num, money, esc } from '../fmt.js?v=485';
+import { db } from '../storage.js?v=494';
+import { tileIcon } from '../tileicon.js?v=494';
+import { getTheme, setTheme } from '../theme.js?v=494';
+import { num, money, esc } from '../fmt.js?v=494';
 import {
   openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast,
-} from '../ui.js?v=485';
-import { planYieldUpdate } from '../yieldupdate.js?v=485';
-import { openLoadImportSheet } from './importloads.js?v=485';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=485';
-import { openPastSeasonsSheet } from './pastseasons.js?v=485';
-import { openPastSalesSheet } from './pastsales.js?v=485';
-import { openLineupSheet } from './lineup.js?v=485';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=485';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=485';
-import { openDangerSheet } from './dangerconfirm.js?v=485';
+} from '../ui.js?v=494';
+import { planYieldUpdate } from '../yieldupdate.js?v=494';
+import { openLoadImportSheet } from './importloads.js?v=494';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=494';
+import { openPastSeasonsSheet } from './pastseasons.js?v=494';
+import { openPastSalesSheet } from './pastsales.js?v=494';
+import { openLineupSheet } from './lineup.js?v=494';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=494';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=494';
+import { openDangerSheet } from './dangerconfirm.js?v=494';
 import {
   sampleHistoryFrom, sampleHistoryOffered, sampleOrdersFrom, sampleOrdersOffered, sampleCottonHayFrom, sampleCottonHayOffered, sampleRefreshOffered, sampleStateFor,
-} from '../demo.js?v=485';
-import { seasonContents, contentsText } from '../seasondelete.js?v=485';
-import { openDeletedSheet } from './deleted.js?v=485';
-import { openAuditSheet } from './audit.js?v=485';
-import { canSeeAudit } from '../audit.js?v=485';
-import { canSeeOverheads } from '../nav.js?v=485';
-import { APP_VERSION } from '../version.js?v=485';
-import { checkNow } from '../updatecheck.js?v=485';
-import { logoFromFile } from '../logo.js?v=485';
+} from '../demo.js?v=494';
+import { seasonContents, contentsText } from '../seasondelete.js?v=494';
+import { openDeletedSheet } from './deleted.js?v=494';
+import { openAuditSheet } from './audit.js?v=494';
+import { canSeeAudit } from '../audit.js?v=494';
+import { canSeeOverheads } from '../nav.js?v=494';
+import { APP_VERSION } from '../version.js?v=494';
+import { checkNow } from '../updatecheck.js?v=494';
+import { logoFromFile } from '../logo.js?v=494';
 
-import { closingStock, position } from '../derived.js?v=485';
-import { cleanCotton } from '../ginning.js?v=485';
-import { cleanHay, hasHay, BALE_TYPES } from '../hay.js?v=485';
-import { orderedNames, moveName } from '../commodityorder.js?v=485';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=485';
-import { autoSeasonText } from '../harvestseason.js?v=485';
-import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=485';
-import { openMySignatureSheet } from './signaturepad.js?v=485';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=485';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=485';
-import { paintPeople } from './settingspeople.js?v=485';
-import { paintSyncCard } from './settingssync.js?v=485';
-import { openExportCsvSheet } from './settingsexport.js?v=485';
+import { closingStock, position } from '../derived.js?v=494';
+import { cleanCotton } from '../ginning.js?v=494';
+import { cleanHay, hasHay, BALE_TYPES } from '../hay.js?v=494';
+import { orderedNames, moveName } from '../commodityorder.js?v=494';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=494';
+import { autoSeasonText } from '../harvestseason.js?v=494';
+import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=494';
+import { openMySignatureSheet } from './signaturepad.js?v=494';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=494';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=494';
+import { paintPeople } from './settingspeople.js?v=494';
+import { paintSyncCard } from './settingssync.js?v=494';
+import { openExportCsvSheet } from './settingsexport.js?v=494';
 
 let unsub = null;
 
@@ -694,9 +694,12 @@ function openCommoditySheet(existing) {
         ${field({ label: 'Angle of repose (°)', id: 'angle', type: 'number', step: '1', value: existing?.angleOfRepose })}
         ${field({ label: 'Test weight (t/m³)', id: 'tw', type: 'number', step: '0.01', value: existing?.testWeight })}
       </div>
-      ${field({ label: 'Harvested in', id: 'harvestSeason', type: 'select', value: existing?.harvestSeason ?? '',
-        options: [{ value: '', label: 'Automatic' }, { value: 'winter', label: 'Winter (wheat, barley, canola...)' }, { value: 'summer', label: 'Summer (sorghum, cotton, maize...)' }],
-        hint: 'Harvest progress is read for winter and summer separately. Automatic goes by the name.' })}
+      <div class="grid-2">
+        ${field({ label: 'Shrink in silos (%)', id: 'shrinkPct', type: 'number', step: '0.1', value: existing?.shrinkPct || '', placeholder: '0.7' })}
+        ${field({ label: 'Harvested in', id: 'harvestSeason', type: 'select', value: existing?.harvestSeason ?? '',
+          options: [{ value: '', label: 'Automatic' }, { value: 'winter', label: 'Winter crop' }, { value: 'summer', label: 'Summer crop' }] })}
+      </div>
+      <div class="hint" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">Shrink comes off grain going from a paddock into a silo, normally 0.7%. Harvested in: winter is wheat, barley, canola; summer is sorghum, cotton, maize. Automatic goes by the name.</div>
       <div class="grid-2">
         ${field({ label: 'Opening stock (t)', id: 'opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0 })}
         ${field({ label: 'Retained seed (t)', id: 'seed', type: 'number', step: '0.01', value: existing?.retainedSeed ?? 0 })}
@@ -794,6 +797,7 @@ function openCommoditySheet(existing) {
         angleOfRepose: getNum(root, 'angle'),
         testWeight: getNum(root, 'tw'),
         harvestSeason: getVal(root, 'harvestSeason') || null,
+        shrinkPct: Math.min(25, Math.max(0, getNum(root, 'shrinkPct') || 0)),
         mtmPrice: getNum(root, 'mtm'),
         // cotton's seed and ginning settings; cleared when the commodity is not in bales
         cotton: getVal(root, 'unit') === 'bale' ? cleanCotton({ seedMtm: getNum(root, 'seedMtm'), seedFactor: getNum(root, 'seedFactor'), ginRate: getNum(root, 'ginRate'), levies: getNum(root, 'ginLevies'), turnout: getNum(root, 'ginTurnout'), moduleKg: getNum(root, 'ginModuleKg') }) : null,

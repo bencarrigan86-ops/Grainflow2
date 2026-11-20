@@ -1,28 +1,29 @@
-import { db } from '../storage.js?v=485';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=485';
-import { isHay, balesInStorage, describeBales } from '../hay.js?v=485';
-import { modulesReport } from '../modulesreport.js?v=485';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=485';
-import { isTransit } from '../transit.js?v=485';
-import { isOffFarm } from '../offfarm.js?v=485';
-import { paintOffFarmCard, openOffFarmSheet } from './offfarm.js?v=485';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=485';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=485';
-import { hasStorageQuality } from '../mapping.js?v=485';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=485';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=485';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=485';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=485';
-import { renderRelatedMovements } from './movements.js?v=485';
-import { openSiloSetupSheet } from './silosetup.js?v=485';
-import { openCalculatorSheet } from './calculator.js?v=485';
-import { commodityFills } from '../commodityfill.js?v=485';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=485';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=485';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=485';
+import { db } from '../storage.js?v=494';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=494';
+import { isHay, balesInStorage, describeBales } from '../hay.js?v=494';
+import { modulesReport } from '../modulesreport.js?v=494';
+import { shrinkInSilo, shrinkFraction } from '../shrink.js?v=494';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=494';
+import { isTransit } from '../transit.js?v=494';
+import { isOffFarm } from '../offfarm.js?v=494';
+import { paintOffFarmCard, openOffFarmSheet } from './offfarm.js?v=494';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=494';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=494';
+import { hasStorageQuality } from '../mapping.js?v=494';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=494';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=494';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=494';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=494';
+import { renderRelatedMovements } from './movements.js?v=494';
+import { openSiloSetupSheet } from './silosetup.js?v=494';
+import { openCalculatorSheet } from './calculator.js?v=494';
+import { commodityFills } from '../commodityfill.js?v=494';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=494';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=494';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=494';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=485';
+} from '../silolayers.js?v=494';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -473,10 +474,12 @@ function qualityFold(existing, commodity) {
         ${field({ label: 'Screenings (%)', id: 'q-screenings', type: 'number', step: '0.1', value: existing?.screeningsPct ?? '' })}
         ${field({ label: 'Test weight (kg/hL)', id: 'q-tw', type: 'number', step: '0.1', value: existing?.testWeightKgHl ?? '', hint: 'As measured. Not the volume density below.' })}
       </div>
-      ${field({ label: 'Falling number (seconds)', id: 'q-fn', type: 'number', step: '1', value: existing?.fallingNumber ?? '' })}
-      <div id="q-oil-wrap" ${extraSpecKey(commodity?.name) === 'oilPct' || existing?.oilPct != null ? '' : 'hidden'}>${field({ label: 'Oil (%, canola)', id: 'q-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '' })}</div>
-      <div id="q-ffa-wrap" ${extraSpecKey(commodity?.name) === 'oilPct' || existing?.ffaPct != null ? '' : 'hidden'}>${field({ label: 'Free fatty acid (%, canola)', id: 'q-ffa', type: 'number', step: '0.01', value: existing?.ffaPct ?? '' })}</div>
-      <div id="q-ret-wrap" ${extraSpecKey(commodity?.name) === 'retentionPct' || existing?.retentionPct != null ? '' : 'hidden'}>${field({ label: 'Retention (%, barley)', id: 'q-ret', type: 'number', step: '0.1', value: existing?.retentionPct ?? '', placeholder: 'Kept above 2.5 mm' })}</div>
+      <div class="grid-2">
+        ${field({ label: 'Falling number (seconds)', id: 'q-fn', type: 'number', step: '1', value: existing?.fallingNumber ?? '' })}
+        <div id="q-oil-wrap" ${extraSpecKey(commodity?.name) === 'oilPct' || existing?.oilPct != null ? '' : 'hidden'}>${field({ label: 'Oil (%, canola)', id: 'q-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '' })}</div>
+        <div id="q-ffa-wrap" ${extraSpecKey(commodity?.name) === 'oilPct' || existing?.ffaPct != null ? '' : 'hidden'}>${field({ label: 'Free fatty acid (%, canola)', id: 'q-ffa', type: 'number', step: '0.01', value: existing?.ffaPct ?? '' })}</div>
+        <div id="q-ret-wrap" ${extraSpecKey(commodity?.name) === 'retentionPct' || existing?.retentionPct != null ? '' : 'hidden'}>${field({ label: 'Retention (%, barley)', id: 'q-ret', type: 'number', step: '0.1', value: existing?.retentionPct ?? '', placeholder: 'Kept above 2.5 mm' })}</div>
+      </div>
     </details>`;
 }
 
@@ -1238,6 +1241,7 @@ export function openStorageSheet(existing) {
         </div>
         ${pairHint('Opening stock is a stocktake baseline of what is in it now. Movements adjust from there.')}
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
+        ${(() => { const sh = existing ? shrinkInSilo(existing.id, movements) : 0; const f = shrinkFraction(commodities.find((c) => c.id === existing?.commodityId)); return sh > 0 ? `<div class="row"><span class="label">Shrink so far<span class="sub">${num(f * 100, 2)}% off grain put in from paddocks</span></span><span class="value">${num(sh, 1)} t</span></div>` : ''; })()}
         <div class="fold-bands">
         ${qualityFold(existing, commodities.find((c) => c.id === existing?.commodityId))}
         ${contentsFold(existing, gradesInUse, kind)}
