@@ -2,11 +2,11 @@
 // totals for the whole farm. Pure: the figures come from the same places the Storage screen uses (the layers in a silo, the
 // holdings of an off-farm site), so the report cannot disagree with it.
 
-import { layersForStorage } from './outload.js?v=479';
-import { holdings, isOffFarm, commodityOfLoad } from './offfarm.js?v=479';
-import { isTransit } from './transit.js?v=479';
-import { createReport, fixed } from './reportpdf.js?v=479';
-import { gradeComparer } from './grades.js?v=479';
+import { layersForStorage } from './outload.js?v=481';
+import { holdings, isOffFarm, commodityOfLoad } from './offfarm.js?v=481';
+import { isTransit } from './transit.js?v=481';
+import { createReport, fixed } from './reportpdf.js?v=481';
+import { gradeComparer } from './grades.js?v=481';
 
 const EPS = 0.0005;
 const round3 = (n) => Math.round(n * 1000) / 1000;

@@ -15,15 +15,15 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=479';
-import { stateToRows } from './mapping.js?v=479';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=479';
-import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=479';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=479';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=479';
-import { readAllIn } from './pages.js?v=479';
-import { farmSwitch, farmLevel } from './nav.js?v=479';
-import { LEVEL_TABLES } from './farmswitches.js?v=479';
+import { supabase } from './supabase.js?v=481';
+import { stateToRows } from './mapping.js?v=481';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems } from './local.js?v=481';
+import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=481';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=481';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=481';
+import { readAllIn } from './pages.js?v=481';
+import { farmSwitch, farmLevel } from './nav.js?v=481';
+import { LEVEL_TABLES } from './farmswitches.js?v=481';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.

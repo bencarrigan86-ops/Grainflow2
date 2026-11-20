@@ -1,8 +1,8 @@
-import { db } from '../storage.js?v=479';
-import { esc } from '../fmt.js?v=479';
-import { notify, askConfirm } from '../ui.js?v=479';
-import { roleLabel } from '../invites.js?v=479';
-import { getSession } from '../auth.js?v=479';
+import { db } from '../storage.js?v=481';
+import { esc } from '../fmt.js?v=481';
+import { notify, askConfirm } from '../ui.js?v=481';
+import { roleLabel } from '../invites.js?v=481';
+import { getSession } from '../auth.js?v=481';
 
 /**
  * Whether this device is up to date with the server, in words.
@@ -24,11 +24,14 @@ export async function paintSyncCard(root) {
   // Nothing owed and nothing wrong is the normal case, and it should not take
   // up a card telling you so.
   if (!status.pending && !status.lastError) {
+    // one slim line, not a card with a heading over a single row
+    card.className = 'card';
+    card.style.padding = '10px 16px';
     card.innerHTML = `
-      <h2>Sync</h2>
-      <div class="row"><span class="label">This device</span><span class="value">Up to date</span></div>`;
+      <div class="row" style="padding:0;border:none"><span class="label"><strong style="color:var(--text);font-size:15px">Sync</strong> &middot; this device</span><span class="value">Up to date</span></div>`;
     return;
   }
+  card.style.padding = '';
 
   // Who this device is acting as. A refusal almost always comes down to this —
   // the wrong account, a farm that is not the one on the other device, or a

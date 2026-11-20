@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=479';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=479';
-import { isHay, balesInStorage, describeBales } from '../hay.js?v=479';
-import { modulesReport } from '../modulesreport.js?v=479';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=479';
-import { isTransit } from '../transit.js?v=479';
-import { isOffFarm } from '../offfarm.js?v=479';
-import { paintOffFarmCard, openOffFarmSheet } from './offfarm.js?v=479';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=479';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=479';
-import { hasStorageQuality } from '../mapping.js?v=479';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=479';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=479';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=479';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=479';
-import { renderRelatedMovements } from './movements.js?v=479';
-import { openSiloSetupSheet } from './silosetup.js?v=479';
-import { openCalculatorSheet } from './calculator.js?v=479';
-import { commodityFills } from '../commodityfill.js?v=479';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=479';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=479';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=479';
+import { db } from '../storage.js?v=481';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=481';
+import { isHay, balesInStorage, describeBales } from '../hay.js?v=481';
+import { modulesReport } from '../modulesreport.js?v=481';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=481';
+import { isTransit } from '../transit.js?v=481';
+import { isOffFarm } from '../offfarm.js?v=481';
+import { paintOffFarmCard, openOffFarmSheet } from './offfarm.js?v=481';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=481';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=481';
+import { hasStorageQuality } from '../mapping.js?v=481';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=481';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=481';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=481';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=481';
+import { renderRelatedMovements } from './movements.js?v=481';
+import { openSiloSetupSheet } from './silosetup.js?v=481';
+import { openCalculatorSheet } from './calculator.js?v=481';
+import { commodityFills } from '../commodityfill.js?v=481';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=481';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=481';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=481';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=479';
+} from '../silolayers.js?v=481';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -1437,8 +1437,8 @@ export function openStorageSheet(existing) {
         ${field({ label: 'Opening / current stock', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
         ${qualityFold(existing, commodities.find((c) => c.id === existing?.commodityId))}
-        ${notesField(existing)}
         ${existing ? predictorFold(existing) : ''}
+        ${notesField(existing)}
         ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
         ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete ${kindLabel(existing.kind).toLowerCase()}</button>` : ''}
         <div class="save-bar solo"><button class="btn" id="save">Save</button></div>
