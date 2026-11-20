@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=469';
-import { tileIcon } from '../tileicon.js?v=469';
-import { cropCostPerHa } from '../grossmargin.js?v=469';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=469';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=469';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=469';
-import { describeMerge } from '../merge.js?v=469';
-import { renderRelatedMovements } from './movements.js?v=469';
-import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=469';
-import { wireJumps } from '../jump.js?v=469';
-import { openMapSheet } from './farmmap.js?v=469';
-import { openInputsSheet } from './inputs.js?v=469';
-import { openSprayFormSheet, canSpray } from './spray.js?v=469';
-import { stockLevels } from '../inputs.js?v=469';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=469';
-import { openModulesPickedSheet } from './modulespicked.js?v=469';
-import { openBalesBaledSheet } from './balesbaled.js?v=469';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=469';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=469';
+import { db } from '../storage.js?v=471';
+import { tileIcon } from '../tileicon.js?v=471';
+import { cropCostPerHa } from '../grossmargin.js?v=471';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=471';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=471';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=471';
+import { describeMerge } from '../merge.js?v=471';
+import { renderRelatedMovements } from './movements.js?v=471';
+import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=471';
+import { wireJumps } from '../jump.js?v=471';
+import { openMapSheet } from './farmmap.js?v=471';
+import { openInputsSheet } from './inputs.js?v=471';
+import { openSprayFormSheet, canSpray } from './spray.js?v=471';
+import { stockLevels } from '../inputs.js?v=471';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=471';
+import { openModulesPickedSheet } from './modulespicked.js?v=471';
+import { openBalesBaledSheet } from './balesbaled.js?v=471';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=471';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=471';
 
 let unsub = null;
 
@@ -183,7 +183,7 @@ export function openFieldSheet(existing) {
       <div class="yield-only" ${showYield ? '' : 'hidden'}>
       <div class="grid-2">
         ${field({ label: 'Yield estimate (t/ha)', id: 'yield', type: 'number', step: '0.01', value: existing ? existing.yieldTHa : (initialCommodity?.defaultYieldTHa || '') })}
-        <div class="field"><label>Crop default</label><div class="readout" style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span id="commodity-yield-preview">— t/ha</span>${existing ? '<button type="button" class="link-btn" id="use-default-yield" style="font-size:13px">Use it</button>' : ''}</div></div>
+        <div class="field"><label>Crop default</label><div class="readout" style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span id="commodity-yield-preview">— t/ha</span>${existing ? '<button type="button" class="link-btn" id="use-default-yield" style="font-size:13px;min-height:0;padding:0 2px">Use it</button>' : ''}</div></div>
       </div>
       <div class="field">
         <label>Drive tons from</label>
