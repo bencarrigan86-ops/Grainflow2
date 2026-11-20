@@ -3,8 +3,8 @@
 // total row, a footer with the page number). The reports say what goes on it; this does the laying out, and runs a long
 // table on to the next page with its heading and table head repeated. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=449';
-import { drawBrandLogo } from './brand.js?v=449';
+import { Pdf, wrapText } from './pdf.js?v=450';
+import { drawBrandLogo } from './brand.js?v=450';
 
 const PORTRAIT = { width: 595.28, height: 841.89 };
 const LANDSCAPE = { width: 841.89, height: 595.28 };
@@ -30,8 +30,11 @@ export function createReport({ title, business = '', season = '', today = '', fo
   let page = 1;
   let y = 0;
 
+  // the footer runs on to a second line when the note is long, rather than off the edge of the page
   const footer = () => {
-    pdf.text(M, PAGE.height - 24, `Made in Commodity Mate.${footerNote ? ` ${footerNote}` : ''}`, { size: 7.5, gray: GREY });
+    const lines = wrapText(`Made in Commodity Mate.${footerNote ? ` ${footerNote}` : ''}`, W - 50, 7.5);
+    const top = PAGE.height - 24 - (lines.length - 1) * 9;
+    lines.forEach((line, i) => pdf.text(M, top + i * 9, line, { size: 7.5, gray: GREY }));
     pdf.text(PAGE.width - M, PAGE.height - 24, `page ${page}`, { size: 7.5, gray: GREY, align: 'right' });
   };
   const header = () => {

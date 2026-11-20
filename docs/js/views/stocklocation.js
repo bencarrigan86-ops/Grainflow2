@@ -2,12 +2,13 @@
 // Three ways to read it: a card for each location, a card for each grade with the locations under it, and a grid (a row for each
 // location, a column for each commodity and grade). Narrow it to on farm or off farm, and to the commodities ticked.
 
-import { db } from '../storage.js?v=449';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=449';
-import { openSheet, toast } from '../ui.js?v=449';
-import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=449';
-import { exportRowsAsCSV } from '../csv.js?v=449';
-import { stockByLocation, stockTree, stockByGrade, stockMatrix, matrixSheet, narrowed, stockRows, STOCK_COLUMNS, stockPdf } from '../stocklocation.js?v=449';
+import { db } from '../storage.js?v=450';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=450';
+import { openSheet, toast } from '../ui.js?v=450';
+import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
+import { exportRowsAsCSV } from '../csv.js?v=450';
+import { stockByLocation, stockTree, stockByGrade, stockMatrix, matrixSheet, narrowed, stockRows, STOCK_COLUMNS, stockPdf } from '../stocklocation.js?v=450';
 
 const SCOPES = [['all', 'All'], ['farm', 'On farm'], ['off', 'Off farm']];
 const SCOPE_TEXT = { all: '', farm: 'On farm', off: 'Off farm' };
@@ -121,7 +122,7 @@ export function openStockByLocationSheet() {
       <div id="sl-chips" style="margin-bottom:10px"></div>
       <label id="sl-totals-row" class="sw-row" style="margin:0 0 10px" hidden><input type="checkbox" id="sl-rowtotals" /><span>Show a total for each location</span></label>
       <div id="sl-body"></div>
-      <div class="save-bar"><button type="button" class="btn secondary" id="sl-csv" style="flex:1;padding-left:12px;padding-right:12px">Excel (CSV)</button><button type="button" class="btn" id="sl-pdf" style="flex:1;padding-left:12px;padding-right:12px">PDF</button></div>`;
+      <div class="save-bar"><button type="button" class="btn secondary" id="sl-csv" style="flex:1;padding-left:12px;padding-right:12px">Excel (CSV)</button><button type="button" class="btn secondary" id="sl-view" style="flex:1;padding-left:12px;padding-right:12px">View</button><button type="button" class="btn" id="sl-pdf" style="flex:1;padding-left:12px;padding-right:12px">PDF</button></div>`;
     root.querySelectorAll('.sl-scope').forEach((b) => b.addEventListener('click', () => { scope = b.dataset.scope; saveScope(scope); paint(); }));
     root.querySelectorAll('.sl-group').forEach((b) => b.addEventListener('click', () => { group = b.dataset.group; saveGroup(group); paint(); }));
     root.querySelector('#sl-rowtotals').addEventListener('change', (e) => { rowTotals = e.target.checked; saveTotals(rowTotals); paint(); });
@@ -132,13 +133,22 @@ export function openStockByLocationSheet() {
       if (group === 'table') { const s = matrixSheet(stockMatrix(report), { rowTotals }); exportRowsAsCSV(name, s.rows, s.columns); } else exportRowsAsCSV(name, stockRows(report), STOCK_COLUMNS);
       toast('Downloaded. It opens in Excel.');
     });
-    root.querySelector('#sl-pdf').addEventListener('click', async () => {
+    // the report as it is on screen, as a PDF; null when there is nothing to put in it
+    const makePdf = () => {
       const report = shown();
-      if (!report.locations.length) { toast('Nothing to put in the PDF yet.'); return; }
+      if (!report.locations.length) { toast('Nothing to put in the PDF yet.'); return null; }
       const bytes = stockPdf({ report, business: db.getBusinessDetails().entityName || '', today: dmy(todayLocal()), scope: SCOPE_TEXT[scope], group, rowTotals });
-      const fileName = safeFileName(`Stock by location ${dmy(todayLocal())}`);
-      if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
-      await sharePdf(bytes, fileName, { title: 'Stock by location' });
+      return { bytes, fileName: safeFileName(`Stock by location ${dmy(todayLocal())}`) };
+    };
+    root.querySelector('#sl-view').addEventListener('click', () => {
+      const file = makePdf();
+      if (file) viewPdf(file.bytes, { title: 'Stock by location', fileName: file.fileName, share: { title: 'Stock by location' } });
+    });
+    root.querySelector('#sl-pdf').addEventListener('click', async () => {
+      const file = makePdf();
+      if (!file) return;
+      if (!canShareFiles()) { downloadFile(file.bytes, file.fileName); return; }
+      await sharePdf(file.bytes, file.fileName, { title: 'Stock by location' });
     });
     paint();
   });

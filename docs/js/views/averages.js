@@ -2,14 +2,15 @@
 // underneath. Built from the seasons the farm already holds; nothing is entered here. Owner, manager and bookkeeper only
 // (it is yields and prices, the same line as Position).
 
-import { db } from '../storage.js?v=449';
-import { num, esc, money, todayLocal, dmy } from '../fmt.js?v=449';
-import { openSheet, toast } from '../ui.js?v=449';
-import { canSeeYield } from '../nav.js?v=449';
-import { exportRowsAsCSV } from '../csv.js?v=449';
-import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=449';
-import { averagesPdf } from '../averagespdf.js?v=449';
-import { seasonAverages, finishedSeasons, averagesRows, AVERAGES_COLUMNS } from '../seasonaverages.js?v=449';
+import { db } from '../storage.js?v=450';
+import { num, esc, money, todayLocal, dmy } from '../fmt.js?v=450';
+import { openSheet, toast } from '../ui.js?v=450';
+import { canSeeYield } from '../nav.js?v=450';
+import { exportRowsAsCSV } from '../csv.js?v=450';
+import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
+import { averagesPdf } from '../averagespdf.js?v=450';
+import { seasonAverages, finishedSeasons, averagesRows, AVERAGES_COLUMNS } from '../seasonaverages.js?v=450';
 
 const KEY = 'grainflow.averages.seasons';
 const readPicked = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return Array.isArray(v) ? v : null; } catch { return null; } };
@@ -66,7 +67,7 @@ export function openAveragesSheet() {
         <div style="display:flex;gap:8px"><button type="button" class="btn secondary" id="av-all">Select all</button><button type="button" class="btn secondary" id="av-done">Finished seasons</button></div>
       </details></div>
       <div id="av-body"></div>
-      <div class="save-bar"><button type="button" class="btn secondary" id="av-csv" style="flex:1;padding-left:12px;padding-right:12px">Excel (CSV)</button><button type="button" class="btn" id="av-pdf" style="flex:1;padding-left:12px;padding-right:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button></div>`;
+      <div class="save-bar"><button type="button" class="btn secondary" id="av-csv" style="flex:1;padding-left:12px;padding-right:12px">Excel (CSV)</button><button type="button" class="btn secondary" id="av-view" style="flex:1;padding-left:12px;padding-right:12px">View</button><button type="button" class="btn" id="av-pdf" style="flex:1;padding-left:12px;padding-right:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button></div>`;
 
     const set = (list) => { picked.clear(); list.forEach((l) => picked.add(l)); root.querySelectorAll('.av-season').forEach((b) => { b.checked = picked.has(b.value); }); savePicked([...picked]); paint(); };
     root.querySelectorAll('.av-season').forEach((b) => b.addEventListener('change', () => { if (b.checked) picked.add(b.value); else picked.delete(b.value); savePicked([...picked]); paint(); }));
@@ -78,15 +79,24 @@ export function openAveragesSheet() {
       exportRowsAsCSV(safeFileName(`grainflow-averages-${todayLocal()}`, 'csv'), averagesRows(seasonAverages(years, chosen)), AVERAGES_COLUMNS(true));
       toast('Downloaded. It opens in Excel.');
     });
-    root.querySelector('#av-pdf').addEventListener('click', async () => {
+    // the averages for the ticked seasons as a PDF; null when there is nothing to put in it
+    const makePdf = () => {
       const chosen = labels.filter((l) => picked.has(l));
       const result = seasonAverages(years, chosen);
-      if (!chosen.length || !result.commodities.length) { toast('Tick a season with something grown or sold first.'); return; }
+      if (!chosen.length || !result.commodities.length) { toast('Tick a season with something grown or sold first.'); return null; }
       const bytes = averagesPdf(result, { business: db.getBusinessDetails().entityName || '', today: dmy(todayLocal()) });
       const span = `${chosen[0]}${chosen.length > 1 ? ` to ${chosen[chosen.length - 1]}` : ''}`;
-      const fileName = safeFileName(`Averages ${span} ${dmy(todayLocal())}`);
-      if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
-      await sharePdf(bytes, fileName, { title: `Averages ${span}` });
+      return { bytes, span, fileName: safeFileName(`Averages ${span} ${dmy(todayLocal())}`) };
+    };
+    root.querySelector('#av-view').addEventListener('click', () => {
+      const file = makePdf();
+      if (file) viewPdf(file.bytes, { title: `Averages ${file.span}`, fileName: file.fileName, share: { title: `Averages ${file.span}` } });
+    });
+    root.querySelector('#av-pdf').addEventListener('click', async () => {
+      const file = makePdf();
+      if (!file) return;
+      if (!canShareFiles()) { downloadFile(file.bytes, file.fileName); return; }
+      await sharePdf(file.bytes, file.fileName, { title: `Averages ${file.span}` });
     });
     paint();
   });

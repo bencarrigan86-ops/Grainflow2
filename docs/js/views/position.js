@@ -1,19 +1,20 @@
-import { db } from '../storage.js?v=449';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=449';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=449';
-import { payablesCost } from '../payables.js?v=449';
-import { commodityClass } from '../commoditycolor.js?v=449';
-import { hasCommodityOrder } from '../commodityorder.js?v=449';
-import { startProgress, missingLine } from '../helpcontent.js?v=449';
-import { openSetupWalk } from './setupwalk.js?v=449';
-import { attentionItems } from '../attention.js?v=449';
-import { lastBackup } from '../backup.js?v=449';
-import { supportWaitingCount } from './support.js?v=449';
-import { todayLocal, dmy } from '../fmt.js?v=449';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=449';
-import { openSheet, closeSheet } from '../ui.js?v=449';
-import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=449';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=449';
+import { db } from '../storage.js?v=450';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=450';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=450';
+import { payablesCost } from '../payables.js?v=450';
+import { commodityClass } from '../commoditycolor.js?v=450';
+import { hasCommodityOrder } from '../commodityorder.js?v=450';
+import { startProgress, missingLine } from '../helpcontent.js?v=450';
+import { openSetupWalk } from './setupwalk.js?v=450';
+import { attentionItems } from '../attention.js?v=450';
+import { lastBackup } from '../backup.js?v=450';
+import { supportWaitingCount } from './support.js?v=450';
+import { todayLocal, dmy } from '../fmt.js?v=450';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=450';
+import { openSheet, closeSheet } from '../ui.js?v=450';
+import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=450';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -141,24 +142,33 @@ function openPdfSheet(data) {
       <div class="subhead" style="margin-top:14px">Under the table</div>
       ${tick('pp-result', d.result, '<strong>Whole farm result</strong><span class="meta" style="display:block">Gross margin, overheads and the profit or loss</span>')}
       ${tick('pp-over', d.overheads, '<strong>Overheads and bills</strong><span class="meta" style="display:block">Each overhead, and the bills taken off profit</span>')}
-      <button type="button" class="btn" id="pp-go" style="margin-top:6px">${canShareFiles() ? 'Share PDF' : 'Download PDF'}</button>`;
+      <div class="pv-actions"><button type="button" class="btn secondary" id="pp-view">View</button><button type="button" class="btn" id="pp-go">${canShareFiles() ? 'Share PDF' : 'Download PDF'}</button></div>`;
     const setCols = (keys) => root.querySelectorAll('[data-col]').forEach((el) => { el.checked = el.dataset.col === 'commodity' || keys.includes(el.dataset.col); });
     root.querySelectorAll('[data-preset]').forEach((el) => el.addEventListener('click', () => setCols(COLUMN_PRESETS.find((p) => p.id === el.dataset.preset).keys)));
-    root.querySelector('#pp-go').addEventListener('click', () => {
+    const chosenShow = () => {
       const columns = [...root.querySelectorAll('[data-col]:checked')].map((el) => el.dataset.col);
       const show = { result: root.querySelector('#pp-result').checked, overheads: root.querySelector('#pp-over').checked, columns: columns.length > 1 ? columns : DEFAULT_COLUMNS };
       saveShow(show);
+      return show;
+    };
+    root.querySelector('#pp-view').addEventListener('click', () => { const file = makePdf(data, chosenShow()); viewPdf(file.bytes, { title: 'Position', fileName: file.fileName, share: { title: `Position ${file.season}` } }); });
+    root.querySelector('#pp-go').addEventListener('click', () => {
+      const show = chosenShow();
       closeSheet();
       exportPdf(data, show);
     });
   }, { askBeforeClose: false });
 }
 
-async function exportPdf(data, show = readShow()) {
+/** The PDF for what the sheet has ticked, with the name it is saved or sent under. */
+function makePdf(data, show = readShow()) {
   const business = db.getBusinessDetails().entityName || '';
   const season = db.getCurrentYear();
-  const bytes = positionPdf(data, { business, season, today: dmy(todayLocal()), show });
-  const fileName = safeFileName(`Position ${season} ${dmy(todayLocal())}`);
+  return { bytes: positionPdf(data, { business, season, today: dmy(todayLocal()), show }), season, fileName: safeFileName(`Position ${season} ${dmy(todayLocal())}`) };
+}
+
+async function exportPdf(data, show = readShow()) {
+  const { bytes, season, fileName } = makePdf(data, show);
   if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
   await sharePdf(bytes, fileName, { title: `Position ${season}` });
 }

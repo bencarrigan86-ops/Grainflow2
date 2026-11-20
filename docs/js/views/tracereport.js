@@ -1,13 +1,14 @@
 // The traceability sheet: choose the loads (all going to contracts, one contract, or every load; dates and commodity if wanted),
 // see which paddocks made them up (load by load, or sale by sale), and send or download it as a PDF.
 
-import { db } from '../storage.js?v=449';
-import { num, todayLocal, dmy, esc } from '../fmt.js?v=449';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=449';
-import { exportRowsAsCSV } from '../csv.js?v=449';
-import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=449';
-import { nowTime, rangeText } from '../loadreport.js?v=449';
-import { traceReportRows, traceTotals, traceSummary, traceBySale, sourceText, traceCsvRows, TRACE_CSV_COLUMNS, buildTraceReportPdf } from '../tracereport.js?v=449';
+import { db } from '../storage.js?v=450';
+import { num, todayLocal, dmy, esc } from '../fmt.js?v=450';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=450';
+import { exportRowsAsCSV } from '../csv.js?v=450';
+import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
+import { nowTime, rangeText } from '../loadreport.js?v=450';
+import { traceReportRows, traceTotals, traceSummary, traceBySale, sourceText, traceCsvRows, TRACE_CSV_COLUMNS, buildTraceReportPdf } from '../tracereport.js?v=450';
 
 const SHOWN = 40;   // loads listed on screen; the PDF has them all
 const KEY = 'grainflow.tracereport.by';
@@ -48,6 +49,7 @@ export function openTraceSheet() {
       <div id="tr-result"></div>
       ${field({ label: 'Send to (email, optional)', id: 'tr-email', value: '', placeholder: 'name@example.com' })}
       <button class="btn" id="tr-csv" type="button" style="margin-top:6px">Download for Excel (CSV)</button>
+      <button class="btn secondary" id="tr-view" type="button" style="margin-top:8px">View PDF</button>
       <button class="btn secondary" id="tr-send" type="button" style="margin-top:8px">Send as PDF</button>
       <button class="btn secondary" id="tr-download" type="button" style="margin-top:8px">Download PDF</button>`;
 
@@ -92,6 +94,7 @@ export function openTraceSheet() {
         const scopeLabel = p.scope === 'contracts' ? 'Loads to contracts' : p.scope === 'all' ? 'Every load' : saleLabel(sales.find((s) => s.id === p.scope) || {});
         const bytes = buildTraceReportPdf(r, { business: name, ngr: business.ngr || '', from: p.from, to: p.to, scopeLabel, by, showStore: store, madeAt: `${dmy(todayLocal())} ${nowTime()}` });
         const fileName = safeFileName(`Traceability by ${by} ${rangeText(p.from, p.to)}`);
+        if (andSend === 'view') { viewPdf(bytes, { title: 'Traceability report', fileName }); return; }
         if (!andSend) { downloadFile(bytes, fileName); toast('Downloaded'); return; }
         const t = traceTotals(r);
         const subject = `Traceability ${scopeLabel}${name ? ` - ${name}` : ''}`;
@@ -109,6 +112,7 @@ export function openTraceSheet() {
       exportRowsAsCSV(`traceability-by-${by}-${p.from || 'all'}-${p.to || 'dates'}-${todayLocal()}.csv`, traceCsvRows(r, by), TRACE_CSV_COLUMNS);
       toast('Downloaded');
     });
+    root.querySelector('#tr-view').addEventListener('click', () => make('view'));
     root.querySelector('#tr-send').addEventListener('click', () => make(true));
     root.querySelector('#tr-download').addEventListener('click', () => make(false));
   });

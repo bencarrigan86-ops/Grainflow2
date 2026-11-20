@@ -5,23 +5,24 @@
 // It goes to the carrier as a PDF (shared or emailed) and a copy is filed with the contract. Loads then name the
 // freight order they travel on, and the carrier's bill is recorded against it. The arithmetic is in freight.js.
 
-import { db } from '../storage.js?v=449';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=449';
-import { signerName } from '../signdoc.js?v=449';
-import { addressFields, readAddress, partsOf, joinAddress } from '../address.js?v=449';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=449';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=449';
-import { orderTitle } from '../orders.js?v=449';
-import { orderDelivery, bookingRows, nilToleranceLines, cleanFreightDetail, freightDetailDefaults, showsRate } from '../orderdetail.js?v=449';
-import { activeSales } from '../paidsales.js?v=449';
+import { db } from '../storage.js?v=450';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=450';
+import { signerName } from '../signdoc.js?v=450';
+import { addressFields, readAddress, partsOf, joinAddress } from '../address.js?v=450';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=450';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=450';
+import { orderTitle } from '../orders.js?v=450';
+import { orderDelivery, bookingRows, nilToleranceLines, cleanFreightDetail, freightDetailDefaults, showsRate } from '../orderdetail.js?v=450';
+import { activeSales } from '../paidsales.js?v=450';
 import {
   BASES, STATE_LABEL, contractFreightNo, freightState, freightOwed, freightTitle, freightDefaults, freightProblems,
   perTonne, rateText, estimatedTotal, windowText, freightOrderPdf,
-} from '../freight.js?v=449';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=449';
-import { fileSentCopy } from '../sentcopy.js?v=449';
-import { movementRow, openMovementSheet } from './movements.js?v=449';
-import { openBillSheet, returnToAfterBill } from './payables.js?v=449';
+} from '../freight.js?v=450';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
+import { fileSentCopy } from '../sentcopy.js?v=450';
+import { movementRow, openMovementSheet } from './movements.js?v=450';
+import { openBillSheet, returnToAfterBill } from './payables.js?v=450';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | closed | all
@@ -241,6 +242,7 @@ export function openFreightOrderSheet(existing, start = {}) {
         ${signerPickHtml('fo-signer')}
         </details>
         <div id="fo-problems" class="hint" style="color:var(--danger);margin:8px 0"></div>
+        <button class="btn secondary" id="fo-view" style="margin-bottom:8px">View PDF</button>
         <button class="btn" id="fo-send">${canShareFiles() ? 'Save and send to carrier' : 'Save, download and email'}</button>
         <button class="btn secondary" id="fo-download" style="margin-top:8px">Save and download PDF</button>
         ${existing ? `<button class="btn secondary" id="fo-bill" style="margin-top:8px">Record the carrier's bill&hellip;</button>
@@ -352,6 +354,19 @@ export function openFreightOrderSheet(existing, start = {}) {
       root.querySelector('#fo-save').addEventListener('click', () => { if (persist(true)) { toast('Saved'); openFreightOrdersSheet(); } });
       wireSignToggle(root, 'fo-sign', (sig) => { mySig = sig; });
       wireSignerPick(root, 'fo-signer', db.getBusinessDetails(), (name) => { printedName = name; });
+      root.querySelector('#fo-view').addEventListener('click', () => {
+        collect();
+        try {
+          const sale = sales.find((s) => s.id === d.saleId);
+          const order = orders.find((o) => o.id === d.orderId) || null;
+          const business = db.getBusinessDetails();
+          const bytes = freightOrderPdf({
+            fo: d, sale, order, business, date: todayLocal(), issuedBy: printedName || signerName(mySig, business), signature: mySig,
+            commodityName: commodities.find((c) => c.id === sale?.commodityId)?.name || '',
+          });
+          viewPdf(bytes, { title: 'Freight order', fileName: safeFileName(`Freight order ${d.freightNo || ''} ${dmy(todayLocal())}`), share: false });
+        } catch (e) { notify(`It could not be shown: ${e.message}`); }
+      });
       root.querySelector('#fo-send').addEventListener('click', () => send(true));
       root.querySelector('#fo-download').addEventListener('click', () => send(false));
       root.querySelector('#fo-bill')?.addEventListener('click', () => recordBill());

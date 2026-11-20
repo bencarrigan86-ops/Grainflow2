@@ -4,20 +4,21 @@
 // spray marked. What is on the form and where is decided in spray.js; the PDF is drawn in spraypdf.js. The job is saved
 // as it is filled in, so a request can be started in the paddock and finished at the desk.
 
-import { db } from '../storage.js?v=449';
-import { farmSwitch, canChangeArea } from '../nav.js?v=449';
-import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=449';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=449';
-import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=449';
+import { db } from '../storage.js?v=450';
+import { farmSwitch, canChangeArea } from '../nav.js?v=450';
+import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=450';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=450';
+import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=450';
 import {
   FORMS, RATE_UNITS, MAX_CHEMICALS, CHECKLIST, sprayDefaults, sprayProblems, sprayTotals, sprayTitle, usedChemicals, plain,
-} from '../spray.js?v=449';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=449';
-import { loadMySignature } from '../mysignature.js?v=449';
-import { signerNamesFor } from './signtoggle.js?v=449';
-import { signatureSvg } from './signaturepad.js?v=449';
-import { openMapSheet } from './farmmap.js?v=449';
-import { buildSprayPdf } from '../spraypdf.js?v=449';
+} from '../spray.js?v=450';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
+import { loadMySignature } from '../mysignature.js?v=450';
+import { signerNamesFor } from './signtoggle.js?v=450';
+import { signatureSvg } from './signaturepad.js?v=450';
+import { openMapSheet } from './farmmap.js?v=450';
+import { buildSprayPdf } from '../spraypdf.js?v=450';
 
 // A farm worker can write spray requests on a farm that has switched it on (see farmswitches.js); sending one on is for an owner or manager.
 export const canSpray = (role) => canChangeArea(role, 'sprays', ['owner', 'manager'].includes(role) || (role === 'farm_worker' && farmSwitch('workersRaiseSprays')));
@@ -247,6 +248,7 @@ export async function openSprayFormSheet(existing, start = {}) {
         ${d.form === 'aircair' ? aircairCard() : ''}
         ${checklistCard()}
         <div id="sp-problems" class="hint" style="color:var(--danger);margin:8px 0"></div>
+        <button class="btn secondary" id="sp-view" style="margin-bottom:8px">View PDF</button>
         ${canSendSpray(db.getRole()) ? `<button class="btn" id="sp-send">${share ? 'Save and send' : 'Save, download and email'}</button>
         <button class="btn secondary" id="sp-download" style="margin-top:8px">Save and download the PDF</button>` : '<div class="hint">A manager checks it and sends it to the contractor.</div>'}
         <button class="btn${canSendSpray(db.getRole()) ? ' secondary' : ''}" id="sp-save" style="margin-top:8px">Save as a draft</button>
@@ -344,6 +346,15 @@ export async function openSprayFormSheet(existing, start = {}) {
         });
       });
       root.querySelector('#sp-save').addEventListener('click', () => { if (persist()) { toast('Saved'); } });
+      root.querySelector('#sp-view').addEventListener('click', async (e) => {
+        const btn = e.currentTarget; btn.disabled = true;
+        collect();
+        d.today = todayLocal();
+        try {
+          const bytes = await buildSprayPdf(d, farmLayout(), { signature: d.form === 'aircair' && d.useSignature && mySig ? mySig.strokes : null });
+          viewPdf(bytes, { title: 'Spray request', fileName: safeFileName(`Spray request ${d.jobNo} ${d.contractor} ${dmy(d.dateRequired)}`), share: false });
+        } catch (err) { toast(`It could not be shown: ${err.message}`); } finally { btn.disabled = false; }
+      });
       root.querySelector('#sp-send')?.addEventListener('click', () => send(false));
       root.querySelector('#sp-download')?.addEventListener('click', () => send(true));
       root.querySelector('#sp-done')?.addEventListener('click', () => { collect(); d.status = d.status === 'done' ? 'sent' : 'done'; if (persist()) toast(d.status === 'done' ? 'Marked as done' : 'Back to sent'); paint(); });

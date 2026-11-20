@@ -1,16 +1,17 @@
 // Rotation and yield history: every paddock against every season, with the crop and its yield in each cell, and the
 // farm's yield for each crop by season underneath. Built from the seasons the farm already holds; nothing is entered here.
 
-import { db } from '../storage.js?v=449';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=449';
-import { openSheet, toast } from '../ui.js?v=449';
-import { canSeeYield } from '../nav.js?v=449';
-import { PALETTE } from '../farmmap.js?v=449';
-import { rotationGrid, rotationFarms, withoutFarms, withoutSeasons } from '../fieldhistory.js?v=449';
-import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=449';
-import { nowTime } from '../loadreport.js?v=449';
-import { downloadCSV } from '../csv.js?v=449';
-import { sharePdf, safeFileName } from '../sharefile.js?v=449';
+import { db } from '../storage.js?v=450';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=450';
+import { openSheet, toast } from '../ui.js?v=450';
+import { canSeeYield } from '../nav.js?v=450';
+import { PALETTE } from '../farmmap.js?v=450';
+import { rotationGrid, rotationFarms, withoutFarms, withoutSeasons } from '../fieldhistory.js?v=450';
+import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=450';
+import { nowTime } from '../loadreport.js?v=450';
+import { downloadCSV } from '../csv.js?v=450';
+import { sharePdf, safeFileName } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
 
 const ORIENT_KEY = 'grainflow.rotation.orientation';
 const lastOrientation = () => { try { return orientationOf(localStorage.getItem(ORIENT_KEY)); } catch { return 'landscape'; } };
@@ -154,6 +155,8 @@ export function openRotationSheet() {
         pick.innerHTML = `
           <div class="hint" style="margin-bottom:10px">How should it print? Landscape fits more seasons across a page; portrait suits a narrow sheet. The one you used last is filled in.</div>
           <div class="grid-2">${ORIENTATIONS.map((x) => `<button type="button" class="btn ${x.value === orientation ? '' : 'secondary'}" data-orient="${x.value}">${x.label}</button>`).join('')}</div>
+          <div class="subhead" style="margin-top:12px">Or look first</div>
+          <div class="grid-2">${ORIENTATIONS.map((x) => `<button type="button" class="btn secondary" data-look="${x.value}">View ${x.label.toLowerCase()}</button>`).join('')}</div>
           <button type="button" class="btn ghost" id="rot-back" style="margin-top:10px">Back to the report</button>`;
         pick.querySelectorAll('[data-orient]').forEach((btn) => btn.addEventListener('click', async () => {
           orientation = orientationOf(btn.dataset.orient);
@@ -163,6 +166,14 @@ export function openRotationSheet() {
             today: dmy(stamp), madeAt: `${dmy(stamp)} ${nowTime()}`,
           });
           await sharePdf(bytes, `Rotation and yield history ${stamp}`, { title: 'Rotation and yield history', text: `Rotation and yield history, ${business.farmName || business.entityName || ''}`.trim() });
+        }));
+        pick.querySelectorAll('[data-look]').forEach((btn) => btn.addEventListener('click', () => {
+          const o = orientationOf(btn.dataset.look);
+          const bytes = rotationPdf(pdfGrid, {
+            orientation: o, showYield: pdfYield, business: business.entityName || business.farmName || '', ngr: business.ngr || '',
+            today: dmy(stamp), madeAt: `${dmy(stamp)} ${nowTime()}`,
+          });
+          viewPdf(bytes, { title: 'Rotation and yield history', fileName: `Rotation and yield history ${stamp}`, share: { title: 'Rotation and yield history', text: `Rotation and yield history, ${business.farmName || business.entityName || ''}`.trim() } });
         }));
         pick.querySelector('#rot-back').addEventListener('click', () => openRotationSheet());
       });

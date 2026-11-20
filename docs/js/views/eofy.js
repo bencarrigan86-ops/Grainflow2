@@ -2,11 +2,12 @@
 // one day (30 June by default). The sheet shows it; Download PDF keeps a frozen copy to hand to the accountant. The
 // arithmetic and the PDF are in eofy.js.
 
-import { db } from '../storage.js?v=449';
-import { openSheet, field, getVal } from '../ui.js?v=449';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=449';
-import { eofySnapshot, eofyPdf, financialYearEnd } from '../eofy.js?v=449';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=449';
+import { db } from '../storage.js?v=450';
+import { openSheet, field, getVal } from '../ui.js?v=450';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=450';
+import { eofySnapshot, eofyPdf, financialYearEnd } from '../eofy.js?v=450';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
 
 const contractText = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -67,18 +68,19 @@ export function openEofySheet() {
           ${snap.unpaid.count === 0 ? '<div class="empty">Nothing owed by buyers.</div>' : row(`${snap.unpaid.count} invoice${snap.unpaid.count === 1 ? '' : 's'}`, `<strong>${money(snap.unpaid.total, 0)}</strong>`, 'GST included')}
         </div>
 
-        <button class="btn" id="eofy-pdf" style="margin-top:6px">${canShareFiles() ? 'Share PDF' : 'Download PDF'}</button>
+        <div class="pv-actions"><button class="btn secondary" id="eofy-view">View</button><button class="btn" id="eofy-pdf">${canShareFiles() ? 'Share PDF' : 'Download PDF'}</button></div>
         <div class="hint" style="margin-top:8px">The PDF is the frozen copy: these figures move on as the books do, the file does not.</div>`;
 
       root.querySelector('#eofy-date').addEventListener('change', () => {
         const v = getVal(root, 'eofy-date');
         if (v) { asAt = v; paint(); }
       });
+      const makePdf = () => ({ bytes: eofyPdf(compute(), { businessName: db.getBusinessDetails().entityName || '', commodities }), fileName: safeFileName(`End of year snapshot ${dmy(asAt)}`), title: `End of year snapshot ${dmy(asAt)}` });
+      root.querySelector('#eofy-view').addEventListener('click', () => { const f = makePdf(); viewPdf(f.bytes, { title: 'End of year snapshot', fileName: f.fileName, share: { title: f.title } }); });
       root.querySelector('#eofy-pdf').addEventListener('click', async () => {
-        const bytes = eofyPdf(compute(), { businessName: db.getBusinessDetails().entityName || '', commodities });
-        const fileName = safeFileName(`End of year snapshot ${dmy(asAt)}`);
-        if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
-        await sharePdf(bytes, fileName, { title: `End of year snapshot ${dmy(asAt)}` });
+        const f = makePdf();
+        if (!canShareFiles()) { downloadFile(f.bytes, f.fileName); return; }
+        await sharePdf(f.bytes, f.fileName, { title: f.title });
       });
     };
     paint();

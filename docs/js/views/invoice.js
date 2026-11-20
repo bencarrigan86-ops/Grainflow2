@@ -1,20 +1,21 @@
-import { db } from '../storage.js?v=449';
-import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=449';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=449';
-import { addressLinesOf } from '../address.js?v=449';
-import { signedBlockHTML, canSign } from '../signdoc.js?v=449';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=449';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=449';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=449';
-import { docBandHTML } from '../docband.js?v=449';
-import { deductionNotes } from '../deductions.js?v=449';
-import { ginOffsetOptions, ginOffsetLine, linePayableId } from '../ginoffset.js?v=449';
-import { cottonInvoiceModel } from '../cottoninvoice.js?v=449';
-import { openMovementSheet } from './movements.js?v=449';
-import { invoicePdf, adjustmentPdf } from '../invoicepdf.js?v=449';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=449';
-import { splitContact } from '../buyercontact.js?v=449';
-import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=449';
+import { db } from '../storage.js?v=450';
+import { movementsForEndpoint, invoiceLineItems, invoiceTotals, invoicedMovementIds, toTonsForEndpoint, freightOnInvoice, rctiCheck } from '../derived.js?v=450';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=450';
+import { addressLinesOf } from '../address.js?v=450';
+import { signedBlockHTML, canSign } from '../signdoc.js?v=450';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=450';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=450';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=450';
+import { docBandHTML } from '../docband.js?v=450';
+import { deductionNotes } from '../deductions.js?v=450';
+import { ginOffsetOptions, ginOffsetLine, linePayableId } from '../ginoffset.js?v=450';
+import { cottonInvoiceModel } from '../cottoninvoice.js?v=450';
+import { openMovementSheet } from './movements.js?v=450';
+import { invoicePdf, adjustmentPdf } from '../invoicepdf.js?v=450';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
+import { splitContact } from '../buyercontact.js?v=450';
+import { isAdjustment, invoiceLabel, noteLabel, netPayable, rctiAdjustment, buildAdjustment } from '../adjustment.js?v=450';
 
 /** Entry point from the Sales sheet: shows past invoices for this sale, plus "New invoice". */
 export function openInvoiceListSheet(sale) {
@@ -590,6 +591,7 @@ function invoiceDocHTML(sale, invoice, business, commodity, signed = null) {
 function pdfButtonsHtml() {
   return `<div class="doc-actions">
         <button class="btn" id="send-invoice" style="margin-top:14px">${canShareFiles() ? 'Share PDF' : 'Download PDF and email'}</button>
+        <button class="btn secondary" id="view-invoice" style="margin-top:8px">View PDF</button>
         <button class="btn secondary" id="download-invoice" style="margin-top:8px">Download PDF</button>
         <button class="btn secondary" id="print-invoice" style="margin-top:8px">Print</button>
       </div>`;
@@ -597,6 +599,9 @@ function pdfButtonsHtml() {
 
 /** Wire those buttons: makePdf() builds the bytes from what is on the screen now. */
 function wirePdfButtons(root, { makePdf, fileName, subject, body, to }) {
+  root.querySelector('#view-invoice').addEventListener('click', () => {
+    try { viewPdf(makePdf(), { title: 'Invoice', fileName: fileName(), share: false }); } catch (e) { notify(`The PDF could not be made: ${e.message}`); }
+  });
   root.querySelector('#download-invoice').addEventListener('click', () => {
     try { downloadFile(makePdf(), fileName()); toast('Downloaded'); } catch (e) { notify(`The PDF could not be made: ${e.message}`); }
   });

@@ -4,15 +4,16 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=449';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=449';
-import { esc, num, todayLocal, dmy } from '../fmt.js?v=449';
-import { sharePdf, safeFileName } from '../sharefile.js?v=449';
-import { APP_VERSION } from '../version.js?v=449';
-import { buildFarmMapPdf } from '../spraypdf.js?v=449';
+import { db } from '../storage.js?v=450';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=450';
+import { esc, num, todayLocal, dmy } from '../fmt.js?v=450';
+import { sharePdf, safeFileName } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
+import { APP_VERSION } from '../version.js?v=450';
+import { buildFarmMapPdf } from '../spraypdf.js?v=450';
 import {
   readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx, farmLabelPx, commonLabelPx,
-} from '../farmmap.js?v=449';
+} from '../farmmap.js?v=450';
 
 const MAX_ZOOM = 40;
 const MIN_LABEL_PX = 6.5;    // the smallest writing a paddock's name is shown in, on screen
@@ -98,7 +99,7 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
         ${unmapped.length ? `<div class="hint" style="margin-bottom:8px">Not on the map: ${unmapped.map((f) => esc(f.name)).join(', ')}.</div>` : ''}
         ${pick ? '<button type="button" class="btn secondary" id="fm-pickcancel" style="margin-top:6px">Cancel</button>' : `
         ${onSpray ? '<button type="button" class="btn" id="fm-spray" style="margin-top:6px">Spray request from this map</button>' : ''}
-        <button type="button" class="btn secondary" id="fm-pdf" style="margin-top:8px">Send this view as a PDF</button>
+        <div class="pv-actions" style="margin-top:8px"><button type="button" class="btn secondary" id="fm-view">View</button><button type="button" class="btn secondary" id="fm-pdf">Send this view as a PDF</button></div>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px"><input type="checkbox" id="fm-pdftotals" style="width:18px;height:18px" /> Paddock and hectare totals on the PDF</label>
         <div class="hint" style="margin-top:4px">The PDF shows what is on the map now: zoom to the area you want, switch off the farms you do not, and the Names, Areas and Farm names ticks above decide what is written on it.</div>
         <button type="button" class="btn secondary" id="fm-update" style="margin-top:8px">Update from a file</button>
@@ -123,9 +124,8 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
       }));
       const totalsBox = root.querySelector('#fm-pdftotals');
       if (totalsBox) { totalsBox.checked = readShow().totals !== false; totalsBox.addEventListener('change', () => saveShow({ ...readShow(), totals: totalsBox.checked })); }
-      root.querySelector('#fm-pdf')?.addEventListener('click', async (e) => {
-        const btn = e.currentTarget; btn.disabled = true;
-        try {
+      // the map as it is on screen, as a PDF, with the name it is sent under
+      const makeMapPdf = async () => {
           const business = db.getBusinessDetails();
           const legend = [...inUse.map((c, i) => ({ name: c.name, color: PALETTE[i % PALETTE.length] })), ...(mapped.some((f) => colourOf(f) === NO_CROP) ? [{ name: 'No crop set', color: NO_CROP }] : [])];
           const shown = readShow();
@@ -134,13 +134,17 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
             title: 'Farm map', date: todayLocal(), legend, hiddenFarms: readHidden(), view: mapApi.getView(),
             subtitle: [business.entityName || business.farmName, db.getCurrentYear()].filter(Boolean).join('  ·  '),
           });
-          const fileName = safeFileName(`Farm map ${dmy(todayLocal())}`);
-          const result = await sharePdf(bytes, fileName, { title: 'Farm map', text: `Farm map: ${mapped.length} paddocks, ${num(mappedHa, 0)} ha.` });
-          if (result !== 'cancelled') toast(result === 'shared' ? 'Sent' : 'Saved to this device');
-        } catch (err) {
-          notify(`The map could not be made into a PDF: ${err.message}`);
-        } finally { btn.disabled = false; }
-      });
+          return { bytes, fileName: safeFileName(`Farm map ${dmy(todayLocal())}`), text: `Farm map: ${mapped.length} paddocks, ${num(mappedHa, 0)} ha.` };
+      };
+      const withMapPdf = (use) => async (e) => {
+        const btn = e.currentTarget; btn.disabled = true;
+        try { await use(await makeMapPdf()); } catch (err) { notify(`The map could not be made into a PDF: ${err.message}`); } finally { btn.disabled = false; }
+      };
+      root.querySelector('#fm-view')?.addEventListener('click', withMapPdf((f) => viewPdf(f.bytes, { title: 'Farm map', fileName: f.fileName, share: { title: 'Farm map', text: f.text } })));
+      root.querySelector('#fm-pdf')?.addEventListener('click', withMapPdf(async (f) => {
+        const result = await sharePdf(f.bytes, f.fileName, { title: 'Farm map', text: f.text });
+        if (result !== 'cancelled') toast(result === 'shared' ? 'Sent' : 'Saved to this device');
+      }));
       root.querySelector('#fm-update')?.addEventListener('click', () => importView(root, draw, true));
       root.querySelector('#fm-clear')?.addEventListener('click', async () => {
         if (!(await askConfirm('Remove the outlines from every paddock? The paddocks and their areas stay. You can import the file again.', { confirmLabel: 'Remove', danger: true }))) return;

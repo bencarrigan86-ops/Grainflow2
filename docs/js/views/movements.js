@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=449';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=449';
-import { commodityClass } from '../commoditycolor.js?v=449';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=449';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=449';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=449';
-import { withholdingClash } from '../fumigation.js?v=449';
-import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=449';
-import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=449';
-import { cleanStrokes } from '../signature.js?v=449';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=449';
-import { compressAndStampImage } from '../img.js?v=449';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=449';
-import { specText, extraSpecKey } from '../outload.js?v=449';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=449';
-import { pickableSilos } from '../silopick.js?v=449';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=449';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=449';
-import { activeSales } from '../paidsales.js?v=449';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=449';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=449';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=449';
-import { nowTime } from '../loadreport.js?v=449';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=449';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=449';
-import { openGinRunSheet } from './ginrun.js?v=449';
-import { openModuleMoveSheet } from './modulemove.js?v=449';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=449';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=449';
+import { db } from '../storage.js?v=450';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=450';
+import { commodityClass } from '../commoditycolor.js?v=450';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=450';
+import { movementsForEndpoint, bigFirst } from '../derived.js?v=450';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=450';
+import { withholdingClash } from '../fumigation.js?v=450';
+import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=450';
+import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=450';
+import { cleanStrokes } from '../signature.js?v=450';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=450';
+import { compressAndStampImage } from '../img.js?v=450';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=450';
+import { specText, extraSpecKey } from '../outload.js?v=450';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=450';
+import { pickableSilos } from '../silopick.js?v=450';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=450';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=450';
+import { activeSales } from '../paidsales.js?v=450';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=450';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=450';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=450';
+import { nowTime } from '../loadreport.js?v=450';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=450';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=450';
+import { openGinRunSheet } from './ginrun.js?v=450';
+import { openModuleMoveSheet } from './modulemove.js?v=450';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=450';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=450';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -679,6 +679,7 @@ export function openMovementSheet(existing, template) {
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-dest" ${readDestination() ? 'checked' : ''} style="width:18px;height:18px" /> Show the destination</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-comments" ${readComments() ? 'checked' : ''} style="width:18px;height:18px" /> Comments box (this load's notes, and room to write)</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-quality" ${readQuality() ? 'checked' : ''} style="width:18px;height:18px" /> Quality results (if the load was tested)</label>
+        <button class="btn secondary" id="tk-view" type="button" style="margin-bottom:8px">View the PDF</button>
         <button class="btn secondary" id="tk-send" type="button">Send this load as a PDF</button>
         <div class="meta" style="margin-top:6px;font-size:12px">Sends the load as it is on the screen now. Save the ticket to keep any changes.</div></div></details>` : ''}
 ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete movement</button>` : ''}
@@ -1227,7 +1228,7 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
     root.querySelector('#tk-split')?.addEventListener('change', (e) => saveSplit(e.target.checked));
     root.querySelector('#tk-comments')?.addEventListener('change', (e) => saveComments(e.target.checked));
     root.querySelector('#tk-quality')?.addEventListener('change', (e) => saveQuality(e.target.checked));
-    root.querySelector('#tk-send')?.addEventListener('click', async (e) => {
+    const ticketTo = (view) => async (e) => {
       const btn = e.currentTarget; btn.disabled = true;
       const num = (id) => (getVal(root, id) === '' || getVal(root, id) == null ? null : getNum(root, id));
       const live = {
@@ -1241,10 +1242,12 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
         notes: getVal(root, 'notes')?.trim(),
       };
       live.driverSignature = sigPending ? signLoad(sigPending, live) : sigRemoved ? null : existing?.driverSignature;
-      try { await sendLoadTicket(live, { showOrigin: root.querySelector('#tk-origin').checked, showDestination: root.querySelector('#tk-dest').checked, showComments: root.querySelector('#tk-comments').checked, showQuality: root.querySelector('#tk-quality').checked, showSplit: root.querySelector('#tk-split').checked }); }
+      try { await sendLoadTicket(live, { showOrigin: root.querySelector('#tk-origin').checked, showDestination: root.querySelector('#tk-dest').checked, showComments: root.querySelector('#tk-comments').checked, showQuality: root.querySelector('#tk-quality').checked, showSplit: root.querySelector('#tk-split').checked, view }); }
       catch (err) { notify(`The load ticket could not be made: ${err.message}`); }
       finally { btn.disabled = false; }
-    });
+    };
+    root.querySelector('#tk-send')?.addEventListener('click', ticketTo(false));
+    root.querySelector('#tk-view')?.addEventListener('click', ticketTo(true));
     const del = root.querySelector('#del');
     if (del) {
       del.addEventListener('click', () => {

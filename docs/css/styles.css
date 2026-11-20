@@ -1590,3 +1590,14 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .pp-col { display: flex; align-items: center; gap: 8px; min-height: 34px; cursor: pointer; }
 .pp-col input { width: 20px; height: 20px; flex: none; }
 
+
+/* PDF preview sheet: the pages on a grey desk, zoom and share above */
+.pv-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+.pv-zoom { display: flex; gap: 6px; }
+.pv-scroll { overflow: auto; max-height: calc(100vh - 230px); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px; -webkit-overflow-scrolling: touch; }
+.pv-pages { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; width: max-content; min-width: 100%; }
+.pv-page { display: block; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); max-width: none; }
+
+/* a View button beside Share / Download, in a share sheet */
+.pv-actions { display: flex; gap: 8px; margin-top: 6px; }
+.pv-actions .btn { flex: 1; }

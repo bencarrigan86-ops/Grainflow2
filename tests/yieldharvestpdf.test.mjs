@@ -111,8 +111,8 @@ check('nothing planned gives a page that says so', () => {
 
 check('the reports screen has both buttons, built from the same figures, in both versions of harvest', () => {
   const r = read('docs/js/views/reports.js');
-  assert.ok(r.includes('id="yield-pdf"') && r.includes('exportYieldPdf(groups, movements)') && r.includes('yieldFigures(g, movements)'));
-  assert.ok(r.includes('id="harvest-pdf"') && r.includes("exportHarvestPdf({ groups, farm, seasons: scope ? [] : seasons, scopeLabel: scope ? scope.label : '', split, space, minRoom, nameOf, showYield })"));
+  assert.ok(r.includes('id="yield-pdf"') && r.includes('makeYieldPdf(groups, movements)') && r.includes('yieldFigures(g, movements)'));
+  assert.ok(r.includes('id="harvest-pdf"') && r.includes("makeHarvestPdf({ groups, farm, seasons: scope ? [] : seasons, scopeLabel: scope ? scope.label : '', split, space, minRoom, nameOf, showYield })"));
   assert.ok(r.includes('pdfButton + picker + harvestNoYieldHtml'), 'the no-yield version has the button too');
   assert.ok(r.includes('const { rows: figures, total } = yieldFigures(g, movements);'), 'the table takes its figures from the shared place');
 });

@@ -5,19 +5,20 @@
 // assurance program is remembered with the business details so it is typed once. The form itself is in
 // vendordec.js; getting the PDF out is in sharefile.js.
 
-import { db } from '../storage.js?v=449';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=449';
-import { todayLocal, tightDate, dmy, esc } from '../fmt.js?v=449';
-import { loadMySignature } from '../mysignature.js?v=449';
-import { signerNamesFor } from './signtoggle.js?v=449';
-import { fileSentCopy } from '../sentcopy.js?v=449';
-import { mountSignaturePad, signatureSvg } from './signaturepad.js?v=449';
-import { orderTitle, windowText } from '../orders.js?v=449';
-import { activeSales } from '../paidsales.js?v=449';
+import { db } from '../storage.js?v=450';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=450';
+import { todayLocal, tightDate, dmy, esc } from '../fmt.js?v=450';
+import { loadMySignature } from '../mysignature.js?v=450';
+import { signerNamesFor } from './signtoggle.js?v=450';
+import { fileSentCopy } from '../sentcopy.js?v=450';
+import { mountSignaturePad, signatureSvg } from './signaturepad.js?v=450';
+import { orderTitle, windowText } from '../orders.js?v=450';
+import { activeSales } from '../paidsales.js?v=450';
 import {
   buildDeclaration, declarationPdf, declarationProblems, GMO_OPTIONS, MAX_VARIETIES, LAYOUTS, CVD_SOURCES, CVD_GMO_OPTIONS, CVD_BYPRODUCT,
-} from '../vendordec.js?v=449';
-import { sharePdf, downloadFile, safeFileName, mailtoLink, canShareFiles } from '../sharefile.js?v=449';
+} from '../vendordec.js?v=450';
+import { sharePdf, downloadFile, safeFileName, mailtoLink, canShareFiles } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
 
 const LAYOUT_KEY = 'grainflow.vendordec.layout';
 const lastLayout = () => { try { return localStorage.getItem(LAYOUT_KEY) === 'cvd' ? 'cvd' : 'gta'; } catch { return 'gta'; } };
@@ -200,7 +201,8 @@ export async function openVendorDecSheet(start = {}) {
         ${field({ label: 'Document ID', id: 'vd-id', value: d.documentId })}
 
         <div id="vd-problems" class="hint" style="color:var(--danger);margin:8px 0"></div>
-        <button class="btn" id="vd-share" style="margin-top:6px">${canShareFiles() ? 'Share PDF' : 'Download PDF and email'}</button>
+        <button class="btn secondary" id="vd-view" style="margin-top:6px">View PDF</button>
+        <button class="btn" id="vd-share" style="margin-top:8px">${canShareFiles() ? 'Share PDF' : 'Download PDF and email'}</button>
         <button class="btn secondary" id="vd-download" style="margin-top:8px">Download PDF</button>
         <div class="hint" style="margin-top:8px">${canShareFiles()
           ? 'Share opens your phone\'s share sheet with the PDF attached: choose Mail or another app.'
@@ -315,6 +317,10 @@ export async function openVendorDecSheet(start = {}) {
       }
       root.querySelector('#vd-share').addEventListener('click', () => send(true));
       root.querySelector('#vd-download').addEventListener('click', () => send(false));
+      root.querySelector('#vd-view').addEventListener('click', () => {
+        collect();
+        try { viewPdf(declarationPdf(d), { title: 'Vendor declaration', fileName: safeFileName(`Vendor declaration ${d.contractNo || d.documentId} ${dmy(d.signedDate)}`), share: false }); } catch (e) { toast(`It could not be shown: ${e.message}`); }
+      });
     };
 
     // changing the contract or order refills the details that come from them, and keeps what was chosen by hand

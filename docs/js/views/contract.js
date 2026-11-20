@@ -18,17 +18,18 @@
 // invoice.js already works, it produces a real PDF on a phone as readily as on
 // a desktop, and it costs nothing to carry.
 
-import { db } from '../storage.js?v=449';
-import { openSheet, toast, notify, askConfirm } from '../ui.js?v=449';
-import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=449';
-import { addressLinesOf } from '../address.js?v=449';
-import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=449';
-import { contactLines, splitContact } from '../buyercontact.js?v=449';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=449';
-import { DASH, longDate, termRows, confirmationPdf, confirmationFooting } from '../contractpdf.js?v=449';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=449';
-import { fileSentCopy } from '../sentcopy.js?v=449';
-import { docBandHTML } from '../docband.js?v=449';
+import { db } from '../storage.js?v=450';
+import { openSheet, toast, notify, askConfirm } from '../ui.js?v=450';
+import { esc, num, money, todayLocal, dmy } from '../fmt.js?v=450';
+import { addressLinesOf } from '../address.js?v=450';
+import { signedBlockHTML, canSign, signerName } from '../signdoc.js?v=450';
+import { contactLines, splitContact } from '../buyercontact.js?v=450';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=450';
+import { DASH, longDate, termRows, confirmationPdf, confirmationFooting } from '../contractpdf.js?v=450';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
+import { fileSentCopy } from '../sentcopy.js?v=450';
+import { docBandHTML } from '../docband.js?v=450';
 
 /** One term, its value on one line or on several (an array). Omitted entirely when empty — a blank line invites a pen. */
 const term = (label, value) => {
@@ -148,6 +149,7 @@ export function openContractDocSheet(sale) {
       <div id="doc-holder">${contractDocHTML(sale, business, commodity)}</div>
       <div class="doc-actions">
         <button class="btn" id="send-contract" style="margin-top:14px">${canShareFiles() ? 'Share PDF' : 'Download PDF and email'}</button>
+        <button class="btn secondary" id="view-contract" style="margin-top:8px">View PDF</button>
         <button class="btn secondary" id="download-contract" style="margin-top:8px">Download PDF</button>
         <button class="btn secondary" id="print-contract" style="margin-top:8px">Print</button>
         <div class="hint" style="margin-top:8px">${canShareFiles()
@@ -176,6 +178,7 @@ export function openContractDocSheet(sale) {
       return confirmationPdf({ sale, business, commodity, signature: signedWith, printedName, date: todayLocal(), showFreight, showComments });
     };
     const fileName = () => safeFileName(`Confirmation of sale ${sale.contractNo || ''} ${dmy(todayLocal())}`);
+    root.querySelector('#view-contract').addEventListener('click', () => viewPdf(makePdf(), { title: 'Confirmation of sale', fileName: fileName(), share: false }));
     root.querySelector('#download-contract').addEventListener('click', () => { downloadFile(makePdf(), fileName()); toast('Downloaded'); });
     root.querySelector('#send-contract').addEventListener('click', async () => {
       if (gaps.length && !(await askConfirm(`Still to fill in: ${gaps.join('; ')}. Send it anyway?`, { confirmLabel: 'Send anyway' }))) return;

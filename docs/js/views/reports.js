@@ -1,37 +1,38 @@
-import { db } from '../storage.js?v=449';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=449';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT, areaShare, productionSummary } from '../derived.js?v=449';
-import { fertPdf } from '../fertpdf.js?v=449';
-import { seedPdf } from '../seedpdf.js?v=449';
-import { yieldPdf } from '../yieldpdf.js?v=449';
-import { harvestPdf } from '../harvestpdf.js?v=449';
-import { modulesPdf } from '../modulespdf.js?v=449';
-import { modulesReport } from '../modulesreport.js?v=449';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=449';
-import { num, tons, esc, money, todayLocal, dmy } from '../fmt.js?v=449';
-import { field, getVal, getNum } from '../ui.js?v=449';
-import { canSeeYield, canOpen, canSeePrices } from '../nav.js?v=449';
-import { gmReport } from '../grossmargin.js?v=449';
-import { gmPdf } from '../gmpdf.js?v=449';
-import { levelFor } from '../helpcontent.js?v=449';
-import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=449';
-import { openMoneySheet, openMtmSheet, openDeliveriesSheet } from './outstanding.js?v=449';
-import { openOptimiserSheet } from './optimiser.js?v=449';
-import { openCalculatorSheet } from './calculator.js?v=449';
-import { openEofySheet } from './eofy.js?v=449';
-import { openPricesSheet } from './prices.js?v=449';
-import { openRotationSheet } from './rotation.js?v=449';
-import { openAveragesSheet } from './averages.js?v=449';
-import { openLoadReportSheet } from './loadreport.js?v=449';
-import { openStockByLocationSheet } from './stocklocation.js?v=449';
-import { openTraceSheet } from './tracereport.js?v=449';
-import { openXeroSheet } from './xero.js?v=449';
-import { openMapSheet } from './farmmap.js?v=449';
-import { openExportCsvSheet } from './settingsexport.js?v=449';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=449';
-import { harvestReport, siloSpace, roomSplit, roomSummary, pctText } from '../harvest.js?v=449';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=449';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=449';
+import { db } from '../storage.js?v=450';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=450';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT, areaShare, productionSummary } from '../derived.js?v=450';
+import { fertPdf } from '../fertpdf.js?v=450';
+import { seedPdf } from '../seedpdf.js?v=450';
+import { yieldPdf } from '../yieldpdf.js?v=450';
+import { harvestPdf } from '../harvestpdf.js?v=450';
+import { modulesPdf } from '../modulespdf.js?v=450';
+import { modulesReport } from '../modulesreport.js?v=450';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
+import { num, tons, esc, money, todayLocal, dmy } from '../fmt.js?v=450';
+import { field, getVal, getNum } from '../ui.js?v=450';
+import { canSeeYield, canOpen, canSeePrices } from '../nav.js?v=450';
+import { gmReport } from '../grossmargin.js?v=450';
+import { gmPdf } from '../gmpdf.js?v=450';
+import { levelFor } from '../helpcontent.js?v=450';
+import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=450';
+import { openMoneySheet, openMtmSheet, openDeliveriesSheet } from './outstanding.js?v=450';
+import { openOptimiserSheet } from './optimiser.js?v=450';
+import { openCalculatorSheet } from './calculator.js?v=450';
+import { openEofySheet } from './eofy.js?v=450';
+import { openPricesSheet } from './prices.js?v=450';
+import { openRotationSheet } from './rotation.js?v=450';
+import { openAveragesSheet } from './averages.js?v=450';
+import { openLoadReportSheet } from './loadreport.js?v=450';
+import { openStockByLocationSheet } from './stocklocation.js?v=450';
+import { openTraceSheet } from './tracereport.js?v=450';
+import { openXeroSheet } from './xero.js?v=450';
+import { openMapSheet } from './farmmap.js?v=450';
+import { openExportCsvSheet } from './settingsexport.js?v=450';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=450';
+import { harvestReport, siloSpace, roomSplit, roomSummary, pctText } from '../harvest.js?v=450';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=450';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=450';
 
 let unsub = null;
 let view = null;   // null is the screen of tiles; otherwise the report that is open
@@ -167,8 +168,32 @@ function dockPdf(root) {
   b.removeAttribute('style');
   b.classList.add('small');
   slot.innerHTML = '';
+  const view = document.createElement('button');
+  view.type = 'button';
+  view.className = 'btn secondary small';
+  view.id = 'reports-view';
+  view.textContent = 'View';
+  view.addEventListener('click', () => { if (pdfMaker) viewMade(pdfMaker()); });
+  slot.style.display = 'flex';
+  slot.style.gap = '6px';
+  slot.appendChild(view);
   slot.appendChild(b);
 }
+
+/**
+ * How the open report makes its PDF: { bytes, fileName, title }. The PDF button shares it and the View button next to it
+ * shows it, so both are the same file.
+ */
+let pdfMaker = null;
+function wirePdfButton(body, id, make) {
+  pdfMaker = make;
+  body.querySelector(`#${id}`)?.addEventListener('click', () => shareMade(make()));
+}
+async function shareMade(file) {
+  if (!canShareFiles()) { downloadFile(file.bytes, file.fileName); return; }
+  await sharePdf(file.bytes, file.fileName, { title: file.title });
+}
+function viewMade(file) { viewPdf(file.bytes, { title: file.title, fileName: file.fileName, share: { title: file.title } }); }
 
 /** The modules report: a summary of where the modules are and what has been ginned, then the grower position as the gin prints it. */
 
@@ -212,12 +237,10 @@ function paintModules(root) {
     ${report.pending.loads ? `<div class="card report">
       <div class="row" id="modules-pending" style="cursor:pointer"><span class="label">Loads waiting for the weighbridge weight</span><span class="value"><span class="badge warn">${report.pending.loads} · ${num(report.pending.modules, 0)} modules</span></span></div>
     </div>` : ''}`;
-  body.querySelector('#modules-pdf')?.addEventListener('click', async () => {
+  wirePdfButton(body, 'modules-pdf', () => {
     const season = db.getCurrentYear();
     const bytes = modulesPdf({ report, business: db.getBusinessDetails().entityName || '', season, today: dmy(todayLocal()) });
-    const fileName = safeFileName(`Modules ${season} ${dmy(todayLocal())}`);
-    if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
-    await sharePdf(bytes, fileName, { title: `Modules ${season}` });
+    return { bytes, fileName: safeFileName(`Modules ${season} ${dmy(todayLocal())}`), title: `Modules ${season}` };
   });
   body.querySelector('#modules-pending')?.addEventListener('click', () => { location.hash = '#movement'; });
 }
@@ -255,20 +278,18 @@ function paintFert(root) {
     </div>
   `;
   buildNitrogenCalc(body, commodities);
-  body.querySelector('#fert-pdf')?.addEventListener('click', () => exportFertPdf(groups, commodities));
+  wirePdfButton(body, 'fert-pdf', () => makeFertPdf(groups, commodities));
   if (groups.length > 0) buildFertSensitivity(body, groups.filter((g) => g.id), commodities, fields);
 }
 
 /** The Fert report as a PDF: the same figures as the tables, shared where the phone can share and downloaded elsewhere. */
-async function exportFertPdf(groups, commodities) {
+function makeFertPdf(groups, commodities) {
   const season = db.getCurrentYear();
   const bytes = fertPdf(
     { urea: groups.map((g) => ureaFigures(g, commodities.find((c) => c.id === g.id))), starter: groups.map((g) => starterFigures(g)), summary: groups.length > 1 },
     { business: db.getBusinessDetails().entityName || '', season, today: dmy(todayLocal()), ureaNPct: UREA_N_PCT },
   );
-  const fileName = safeFileName(`Fertiliser ${season} ${dmy(todayLocal())}`);
-  if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
-  await sharePdf(bytes, fileName, { title: `Fertiliser ${season}` });
+  return { bytes, fileName: safeFileName(`Fertiliser ${season} ${dmy(todayLocal())}`), title: `Fertiliser ${season}` };
 }
 
 // What the panel was last set to, so it survives the page repainting when data changes.
@@ -545,16 +566,14 @@ function paintSeed(root) {
       ${groups.length === 0 ? `<div class="empty">Add fields with a seed rate in the Production tab.</div>` : seedSummaryTable(seedSummary(groups.map((g) => seedFigures(g)))) + groups.map((g) => seedTable(g)).join('')}
     </div>
   `;
-  body.querySelector('#seed-pdf')?.addEventListener('click', () => exportSeedPdf(groups));
+  wirePdfButton(body, 'seed-pdf', () => makeSeedPdf(groups));
 }
 
 /** The Seed report as a PDF: the same figures as the tables, shared where the phone can share and downloaded elsewhere. */
-async function exportSeedPdf(groups) {
+function makeSeedPdf(groups) {
   const season = db.getCurrentYear();
   const bytes = seedPdf(groups.map((g) => seedFigures(g)), { business: db.getBusinessDetails().entityName || '', season, today: dmy(todayLocal()), bufferPct: SEED_BUFFER_PCT });
-  const fileName = safeFileName(`Seed ${season} ${dmy(todayLocal())}`);
-  if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
-  await sharePdf(bytes, fileName, { title: `Seed ${season}` });
+  return { bytes, fileName: safeFileName(`Seed ${season} ${dmy(todayLocal())}`), title: `Seed ${season}` };
 }
 
 /**
@@ -678,7 +697,7 @@ function paintHarvest(root, showYield = true) {
   }
   const nameOf = (id) => commodities.find((c) => c.id === id)?.name || 'No commodity';
   const pdfButton = `<button type="button" class="btn secondary" id="harvest-pdf" style="margin-bottom:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>`;
-  const wirePdf = () => body.querySelector('#harvest-pdf')?.addEventListener('click', () => exportHarvestPdf({ groups, farm, seasons: scope ? [] : seasons, scopeLabel: scope ? scope.label : '', split, space, minRoom, nameOf, showYield }));
+  const wirePdf = () => wirePdfButton(body, 'harvest-pdf', () => makeHarvestPdf({ groups, farm, seasons: scope ? [] : seasons, scopeLabel: scope ? scope.label : '', split, space, minRoom, nameOf, showYield }));
   // what a role that is not shown yields sees: how much ground is cut and what is left, and the room in the silos. A tonne
   // figure beside a hectare figure is a yield, and the estimate and what is still to come are built from yields.
   const haPct = (done, area) => (area > 0 ? `${Math.round((done / area) * 100)}%` : '-');
@@ -751,12 +770,10 @@ function paintHarvest(root, showYield = true) {
 }
 
 /** The Harvest report as a PDF: the report's own figures, with no tonnes for a role that is not shown yields. */
-async function exportHarvestPdf({ groups, farm, seasons, scopeLabel, split, space, minRoom, nameOf, showYield }) {
+function makeHarvestPdf({ groups, farm, seasons, scopeLabel, split, space, minRoom, nameOf, showYield }) {
   const season = db.getCurrentYear();
   const bytes = harvestPdf({ groups, farm, seasons, scopeLabel, split, space, minRoom, nameOf, showYield, business: db.getBusinessDetails().entityName || '', season, today: dmy(todayLocal()) });
-  const fileName = safeFileName(`Harvest ${season} ${dmy(todayLocal())}`);
-  if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
-  await sharePdf(bytes, fileName, { title: `Harvest ${season}` });
+  return { bytes, fileName: safeFileName(`Harvest ${season} ${dmy(todayLocal())}`), title: `Harvest ${season}` };
 }
 
 /** Winter, Summer or Both: which crops the harvest report is looking at. Shown only when there is more than one season to choose between. */
@@ -1029,12 +1046,10 @@ function paintGm(root) {
       <div class="row"><span class="label">Cost</span><span class="value">${d0(total.costHa)} /ha &middot; ${money(total.cost, 0)}</span></div>
       <div class="row"><span class="label"><strong>Gross margin</strong></span><span class="value"><strong>${gm(total.gmHa)} /ha &middot; ${money(total.gm, 0)}</strong></span></div>
     </div>`;
-  body.querySelector('#gm-pdf')?.addEventListener('click', async () => {
+  wirePdfButton(body, 'gm-pdf', () => {
     const season = db.getCurrentYear();
     const bytes = gmPdf({ groups, total }, { business: db.getBusinessDetails().entityName || '', season, today: dmy(todayLocal()) });
-    const fileName = safeFileName(`Gross margin ${season} ${dmy(todayLocal())}`);
-    if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
-    await sharePdf(bytes, fileName, { title: `Gross margin ${season}` });
+    return { bytes, fileName: safeFileName(`Gross margin ${season} ${dmy(todayLocal())}`), title: `Gross margin ${season}` };
   });
   body.querySelectorAll('.gm-cost').forEach((el) => el.addEventListener('change', () => {
     const v = el.value.trim();
@@ -1083,16 +1098,14 @@ function paintYield(root) {
     </div>
   `;
   bindSensitivity(body);
-  body.querySelector('#yield-pdf')?.addEventListener('click', () => exportYieldPdf(groups, movements));
+  wirePdfButton(body, 'yield-pdf', () => makeYieldPdf(groups, movements));
 }
 
 /** The Yield report as a PDF: the same figures as the tables, shared where the phone can share and downloaded elsewhere. */
-async function exportYieldPdf(groups, movements) {
+function makeYieldPdf(groups, movements) {
   const season = db.getCurrentYear();
   const bytes = yieldPdf(groups.map((g) => yieldFigures(g, movements)), { business: db.getBusinessDetails().entityName || '', season, today: dmy(todayLocal()) });
-  const fileName = safeFileName(`Yield ${season} ${dmy(todayLocal())}`);
-  if (!canShareFiles()) { downloadFile(bytes, fileName); return; }
-  await sharePdf(bytes, fileName, { title: `Yield ${season}` });
+  return { bytes, fileName: safeFileName(`Yield ${season} ${dmy(todayLocal())}`), title: `Yield ${season}` };
 }
 
 function yieldTable(g, movements) {

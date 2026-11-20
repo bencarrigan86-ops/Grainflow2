@@ -1,11 +1,12 @@
 // The load report sheet: pick the dates, tick what to narrow the loads by (any number of commodities, contracts, paddocks, silos,
 // grades, trucks or drivers), then send the list of loads on as a PDF.
 
-import { db } from '../storage.js?v=449';
-import { num, todayLocal, dmy, esc } from '../fmt.js?v=449';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=449';
-import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=449';
-import { loadReportRows, loadReportTotals, loadFilterChoices, filterText, datePresets, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=449';
+import { db } from '../storage.js?v=450';
+import { num, todayLocal, dmy, esc } from '../fmt.js?v=450';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=450';
+import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
+import { loadReportRows, loadReportTotals, loadFilterChoices, filterText, datePresets, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=450';
 
 // what was chosen last time, remembered on this device
 const KEY = 'grainflow.loadreport';
@@ -25,13 +26,14 @@ export const readDestination = () => read().showDestination !== false;
 export const saveDestination = (showDestination) => save({ ...read(), showDestination });
 
 /** One saved load, made into a slip and sent on (or downloaded). */
-export async function sendLoadTicket(m, { showOrigin = true, showDestination = true, showComments = true, showQuality = true, showSplit = true, download = false } = {}) {
+export async function sendLoadTicket(m, { showOrigin = true, showDestination = true, showComments = true, showQuality = true, showSplit = true, download = false, view = false } = {}) {
   const { fields, storages, sales, commodities } = db.get();
   const row = loadReportRows([m], { fields, storages, sales, commodities })[0];
   const business = db.getBusinessDetails();
   const name = business.entityName || business.farmName || '';
   const bytes = buildLoadTicketPdf(row, { business: name, ngr: business.ngr || '', showOrigin, showDestination, showComments, showQuality, showSplit, madeAt: `${dmy(todayLocal())} ${nowTime()}` });
   const fileName = safeFileName(`Load ticket ${row.ticketNo === '' ? '' : `${row.ticketNo} `}${dmy(row.date)}`);
+  if (view) { viewPdf(bytes, { title: 'Load ticket', fileName }); return; }
   if (download) { downloadFile(bytes, fileName); toast('Downloaded'); return; }
   const subject = `Load ticket${row.ticketNo === '' ? '' : ` #${row.ticketNo}`} ${dmy(row.date)}${name ? ` - ${name}` : ''}`;
   const body = `Hi,
@@ -104,7 +106,8 @@ export function openLoadReportSheet() {
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="lr-quality" ${d.showQuality ? 'checked' : ''} style="width:18px;height:18px" /> Show quality results where a load was tested</label>
       ${field({ label: 'Send to (email, optional)', id: 'lr-email', value: d.email, placeholder: 'name@example.com' })}
       <div class="row"><span class="label">On the report</span><span class="value" id="lr-count">-</span></div>
-      <button class="btn" id="lr-send" type="button" style="margin-top:10px">Send as PDF</button>
+      <button class="btn secondary" id="lr-view" type="button" style="margin-top:10px">View PDF</button>
+      <button class="btn" id="lr-send" type="button" style="margin-top:8px">Send as PDF</button>
       <button class="btn secondary" id="lr-download" type="button" style="margin-top:8px">Download</button>`;
 
     const collect = () => {
@@ -160,6 +163,7 @@ export function openLoadReportSheet() {
         const name = business.entityName || business.farmName || '';
         const bytes = buildLoadReportPdf(r, { business: name, ngr: business.ngr || '', from: d.from, to: d.to, showOrigin: d.showOrigin, showDestination: d.showDestination, showQuality: d.showQuality, filters: filterText(d, ctx), madeAt: `${dmy(todayLocal())} ${nowTime()}` });
         const fileName = safeFileName(`Load report ${rangeText(d.from, d.to)}`);
+        if (andSend === 'view') { viewPdf(bytes, { title: 'Load report', fileName }); return; }
         if (!andSend) { downloadFile(bytes, fileName); toast('Downloaded'); return; }
         const t = loadReportTotals(r);
         const subject = `Load report ${rangeText(d.from, d.to)}${name ? ` - ${name}` : ''}`;
@@ -170,6 +174,7 @@ export function openLoadReportSheet() {
         notify(`The report could not be made: ${e.message}`);
       } finally { btns.forEach((b) => { b.disabled = false; }); }
     };
+    root.querySelector('#lr-view').addEventListener('click', () => make('view'));
     root.querySelector('#lr-send').addEventListener('click', () => make(true));
     root.querySelector('#lr-download').addEventListener('click', () => make(false));
   });

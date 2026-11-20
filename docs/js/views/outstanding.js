@@ -4,25 +4,26 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { canSeeBills, canSeeOrders } from '../nav.js?v=449';
-import { db } from '../storage.js?v=449';
-import { openSheet, openOver } from '../ui.js?v=449';
-import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=449';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=449';
-import { windowText } from '../orders.js?v=449';
-import { openOrderSheet } from './orders.js?v=449';
-import { openInvoiceListSheet } from './invoice.js?v=449';
-import { renderPayables, returnToAfterBill } from './payables.js?v=449';
-import { openXeroSheet } from './xero.js?v=449';
-import { cashflow } from '../cashflow.js?v=449';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=449';
-import { buyerStatements, statementPdf } from '../statement.js?v=449';
-import { buyerExposure } from '../exposure.js?v=449';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=449';
-import { exposurePdf } from '../exposurepdf.js?v=449';
-import { emailIn } from '../vendordec.js?v=449';
-import { invoiceLabel } from '../adjustment.js?v=449';
-import { matchesAll, amountText } from '../listsearch.js?v=449';
+import { canSeeBills, canSeeOrders } from '../nav.js?v=450';
+import { db } from '../storage.js?v=450';
+import { openSheet, openOver } from '../ui.js?v=450';
+import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=450';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=450';
+import { windowText } from '../orders.js?v=450';
+import { openOrderSheet } from './orders.js?v=450';
+import { openInvoiceListSheet } from './invoice.js?v=450';
+import { renderPayables, returnToAfterBill } from './payables.js?v=450';
+import { openXeroSheet } from './xero.js?v=450';
+import { cashflow } from '../cashflow.js?v=450';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=450';
+import { buyerStatements, statementPdf } from '../statement.js?v=450';
+import { buyerExposure } from '../exposure.js?v=450';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=450';
+import { viewPdf } from '../pdfview.js?v=450';
+import { exposurePdf } from '../exposurepdf.js?v=450';
+import { emailIn } from '../vendordec.js?v=450';
+import { invoiceLabel } from '../adjustment.js?v=450';
+import { matchesAll, amountText } from '../listsearch.js?v=450';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -164,7 +165,9 @@ export function openMoneySheet(side = null) {
       root.querySelectorAll('[data-open-invoices]').forEach((el) => el.addEventListener('click', () => openOver(() => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.openInvoices)), draw)));
       root.querySelector('#open-xero')?.addEventListener('click', () => openOver(() => openXeroSheet()));
       root.querySelector('#exposure-pdf')?.addEventListener('click', () => exportExposurePdf(buyerExposure(invoices, sales, movements, commodities, today), today));
+      root.querySelector('#exposure-view')?.addEventListener('click', () => viewExposurePdf(buyerExposure(invoices, sales, movements, commodities, today), today));
       root.querySelectorAll('[data-statement]').forEach((b) => b.addEventListener('click', () => sendStatement(b.dataset.statement, { invoices, sales, movements, commodities, today })));
+      root.querySelectorAll('[data-statement-view]').forEach((b) => b.addEventListener('click', () => sendStatement(b.dataset.statementView, { invoices, sales, movements, commodities, today }, true)));
       const bills = root.querySelector('#money-bills');
       if (bills) renderPayables(bills, { stats: false });
     };
@@ -184,7 +187,9 @@ export function openMtmSheet() {
       root.innerHTML = buyersHtml(buyerExposure(invoices, sales, movements, commodities, today), commodities);
       root.querySelectorAll('[data-open-invoices]').forEach((el) => el.addEventListener('click', () => openOver(() => openInvoiceListSheet(sales.find((s) => s.id === el.dataset.openInvoices)), draw)));
       root.querySelector('#exposure-pdf')?.addEventListener('click', () => exportExposurePdf(buyerExposure(invoices, sales, movements, commodities, today), today));
+      root.querySelector('#exposure-view')?.addEventListener('click', () => viewExposurePdf(buyerExposure(invoices, sales, movements, commodities, today), today));
       root.querySelectorAll('[data-statement]').forEach((b) => b.addEventListener('click', () => sendStatement(b.dataset.statement, { invoices, sales, movements, commodities, today })));
+      root.querySelectorAll('[data-statement-view]').forEach((b) => b.addEventListener('click', () => sendStatement(b.dataset.statementView, { invoices, sales, movements, commodities, today }, true)));
     };
     draw();
   });
@@ -306,7 +311,7 @@ function buyersHtml({ buyers, total, weeks }, commodities) {
   if (!buyers.length) return '<div class="empty" style="padding:6px 0">No buyer owes you anything, and there is no grain still to deliver.</div>';
   const gapNote = total.noMtm ? ` ${total.noMtm} contract${total.noMtm === 1 ? ' has' : 's have'} no MTM price set on the commodity, so ${total.noMtm === 1 ? 'it is' : 'they are'} left out.` : '';
   return `
-    <button type="button" class="btn secondary small" id="exposure-pdf" style="margin-bottom:10px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>
+    <button type="button" class="btn secondary small" id="exposure-view" style="margin-bottom:10px;margin-right:6px">View</button><button type="button" class="btn secondary small" id="exposure-pdf" style="margin-bottom:10px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>
     <div class="stat-grid">
       <div class="stat" style="grid-column:1 / -1"><div class="n">${money(total.owing, 0)}</div><div class="l">Owing now · ${total.overdueTotal ? `<span class="mtm neg">${money(total.overdueTotal, 0)} overdue</span>` : 'none overdue'}</div></div>
       <div class="stat"><div class="n">${money(total.unpaidTotal, 0)}</div><div class="l">Invoiced, unpaid</div></div>
@@ -342,30 +347,38 @@ function buyersHtml({ buyers, total, weeks }, commodities) {
         ${b.nextDue ? `<div class="meta">Next payment: ${money(b.nextDue.amount, 0)} due ${esc(shortDate(b.nextDue.date))}</div>` : ''}
         <div class="meta">${b.dueTons > 0 ? `To go: ${num(b.dueTons, 0)} t on ${b.contracts} contract${b.contracts === 1 ? '' : 's'} · ${money(b.dueValue, 0)}${b.contracts > b.noMtm ? ` · <strong>${mtmHtml(b.mtmGap)} vs MTM</strong>` : ' · no MTM price set'}` : 'Nothing left to deliver'}</div>
         <div class="li-foot"><span class="badges">${b.overdueTotal ? `<span class="badge neg">${money(b.overdueTotal, 0)} overdue</span>` : '<span class="badge muted">None overdue</span>'}${b.share >= 0.005 ? `<span class="badge muted">${Math.round(b.share * 100)}% of what is owed</span>` : ''}</span>
-          ${b.owing > 0 ? `<button type="button" class="btn secondary small" data-statement="${esc(b.key)}">Send statement</button>` : ''}</div>
+          ${b.owing > 0 ? `<span style="display:flex;gap:6px"><button type="button" class="btn secondary small" data-statement-view="${esc(b.key)}">View</button><button type="button" class="btn secondary small" data-statement="${esc(b.key)}">Send statement</button></span>` : ''}</div>
       </div>`).join('')}`;
 }
 
 /** The buyer exposure as a PDF: shared where the phone can share, downloaded elsewhere. */
-async function exportExposurePdf(exposure, today) {
+function makeExposurePdf(exposure, today) {
   const biz = db.getBusinessDetails();
-  const bytes = exposurePdf(exposure, { business: biz.entityName || biz.farmName || '', today: dmy(today) });
-  const name = safeFileName(`Buyer exposure ${dmy(today)}`);
+  return { bytes: exposurePdf(exposure, { business: biz.entityName || biz.farmName || '', today: dmy(today) }), name: safeFileName(`Buyer exposure ${dmy(today)}`) };
+}
+async function exportExposurePdf(exposure, today) {
+  const { bytes, name } = makeExposurePdf(exposure, today);
   if (!canShareFiles()) { downloadFile(bytes, name); return; }
   await sharePdf(bytes, name, { title: 'Buyer exposure' });
 }
+function viewExposurePdf(exposure, today) {
+  const { bytes, name } = makeExposurePdf(exposure, today);
+  viewPdf(bytes, { title: 'Buyer exposure', fileName: name, share: { title: 'Buyer exposure' } });
+}
 
 /** Makes the buyer's statement as a PDF and sends it on: the share sheet on a phone, a download and an email on a computer. */
-async function sendStatement(key, { invoices, sales, movements, commodities, today }) {
+async function sendStatement(key, { invoices, sales, movements, commodities, today }, lookOnly = false) {
   const st = buyerStatements(invoices, sales, movements, today).find((b) => b.key === key);
   if (!st) return;
   const biz = db.getBusinessDetails();
   const bytes = statementPdf(st, { businessName: biz.entityName || biz.farmName || '', abn: biz.abn || '', today, contractName: (s) => contractLabel(s, commodities) });
   const to = emailIn(sales.find((s) => String(s.buyer || '').trim().toLowerCase() === key && emailIn(s.buyerContact))?.buyerContact) || '';
-  await sharePdf(bytes, `Statement ${st.buyer} ${today}`, {
+  const send = {
     title: `Statement from ${biz.entityName || biz.farmName || 'us'}`, text: `Statement for ${st.buyer}, ${today}.`,
     mail: { to, subject: `Statement for ${st.buyer} as at ${today}`, body: 'Please find our statement attached.' },
-  });
+  };
+  if (lookOnly) { viewPdf(bytes, { title: `Statement ${st.buyer}`, fileName: `Statement ${st.buyer} ${today}`, share: send }); return; }
+  await sharePdf(bytes, `Statement ${st.buyer} ${today}`, send);
 }
 
 /** How a contract is delivered, and for an even one the weekly or monthly rate: " · spread evenly, about 30 t a week". */
