@@ -448,6 +448,8 @@ details.fold.fold-band.fold-alt {
   box-sizing: border-box;
 }
 
+/* the Silo / Bunker / Yard choice at the top of a storage form: room before the Name and Farm row */
+.segmented#s-kind { margin-bottom: 16px; }
 .segmented {
   display: flex;
   background: var(--btn-tint);
