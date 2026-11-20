@@ -2,7 +2,7 @@
 // per hectare, with a total, and the whole farm at the end. The figures come from grossmargin.js (gmReport), the same ones the
 // screen uses; a paddock with a cost of its own is marked with a star. Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=471';
+import { createReport, fixed } from './reportpdf.js?v=472';
 
 const money = (v) => `${v < 0 ? '-' : ''}$${fixed(Math.abs(v), 0)}`;
 

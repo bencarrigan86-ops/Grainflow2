@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=471';
-import { num, esc, todayLocal } from '../fmt.js?v=471';
-import { openSheet } from '../ui.js?v=471';
-import { cleanDriverSignature, signedWhen } from '../driversign.js?v=471';
-import { exportRowsAsCSV } from '../csv.js?v=471';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=471';
-import { endpointLabel } from './movements.js?v=471';
-import { layersForStorage } from '../outload.js?v=471';
-import { traceLoads, traceText } from '../trace.js?v=471';
-import { holdings, totalHeld } from '../offfarm.js?v=471';
-import { kindLabel, billTotal } from '../payables.js?v=471';
-import { orderState, STATE_LABEL } from '../orders.js?v=471';
-import { fieldHarvest } from '../harvest.js?v=471';
-import { capacityFor } from '../storagecapacity.js?v=471';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=471';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=471';
+import { db } from '../storage.js?v=472';
+import { num, esc, todayLocal } from '../fmt.js?v=472';
+import { openSheet } from '../ui.js?v=472';
+import { cleanDriverSignature, signedWhen } from '../driversign.js?v=472';
+import { exportRowsAsCSV } from '../csv.js?v=472';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=472';
+import { endpointLabel } from './movements.js?v=472';
+import { layersForStorage } from '../outload.js?v=472';
+import { traceLoads, traceText } from '../trace.js?v=472';
+import { holdings, totalHeld } from '../offfarm.js?v=472';
+import { kindLabel, billTotal } from '../payables.js?v=472';
+import { orderState, STATE_LABEL } from '../orders.js?v=472';
+import { fieldHarvest } from '../harvest.js?v=472';
+import { capacityFor } from '../storagecapacity.js?v=472';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=472';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=472';
 
 function commodityName(commodities, id) {
   return commodities.find((c) => c.id === id)?.name || '';

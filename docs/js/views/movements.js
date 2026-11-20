@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=471';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=471';
-import { commodityClass } from '../commoditycolor.js?v=471';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=471';
-import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=471';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=471';
-import { withholdingClash } from '../fumigation.js?v=471';
-import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=471';
-import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=471';
-import { cleanStrokes } from '../signature.js?v=471';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=471';
-import { compressAndStampImage } from '../img.js?v=471';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=471';
-import { specText, extraSpecKey } from '../outload.js?v=471';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=471';
-import { pickableSilos } from '../silopick.js?v=471';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=471';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=471';
-import { activeSales } from '../paidsales.js?v=471';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=471';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=471';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=471';
-import { nowTime } from '../loadreport.js?v=471';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=471';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=471';
-import { openGinRunSheet } from './ginrun.js?v=471';
-import { openModuleMoveSheet } from './modulemove.js?v=471';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=471';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=471';
+import { db } from '../storage.js?v=472';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=472';
+import { commodityClass } from '../commoditycolor.js?v=472';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=472';
+import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=472';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=472';
+import { withholdingClash } from '../fumigation.js?v=472';
+import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=472';
+import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=472';
+import { cleanStrokes } from '../signature.js?v=472';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=472';
+import { compressAndStampImage } from '../img.js?v=472';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=472';
+import { specText, extraSpecKey } from '../outload.js?v=472';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=472';
+import { pickableSilos } from '../silopick.js?v=472';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=472';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=472';
+import { activeSales } from '../paidsales.js?v=472';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=472';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=472';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=472';
+import { nowTime } from '../loadreport.js?v=472';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=472';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=472';
+import { openGinRunSheet } from './ginrun.js?v=472';
+import { openModuleMoveSheet } from './modulemove.js?v=472';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=472';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=472';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -529,7 +529,7 @@ export function openMovementSheet(existing, template) {
   const orderOptionLabel = (o) => {
     const s = saleOfOrder(o);
     const c = commodities.find((cc) => cc.id === s?.commodityId);
-    return [c?.name, s?.buyer, orderTitle(o), windowText(o, tightDate), `${num(orderState(o, movements, todayLocal()).left, 0)} t left`].filter(Boolean).join(' · ');
+    return [orderTitle(o), s?.buyer, c?.name, windowText(o, tightDate), `${num(orderState(o, movements, todayLocal()).left, 0)} t left`].filter(Boolean).join(' · ');
   };
   const pickableOrders = orders
     .filter((o) => saleOfOrder(o) && (o.id === existing?.orderId || orderState(o, movements, todayLocal()).active))
@@ -546,23 +546,25 @@ export function openMovementSheet(existing, template) {
           ${field({ label: 'Date', id: 'date', type: 'date', value: existing ? existing.date : todayLocal() })}
           ${field({ label: 'Time', id: 'loadTime', type: 'time', value: existing ? (existing.loadTime || '') : nowTime() })}
         </div>
+        <div class="${pickableOrders.length ? 'grid-2 commodity-order' : ''}">
+        <div class="field">
+          <label for="m-commodity">Commodity</label>
+          <select id="m-commodity">
+            <option value="">${pickableOrders.length ? 'All' : 'All commodities'}</option>
+            ${commodities.map((c) => `<option value="${c.id}" ${c.id === ctx.commodityId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
+          </select>
+          ${pickableOrders.length ? '' : '<div class="hint">Narrows the lists below to this grain.</div>'}
+        </div>
         ${pickableOrders.length ? `
         <div class="field">
-          <label for="m-order">Delivering against a grain order</label>
+          <label for="m-order">Grain order</label>
           <select id="m-order">
             <option value="">No grain order</option>
             ${pickableOrders.map((o) => `<option value="${esc(o.id)}" ${o.id === existing?.orderId ? 'selected' : ''}>${esc(orderOptionLabel(o))}</option>`).join('')}
           </select>
-          <div class="hint" id="m-order-note">Fills in the contract, commodity and grade.</div>
         </div>` : ''}
-        <div class="field">
-          <label>Commodity</label>
-          <select id="m-commodity">
-            <option value="">All commodities</option>
-            ${commodities.map((c) => `<option value="${c.id}" ${c.id === ctx.commodityId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
-          </select>
-          <div class="hint">Narrows the lists below to this grain.</div>
         </div>
+        ${pickableOrders.length ? '<div class="hint" id="m-order-note" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">Commodity narrows the lists below. Choosing a grain order fills in its contract, the commodity and the grade.</div>' : ''}
       </section>
 
       <section class="form-section alt">

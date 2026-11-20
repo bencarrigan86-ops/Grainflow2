@@ -255,7 +255,7 @@ check('a buyer\'s order is called a grain order wherever it is named, so it is n
   const orders = read('docs/js/views/orders.js');
   assert.ok(orders.includes("openSheet('Grain orders'") && orders.includes("'Add a grain order'") && orders.includes('<h2>Grain orders</h2>'));
   assert.ok(read('docs/js/views/sales.js').includes('<b>Grain orders</b>') && read('docs/js/views/sales.js').includes('id="open-orders"'));
-  assert.ok(read('docs/js/views/movements.js').includes('Delivering against a grain order'));
+  assert.ok(read('docs/js/views/movements.js').includes('<label for="m-order">Grain order</label>'));
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
