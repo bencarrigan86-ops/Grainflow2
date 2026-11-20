@@ -1,8 +1,8 @@
 // A coloured chip for what a role can do in an area, so a table of ticks and blanks reads at a glance. Shared by the how-to guide
 // (Help) and the farm's own rules (Settings).
 
-import { esc } from '../fmt.js?v=445';
-import { LEVELS } from '../helpcontent.js?v=445';
+import { esc } from '../fmt.js?v=447';
+import { LEVELS } from '../helpcontent.js?v=447';
 
 const TINT = { full: 'var(--accent-summary)', view: 'var(--accent-report)', tonnes: 'var(--accent-report)', own: 'var(--accent-input)', used: 'var(--accent-input)', draft: 'var(--accent-input)', none: 'var(--text-dim)' };
 

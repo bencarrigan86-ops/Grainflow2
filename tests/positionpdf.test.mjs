@@ -5,7 +5,7 @@
 // whole-farm lines follow, and an empty farm and a loss are handled.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { positionPdf, POSITION_COLUMNS, BODY, HEAD, PAD } from '../docs/js/positionpdf.js';
+import { positionPdf, POSITION_COLUMNS, BODY, HEAD, PAD, blendedPrice } from '../docs/js/positionpdf.js';
 import { textWidth } from '../docs/js/pdf.js';
 import { positionRows, positionTotals, farmProfitLoss } from '../docs/js/derived.js';
 
@@ -144,8 +144,29 @@ check('the total row adds the commodities up', () => {
   const data = build();
   const total = POSITION_COLUMNS.map((c) => c.total(data.totals));
   assert.equal(total[0], 'Total');
-  assert.equal(total[3], '1,000 t');
-  assert.equal(total[4], '500 t');
+  const at = (label) => POSITION_COLUMNS.findIndex((c) => c.label === label);
+  assert.equal(total[at('Produced')], '1,000 t');
+  assert.equal(total[at('Sold')], '500 t');
+});
+
+check('opening tonnes and value, and the average $/t of sold at contract and unsold at MTM, are columns', () => {
+  const labels = POSITION_COLUMNS.map((c) => c.label);
+  assert.deepEqual(labels.slice(3, 5), ['Opening', 'Opening value'], 'opening sits before produced');
+  assert.equal(labels[labels.indexOf('MTM') + 1], 'Avg $/t');
+  const col = (l) => POSITION_COLUMNS.find((c) => c.label === l);
+  const rows = positionRows([{ id: 'w', name: 'Wheat', mtmPrice: 400, openingStock: 100, openingValue: 36000 }], [], [], []);
+  assert.equal(col('Opening').cell(rows[0]), '100 t');
+  assert.equal(col('Opening value').cell(rows[0]), '$36,000');
+  assert.equal(col('Opening').total(positionTotals(rows)), '100 t');
+  assert.equal(col('Opening value').total(positionTotals(rows)), '$36,000');
+  assert.equal(col('Opening').cell({ opening: 0 }), '-');
+  // 500 t sold at $420 and 300 t unsold at $400 MTM: (210,000 + 120,000) / 800 t = $412.50, shown to the dollar
+  const wheat = positionRows(commodities, fields, sales, []).find((r) => r.commodity.name === 'Wheat');
+  assert.equal(Math.round(blendedPrice(wheat) * 100) / 100, 412.5);
+  assert.equal(col('Avg $/t').cell(wheat), '$413');
+  assert.equal(col('Avg $/t').cell({ soldTons: 0, unsoldTons: 0 }), '-');
+  const total = positionTotals(positionRows(commodities, fields, sales, []));
+  assert.equal(blendedPrice(total), (total.soldValue + total.unsoldValue) / (total.soldTons + total.unsoldTons));
 });
 
 check('whole farm: gross margin, overheads and the profit follow the table', () => {

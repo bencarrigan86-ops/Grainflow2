@@ -5,8 +5,8 @@
 // sold, the prices, the values and the gross margin. Under it the whole farm: gross margin, overheads, bills and the
 // profit or loss. Pure: it builds bytes and touches nothing else.
 
-import { Pdf } from './pdf.js?v=445';
-import { drawBrandLogo } from './brand.js?v=445';
+import { Pdf } from './pdf.js?v=447';
+import { drawBrandLogo } from './brand.js?v=447';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;
@@ -18,14 +18,19 @@ const TOTAL = [0.82, 0.9, 0.83];
 const LINE = [0.78, 0.86, 0.78];
 const LOSS = [0.72, 0.18, 0.15];
 /** The commodity table's type sizes, and the room a figure keeps clear of its column's edges (it is centred, so half each side). */
-export const BODY = 8.5;
-export const HEAD = 7.5;
-export const PAD = 9;
+export const BODY = 7.5;
+export const HEAD = 6.5;
+export const PAD = 8;
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const group = (n, dp = 0) => Math.abs(num(n)).toLocaleString('en-AU', { minimumFractionDigits: dp, maximumFractionDigits: dp });
 const tonnes = (v) => `${group(v, 0)} t`;
 const dollars = (v) => `${num(v) < 0 ? '-' : ''}$${group(v, 0)}`;
 const price = (v) => (num(v) ? `$${group(v, 0)}` : '-');
+/** What all the grain is worth a tonne: the sold tonnes at their contract prices and the unsold at MTM, over the tonnes of both (0 when there are none). */
+export const blendedPrice = (r) => {
+  const t = num(r.soldTons) + num(r.unsoldTons);
+  return t > 0 ? (num(r.soldValue) + num(r.unsoldValue)) / t : 0;
+};
 /** The cost entered for a commodity: a dash where none is entered, so it is not read as a free crop. */
 const cost = (v) => (num(v) ? dollars(v) : '-');
 const costPerHa = (total, ha) => (num(total) && num(ha) > 0 ? `$${group(num(total) / num(ha), 0)}` : '-');
@@ -41,21 +46,24 @@ const OVERHEADS = [
 
 /** The commodity table's columns: header, share of the width, and how a row's cell is written. */
 export const POSITION_COLUMNS = [
-  { label: 'Commodity', w: 0.07, cell: (r) => r.commodity.name, total: () => 'Total' },
-  { label: 'Area (ha)', w: 0.055, cell: (r) => group(r.area, 0), total: (t) => group(t.area, 0) },
-  { label: 'Yield t/ha', w: 0.055, cell: (r) => group(r.yieldTHa, 2), total: () => '' },
-  { label: 'Produced', w: 0.065, cell: (r) => tonnes(r.productionTons), total: (t) => tonnes(t.productionTons) },
-  { label: 'Sold', w: 0.062, cell: (r) => tonnes(r.soldTons), total: (t) => tonnes(t.soldTons) },
-  { label: 'Unsold', w: 0.062, cell: (r) => tonnes(r.unsoldTons), total: (t) => tonnes(t.unsoldTons) },
-  { label: '% sold', w: 0.05, cell: (r) => percent(r.pctSold), total: (t) => (t.productionTons > 0 ? percent(t.soldTons / t.productionTons) : '') },
-  { label: 'Avg sold', w: 0.054, cell: (r) => price(r.avgSoldPrice), total: (t) => (t.soldTons > 0 ? price(t.soldValue / t.soldTons) : '-') },
-  { label: 'MTM', w: 0.045, cell: (r) => price(r.mtmPrice), total: () => '' },
-  { label: 'Sold value', w: 0.082, cell: (r) => dollars(r.soldValue), total: (t) => dollars(t.soldValue) },
-  { label: 'Unsold value', w: 0.082, cell: (r) => dollars(r.unsoldValue), total: (t) => dollars(t.unsoldValue) },
-  { label: 'Position value', w: 0.09, cell: (r) => dollars(r.totalValue), total: (t) => dollars(t.totalValue) },
-  { label: 'Cost', w: 0.075, cell: (r) => cost(r.grossMarginCost), total: (t) => cost(t.grossMarginCost) },
-  { label: 'Cost $/ha', w: 0.055, cell: (r) => costPerHa(r.grossMarginCost, r.area), total: (t) => costPerHa(t.grossMarginCost, t.area) },
-  { label: 'Gross margin', w: 0.098, cell: (r) => dollars(r.grossMargin), total: (t) => dollars(t.grossMargin) },
+  { label: 'Commodity', w: 0.061, cell: (r) => r.commodity.name, total: () => 'Total' },
+  { label: 'Area (ha)', w: 0.045, cell: (r) => group(r.area, 0), total: (t) => group(t.area, 0) },
+  { label: 'Yield t/ha', w: 0.046, cell: (r) => group(r.yieldTHa, 2), total: () => '' },
+  { label: 'Opening', w: 0.056, cell: (r) => (num(r.opening) ? tonnes(r.opening) : '-'), total: (t) => (num(t.openingTons) ? tonnes(t.openingTons) : '-') },
+  { label: 'Opening value', w: 0.07, cell: (r) => (num(r.openingValue) ? dollars(r.openingValue) : '-'), total: (t) => (num(t.openingValue) ? dollars(t.openingValue) : '-') },
+  { label: 'Produced', w: 0.056, cell: (r) => tonnes(r.productionTons), total: (t) => tonnes(t.productionTons) },
+  { label: 'Sold', w: 0.056, cell: (r) => tonnes(r.soldTons), total: (t) => tonnes(t.soldTons) },
+  { label: 'Unsold', w: 0.056, cell: (r) => tonnes(r.unsoldTons), total: (t) => tonnes(t.unsoldTons) },
+  { label: '% sold', w: 0.038, cell: (r) => percent(r.pctSold), total: (t) => (t.productionTons > 0 ? percent(t.soldTons / t.productionTons) : '') },
+  { label: 'Avg sold', w: 0.044, cell: (r) => price(r.avgSoldPrice), total: (t) => (t.soldTons > 0 ? price(t.soldValue / t.soldTons) : '-') },
+  { label: 'MTM', w: 0.043, cell: (r) => price(r.mtmPrice), total: () => '' },
+  { label: 'Avg $/t', w: 0.043, cell: (r) => price(blendedPrice(r)), total: (t) => price(blendedPrice(t)) },
+  { label: 'Sold value', w: 0.07, cell: (r) => dollars(r.soldValue), total: (t) => dollars(t.soldValue) },
+  { label: 'Unsold value', w: 0.07, cell: (r) => dollars(r.unsoldValue), total: (t) => dollars(t.unsoldValue) },
+  { label: 'Position value', w: 0.07, cell: (r) => dollars(r.totalValue), total: (t) => dollars(t.totalValue) },
+  { label: 'Cost', w: 0.06, cell: (r) => cost(r.grossMarginCost), total: (t) => cost(t.grossMarginCost) },
+  { label: 'Cost $/ha', w: 0.046, cell: (r) => costPerHa(r.grossMarginCost, r.area), total: (t) => costPerHa(t.grossMarginCost, t.area) },
+  { label: 'Gross margin', w: 0.07, cell: (r) => dollars(r.grossMargin), total: (t) => dollars(t.grossMargin) },
 ];
 
 /**

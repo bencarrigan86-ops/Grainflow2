@@ -31,5 +31,15 @@ check('an existing tally counted in tonnes offers Silo and Bunker / shed so it c
   assert.ok(st.includes("${!existing || existing.kind === 'tally' ? `<button data-kind=\"tally\""), 'and it can go back to a tally from the silo form');
 });
 
+check('the load import dropdowns list paddocks, silos and commodities in name order', () => {
+  assert.ok(src.includes("localeCompare(String(b.name ?? ''), undefined, { numeric: true, sensitivity: 'base' })"), 'natural name order, A2 before A10');
+  for (const list of ['fieldOpts', 'siloOpts', 'commodityOpts']) {
+    assert.ok(new RegExp(`const ${list} = .*\\.sort\\(inOrder\\)`).test(src), `${list} is sorted`);
+  }
+  assert.ok(src.includes("farm: farmOf(f)") && src.includes("farm: farmOf(s)"), 'paddocks and silos carry their farm or site');
+  assert.ok(src.includes("optionsByFarm(options[kind], cur,") && src.includes("optionsByFarm(fieldOpts, selected,"), 'both the main dropdowns and the split dropdowns group by farm');
+  assert.ok(src.includes("'No farm / site'") && src.includes("(a === '') - (b === '')"), 'those with no farm come last');
+});
+
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
 console.log('\nall passed');

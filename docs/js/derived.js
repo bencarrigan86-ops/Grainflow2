@@ -1,13 +1,13 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=445';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=445';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=445';
-import { isGinContract } from './cottonkinds.js?v=445';
-import { ginTakenOff } from './ginoffset.js?v=445';
-import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=445';
-import { commoditySort } from './commodityorder.js?v=445';
-import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=445';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=447';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=447';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=447';
+import { isGinContract } from './cottonkinds.js?v=447';
+import { ginTakenOff } from './ginoffset.js?v=447';
+import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=447';
+import { commoditySort } from './commodityorder.js?v=447';
+import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=447';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -619,11 +619,12 @@ export function positionTotals(rows) {
     soldValue: acc.soldValue + r.soldValue,
     unsoldTons: acc.unsoldTons + r.unsoldTons,
     unsoldValue: acc.unsoldValue + r.unsoldValue,
+    openingTons: acc.openingTons + (r.opening || 0),
     openingValue: acc.openingValue + (r.openingValue || 0),
     totalValue: acc.totalValue + r.totalValue,
     grossMarginCost: acc.grossMarginCost + r.grossMarginCost,
     grossMargin: acc.grossMargin + r.grossMargin,
-  }), { area: 0, productionTons: 0, soldTons: 0, soldValue: 0, unsoldTons: 0, unsoldValue: 0, openingValue: 0, totalValue: 0, grossMarginCost: 0, grossMargin: 0 });
+  }), { area: 0, productionTons: 0, soldTons: 0, soldValue: 0, unsoldTons: 0, unsoldValue: 0, openingTons: 0, openingValue: 0, totalValue: 0, grossMarginCost: 0, grossMargin: 0 });
 }
 
 /** Sum of the farm-wide overhead categories. */

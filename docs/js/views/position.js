@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=445';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=445';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=445';
-import { payablesCost } from '../payables.js?v=445';
-import { commodityClass } from '../commoditycolor.js?v=445';
-import { hasCommodityOrder } from '../commodityorder.js?v=445';
-import { startProgress, missingLine } from '../helpcontent.js?v=445';
-import { openSetupWalk } from './setupwalk.js?v=445';
-import { attentionItems } from '../attention.js?v=445';
-import { lastBackup } from '../backup.js?v=445';
-import { supportWaitingCount } from './support.js?v=445';
-import { todayLocal, dmy } from '../fmt.js?v=445';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=445';
-import { openSheet, closeSheet } from '../ui.js?v=445';
-import { positionPdf } from '../positionpdf.js?v=445';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=445';
+import { db } from '../storage.js?v=447';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=447';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=447';
+import { payablesCost } from '../payables.js?v=447';
+import { commodityClass } from '../commoditycolor.js?v=447';
+import { hasCommodityOrder } from '../commodityorder.js?v=447';
+import { startProgress, missingLine } from '../helpcontent.js?v=447';
+import { openSetupWalk } from './setupwalk.js?v=447';
+import { attentionItems } from '../attention.js?v=447';
+import { lastBackup } from '../backup.js?v=447';
+import { supportWaitingCount } from './support.js?v=447';
+import { todayLocal, dmy } from '../fmt.js?v=447';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=447';
+import { openSheet, closeSheet } from '../ui.js?v=447';
+import { positionPdf } from '../positionpdf.js?v=447';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=447';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 

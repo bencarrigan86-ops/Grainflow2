@@ -4,13 +4,13 @@
 // whether it is on, turns it on for 7 days or off early, and shows the log of what happened. A report sends the build,
 // the role, the sync state and the last few errors, with a message; the words are in supportinfo.js.
 
-import { supabase } from '../supabase.js?v=445';
-import { db } from '../storage.js?v=445';
-import { APP_VERSION } from '../version.js?v=445';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=445';
-import { esc } from '../fmt.js?v=445';
-import { buildReport, reportText, recentErrors, supportStatusText, standingStatus, logLine, SUPPORT_TICK, SUPPORT_TICK_HINT, SUPPORT_ALREADY, SUPPORT_OWNER_ONLY, SUPPORT_SENT_WAITING, waitingText, accessNote } from '../supportinfo.js?v=445';
-import { trialWatched, standingText } from '../trials.js?v=445';
+import { supabase } from '../supabase.js?v=447';
+import { db } from '../storage.js?v=447';
+import { APP_VERSION } from '../version.js?v=447';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=447';
+import { esc } from '../fmt.js?v=447';
+import { buildReport, reportText, recentErrors, supportStatusText, standingStatus, logLine, SUPPORT_TICK, SUPPORT_TICK_HINT, SUPPORT_ALREADY, SUPPORT_OWNER_ONLY, SUPPORT_SENT_WAITING, waitingText, accessNote } from '../supportinfo.js?v=447';
+import { trialWatched, standingText } from '../trials.js?v=447';
 
 const UNAVAILABLE = 'Support access is not available yet. Ask whoever looks after Commodity Mate to finish setting it up.';
 

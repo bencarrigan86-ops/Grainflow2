@@ -8,18 +8,18 @@
 // The reading and the rules live in loadimport.js, where they are tested. This
 // file is the screen: it holds the person's choices and hands them over.
 
-import { db } from '../storage.js?v=445';
-import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=445';
-import { esc, num, shortDate } from '../fmt.js?v=445';
-import { commodityFills } from '../commodityfill.js?v=445';
-import { isTransit } from '../transit.js?v=445';
-import { reconcileLoads } from '../loadcheck.js?v=445';
+import { db } from '../storage.js?v=447';
+import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=447';
+import { esc, num, shortDate } from '../fmt.js?v=447';
+import { commodityFills } from '../commodityfill.js?v=447';
+import { isTransit } from '../transit.js?v=447';
+import { reconcileLoads } from '../loadcheck.js?v=447';
 import {
   FIELD_SPECS, REQUIRED_KEYS, chooseSetup, recallSetups, rememberSetup, setupProblems, peekFile, distinctOf, likelyFinished,
-} from '../loadmap.js?v=445';
+} from '../loadmap.js?v=447';
 import {
   readFreightExport, planNames, distinctNames, matchCommodity, matchSiloByNumber, suggestCutoff, buildMovements, COMPLETED,
-} from '../loadimport.js?v=445';
+} from '../loadimport.js?v=447';
 
 const MEMORY_KEY = 'grainflow.loadImportChoices';
 const NEW = '__new';
@@ -237,9 +237,12 @@ function review(body, text, setup, source, headers, rows) {
   if (loads.length === 0) { body.innerHTML = '<div class="empty">That file has no loads in it.</div>'; return; }
 
   const { fields, storages, commodities, movements } = db.get();
-  const fieldOpts = fields.map((f) => ({ id: f.id, name: f.name }));
-  const siloOpts = storages.filter((s) => !isTransit(s) && !s.offFarm).map((s) => ({ id: s.id, name: s.name }));
-  const commodityOpts = commodities.map((c) => ({ id: c.id, name: c.name }));
+  // The dropdowns list paddocks, silos and commodities in name order (A2 before A10), so a name is quick to find.
+  const inOrder = (a, b) => String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+  const farmOf = (x) => String(x.property ?? '').trim();
+  const fieldOpts = fields.map((f) => ({ id: f.id, name: f.name, farm: farmOf(f) })).sort(inOrder);
+  const siloOpts = storages.filter((s) => !isTransit(s) && !s.offFarm).map((s) => ({ id: s.id, name: s.name, farm: farmOf(s) })).sort(inOrder);
+  const commodityOpts = commodities.map((c) => ({ id: c.id, name: c.name })).sort(inOrder);
 
   const plans = {
     field: planNames(loads, 'field', fieldOpts),
@@ -300,9 +303,18 @@ function review(body, text, setup, source, headers, rows) {
   const unresolved = () => Object.entries(choices).reduce((n, [, c]) => n + Object.entries(c)
     .filter(([name, v]) => v === '' || (v === SPLIT && !splitReady(name))).length, 0);
 
+  // Paddocks and silos are grouped under their farm or site (those with none last) when any has one; otherwise one flat list.
+  const optionsByFarm = (list, selected, plainLabel) => {
+    const opt = (o) => `<option value="${esc(o.id)}" ${selected === o.id ? 'selected' : ''}>${esc(o.name)}</option>`;
+    if (!list.some((o) => o.farm)) return `<optgroup label="${plainLabel}">${list.map(opt).join('')}</optgroup>`;
+    const farms = [...new Set(list.map((o) => o.farm))].sort((a, b) => (a === '') - (b === '') || inOrder({ name: a }, { name: b }));
+    return farms.map((farm) => `<optgroup label="${esc(farm || 'No farm / site')}">${list.filter((o) => o.farm === farm).map(opt).join('')}</optgroup>`).join('');
+  };
   const select = (kind, p) => {
     const cur = choices[kind][p.name];
-    const existing = options[kind].map((o) => `<option value="${esc(o.id)}" ${cur === o.id ? 'selected' : ''}>${esc(o.name)}</option>`).join('');
+    const existing = kind === 'commodity'
+      ? `<optgroup label="Your commodities">${options[kind].map((o) => `<option value="${esc(o.id)}" ${cur === o.id ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</optgroup>`
+      : optionsByFarm(options[kind], cur, kind === 'field' ? 'Your paddocks' : 'Your storages');
     const sug = p.suggestions.length && !p.match
       ? `<optgroup label="Suggested">${p.suggestions.map((o) => `<option value="${esc(o.id)}">${esc(o.name)}</option>`).join('')}</optgroup>` : '';
     const extra = kind === 'commodity'
@@ -310,13 +322,13 @@ function review(body, text, setup, source, headers, rows) {
       : `<option value="${SKIP}" ${cur === SKIP ? 'selected' : ''}>Skip these loads</option>`;
     return `<select data-kind="${kind}" data-name="${esc(p.name)}">
       <option value="" ${cur === '' ? 'selected' : ''}>Choose…</option>
-      ${sug}<optgroup label="${kind === 'commodity' ? 'Your commodities' : kind === 'field' ? 'Your paddocks' : 'Your storages'}">${existing}</optgroup>
+      ${sug}${existing}
       <option value="${NEW}" ${cur === NEW ? 'selected' : ''}>+ Add as new ${kind === 'field' ? 'paddock' : kind === 'silo' ? storageKindFor(p.name) : 'commodity'}</option>
       ${kind === 'field' ? `<option value="${SPLIT}" ${cur === SPLIT ? 'selected' : ''}>Split between two paddocks by date…</option>` : ''}
       ${extra}</select>${kind === 'field' ? splitPanel(p, cur === SPLIT) : ''}`;
   };
   const fieldSelect = (cls, name, selected) => `<select ${cls}="${esc(name)}">
-    <option value="">Choose…</option>${fieldOpts.map((o) => `<option value="${esc(o.id)}" ${selected === o.id ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select>`;
+    <option value="">Choose…</option>${optionsByFarm(fieldOpts, selected, 'Your paddocks')}</select>`;
   const splitPanel = (p, shown) => {
     const x = splits[p.name] || { cutoff: '', before: '', from: '' };
     return `<div class="card" data-split-panel="${esc(p.name)}" style="margin:8px 0 0;${shown ? '' : 'display:none'}">
