@@ -4,19 +4,19 @@
 // carting it and the buyer's own order number. Everything else about the sale is the contract's and is shown from it.
 // Loads are matched to an order on the movement. The arithmetic is in orders.js.
 
-import { db } from '../storage.js?v=481';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=481';
-import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=481';
-import { movementTonsToSale } from '../derived.js?v=481';
-import { activeSales } from '../paidsales.js?v=481';
-import { movementRow, openMovementSheet } from './movements.js?v=481';
-import { openVendorDecSheet } from './vendordec.js?v=481';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=481';
-import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=481';
-import { freightTitle, freightState, rateText } from '../freight.js?v=481';
-import { addressFields, readAddress } from '../address.js?v=481';
-import { cleanOrderDetail, contractMismatch, orderDefaults } from '../orderdetail.js?v=481';
-import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=481';
+import { db } from '../storage.js?v=484';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=484';
+import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=484';
+import { movementTonsToSale } from '../derived.js?v=484';
+import { activeSales } from '../paidsales.js?v=484';
+import { movementRow, openMovementSheet } from './movements.js?v=484';
+import { openVendorDecSheet } from './vendordec.js?v=484';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=484';
+import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=484';
+import { freightTitle, freightState, rateText } from '../freight.js?v=484';
+import { addressFields, readAddress } from '../address.js?v=484';
+import { cleanOrderDetail, contractMismatch, orderDefaults } from '../orderdetail.js?v=484';
+import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=484';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | filled | closed | all
@@ -154,14 +154,16 @@ export function openOrderSheet(existing, defaults = {}) {
           ${field({ label: 'Grade ordered', id: 'od-grade', value: src.detail?.grade, placeholder: "e.g. CHKP1" })}
           ${field({ label: 'Delivery reference', id: 'od-ref', value: src.detail?.deliveryRef })}
         </div>
-        ${field({ label: 'Destination', id: 'od-dest', value: src.detail?.destination, placeholder: 'e.g. Brisbane (Queensland Bulk Terminal)' })}
+        <div class="grid-2">
+          ${field({ label: 'Destination', id: 'od-dest', value: src.detail?.destination, placeholder: 'e.g. Brisbane terminal' })}
+          ${field({ label: 'Bookings', id: 'od-contact', value: src.detail?.bookingContact, placeholder: 'Email or phone' })}
+        </div>
         ${addressFields('od-addr', src.detail?.address, { label: 'Delivery address', optional: true })}
-        ${field({ label: 'Bookings', id: 'od-contact', value: src.detail?.bookingContact, placeholder: 'Email or phone to book a slot' })}
-        ${field({ label: 'Booking instructions', id: 'od-book', type: 'textarea', value: src.detail?.booking, hint: 'Hours, what a booking needs, who to ring to change it' })}
-        ${field({ label: 'Rejected on arrival', id: 'od-nil', type: 'textarea', value: src.detail?.nilTolerance, hint: 'Nil tolerance, one to a line. These go to the carrier on the freight order' })}
-        ${field({ label: 'Other terms and comments', id: 'od-comments', type: 'textarea', value: src.detail?.comments, hint: "Anything else on the buyer's order: terms, carrier obligations, who to call. Goes to the carrier too" })}
+        ${field({ label: 'Booking instructions', id: 'od-book', type: 'textarea', value: src.detail?.booking, hint: 'Hours, what a booking needs, who to ring' })}
+        ${field({ label: 'Rejected on arrival', id: 'od-nil', type: 'textarea', value: src.detail?.nilTolerance, hint: 'Nil tolerance, one to a line. Goes to the carrier' })}
+        ${field({ label: 'Other terms and comments', id: 'od-comments', type: 'textarea', value: src.detail?.comments, hint: 'Terms, carrier obligations, who to call. Goes to the carrier too' })}
       </details>
-      ${field({ label: 'Comments', id: 'o-notes', type: 'textarea', value: src.notes, hint: 'Booking, truck type, gate hours, anything the buyer asked for' })}
+      ${field({ label: 'Comments', id: 'o-notes', type: 'textarea', value: src.notes, placeholder: 'Truck type, gate hours, anything the buyer asked for' })}
       ${existing ? `
       <div class="field">
         <label>Status</label>

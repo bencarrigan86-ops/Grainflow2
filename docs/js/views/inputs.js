@@ -4,19 +4,19 @@
 // and Bought, Used and Count record an entry. Seed and fertiliser also show what this season's paddocks call for
 // against what is in the shed. The arithmetic is in inputs.js.
 
-import { tileIcon } from '../tileicon.js?v=481';
-import { db } from '../storage.js?v=481';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=481';
-import { openSprayJobsSheet, canSpray } from './spray.js?v=481';
-import { canChangeInputs } from '../nav.js?v=481';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=481';
-import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=481';
-import { isTransit } from '../transit.js?v=481';
-import { isOffFarm } from '../offfarm.js?v=481';
+import { tileIcon } from '../tileicon.js?v=484';
+import { db } from '../storage.js?v=484';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=484';
+import { openSprayJobsSheet, canSpray } from './spray.js?v=484';
+import { canChangeInputs } from '../nav.js?v=484';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=484';
+import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=484';
+import { isTransit } from '../transit.js?v=484';
+import { isOffFarm } from '../offfarm.js?v=484';
 import {
   KINDS, UNITS, MOVE_TYPES, kindLabel, defaultUnit, productKey, stockLevels, productMoves, stockValue,
   plannedNeeds, planVsStock, inputProblems, adjustmentFor, moveDelta, qtyText, onHandAt,
-} from '../inputs.js?v=481';
+} from '../inputs.js?v=484';
 
 // A farm worker sees what is on hand and records what is used and counts. The prices are not sent to their phone
 // at all (see the migration); this keeps the screens from showing blanks where a price would be, and from offering a delivery.
@@ -157,8 +157,10 @@ export function openMoveSheet(existing, start = {}) {
         ${existing ? '' : `<div class="segmented" id="in-type" style="margin-bottom:10px">
           ${MOVE_TYPES.filter((t) => priced || t.key !== 'buy').map((t) => `<button data-type="${t.key}" class="${d.type === t.key ? 'active' : ''}">${t.label}</button>`).join('')}
         </div>`}
-        ${field({ label: 'What is it', id: 'in-kind', type: 'select', value: d.kind, options: KINDS.map((k) => ({ value: k.key, label: k.label })) })}
-        ${field({ label: 'Product', id: 'in-product', value: d.product, list: 'dl-products', placeholder: KINDS.find((k) => k.key === d.kind)?.hint || '' })}
+        <div class="grid-2">
+          ${field({ label: 'What is it', id: 'in-kind', type: 'select', value: d.kind, options: KINDS.map((k) => ({ value: k.key, label: k.label })) })}
+          ${field({ label: 'Product', id: 'in-product', value: d.product, list: 'dl-products', placeholder: KINDS.find((k) => k.key === d.kind)?.hint || '' })}
+        </div>
         ${lvl
           ? `<div class="row"><span class="label">On hand now</span><span class="value">${qtyText(lvl.onHand, lvl.unit)}</span></div>${d.location ? `<div class="row"><span class="label">In ${esc(d.location)}</span><span class="value">${qtyText(onHandAt(lvl, d.location), lvl.unit)}</span></div>` : ''}`
           : (d.product.trim() ? '<div class="hint" style="margin:0 0 8px">A new product. Choose its unit below; it stays the same from here on.</div>' : '')}
@@ -169,10 +171,13 @@ export function openMoveSheet(existing, start = {}) {
           ${lvl ? `<div class="field"><label>Unit</label><div class="meta" style="padding:10px 0">${esc(lvl.unit)}</div></div>`
             : field({ label: 'Unit', id: 'in-unit', type: 'select', value: d.unit, options: UNITS.map((u) => ({ value: u, label: u })) })}
         </div>
-        ${places.length || d.location ? field({ label: ({ buy: 'Put into', use: 'Taken from', adjust: 'Counted in' })[d.type], id: 'in-loc', type: 'select', value: d.location || '',
-          options: [{ value: '', label: 'Not recorded' }, ...(d.location && !places.includes(d.location) ? [d.location] : []), ...places].map((o) => (typeof o === 'string' ? { value: o, label: o } : o)) })
-          : '<div class="hint" style="margin:0 0 8px">Set up your silos and sheds under Storage to say where it is kept.</div>'}
-        ${field({ label: 'Date', id: 'in-date', type: 'date', value: d.date })}
+        ${places.length || d.location ? `<div class="grid-2">
+          ${field({ label: ({ buy: 'Put into', use: 'Taken from', adjust: 'Counted in' })[d.type], id: 'in-loc', type: 'select', value: d.location || '',
+            options: [{ value: '', label: 'Not recorded' }, ...(d.location && !places.includes(d.location) ? [d.location] : []), ...places].map((o) => (typeof o === 'string' ? { value: o, label: o } : o)) })}
+          ${field({ label: 'Date', id: 'in-date', type: 'date', value: d.date })}
+        </div>`
+          : `<div class="hint" style="margin:0 0 8px">Set up your silos and sheds under Storage to say where it is kept.</div>
+        ${field({ label: 'Date', id: 'in-date', type: 'date', value: d.date })}`}
         ${d.type === 'buy' && priced ? `
         <div class="grid-2">
           ${field({ label: `Price per ${d.unit || 'unit'} ($)`, id: 'in-cost', type: 'number', step: '0.01', value: d.unitCost ?? '' })}

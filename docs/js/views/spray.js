@@ -4,21 +4,21 @@
 // spray marked. What is on the form and where is decided in spray.js; the PDF is drawn in spraypdf.js. The job is saved
 // as it is filled in, so a request can be started in the paddock and finished at the desk.
 
-import { db } from '../storage.js?v=481';
-import { farmSwitch, canChangeArea } from '../nav.js?v=481';
-import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=481';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=481';
-import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=481';
+import { db } from '../storage.js?v=484';
+import { farmSwitch, canChangeArea } from '../nav.js?v=484';
+import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=484';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=484';
+import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=484';
 import {
   FORMS, RATE_UNITS, MAX_CHEMICALS, CHECKLIST, sprayDefaults, sprayProblems, sprayTotals, sprayTitle, usedChemicals, plain,
-} from '../spray.js?v=481';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=481';
-import { viewPdf } from '../pdfview.js?v=481';
-import { loadMySignature } from '../mysignature.js?v=481';
-import { signerNamesFor } from './signtoggle.js?v=481';
-import { signatureSvg } from './signaturepad.js?v=481';
-import { openMapSheet } from './farmmap.js?v=481';
-import { buildSprayPdf } from '../spraypdf.js?v=481';
+} from '../spray.js?v=484';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=484';
+import { viewPdf } from '../pdfview.js?v=484';
+import { loadMySignature } from '../mysignature.js?v=484';
+import { signerNamesFor } from './signtoggle.js?v=484';
+import { signatureSvg } from './signaturepad.js?v=484';
+import { openMapSheet } from './farmmap.js?v=484';
+import { buildSprayPdf } from '../spraypdf.js?v=484';
 
 // A farm worker can write spray requests on a farm that has switched it on (see farmswitches.js); sending one on is for an owner or manager.
 export const canSpray = (role) => canChangeArea(role, 'sprays', ['owner', 'manager'].includes(role) || (role === 'farm_worker' && farmSwitch('workersRaiseSprays')));
@@ -93,6 +93,7 @@ export async function openSprayFormSheet(existing, start = {}) {
   if (!existing && d.form === 'aircair' && !business.showAircair) d.form = 'standard';
   if (!d.chemicals?.length) d.chemicals = [{ name: '', rate: '', unit: 'L' }];
   let ticked = new Set((d.paddocks || []).map((p) => p.id));
+  const openFarms = new Set();   // the properties opened to show their paddocks; all start closed
   let savedId = existing?.id || d.id || null;
   const hasMap = fields.some((f) => f.boundary?.length);
   // property and crop follow the paddocks ticked, until they are typed over
@@ -149,8 +150,15 @@ export async function openSprayFormSheet(existing, start = {}) {
           ${fields.length === 0 ? '<div class="empty">Add your paddocks in Production first.</div>' : order.map((farm) => {
             const list = groups.get(farm);
             const all = list.every((f) => ticked.has(f.id));
-            return `${showHeads ? `<label class="row sp-band sp-farmhead" style="cursor:pointer"><span class="label"><input type="checkbox" class="sp-farm" data-farm="${esc(farm)}" ${all ? 'checked' : ''} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" /><strong>${esc(farm)}</strong></span><span class="value">${list.filter((f) => ticked.has(f.id)).length} of ${list.length}</span></label>` : ''}
-              ${list.map((f, n) => `<label class="row sp-band${n % 2 ? ' alt' : ''}" style="cursor:pointer"><span class="label"><input type="checkbox" class="sp-pad" data-id="${esc(f.id)}" ${ticked.has(f.id) ? 'checked' : ''} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />${esc(f.name)}</span><span class="value">${num(Number(f.areaHa) || 0, 1)} ha</span></label>`).join('')}`;
+            const rows = list.map((f, n) => `<label class="row sp-band${n % 2 ? ' alt' : ''}" style="cursor:pointer"><span class="label"><input type="checkbox" class="sp-pad" data-id="${esc(f.id)}" ${ticked.has(f.id) ? 'checked' : ''} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />${esc(f.name)}</span><span class="value">${num(Number(f.areaHa) || 0, 1)} ha</span></label>`).join('');
+            if (!showHeads) return rows;
+            // each property is one line, ticked as a whole or opened to pick its paddocks
+            const nTicked = list.filter((f) => ticked.has(f.id)).length;
+            const ha = list.filter((f) => ticked.has(f.id)).reduce((s, f) => s + (Number(f.areaHa) || 0), 0);
+            return `<details class="sp-farm-fold" data-farm="${esc(farm)}" ${openFarms.has(farm) ? 'open' : ''}>
+              <summary class="row sp-band sp-farmhead"><span class="label"><input type="checkbox" class="sp-farm" data-farm="${esc(farm)}" ${all ? 'checked' : ''} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" /><strong>${esc(farm)}</strong></span><span class="value">${nTicked} of ${list.length}${nTicked ? ` &middot; ${num(ha, 0)} ha` : ''}</span></summary>
+              <div class="sp-farm-list">${rows}</div>
+            </details>`;
           }).join('')}
           <div class="hint" id="sp-padtotal" style="margin-top:8px"></div>
           ${hasMap ? '<button type="button" class="btn secondary small" id="sp-pick" style="margin-top:8px;width:auto">Pick on the map</button>' : ''}
@@ -231,17 +239,24 @@ export async function openSprayFormSheet(existing, start = {}) {
           <h2>Who and when</h2>
           ${field({ label: 'Contractor', id: 'sp-contractor', value: d.contractor, list: 'dl-spray-contractors', placeholder: business.showAircair ? 'e.g. Aircair' : 'e.g. your spray contractor' })}
           ${field({ label: 'Their email', id: 'sp-email', type: 'email', value: d.contractorEmail })}
-          ${field({ label: 'Send it on', id: 'sp-form', type: 'select', value: d.form, options: FORMS.filter((f) => f.key !== 'aircair' || business.showAircair || d.form === 'aircair').map((f) => ({ value: f.key, label: f.label })), hint: d.form === 'aircair' ? "Aircair's own form is filled in and the map added after it." : 'Our own form, with the map after it.' })}
-          ${field({ label: 'Date required', id: 'sp-date', type: 'date', value: d.dateRequired })}
+          <div class="grid-2">
+            ${field({ label: 'Send it on', id: 'sp-form', type: 'select', value: d.form, options: FORMS.filter((f) => f.key !== 'aircair' || business.showAircair || d.form === 'aircair').map((f) => ({ value: f.key, label: f.label })) })}
+            ${field({ label: 'Date required', id: 'sp-date', type: 'date', value: d.dateRequired })}
+          </div>
+          <div class="hint" style="margin:-6px 0 4px;font-size:11.5px;color:var(--text-dim)">${d.form === 'aircair' ? "Aircair's own form is filled in and the map added after it." : 'Our own form, with the map after it.'}</div>
         </div>
         ${paddockCard()}
         ${chemicalsCard()}
         <div class="card">
           <h2>The job</h2>
-          ${field({ label: 'Property', id: 'sp-property', value: d.property })}
-          ${field({ label: 'Crop', id: 'sp-crop', value: d.crop })}
-          ${field({ label: 'Purchase order number', id: 'sp-po', value: d.poNumber })}
-          ${field({ label: 'Chemical supplied by', id: 'sp-supplier', value: d.chemicalSuppliedBy, placeholder: 'e.g. us, or the agronomist' })}
+          <div class="grid-2">
+            ${field({ label: 'Property', id: 'sp-property', value: d.property })}
+            ${field({ label: 'Crop', id: 'sp-crop', value: d.crop })}
+          </div>
+          <div class="grid-2">
+            ${field({ label: 'Purchase order no.', id: 'sp-po', value: d.poNumber })}
+            ${field({ label: 'Chemical supplied by', id: 'sp-supplier', value: d.chemicalSuppliedBy, placeholder: 'e.g. us' })}
+          </div>
           ${field({ label: 'Located at', id: 'sp-located', value: d.locatedAt, placeholder: 'e.g. the shed at Home farm' })}
           ${field({ label: 'Other instructions', id: 'sp-other', type: 'textarea', value: d.otherInstructions, placeholder: 'Wind limits, gates, buffers, anything they should know', rows: 3 })}
         </div>
@@ -317,6 +332,15 @@ export async function openSprayFormSheet(existing, start = {}) {
     }
 
     function wire() {
+      // a property with some of its paddocks ticked shows a dash in its box, not an empty one
+      root.querySelectorAll('.sp-farm').forEach((b) => {
+        const mine = fields.filter((f) => (String(f.property || '').trim() || NO_FARM) === b.dataset.farm);
+        const n = mine.filter((f) => ticked.has(f.id)).length;
+        b.indeterminate = n > 0 && n < mine.length;
+      });
+      root.querySelectorAll('details.sp-farm-fold').forEach((el) => el.addEventListener('toggle', () => {
+        if (el.open) openFarms.add(el.dataset.farm); else openFarms.delete(el.dataset.farm);
+      }));
       root.querySelectorAll('.sp-pad').forEach((b) => b.addEventListener('change', () => {
         if (b.checked) ticked.add(b.dataset.id); else ticked.delete(b.dataset.id);
         collect(); paint(); followTicks();

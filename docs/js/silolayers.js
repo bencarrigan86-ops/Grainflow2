@@ -7,7 +7,7 @@
 //
 // Pure. The stack itself comes from outload.js (layersForStorage).
 
-import { STANDARDS } from './grades.js?v=481';
+import { STANDARDS } from './grades.js?v=484';
 
 export const NO_GRADE = 'No grade';
 const NO_GRADE_COLOR = '#9aa3ad';

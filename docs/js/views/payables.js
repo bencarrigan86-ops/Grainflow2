@@ -4,17 +4,17 @@
 // what is unpaid and overdue, and the brokerage that has run up on contracts but has not been billed yet. Each
 // bill is recorded in a form of its own. The arithmetic is in payables.js.
 
-import { db } from '../storage.js?v=481';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=481';
-import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=481';
+import { db } from '../storage.js?v=484';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=484';
+import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=484';
 import {
   KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed, paidByBuyer,
-} from '../payables.js?v=481';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=481';
-import { activeSales } from '../paidsales.js?v=481';
-import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=481';
-import { ginOffsetOptions, ginBillTotal, ginBillTakenOff } from '../ginoffset.js?v=481';
-import { matchesAll, amountText } from '../listsearch.js?v=481';
+} from '../payables.js?v=484';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=484';
+import { activeSales } from '../paidsales.js?v=484';
+import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=484';
+import { ginOffsetOptions, ginBillTotal, ginBillTakenOff } from '../ginoffset.js?v=484';
+import { matchesAll, amountText } from '../listsearch.js?v=484';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'unpaid';   // unpaid | paid | all
@@ -191,15 +191,17 @@ export function openBillSheet(existing, defaults = {}) {
   openSheet(existing ? 'Edit bill' : 'Add a bill', (root) => {
     root.innerHTML = `
       <datalist id="dl-suppliers">${suppliers.map((s) => `<option value="${esc(s)}">`).join('')}</datalist>
-      ${field({ label: 'Type', id: 'b-kind', type: 'select', value: src.kind || 'other', options: KINDS.map((k) => ({ value: k.key, label: k.label })) })}
+      <div class="grid-2">
+        ${field({ label: 'Type', id: 'b-kind', type: 'select', value: src.kind || 'other', options: KINDS.map((k) => ({ value: k.key, label: k.label })) })}
+        ${field({ label: 'Due date', id: 'b-due', type: 'date', value: src.dueDate })}
+      </div>
       ${field({ label: 'From', id: 'b-supplier', value: src.supplier, placeholder: 'e.g. the broker, the carrier, GrainCorp', list: 'dl-suppliers' })}
       <div class="grid-2">
         ${field({ label: 'Their invoice no.', id: 'b-ref', value: src.reference })}
         ${field({ label: 'Invoice date', id: 'b-date', type: 'date', value: src.invoiceDate ?? (existing ? '' : today) })}
       </div>
-      ${field({ label: 'Due date', id: 'b-due', type: 'date', value: src.dueDate })}
       ${field({ label: 'For a contract', id: 'b-sale', type: 'select', value: src.saleId ?? '', options: [{ value: '', label: 'Not for one contract' }, ...activeSales(sales, [src.saleId]).map((s) => ({ value: s.id, label: contractLabel(s, commodities) }))],
-        hint: 'Brokerage and freight usually are. A freight bill on a contract replaces its Freight ($/t) estimate for those tonnes.' })}
+        hint: "Brokerage and freight usually are. A freight bill replaces the contract's Freight ($/t) estimate." })}
       <div id="b-loc-wrap">
         ${field({ label: 'Storage location', id: 'b-loc', type: 'select', value: src.storageId ?? '', options: [{ value: '', label: 'Not for one location' }, ...locations.map((s) => ({ value: s.id, label: s.name }))] })}
       </div>
