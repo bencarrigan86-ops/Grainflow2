@@ -5,7 +5,7 @@
 // Price is the tonnes sold weighted: the contract price, and what was left per tonne after freight and levies.
 // Built from the seasons the farm already holds; nothing is entered. Pure.
 
-import { fieldTons, saleEconomics } from './derived.js?v=453';
+import { fieldTons, saleEconomics } from './derived.js?v=454';
 
 const key = (s) => String(s || '').trim().toLowerCase();
 const isFallow = (name) => /^fallow\b/i.test(String(name || '').trim());
@@ -34,7 +34,7 @@ export function seasonAverages(years, labels) {
     const k = key(name);
     if (!by.has(k)) by.set(k, { name: String(name).trim(), seasons: {} });
     const c = by.get(k);
-    if (!c.seasons[label]) c.seasons[label] = { ha: 0, tons: 0, est: false, soldTons: 0, soldValue: 0, contractValue: 0 };
+    if (!c.seasons[label]) c.seasons[label] = { ha: 0, tons: 0, est: false, soldTons: 0, soldValue: 0, contractValue: 0, dbl: { ha: 0, tons: 0, est: false, n: 0 }, fal: { ha: 0, tons: 0, est: false, n: 0 } };
     return c.seasons[label];
   };
 
@@ -50,7 +50,12 @@ export function seasonAverages(years, labels) {
       const t = fieldTons(f, y.movements || []);
       s.ha += ha;
       s.tons += t;
-      if (!(f.yieldMode === 'actual' || f.yieldMode === 'recorded')) s.est = true;
+      const forecast = !(f.yieldMode === 'actual' || f.yieldMode === 'recorded');
+      if (forecast) s.est = true;
+      // the same hectares and tonnes again, on the side of the double crops or of the rest
+      const part = f.doubleCrop ? s.dbl : s.fal;
+      part.ha += ha; part.tons += t; part.n += 1;
+      if (forecast) part.est = true;
     }
     for (const sale of y.sales || []) {
       const name = nameOf.get(sale.commodityId);
@@ -68,6 +73,9 @@ export function seasonAverages(years, labels) {
     const seasons = {};
     let ha = 0; let tons = 0; let grown = 0; let est = false;
     let soldTons = 0; let soldValue = 0; let contractValue = 0;
+    const sum = { dbl: { ha: 0, tons: 0, est: false, n: 0 }, fal: { ha: 0, tons: 0, est: false, n: 0 } };
+    let hasDouble = false;
+    const shown = (p) => { const made = p.tons > 0 && p.ha > 0; return { ha: round(p.ha, 1), tons: round(p.tons, 0), paddocks: p.n, yieldTHa: made ? round(p.tons / p.ha, 2) : 0, est: made && p.est }; };
     for (const label of labels) {
       const s = c.seasons[label];
       if (!s) continue;
@@ -76,13 +84,17 @@ export function seasonAverages(years, labels) {
         ha: round(s.ha, 1), tons: round(s.tons, 0), yieldTHa: made ? round(s.tons / s.ha, 2) : 0, est: made && s.est,
         soldTons: round(s.soldTons, 0), netPrice: s.soldTons > 0 ? round(s.soldValue / s.soldTons, 0) : 0,
         contractPrice: s.soldTons > 0 ? round(s.contractValue / s.soldTons, 0) : 0,
+        double: shown(s.dbl), normal: shown(s.fal),
       };
+      if (s.dbl.n > 0) hasDouble = true;
+      for (const k of ['dbl', 'fal']) if (s[k].tons > 0 && s[k].ha > 0) { sum[k].ha += s[k].ha; sum[k].tons += s[k].tons; sum[k].n += s[k].n; if (s[k].est) sum[k].est = true; }
       if (made) { ha += s.ha; tons += s.tons; grown += 1; if (s.est) est = true; }
       soldTons += s.soldTons; soldValue += s.soldValue; contractValue += s.contractValue;
     }
     return {
-      name: c.name, seasons,
+      name: c.name, seasons, hasDouble,
       total: {
+        double: shown(sum.dbl), normal: shown(sum.fal),
         seasonsGrown: grown, ha: round(ha, 1), tons: round(tons, 0), yieldTHa: ha > 0 ? round(tons / ha, 2) : 0, est,
         soldTons: round(soldTons, 0), netPrice: soldTons > 0 ? round(soldValue / soldTons, 0) : 0,
         contractPrice: soldTons > 0 ? round(contractValue / soldTons, 0) : 0, soldValue: round(soldValue, 0),
@@ -103,12 +115,14 @@ export function averagesRows(result, { showMoney = true } = {}) {
       if (!s) continue;
       rows.push({
         commodity: c.name, season: label, ha: s.ha || '', tons: s.tons || '', yieldTHa: s.yieldTHa || '', yieldIs: s.yieldTHa ? (s.est ? 'Estimate' : 'Actual') : '',
+        doubleYield: c.hasDouble ? s.double.yieldTHa || '' : '', normalYield: c.hasDouble ? s.normal.yieldTHa || '' : '',
         soldTons: s.soldTons || '', contractPrice: showMoney && s.soldTons ? s.contractPrice : '', netPrice: showMoney && s.soldTons ? s.netPrice : '',
       });
     }
     const t = c.total;
     rows.push({
       commodity: c.name, season: `All ${t.seasonsGrown} seasons`, ha: t.ha || '', tons: t.tons || '', yieldTHa: t.yieldTHa || '', yieldIs: '',
+      doubleYield: c.hasDouble ? t.double.yieldTHa || '' : '', normalYield: c.hasDouble ? t.normal.yieldTHa || '' : '',
       soldTons: t.soldTons || '', contractPrice: showMoney && t.soldTons ? t.contractPrice : '', netPrice: showMoney && t.soldTons ? t.netPrice : '',
     });
   }
@@ -127,4 +141,7 @@ export const AVERAGES_COLUMNS = (showMoney = true) => [
     { label: 'Average contract price ($/t)', get: (r) => r.contractPrice },
     { label: 'Average net price after freight and levies ($/t)', get: (r) => r.netPrice },
   ] : []),
+  // after the rest, blank for a crop with no double-cropped paddock
+  { label: 'Double crop yield (t/ha)', get: (r) => r.doubleYield },
+  { label: 'After fallow yield (t/ha)', get: (r) => r.normalYield },
 ];

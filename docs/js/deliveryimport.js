@@ -8,10 +8,10 @@
 // owner saves it) and recognised the next time by the column headings. The reading and the rules are here, pure; the screen that
 // drives them is views/importdeliveries.js. Nothing here touches the farm.
 
-import { parseCsv, detectDelimiter, parseDate } from './loadimport.js?v=453';
-import { normHeader, looksLikeKilograms } from './loadmap.js?v=453';
-import { normaliseOutloadNo } from './outloadno.js?v=453';
-import { appendNote } from './carryover.js?v=453';
+import { parseCsv, detectDelimiter, parseDate } from './loadimport.js?v=454';
+import { normHeader, looksLikeKilograms } from './loadmap.js?v=454';
+import { normaliseOutloadNo } from './outloadno.js?v=454';
+import { appendNote } from './carryover.js?v=454';
 
 /** What a delivery file can give us. `synonyms` are headings sites tend to use (spacing, case and punctuation ignored). */
 export const DELIVERY_FIELDS = [

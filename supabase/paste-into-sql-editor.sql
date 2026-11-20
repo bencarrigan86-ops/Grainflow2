@@ -3140,3 +3140,14 @@ revoke all on function support_requests_waiting(uuid) from public;
 grant execute on function support_requests_waiting(uuid) to authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------------
+-- 20261223000000_field_double_crop.sql
+-- ---------------------------------------------------------------------------
+-- A paddock grown straight after another crop in the same season (a double crop, no fallow between). The Position and Averages
+-- reports show the yield of these apart from the rest. Empty means "not a double crop". Safe to run more than once. The same row
+-- security as the rest of the paddock applies.
+
+alter table fields add column if not exists double_crop boolean;
+
+notify pgrst, 'reload schema';

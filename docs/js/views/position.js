@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=453';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=453';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=453';
-import { payablesCost } from '../payables.js?v=453';
-import { commodityClass } from '../commoditycolor.js?v=453';
-import { hasCommodityOrder } from '../commodityorder.js?v=453';
-import { startProgress, missingLine } from '../helpcontent.js?v=453';
-import { openSetupWalk } from './setupwalk.js?v=453';
-import { attentionItems } from '../attention.js?v=453';
-import { lastBackup } from '../backup.js?v=453';
-import { supportWaitingCount } from './support.js?v=453';
-import { todayLocal, dmy } from '../fmt.js?v=453';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=453';
-import { openSheet, closeSheet } from '../ui.js?v=453';
-import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=453';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=453';
-import { viewPdf } from '../pdfview.js?v=453';
+import { db } from '../storage.js?v=454';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=454';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=454';
+import { payablesCost } from '../payables.js?v=454';
+import { commodityClass } from '../commoditycolor.js?v=454';
+import { hasCommodityOrder } from '../commodityorder.js?v=454';
+import { startProgress, missingLine } from '../helpcontent.js?v=454';
+import { openSetupWalk } from './setupwalk.js?v=454';
+import { attentionItems } from '../attention.js?v=454';
+import { lastBackup } from '../backup.js?v=454';
+import { supportWaitingCount } from './support.js?v=454';
+import { todayLocal, dmy } from '../fmt.js?v=454';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=454';
+import { openSheet, closeSheet } from '../ui.js?v=454';
+import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=454';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=454';
+import { viewPdf } from '../pdfview.js?v=454';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -312,6 +312,8 @@ function cropDetail(r) {
         <div class="kv sm"><div class="l">Avg sold</div><div class="v">${money(r.avgSoldPrice, 0)}/${per}</div></div>
         <div class="kv sm"><div class="l">MTM</div><div class="v">${money(r.mtmPrice, 0)}/${per}</div></div>
       </div>
+      ${r.split ? `<div class="row"><span class="label">Double crop yield<span style="display:block;font-size:11.5px;color:var(--text-dim);font-weight:400">${r.split.double.count} paddock${r.split.double.count === 1 ? '' : 's'} · ${num(r.split.double.area, 0)} ha</span></span><span class="value">${r.split.double.yieldTHa > 0 ? `${num(r.split.double.yieldTHa, 2)} ${bales ? 'bales' : 't'}/ha` : '&ndash;'}</span></div>
+      <div class="row"><span class="label">After fallow yield<span style="display:block;font-size:11.5px;color:var(--text-dim);font-weight:400">${r.split.normal.count} paddock${r.split.normal.count === 1 ? '' : 's'} · ${num(r.split.normal.area, 0)} ha</span></span><span class="value">${r.split.normal.yieldTHa > 0 ? `${num(r.split.normal.yieldTHa, 2)} ${bales ? 'bales' : 't'}/ha` : '&ndash;'}</span></div>` : ''}
       <div class="gauge" role="img" aria-label="${Math.round(sold * 100)} percent sold"><i style="width:${sold * 100}%"></i></div>
       ${cottonLines(r)}
       ${r.openingValue ? `

@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=453';
-import { num, esc, todayLocal } from '../fmt.js?v=453';
-import { openSheet } from '../ui.js?v=453';
-import { cleanDriverSignature, signedWhen } from '../driversign.js?v=453';
-import { exportRowsAsCSV } from '../csv.js?v=453';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=453';
-import { endpointLabel } from './movements.js?v=453';
-import { layersForStorage } from '../outload.js?v=453';
-import { traceLoads, traceText } from '../trace.js?v=453';
-import { holdings, totalHeld } from '../offfarm.js?v=453';
-import { kindLabel, billTotal } from '../payables.js?v=453';
-import { orderState, STATE_LABEL } from '../orders.js?v=453';
-import { fieldHarvest } from '../harvest.js?v=453';
-import { capacityFor } from '../storagecapacity.js?v=453';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=453';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=453';
+import { db } from '../storage.js?v=454';
+import { num, esc, todayLocal } from '../fmt.js?v=454';
+import { openSheet } from '../ui.js?v=454';
+import { cleanDriverSignature, signedWhen } from '../driversign.js?v=454';
+import { exportRowsAsCSV } from '../csv.js?v=454';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=454';
+import { endpointLabel } from './movements.js?v=454';
+import { layersForStorage } from '../outload.js?v=454';
+import { traceLoads, traceText } from '../trace.js?v=454';
+import { holdings, totalHeld } from '../offfarm.js?v=454';
+import { kindLabel, billTotal } from '../payables.js?v=454';
+import { orderState, STATE_LABEL } from '../orders.js?v=454';
+import { fieldHarvest } from '../harvest.js?v=454';
+import { capacityFor } from '../storagecapacity.js?v=454';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=454';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=454';
 
 function commodityName(commodities, id) {
   return commodities.find((c) => c.id === id)?.name || '';
@@ -70,6 +70,7 @@ function exportFieldsCSV(year, stamp) {
     { label: 'Seed required (t)', get: (f) => num(fieldSeed(f).requiredTons, 2) },
     { label: 'Harvested so far (t)', get: (f) => num(fieldHarvest(f, movements).inT, 2) },
     { label: 'Still to harvest (t)', get: (f) => num(fieldHarvest(f, movements).toComeT, 2) },
+    { label: 'Double crop', get: (f) => (f.doubleCrop ? 'Yes' : 'No') },
     { label: 'Harvest finished', get: (f) => (f.harvestDone ? 'Yes' : 'No') },
     { label: 'Hectares still to harvest', get: (f) => (f.harvestHaLeft != null && !f.harvestDone ? num(f.harvestHaLeft, 2) : '') },
     { label: 'Yield for hectares left (t/ha)', get: (f) => (f.harvestHaLeft != null && !f.harvestDone && f.harvestLeftYield != null ? num(f.harvestLeftYield, 2) : '') },

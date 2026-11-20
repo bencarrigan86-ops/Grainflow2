@@ -1,13 +1,13 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=453';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=453';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=453';
-import { isGinContract } from './cottonkinds.js?v=453';
-import { ginTakenOff } from './ginoffset.js?v=453';
-import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=453';
-import { commoditySort } from './commodityorder.js?v=453';
-import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=453';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=454';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=454';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=454';
+import { isGinContract } from './cottonkinds.js?v=454';
+import { ginTakenOff } from './ginoffset.js?v=454';
+import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=454';
+import { commoditySort } from './commodityorder.js?v=454';
+import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=454';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -415,6 +415,21 @@ export function productionSummary(commodities, fields, movements = []) {
   return { rows, totals };
 }
 
+/**
+ * A crop's yield split by whether the paddock was a double crop (grown straight after another crop) or not (after fallow, or a
+ * one-crop year): hectares, tonnes and t/ha for each. Null when none of the paddocks is ticked, so nothing extra is shown.
+ * @param {object[]} rows the paddocks of one crop
+ */
+export function doubleCropSplit(rows, movements = []) {
+  if (!rows.some((f) => f.doubleCrop)) return null;
+  const part = (list) => {
+    const area = list.reduce((s, f) => s + (Number(f.areaHa) || 0), 0);
+    const tons = list.reduce((s, f) => s + fieldTons(f, movements), 0);
+    return { count: list.length, area, tons, yieldTHa: area > 0 ? tons / area : 0 };
+  };
+  return { double: part(rows.filter((f) => f.doubleCrop)), normal: part(rows.filter((f) => !f.doubleCrop)) };
+}
+
 export function productionByCommodity(commodities, fields, movements = []) {
   return commodities.map((c) => {
     const rows = fields.filter((f) => f.commodityId === c.id);
@@ -424,7 +439,7 @@ export function productionByCommodity(commodities, fields, movements = []) {
     const straw = secondaryHay(c.id, fields);
     const allTons = tons + straw.tons;
     const yieldTHa = (area + straw.area) > 0 ? allTons / (area + straw.area) : 0;
-    return { commodity: c, area, tons: allTons, yieldTHa, fieldCount: rows.length, strawTons: straw.tons, strawArea: straw.area, strawBales: straw.bales };
+    return { commodity: c, area, tons: allTons, yieldTHa, fieldCount: rows.length, strawTons: straw.tons, strawArea: straw.area, strawBales: straw.bales, split: doubleCropSplit(rows, movements) };
   });
 }
 
@@ -516,6 +531,7 @@ export function position(commodities, fields, sales, movements = []) {
       commodity: c,
       area: p.area,
       yieldTHa: p.yieldTHa,
+      split: p.split,
       productionTons: p.tons,
       soldTons: s.tons,
       avgSoldPrice: s.avgPrice,

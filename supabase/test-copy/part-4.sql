@@ -1,4 +1,4 @@
--- Test database, part 4 of 4: 20261210000000_farm_switches_two.sql to 20261222000000_support_request.sql.
+-- Test database, part 4 of 4: 20261210000000_farm_switches_two.sql to 20261223000000_field_double_crop.sql.
 -- Paste ALL of this into the Supabase SQL editor of the TEST project and press Run. Run the parts in order.
 
 -- ---------------------------------------------------------------------------
@@ -913,3 +913,14 @@ grant execute on function support_requests_waiting(uuid) to authenticated;
 
 notify pgrst, 'reload schema';
 
+
+-- ---------------------------------------------------------------------------
+-- 20261223000000_field_double_crop.sql
+-- ---------------------------------------------------------------------------
+-- A paddock grown straight after another crop in the same season (a double crop, no fallow between). The Position and Averages
+-- reports show the yield of these apart from the rest. Empty means "not a double crop". Safe to run more than once. The same row
+-- security as the rest of the paddock applies.
+
+alter table fields add column if not exists double_crop boolean;
+
+notify pgrst, 'reload schema';

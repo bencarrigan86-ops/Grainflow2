@@ -2,8 +2,8 @@
 // figures under it. Same numbers as the screen (seasonAverages() is passed in), laid out portrait, one block per crop in the
 // same green as the Position page. Pure: it builds bytes and touches nothing else.
 
-import { Pdf } from './pdf.js?v=453';
-import { drawBrandLogo } from './brand.js?v=453';
+import { Pdf } from './pdf.js?v=454';
+import { drawBrandLogo } from './brand.js?v=454';
 
 const PAGE = { width: 595.28, height: 841.89 };
 const M = 36;
@@ -28,6 +28,19 @@ export const AVERAGES_PDF_COLUMNS = [
   { label: 'Sold (t)', w: 0.13, cell: (s) => (s.soldTons ? group(s.soldTons, 0) : '-'), total: (t) => (t.soldTons ? group(t.soldTons, 0) : '-') },
   { label: 'Contract $/t', w: 0.14, cell: (s) => (s.soldTons ? dollars(s.contractPrice) : '-'), total: (t) => (t.soldTons ? dollars(t.contractPrice) : '-') },
   { label: 'Net $/t', w: 0.14, cell: (s) => (s.soldTons ? dollars(s.netPrice) : '-'), total: (t) => (t.soldTons ? dollars(t.netPrice) : '-') },
+];
+
+/** The same columns with the double crop and after fallow yields squeezed in, for a crop that has double-cropped paddocks. */
+export const AVERAGES_PDF_COLUMNS_SPLIT = [
+  { label: 'Season', w: 0.125, cell: (s, l) => l, total: () => 'All seasons' },
+  { label: 'Area (ha)', w: 0.1, cell: (s) => (s.ha ? group(s.ha, 0) : '-'), total: (t) => (t.ha ? group(t.ha, 0) : '-') },
+  { label: 'Produced (t)', w: 0.11, cell: (s) => (s.tons ? group(s.tons, 0) : '-'), total: (t) => (t.tons ? group(t.tons, 0) : '-') },
+  { label: 'Yield t/ha', w: 0.11, cell: (s) => (s.yieldTHa ? `${group(s.yieldTHa, 2)}${s.est ? ' est' : ''}` : '-'), total: (t) => (t.yieldTHa ? `${group(t.yieldTHa, 2)}${t.est ? ' est' : ''}` : '-') },
+  { label: 'Double t/ha', w: 0.125, cell: (s) => (s.double.yieldTHa ? group(s.double.yieldTHa, 2) : '-'), total: (t) => (t.double.yieldTHa ? group(t.double.yieldTHa, 2) : '-') },
+  { label: 'Fallow t/ha', w: 0.125, cell: (s) => (s.normal.yieldTHa ? group(s.normal.yieldTHa, 2) : '-'), total: (t) => (t.normal.yieldTHa ? group(t.normal.yieldTHa, 2) : '-') },
+  { label: 'Sold (t)', w: 0.095, cell: (s) => (s.soldTons ? group(s.soldTons, 0) : '-'), total: (t) => (t.soldTons ? group(t.soldTons, 0) : '-') },
+  { label: 'Contract $/t', w: 0.105, cell: (s) => (s.soldTons ? dollars(s.contractPrice) : '-'), total: (t) => (t.soldTons ? dollars(t.contractPrice) : '-') },
+  { label: 'Net $/t', w: 0.105, cell: (s) => (s.soldTons ? dollars(s.netPrice) : '-'), total: (t) => (t.soldTons ? dollars(t.netPrice) : '-') },
 ];
 
 /**
@@ -69,8 +82,12 @@ export function averagesPdf(result = { labels: [], commodities: [] }, { business
     return pdf.bytes();
   }
 
-  const widths = AVERAGES_PDF_COLUMNS.map((c) => c.w * W);
-  const edges = widths.reduce((a, w, i) => { a.push(a[i] + w); return a; }, [0]);
+  // the columns for the crop being drawn: with the double crop split when it has any, and where their edges fall
+  let COLS = AVERAGES_PDF_COLUMNS;
+  let widths = [];
+  let edges = [];
+  const useColumns = (cols) => { COLS = cols; widths = cols.map((c) => c.w * W); edges = widths.reduce((a, w, i) => { a.push(a[i] + w); return a; }, [0]); };
+  useColumns(AVERAGES_PDF_COLUMNS);
   const cell = (i, str, opts = {}) => {
     const left = M + edges[i];
     if (i === 0) pdf.text(left + 5, y, String(str), { size: BODY, ...opts });
@@ -78,13 +95,14 @@ export function averagesPdf(result = { labels: [], commodities: [] }, { business
   };
   const headRow = () => {
     pdf.rect(M, y - 5, W, 19, { stroke: null, fill: GREEN });
-    AVERAGES_PDF_COLUMNS.forEach((c, i) => cell(i, c.label, { bold: true, size: HEAD, gray: 1 }));
+    COLS.forEach((c, i) => cell(i, c.label, { bold: true, size: HEAD, gray: 1 }));
     y += 20;
   };
 
   let anyEstimate = false;
   commodities.forEach((c) => {
     const t = c.total;
+    useColumns(c.hasDouble ? AVERAGES_PDF_COLUMNS_SPLIT : AVERAGES_PDF_COLUMNS);
     const seasons = labels.filter((l) => c.seasons[l]);
     if (t.est) anyEstimate = true;
     // the crop's heading and its two figures stay together with the table's head and first row
@@ -114,13 +132,13 @@ export function averagesPdf(result = { labels: [], commodities: [] }, { business
     seasons.forEach((l, n) => {
       if (y + 20 > BOTTOM) { newPage(); headRow(); }
       if (n % 2 === 1) pdf.rect(M, y - 5, W, 18, { stroke: null, fill: BAND });
-      AVERAGES_PDF_COLUMNS.forEach((col, i) => cell(i, col.cell(c.seasons[l], l), i === 0 ? { bold: true } : {}));
+      COLS.forEach((col, i) => cell(i, col.cell(c.seasons[l], l), i === 0 ? { bold: true } : {}));
       y += 18;
     });
     ensure(26);
     pdf.rect(M, y - 5, W, 19, { stroke: null, fill: TOTAL });
     pdf.line(M, y - 5, M + W, y - 5, { width: 1.2, gray: GREEN });
-    AVERAGES_PDF_COLUMNS.forEach((col, i) => cell(i, col.total(t), { bold: true }));
+    COLS.forEach((col, i) => cell(i, col.total(t), { bold: true }));
     y += 36;
   });
 
@@ -129,6 +147,7 @@ export function averagesPdf(result = { labels: [], commodities: [] }, { business
     'Yield is total tonnes over total hectares, so bigger paddocks count for more. Seasons with no tonnes are left out.',
     'Price is weighted by tonnes sold. Contract is the price on the contract; net is what is left per tonne after freight and levies.',
   ];
+  if (commodities.some((c) => c.hasDouble)) notes.push('Double is the yield of paddocks ticked as a double crop (grown straight after another crop); fallow is every other paddock of that crop.');
   if (anyEstimate) notes.unshift('"est" means at least one season in that average is a forecast yield, not a recorded one.');
   ensure(notes.length * 13 + 4);
   notes.forEach((n) => { pdf.text(M, y, n, { size: 8, gray: GREY }); y += 13; });

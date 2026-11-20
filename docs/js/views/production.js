@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=453';
-import { tileIcon } from '../tileicon.js?v=453';
-import { cropCostPerHa } from '../grossmargin.js?v=453';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=453';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=453';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=453';
-import { describeMerge } from '../merge.js?v=453';
-import { renderRelatedMovements } from './movements.js?v=453';
-import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=453';
-import { wireJumps } from '../jump.js?v=453';
-import { openMapSheet } from './farmmap.js?v=453';
-import { openInputsSheet } from './inputs.js?v=453';
-import { openSprayFormSheet, canSpray } from './spray.js?v=453';
-import { stockLevels } from '../inputs.js?v=453';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=453';
-import { openModulesPickedSheet } from './modulespicked.js?v=453';
-import { openBalesBaledSheet } from './balesbaled.js?v=453';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=453';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=453';
+import { db } from '../storage.js?v=454';
+import { tileIcon } from '../tileicon.js?v=454';
+import { cropCostPerHa } from '../grossmargin.js?v=454';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=454';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=454';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=454';
+import { describeMerge } from '../merge.js?v=454';
+import { renderRelatedMovements } from './movements.js?v=454';
+import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=454';
+import { wireJumps } from '../jump.js?v=454';
+import { openMapSheet } from './farmmap.js?v=454';
+import { openInputsSheet } from './inputs.js?v=454';
+import { openSprayFormSheet, canSpray } from './spray.js?v=454';
+import { stockLevels } from '../inputs.js?v=454';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=454';
+import { openModulesPickedSheet } from './modulespicked.js?v=454';
+import { openBalesBaledSheet } from './balesbaled.js?v=454';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=454';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=454';
 
 let unsub = null;
 
@@ -174,6 +174,7 @@ export function openFieldSheet(existing) {
       <datalist id="dl-farms">${[...new Set(db.get().fields.map((f) => String(f.property || '').trim()).filter(Boolean))].sort().map((p) => `<option value="${esc(p)}">`).join('')}</datalist>
       ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
       ${field({ label: 'Area (ha)', id: 'area', type: 'number', step: '0.01', value: existing?.areaHa })}
+      ${field({ label: 'Double crop', id: 'doubleCrop', type: 'select', value: existing?.doubleCrop ? 'yes' : 'no', options: [{ value: 'no', label: 'No, after fallow or a one-crop year' }, { value: 'yes', label: 'Yes, sown straight after another crop' }], hint: 'Position and Averages show the yield of double-cropped paddocks apart from the rest, as well as in the crop\'s average.' })}
       <div class="yield-only" ${showYield ? '' : 'hidden'}>
       ${field({ label: 'Yield estimate (t/ha)', id: 'yield', type: 'number', step: '0.01', value: existing ? existing.yieldTHa : (initialCommodity?.defaultYieldTHa || ''), hint: 'For production &amp; sales. Pre-filled from the commodity default below — type in this box to override it for this field.' })}
       <div class="row"><span class="label">Commodity's default yield estimate</span><span class="value" id="commodity-yield-preview">— t/ha</span></div>
@@ -505,6 +506,7 @@ export function openFieldSheet(existing) {
         property: String(getVal(root, 'property') ?? '').trim(),
         areaHa: getNum(root, 'area'),
         commodityId: getVal(root, 'commodity'),
+        doubleCrop: getVal(root, 'doubleCrop') === 'yes',
         harvestDone: getVal(root, 'harvestDone') === 'yes',
         harvestHaLeft: String(getVal(root, 'harvestHaLeft') ?? '').trim() === '' ? null : getNum(root, 'harvestHaLeft'),
         harvestLeftYield: String(getVal(root, 'harvestLeftYield') ?? '').trim() === '' ? null : getNum(root, 'harvestLeftYield'),

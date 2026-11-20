@@ -104,7 +104,7 @@ function markerFor(key, ids) {
   if (key === 'ureaApplications') return [{ date: '2026-06-01', kgHa: 90 }];
   if (key === 'date' || key.endsWith('Date')) return '2026-06-01';
   if (key === 'orderId' || key === 'freightOrderId') return uuid();
-  if (key === 'harvestDone' || key === 'paid') return true;
+  if (key === 'harvestDone' || key === 'paid' || key === 'doubleCrop') return true;
   if (key === 'harvestHaLeft') return 7.25;
   if (key === 'harvestLeftYield') return 3.75;
   if (key === 'freightPaidBy') return 'buyer';

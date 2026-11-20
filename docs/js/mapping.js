@@ -27,17 +27,17 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=453';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=453';
-import { cleanCottonTerms } from './cottonkinds.js?v=453';
-import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=453';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=453';
-import { cleanPicked } from './modulespicked.js?v=453';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=453';
-import { cleanHistory, hasHistory } from './pricehistory.js?v=453';
-import { cleanOffFarm } from './offfarm.js?v=453';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=453';
-import { cleanDriverSignature } from './driversign.js?v=453';
+import { cleanGradeOptions } from './gradeprice.js?v=454';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=454';
+import { cleanCottonTerms } from './cottonkinds.js?v=454';
+import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=454';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=454';
+import { cleanPicked } from './modulespicked.js?v=454';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=454';
+import { cleanHistory, hasHistory } from './pricehistory.js?v=454';
+import { cleanOffFarm } from './offfarm.js?v=454';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=454';
+import { cleanDriverSignature } from './driversign.js?v=454';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -388,6 +388,8 @@ export function stateToRows(state, farmId) {
         ...((f.gmCostHa != null || f.__hasGmCostHa) ? { gm_cost_ha: f.gmCostHa == null ? null : n(f.gmCostHa) } : {}),
         // bales baled on a hay paddock. Optional the same way; deleting the last one sends an empty list.
         ...((cleanBaled(f.balesBaled).length || f.__hasBalesBaled) ? { bales_baled: cleanBaled(f.balesBaled) } : {}),
+        // grown straight after another crop this season. Optional the same way: left out until it is ticked, and un-ticking it sends false.
+        ...((f.doubleCrop || f.__hasDoubleCrop) ? { double_crop: !!f.doubleCrop } : {}),
       });
       // The agronomy half. Always written, even when empty — a missing row and
       // a zeroed row are different things, and the app expects the fields to
@@ -822,6 +824,7 @@ export function rowsToState(rows) {
           ...(Array.isArray(f.modules_picked) ? { modulesPicked: cleanPicked(f.modules_picked), __hasModulesPicked: true } : {}),
           ...(f.gm_cost_ha != null ? { gmCostHa: n(f.gm_cost_ha), __hasGmCostHa: true } : {}),
           ...(Array.isArray(f.bales_baled) ? { balesBaled: cleanBaled(f.bales_baled), __hasBalesBaled: true } : {}),
+          ...(f.double_crop != null ? { doubleCrop: !!f.double_crop, __hasDoubleCrop: true } : {}),
           __agronomyId: a.id,
           yieldTHa: n(a.yield_t_ha),
           yieldMode: a.yield_mode || 'estimate',
