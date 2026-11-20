@@ -50,6 +50,24 @@ export function nextOutloadNo({ series, yy, movements = [] } = {}) {
   return `${prefix}${String(top + 1).padStart(3, '0')}`;
 }
 
+/** Is this one of the plain numbers loads were given before the season, person and count form (1, 2, 231...)? Nothing at all counts as plain too. */
+export const isPlainNumber = (no) => normaliseOutloadNo(no).length < 6;
+
+/**
+ * Numbers for loads that have the old plain ones: the next ones in this person's series, in the order the loads happened (date, time,
+ * then the number they have now), each one counting on from the last. Nothing is changed here; this is the list of what would be.
+ * @param {{loads: object[], used: object[], series: number, yy: string}} p  "used" is every load the farm holds, as { outloadNo } (a ticket or an outload number)
+ * @returns {{id: string, from: *, to: number}[]}  empty when there is no digit or season to put on the numbers
+ */
+export function renumberPlan({ loads = [], used = [], series, yy } = {}) {
+  const first = nextOutloadNo({ series, yy, movements: used });
+  if (!first) return [];
+  const prefix = first.slice(0, 3);
+  let seq = num(first.slice(3));
+  const ordered = [...loads].sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.loadTime || '').localeCompare(String(b.loadTime || '')) || (num(a.ticketNo) || 0) - (num(b.ticketNo) || 0));
+  return ordered.map((m) => { const to = num(`${prefix}${String(seq).padStart(3, '0')}`); seq += 1; return { id: m.id, from: m.ticketNo, to }; });
+}
+
 /**
  * Numbers used by more than one load. Two people typing a number by hand, or one person on two phones, can do it; the app says
  * so and the import will not guess between them.

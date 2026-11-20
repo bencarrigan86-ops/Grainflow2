@@ -18,37 +18,37 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=452';
-import { setBrandLogo } from './brand.js?v=452';
+import { hydrate } from './hydrate.js?v=453';
+import { setBrandLogo } from './brand.js?v=453';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState,
-} from './local.js?v=452';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=452';
-import { isLegacyDirty } from './dirty.js?v=452';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=452';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=452';
-import { hasDeductions } from './deductions.js?v=452';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=452';
-import { hasHay, hasHayLoad } from './hay.js?v=452';
-import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=452';
-import { todayLocal } from './fmt.js?v=452';
-import { signLoad } from './driversign.js?v=452';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=452';
-import { settleLegs, dedupeLegs } from './legs.js?v=452';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=452';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=452';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=452';
-import { setCommodityOrder } from './commodityorder.js?v=452';
-import { setFarmSwitches, setFarmLevels } from './nav.js?v=452';
-import { readSwitches, readLevels } from './farmswitches.js?v=452';
-import { seasonYY, nextOutloadNo } from './outloadno.js?v=452';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=452';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=452';
-import { schedulePush, pushOnReconnect } from './sync.js?v=452';
-import { hasParts as hasAddressParts } from './address.js?v=452';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=452';
-import { linePayableId } from './ginoffset.js?v=452';
+} from './local.js?v=453';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=453';
+import { isLegacyDirty } from './dirty.js?v=453';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=453';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=453';
+import { hasDeductions } from './deductions.js?v=453';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=453';
+import { hasHay, hasHayLoad } from './hay.js?v=453';
+import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=453';
+import { todayLocal } from './fmt.js?v=453';
+import { signLoad } from './driversign.js?v=453';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=453';
+import { settleLegs, dedupeLegs } from './legs.js?v=453';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=453';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=453';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=453';
+import { setCommodityOrder } from './commodityorder.js?v=453';
+import { setFarmSwitches, setFarmLevels } from './nav.js?v=453';
+import { readSwitches, readLevels } from './farmswitches.js?v=453';
+import { seasonYY, nextOutloadNo, isPlainNumber, renumberPlan, outloadParts } from './outloadno.js?v=453';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=453';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=453';
+import { schedulePush, pushOnReconnect } from './sync.js?v=453';
+import { hasParts as hasAddressParts } from './address.js?v=453';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=453';
+import { linePayableId } from './ginoffset.js?v=453';
 
 /**
  * A gin bill the lint buyer pays is settled once lint invoices have taken all of it off: the farm owes the gin nothing, the buyer settles
@@ -1227,17 +1227,57 @@ export const db = {
     const c = current();
     for (const m of list) {
       const id = uid();
-      const made = { ...m, id, ticketNo: data.nextMovementNo };
+      // the same number a load typed in gets (season, this person's digit, count), worked out after each one is added so they run in order
+      const ticket = nextTicket();
+      const made = { ...m, id, ticketNo: ticket.no };
       if (hasLoadQuality(made)) made.__hasQuality = true;
       markOil(made);
       made.froms = settleLegs([], made.froms, uid).legs;
       made.tos = settleLegs([], made.tos, uid).legs;
       c.movements.push(made);
-      data.nextMovementNo += 1;
+      if (ticket.plain) data.nextMovementNo += 1;
       touch('movement', id);
     }
     persist();
     return list.length;
+  },
+  /**
+   * The loads that came in by import and still have a plain number, with the numbers they would get: this person's, oldest first. With
+   * `restart`, the loads this season that already have a number in this person's series are put in date order with them, so the
+   * numbers start again from the first of the season. A load already on an invoice has its number written on that invoice, so it is
+   * only included when asked for.
+   * @returns {{plan: {id: string, from: *, to: number}[], old: number, mine: number, invoiced: number, noSeries: boolean}}
+   */
+  planTicketRenumber({ includeInvoiced = false, restart = false } = {}) {
+    const c = current();
+    const onInvoice = new Set();
+    for (const inv of c.invoices || []) for (const l of inv.lines || []) if (l.movementId) onInvoice.add(l.movementId);
+    const yy = seasonYY(data.currentYear, new Date().toISOString().slice(0, 10));
+    const inSeries = (m) => { const p = outloadParts(m.ticketNo); return !!p && p.yy === yy && p.series === Number(outloadSeries); };
+    const imported = (c.movements || []).filter((m) => m.sourceRef && isPlainNumber(m.ticketNo));
+    const mine = (c.movements || []).filter(inSeries);   // already numbered in this person's series this season
+    const pool = restart ? [...imported, ...mine] : imported;
+    const invoiced = pool.filter((m) => onInvoice.has(m.id)).length;
+    const loads = includeInvoiced ? pool : pool.filter((m) => !onInvoice.has(m.id));
+    // a load being renumbered gives its old number back; every other load's number (and any outload number) is still taken
+    const own = new Set(loads.map((m) => m.id));
+    const used = Object.values(data.years || {}).flatMap((y) => y.movements || []).flatMap((m) => (own.has(m.id) ? [{ outloadNo: m.outloadNo }] : [{ outloadNo: m.ticketNo }, { outloadNo: m.outloadNo }]));
+    const plan = renumberPlan({ loads, used, series: outloadSeries, yy }).filter((p) => String(p.from) !== String(p.to));
+    return { plan, old: imported.length, mine: mine.length, invoiced, noSeries: !(outloadSeries >= 1) };
+  },
+  /** Gives the loads in a plan from planTicketRenumber their new numbers. @returns {number} how many were changed */
+  applyTicketRenumber(plan) {
+    const c = current();
+    let n = 0;
+    for (const p of plan || []) {
+      const m = c.movements.find((x) => x.id === p.id);
+      if (!m || String(m.ticketNo) !== String(p.from)) continue;   // gone, or changed since the plan was made
+      m.ticketNo = p.to;
+      touch('movement', m.id);
+      n += 1;
+    }
+    if (n) persist();
+    return n;
   },
   deleteMovement(id) {
     const m = current().movements.find((x) => x.id === id);

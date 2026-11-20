@@ -6,7 +6,7 @@
 // date and the commodity, the site's weight shared out over a load's legs, and the layout saved for next time.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { seasonYY, normaliseOutloadNo, outloadParts, outloadSeasonOk, nextOutloadNo, duplicateOutloads } from '../docs/js/outloadno.js';
+import { seasonYY, normaliseOutloadNo, outloadParts, outloadSeasonOk, nextOutloadNo, duplicateOutloads, renumberPlan, isPlainNumber } from '../docs/js/outloadno.js';
 import {
   readTable, guessMapping, mappingProblems, extractRows, matchDeliveries, prorateLegs, deliveryPatch, looksRounded,
   makeFormat, saveFormat, removeFormat, findFormat, DELIVERY_FIELDS,
@@ -339,6 +339,38 @@ check('it is wired: the load form, the data layer, boot, People and the SQL', ()
   for (const w of ['outload_series', 'farm_users_outload_series_unique', 'assign_outload_series', 'outload_no text', 'import_formats jsonb']) assert.ok(sql.includes(w), w);
   const paste = read('supabase/paste-into-sql-editor.sql');
   assert.ok(paste.includes('Build 308') && paste.includes('assign_outload_series') && paste.includes('import_formats jsonb'));
+});
+
+check('old imported loads are numbered on from this person\'s series, oldest first, without clashing with a number already used', () => {
+  const loads = [
+    { id: 'b', date: '2026-11-12', ticketNo: 232 }, { id: 'a', date: '2026-11-11', loadTime: '09:00', ticketNo: 231 },
+    { id: 'c', date: '2026-11-12', ticketNo: 233 }, { id: 'd', date: '2026-11-11', loadTime: '07:30', ticketNo: 234 },
+  ];
+  const used = [{ outloadNo: 261001 }, { outloadNo: 261007 }, { outloadNo: 231 }, { outloadNo: '262050' }];
+  const plan = renumberPlan({ loads, used, series: 1, yy: '26' });
+  assert.deepEqual(plan.map((p) => p.id), ['d', 'a', 'b', 'c'], 'date, then time, then the number they have');
+  assert.deepEqual(plan.map((p) => p.to), [261008, 261009, 261010, 261011], 'carried on after the highest of this person\'s, ignoring other people\'s series');
+  assert.equal(plan[0].from, 234);
+  assert.deepEqual(renumberPlan({ loads, used, series: null, yy: '26' }), [], 'no digit, nothing to number from');
+  assert.deepEqual(renumberPlan({ loads: [], used, series: 1, yy: '26' }), []);
+  assert.equal(renumberPlan({ loads: [{ id: 'x', date: '2026-01-01', ticketNo: 1 }], used: [{ outloadNo: 261999 }], series: 1, yy: '26' })[0].to, 2611000, 'past 999 it simply gets longer');
+  assert.ok(isPlainNumber(231) && isPlainNumber('') && isPlainNumber(undefined) && !isPlainNumber(261001) && !isPlainNumber('26-1001'));
+});
+check('starting from the first of the season: a load already in the series is put in date order with the imported ones, which gives its old number back', () => {
+  const loads = [
+    { id: 'typed', date: '2026-11-05', ticketNo: 261001 },
+    { id: 'o1', date: '2026-10-20', ticketNo: 231 }, { id: 'o2', date: '2026-10-21', ticketNo: 232 }, { id: 'n1', date: '2026-11-06', ticketNo: 233 },
+  ];
+  const used = [{ outloadNo: 262003 }];   // another person's number: not this series, and loads being renumbered give their own back
+  const plan = renumberPlan({ loads, used, series: 1, yy: '26' });
+  assert.deepEqual(plan.map((p) => [p.id, p.to]), [['o1', 261001], ['o2', 261002], ['typed', 261003], ['n1', 261004]]);
+  const typed = plan.find((p) => p.id === 'typed');
+  assert.equal(typed.from, 261001, 'the plan says what it was, so the screen can show it');
+});
+check('the import sheet offers it, leaves invoiced loads alone unless ticked, and asks before changing anything', () => {
+  const v = read('docs/js/views/importloads.js'); const s = read('docs/js/storage.js');
+  assert.ok(v.includes('id="li-renum-go"') && v.includes('id="li-renum-inv"') && v.includes('id="li-renum-restart"') &&v.includes('db.planTicketRenumber({ includeInvoiced, restart })') && v.includes('askConfirm(') && v.includes('db.applyTicketRenumber(plan)'));
+  assert.ok(s.includes('m.sourceRef && isPlainNumber(m.ticketNo)') && s.includes('onInvoice.has(m.id)') && s.includes("touch('movement', m.id)"), 'only imported loads with a plain number, and each change is saved');
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

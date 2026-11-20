@@ -41,5 +41,13 @@ check('the load import dropdowns list paddocks, silos and commodities in name or
   assert.ok(src.includes("'No farm / site'") && src.includes("(a === '') - (b === '')"), 'those with no farm come last');
 });
 
+check('imported loads are numbered the way a typed-in load is (season, person digit, count), not the old plain count', () => {
+  const s = read('docs/js/storage.js');
+  const at = s.indexOf('addMovements(list) {');
+  const body = s.slice(at, s.indexOf('deleteMovement(id)', at));
+  assert.ok(body.includes('const ticket = nextTicket();') && body.includes('ticketNo: ticket.no') && body.includes('if (ticket.plain) data.nextMovementNo += 1;'));
+  assert.ok(!body.includes('ticketNo: data.nextMovementNo'), 'no longer the plain count');
+});
+
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
 console.log('\nall passed');

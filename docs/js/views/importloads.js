@@ -8,18 +8,18 @@
 // The reading and the rules live in loadimport.js, where they are tested. This
 // file is the screen: it holds the person's choices and hands them over.
 
-import { db } from '../storage.js?v=452';
-import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=452';
-import { esc, num, shortDate } from '../fmt.js?v=452';
-import { commodityFills } from '../commodityfill.js?v=452';
-import { isTransit } from '../transit.js?v=452';
-import { reconcileLoads } from '../loadcheck.js?v=452';
+import { db } from '../storage.js?v=453';
+import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=453';
+import { esc, num, shortDate } from '../fmt.js?v=453';
+import { commodityFills } from '../commodityfill.js?v=453';
+import { isTransit } from '../transit.js?v=453';
+import { reconcileLoads } from '../loadcheck.js?v=453';
 import {
   FIELD_SPECS, REQUIRED_KEYS, chooseSetup, recallSetups, rememberSetup, setupProblems, peekFile, distinctOf, likelyFinished,
-} from '../loadmap.js?v=452';
+} from '../loadmap.js?v=453';
 import {
   readFreightExport, planNames, distinctNames, matchCommodity, matchSiloByNumber, suggestCutoff, buildMovements, COMPLETED,
-} from '../loadimport.js?v=452';
+} from '../loadimport.js?v=453';
 
 const MEMORY_KEY = 'grainflow.loadImportChoices';
 const NEW = '__new';
@@ -55,7 +55,9 @@ export function openLoadImportSheet() {
         weighbridge. You will see what it holds and match its paddocks and silos to yours before
         anything is saved.</div>
       <input type="file" id="li-file" accept=".csv,text/csv" />
-      <div id="li-body" style="margin-top:14px"></div>`;
+      <div id="li-body" style="margin-top:14px"></div>
+      <div id="li-renum" style="margin-top:18px"></div>`;
+    renumberBlock(root.querySelector('#li-renum'), { includeInvoiced: false, restart: true });
     root.querySelector('#li-file').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -63,6 +65,38 @@ export function openLoadImportSheet() {
       try { text = await file.text(); } catch { notify('That file could not be read.'); return; }
       begin(root.querySelector('#li-body'), text);
     });
+  });
+}
+
+/**
+ * Loads imported before imports used the season, person and count numbers still have a plain one (#231). This offers to give them
+ * the next numbers in this person's series, oldest first, and shows exactly which numbers before anything changes.
+ */
+function renumberBlock(box, { includeInvoiced = false, restart = true } = {}) {
+  if (!box) return;
+  const { plan, old, mine, invoiced, noSeries } = db.planTicketRenumber({ includeInvoiced, restart });
+  if (!old) { box.innerHTML = ''; return; }
+  const no = (v) => (v === undefined || v === null || v === '' ? 'no number' : `#${v}`);
+  const examples = plan.length <= 3 ? plan : [plan[0], plan[1], plan[plan.length - 1]];
+  const lines = examples.map((p, i) => `${i === 2 && plan.length > 3 ? '… ' : ''}${esc(no(p.from))} → #${p.to}`).join(' · ');
+  box.innerHTML = `
+    <div class="card" style="margin:0">
+      <h2 style="margin-bottom:4px">Imported loads with the old numbers</h2>
+      <div class="meta">${old} imported load${old === 1 ? '' : 's'} still ${old === 1 ? 'has' : 'have'} a plain number, not the season, person and count form a load typed in gets.</div>
+      ${noSeries ? '<div class="meta" style="margin-top:6px">You have no number series yet, so there is nothing to number them from.</div>' : `
+      ${mine ? `<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:10px 0 0"><input type="checkbox" id="li-renum-restart" ${restart ? 'checked' : ''} style="width:20px;height:20px;margin-top:1px;flex:none" /><span>Start from the first of the season<span class="meta" style="display:block">Put the ${mine} load${mine === 1 ? '' : 's'} already numbered in your series in date order with these.</span></span></label>` : ''}
+      ${invoiced ? `<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:10px 0 0"><input type="checkbox" id="li-renum-inv" ${includeInvoiced ? 'checked' : ''} style="width:20px;height:20px;margin-top:1px;flex:none" /><span>Include the ${invoiced} already on an invoice<span class="meta" style="display:block">The invoice keeps the number it was made with.</span></span></label>` : ''}
+      ${plan.length ? `<div class="meta" style="margin-top:8px"><strong>${plan.length} to number, oldest first:</strong> ${lines}</div>
+      <button type="button" class="btn" id="li-renum-go" style="margin-top:10px">Give them movement numbers</button>` : `<div class="meta" style="margin-top:8px">${invoiced ? 'The rest are on an invoice, so they are left as they are.' : 'Nothing to number.'}</div>`}`}
+    </div>`;
+  box.querySelector('#li-renum-inv')?.addEventListener('change', (e) => renumberBlock(box, { includeInvoiced: e.target.checked, restart }));
+  box.querySelector('#li-renum-restart')?.addEventListener('change', (e) => renumberBlock(box, { includeInvoiced, restart: e.target.checked }));
+  box.querySelector('#li-renum-go')?.addEventListener('click', async () => {
+    const ok = await askConfirm(`Give ${plan.length} imported load${plan.length === 1 ? '' : 's'} new numbers (${no(plan[0].from)} becomes #${plan[0].to}, up to #${plan[plan.length - 1].to})? Their old numbers are replaced, so anything already sent with an old number will not match.`, { confirmLabel: 'Renumber' });
+    if (!ok) return;
+    const n = db.applyTicketRenumber(plan);
+    toast(`${n} load${n === 1 ? '' : 's'} renumbered`);
+    renumberBlock(box, { includeInvoiced, restart });
   });
 }
 
