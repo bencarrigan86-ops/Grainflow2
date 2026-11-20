@@ -3,13 +3,13 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=451';
-import { gradeSorter } from './grades.js?v=451';
-import { drawBrandLogo } from './brand.js?v=451';
-import { dmy } from './fmt.js?v=451';
-import { SPECS, specOf } from './outload.js?v=451';
-import { ASPECT, strokesInBox } from './signature.js?v=451';
-import { SIGN_WORDS, cleanDriverSignature, signState, signedWhen } from './driversign.js?v=451';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=452';
+import { gradeSorter } from './grades.js?v=452';
+import { drawBrandLogo } from './brand.js?v=452';
+import { dmy } from './fmt.js?v=452';
+import { SPECS, specOf } from './outload.js?v=452';
+import { ASPECT, strokesInBox } from './signature.js?v=452';
+import { SIGN_WORDS, cleanDriverSignature, signState, signedWhen } from './driversign.js?v=452';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -72,6 +72,38 @@ const same = (a, b) => String(a ?? '').trim().toLowerCase() === String(b ?? '').
 const asList = (many, one) => (Array.isArray(many) ? many : many ? [many] : one ? [one] : []).filter((v) => String(v ?? '').trim() !== '');
 
 /**
+ * What the paddock, storage and contract filters leave of a load. A load shared between several ends (a truck filled from four
+ * paddocks, a load split across two silos or two contracts) counts, for the ones chosen, only the tonnes that belong to them: the same
+ * tonnes the paddock's production and the silo's stock hold. Its gross and tare are the whole truck's, so they are left out of a cut load.
+ * A load with no tonnes recorded against its ends cannot be split, so it stays whole.
+ * @param {object} m the movement
+ * @param {{fieldIds?: string[], storageIds?: string[], storageDir?: string, saleIds?: string[]}} f the filters, as lists
+ * @returns {{tons: number, part: boolean}}
+ */
+export function loadShare(m, { fieldIds = [], storageIds = [], storageDir = '', saleIds = [] } = {}) {
+  const whole = Number(m.tons) || 0;
+  // the tonnes at the ends chosen on one side of the load, or null when that filter does not cut it
+  const at = (legs, type, ids) => {
+    const list = (legs || []).filter((l) => l.type === type && !(type === 'silo' && l.id === '__transit__'));
+    const mine = list.filter((l) => ids.includes(l.id));
+    if (!mine.length || mine.length === list.length || !list.some((l) => Number(l.tons) > 0)) return null;
+    return mine.reduce((t, l) => t + (Number(l.tons) || 0), 0);
+  };
+  const parts = [];
+  if (fieldIds.length) parts.push(at(m.froms, 'field', fieldIds));
+  if (saleIds.length) parts.push(at(m.tos, 'sale', saleIds));
+  if (storageIds.length) {
+    const sides = storageDir === 'in' ? [m.tos] : storageDir === 'out' ? [m.froms] : [m.froms, m.tos];
+    const found = sides.map((legs) => at(legs, 'silo', storageIds)).filter((v) => v !== null);
+    parts.push(found.length ? Math.max(...found) : null);
+  }
+  const cut = parts.filter((v) => v !== null);
+  if (!cut.length) return { tons: whole, part: false };
+  const tons = Math.min(...cut);
+  return tons < whole - 0.005 ? { tons, part: true } : { tons: whole, part: false };
+}
+
+/**
  * The loads for the report, oldest first (date, then time, then ticket). `from` and `to` are inclusive dates. Every other filter takes
  * one value or a list, and a load stays when it matches ANY value in a list (so two trucks give both trucks' loads); the filters
  * together all have to match (a paddock AND a truck). Ignoring capitals for grade, truck and driver.
@@ -106,7 +138,8 @@ export function loadReportRows(movements, ctx, opts = {}) {
     .filter((m) => anyOf(grd, (g) => same(m.grade, g)))
     .filter((m) => anyOf(trk, (g) => same(m.truckRego, g)))
     .filter((m) => anyOf(drv, (g) => same(m.driver, g)))
-    .map((m) => ({
+    .map((m) => ({ m, cut: loadShare(m, { fieldIds: flds, storageIds: stos, storageDir: dir, saleIds: sales }) }))
+    .map(({ m, cut }) => ({
       id: m.id,
       date: m.date || '',
       time: cleanTime(m.loadTime),
@@ -133,9 +166,11 @@ export function loadReportRows(movements, ctx, opts = {}) {
       goingPlace: placesOf(m.tos, ctx),
       // each place it came from with the tonnes taken from it, for a load drawn from more than one
       fromLegs: (m.froms || []).map((f) => ({ name: endName(f, ctx), place: endPlace(f, ctx), tons: Number(f.tons) || 0 })).filter((l) => l.name),
-      tons: Number(m.tons) || 0,                       // the net load
-      gross: m.grossWeight === null || m.grossWeight === undefined || m.grossWeight === '' ? null : Number(m.grossWeight),
-      tare: m.tareWeight === null || m.tareWeight === undefined || m.tareWeight === '' ? null : Number(m.tareWeight),
+      tons: cut.tons,                                  // the net load, or the part of it from the paddocks chosen
+      part: cut.part,                                  // a load shared with other paddocks, cut down to the chosen ones
+      loadTons: Number(m.tons) || 0,                   // the whole load
+      gross: cut.part || m.grossWeight === null || m.grossWeight === undefined || m.grossWeight === '' ? null : Number(m.grossWeight),
+      tare: cut.part || m.tareWeight === null || m.tareWeight === undefined || m.tareWeight === '' ? null : Number(m.tareWeight),
       final: m.weightStatus === 'final',
     }))
     .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time) || (Number(a.ticketNo) || 0) - (Number(b.ticketNo) || 0));
@@ -277,6 +312,57 @@ export function reportColumns({ showOrigin = true, showCommodity = true, showDes
   return cols;
 }
 
+const FLEX = new Set(['truck', 'company', 'driver', 'commodity', 'grade', 'goingTo', 'destination', 'from']);   // the columns that hold words: their width follows what is in them
+const SHRINK = ['goingTo', 'destination', 'from', 'company'];                                                    // the long ones, narrowed first when the page is full
+
+/**
+ * Sizes the word columns to what is in them: each is as wide as its widest entry (or its heading), so nothing is cut off, and the
+ * page's spare width is shared out in proportion rather than all going to one column. When the page is too full the long columns
+ * (going to, destination, from, company) give way first, and only they are cut with "...". The date, time, ticket and weights keep their widths.
+ * @param {object[]} cols  from reportColumns
+ * @param {object[]} rows  loadReportRows
+ * @param {(col: object, row: object) => string} cellOf  what a column writes for a row
+ */
+export function fitColumns(cols, rows, cellOf) {
+  const avail = PAGE.width - 2 * MARGIN;
+  const PAD = 10;
+  const need = new Map();
+  for (const c of cols) {
+    if (!FLEX.has(c.key)) continue;
+    need.set(c.key, Math.ceil(Math.max(textWidth(c.head, 8.5, true), ...rows.map((r) => textWidth(String(cellOf(c, r) ?? ''), 9, false)))) + PAD);
+  }
+  const fixed = cols.filter((c) => !FLEX.has(c.key)).reduce((t, c) => t + c.w, 0);
+  const wanted = [...need.values()].reduce((t, v) => t + v, 0);
+  let widths = new Map(need);
+  if (fixed + wanted <= avail) {
+    const slack = avail - fixed - wanted;
+    for (const [k, v] of need) widths.set(k, v + slack * (v / wanted));
+  } else {
+    let over = fixed + wanted - avail;
+    const room = (k) => Math.max(0, widths.get(k) - 60);
+    for (let pass = 0; pass < 4 && over > 0.5; pass += 1) {
+      const give = SHRINK.filter((k) => widths.has(k) && room(k) > 0);
+      const total = give.reduce((t, k) => t + room(k), 0);
+      if (!total) break;
+      const cut = Math.min(over, total);
+      for (const k of give) widths.set(k, widths.get(k) - cut * (room(k) / total));
+      over -= cut;
+    }
+    if (over > 0.5) {   // still too full: every word column gives up a share
+      const all = [...widths.values()].reduce((t, v) => t + v, 0);
+      const scale = Math.max(0.5, (all - over) / all);
+      for (const [k, v] of widths) widths.set(k, v * scale);
+    }
+  }
+  let x = MARGIN;
+  for (const c of cols) {
+    if (widths.has(c.key)) c.w = widths.get(c.key);
+    c.x = x;
+    x += c.w;
+  }
+  return cols;
+}
+
 /** The report as a landscape A4 PDF, as many pages as the loads need. */
 export function buildLoadReportPdf(rows, { title = 'Load report', business = '', ngr = '', from = '', to = '', showOrigin = true, showDestination = true, showQuality = true, madeAt = '', filters = '' } = {}) {
   const pdf = new Pdf({ width: PAGE.width, height: PAGE.height });
@@ -292,6 +378,7 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
     if (c.key.startsWith('q:')) return (r.quality || []).find((q) => `q:${q.key}` === c.key)?.value ?? '';
     return r[c.key] || '';
   };
+  fitColumns(cols, rows, cell);
 
   const header = (page) => {
     pdf.text(MARGIN, 30, title.toUpperCase(), { size: 18, bold: true });
@@ -330,6 +417,7 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
       if (wc && value) pdf.text(wc.x + wc.w - 4, y + 6, plain(value), { size: 9.5, bold: true, align: 'right' });
     }
   }
+  if (rows.some((r) => r.part)) pdf.text(MARGIN, PAGE.height - 32, 'A load shared with other paddocks, silos or contracts shows only the tonnes that belong to the one chosen.', { size: 7.5, gray: 0.4 });
   pdf.text(MARGIN, PAGE.height - 22, `Made in Commodity Mate${madeAt ? ` ${madeAt}` : ''}`, { size: 7.5, gray: 0.5 });
   return pdf.bytes();
 }

@@ -3,11 +3,11 @@
 // The paddock-by-paddock replay is trace.js (the same one the movements CSV column uses); this picks the loads, adds them up
 // across the whole list ("which paddocks made up this contract") and lays out the PDF. Pure.
 
-import { Pdf, wrapText } from './pdf.js?v=451';
-import { drawBrandLogo } from './brand.js?v=451';
-import { dmy } from './fmt.js?v=451';
-import { traceDetailed, traceParts } from './trace.js?v=451';
-import { endName, rangeText, clipText } from './loadreport.js?v=451';
+import { Pdf, wrapText } from './pdf.js?v=452';
+import { drawBrandLogo } from './brand.js?v=452';
+import { dmy } from './fmt.js?v=452';
+import { traceDetailed, traceParts } from './trace.js?v=452';
+import { endName, rangeText, clipText } from './loadreport.js?v=452';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 const round = (v, dp = 2) => { const f = 10 ** dp; return Math.round(v * f) / f; };
@@ -35,7 +35,9 @@ export function traceReportRows(data, { from = '', to = '', commodityId = '', sc
       // the buyer when it went to one, not the stores it was also logged through
       goingTo: (toBuyer(m) ? (m.tos || []).filter((t) => t.type === 'sale') : (m.tos || [])).map((t) => endName(t, ctx)).filter(Boolean).join(', '),
       truck: m.truckRego || '',
-      tons: Number(m.tons) || 0,
+      // a load split across contracts counts, on one contract's report, only what went to that contract
+      tons: scope !== 'all' && scope !== 'contracts' && (m.tos || []).filter((t) => t.type === 'sale').length > 1 && (m.tos || []).some((t) => t.type === 'sale' && t.id === scope && Number(t.tons) > 0)
+        ? (m.tos || []).filter((t) => t.type === 'sale' && t.id === scope).reduce((x, t) => x + (Number(t.tons) || 0), 0) : Number(m.tons) || 0,
       // the contracts it went to, with the tonnes to each
       sales: (m.tos || []).filter((t) => t.type === 'sale').map((t) => ({ id: t.id, name: endName(t, ctx), commodity: commodities.find((c) => c.id === (sales.find((s) => s.id === t.id)?.commodityId))?.name || '', tons: Number(t.tons) || 0 })),
       parts: traceParts(traced.get(m.id), { fields, storages }),

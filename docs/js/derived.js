@@ -1,13 +1,13 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=451';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=451';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=451';
-import { isGinContract } from './cottonkinds.js?v=451';
-import { ginTakenOff } from './ginoffset.js?v=451';
-import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=451';
-import { commoditySort } from './commodityorder.js?v=451';
-import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=451';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=452';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=452';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=452';
+import { isGinContract } from './cottonkinds.js?v=452';
+import { ginTakenOff } from './ginoffset.js?v=452';
+import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=452';
+import { commoditySort } from './commodityorder.js?v=452';
+import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=452';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -40,6 +40,22 @@ export function fromTonsForEndpoint(m, type, id) {
 /** Sum of a movement's per-destination tons allocated to one endpoint (a movement can deliver to more than one silo/contract at once). */
 export function toTonsForEndpoint(m, type, id) {
   return (m.tos || []).filter((t) => t.type === type && t.id === id).reduce((s, t) => s + (Number(t.tons) || 0), 0);
+}
+
+/**
+ * The tonnes of a load that belong to one paddock, silo or contract: what the load took from it plus what it put into it. A load shared
+ * between several ends (a truck filled from four paddocks) counts only its own share at each; a load with one end on that side, and no
+ * tonnes recorded against it, is all of the load.
+ */
+export function tonsAtEndpoint(m, type, id) {
+  const side = (legs) => {
+    const list = legs || [];
+    const mine = list.filter((l) => l.type === type && l.id === id);
+    if (!mine.length) return 0;
+    const t = mine.reduce((s, l) => s + (Number(l.tons) || 0), 0);
+    return t > 0 || list.length > 1 ? t : (Number(m.tons) || 0);
+  };
+  return side(m.froms) + side(m.tos);
 }
 
 /** Sum of movement tons that were carted to this sale (contract), i.e. delivered by truck. */

@@ -7,8 +7,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadReportRows, loadReportTotals, reportColumns, qualityKeys, buildLoadReportPdf, buildLoadTicketPdf, siteOf, cleanTime, nowTime, rangeText, clipText, endName, loadFilterChoices, filterText, datePresets } from '../docs/js/loadreport.js';
+import { loadReportRows, loadReportTotals, reportColumns, qualityKeys, buildLoadReportPdf, buildLoadTicketPdf, loadShare, fitColumns, siteOf, cleanTime, nowTime, rangeText, clipText, endName, loadFilterChoices, filterText, datePresets } from '../docs/js/loadreport.js';
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
+import { tonsAtEndpoint, movementTonsFromField } from '../docs/js/derived.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -346,6 +347,63 @@ check('the sheet has a tick list for each filter, a Clear for each, and sends th
   assert.ok(v.includes('filters: filterText(d, ctx)') && v.includes('loadReportRows(movements, ctx, d)'));
   assert.ok(v.includes("from: '', to: ''"), 'the dates start blank, for people who do not want dates');
   assert.ok(!v.includes('id="lr-commodity"') && !v.includes('id="lr-sale"'), 'the one-choice drop-downs are gone');
+});
+
+console.log('\n=== a load shared between paddocks, silos or contracts ===');
+const ctx2 = { fields: [{ id: 'f1', name: 'S1-3' }, { id: 'f2', name: 'Big Tocal' }, { id: 'f3', name: 'Smalls' }], storages: [{ id: 's1', name: 'Silo 1' }, { id: 's2', name: 'Silo 2' }], sales: [{ id: 'k1', buyer: 'A' }, { id: 'k2', buyer: 'B' }], commodities: [{ id: 'w', name: 'Wheat' }] };
+const shared = { ...mv({ id: 'x', ticketNo: 9, date: '2026-11-11', tons: 34, grossWeight: 50, tareWeight: 16, froms: [{ type: 'field', id: 'f1', tons: 21 }, { type: 'field', id: 'f2', tons: 8 }, { type: 'field', id: 'f3', tons: 5 }], tos: [{ type: 'silo', id: 's1', tons: 20 }, { type: 'silo', id: 's2', tons: 14 }] }) };
+const whole = { ...mv({ id: 'y', ticketNo: 10, date: '2026-11-11', tons: 30, grossWeight: 46, tareWeight: 16, froms: [{ type: 'field', id: 'f1', tons: 30 }], tos: [{ type: 'silo', id: 's1', tons: 30 }] }) };
+check('a paddock report counts only the tonnes taken from that paddock, and drops the truck gross and tare', () => {
+  const rows = loadReportRows([shared, whole], ctx2, { fieldIds: ['f1'] });
+  const x = rows.find((r) => r.id === 'x');
+  assert.equal(x.tons, 21); assert.equal(x.part, true); assert.equal(x.loadTons, 34); assert.equal(x.gross, null); assert.equal(x.tare, null);
+  assert.equal(x.from, 'S1-3, Big Tocal, Smalls', 'the from still names every paddock, so it is plain the load was shared');
+  assert.equal(rows.find((r) => r.id === 'y').tons, 30); assert.equal(rows.find((r) => r.id === 'y').gross, 46, 'a whole load is untouched');
+  assert.equal(loadReportTotals(rows).tons, 51);
+  assert.equal(loadReportTotals(rows).tons, movementTonsFromField('f1', [shared, whole]), 'the report agrees with the paddock production');
+});
+check('two paddocks ticked add up their shares; all of them is the whole load', () => {
+  assert.equal(loadReportRows([shared], ctx2, { fieldIds: ['f2', 'f3'] })[0].tons, 13);
+  const all = loadReportRows([shared], ctx2, { fieldIds: ['f1', 'f2', 'f3'] })[0];
+  assert.equal(all.tons, 34); assert.equal(all.part, false); assert.equal(all.gross, 50);
+});
+check('a silo report counts the tonnes into (or out of) that silo', () => {
+  assert.equal(loadReportRows([shared], ctx2, { storageIds: ['s1'], storageDir: 'in' })[0].tons, 20);
+  assert.equal(loadReportRows([shared], ctx2, { storageIds: ['s2'] })[0].tons, 14);
+  assert.equal(loadReportRows([shared], ctx2, { storageIds: ['s1', 's2'] })[0].tons, 34);
+  const out = { ...mv({ id: 'z', date: '2026-11-12', tons: 40, froms: [{ type: 'silo', id: 's1', tons: 25 }, { type: 'silo', id: 's2', tons: 15 }], tos: [{ type: 'sale', id: 'k1', tons: 40 }] }) };
+  assert.equal(loadReportRows([out], ctx2, { storageIds: ['s2'], storageDir: 'out' })[0].tons, 15);
+  assert.equal(loadReportRows([out], ctx2, { storageIds: ['s2'], storageDir: 'in' }).length, 0, 'into a silo it was not put into: not on the report');
+});
+check('a contract report counts the tonnes that went to that contract; a paddock and a silo together take the smaller share', () => {
+  const split = { ...mv({ id: 'q', date: '2026-11-12', tons: 40, froms: [{ type: 'silo', id: 's1', tons: 40 }], tos: [{ type: 'sale', id: 'k1', tons: 25 }, { type: 'sale', id: 'k2', tons: 15 }] }) };
+  assert.equal(loadReportRows([split], ctx2, { saleIds: ['k2'] })[0].tons, 15);
+  assert.equal(loadReportRows([shared], ctx2, { fieldIds: ['f1'], storageIds: ['s1'] })[0].tons, 20);
+  assert.deepEqual(loadShare({ tons: 30, froms: [{ type: 'field', id: 'f1' }, { type: 'field', id: 'f2' }] }, { fieldIds: ['f1'] }), { tons: 30, part: false }, 'no tonnes recorded on its ends: it cannot be split');
+  assert.equal(tonsAtEndpoint(shared, 'field', 'f2'), 8); assert.equal(tonsAtEndpoint(shared, 'silo', 's2'), 14);
+});
+check('the PDF says a cut load is only part of a shared one, and the screens that list loads for a paddock, silo or contract use their own tonnes', () => {
+  const pdf = text(buildLoadReportPdf(loadReportRows([shared], ctx2, { fieldIds: ['f1'] }), {}));
+  assert.ok(pdf.includes('shows only the tonnes that belong to the one chosen'));
+  assert.ok(!text(buildLoadReportPdf(loadReportRows([whole], ctx2, { fieldIds: ['f1'] }), {})).includes('shows only the tonnes'));
+  const m = read('docs/js/views/movements.js');
+  assert.ok(m.includes('tonsAtEndpoint(m, type, id)') && m.includes('ctx.focus'), 'the related-loads list and its total');
+  assert.ok(read('docs/js/tracereport.js').includes("t.id === scope && Number(t.tons) > 0"), 'a contract trace report');
+});
+
+console.log('\n=== the columns fit what is in them ===');
+check('each word column is as wide as its widest entry, nothing is cut off, and the spare width is shared out', () => {
+  const rows = loadReportRows([shared, { ...whole, grade: 'CHK1', driver: 'Alexander Montgomery' }], ctx2, {});
+  const cols = reportColumns({ showOrigin: true, showCommodity: true, showDestination: false, showGrossTare: false, showGrade: true });
+  const cell = (c, r) => (c.key === 'net' ? '' : r[c.key] || '');
+  fitColumns(cols, rows, cell);
+  const total = cols.reduce((t, c) => t + c.w, 0);
+  assert.ok(Math.abs(total - (841.89 - 72)) < 0.5, 'the columns fill the page exactly');
+  for (const c of cols) assert.ok(c.w > 20, c.key + ' has room');
+  const grade = cols.find((c) => c.key === 'grade'); const from = cols.find((c) => c.key === 'from'); const going = cols.find((c) => c.key === 'goingTo');
+  assert.ok(grade.w >= clipText('CHK1', 9999).length * 4, 'a grade is not cut to "CHK..."');
+  assert.ok(from.w > going.w, 'the from column holding three paddock names is wider than a short silo name');
+  let x = 36; for (const c of cols) { assert.ok(Math.abs(c.x - x) < 0.01, c.key + ' sits where the one before ends'); x += c.w; }
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }

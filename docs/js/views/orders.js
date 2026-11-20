@@ -4,19 +4,19 @@
 // carting it and the buyer's own order number. Everything else about the sale is the contract's and is shown from it.
 // Loads are matched to an order on the movement. The arithmetic is in orders.js.
 
-import { db } from '../storage.js?v=451';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=451';
-import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=451';
-import { movementTonsToSale } from '../derived.js?v=451';
-import { activeSales } from '../paidsales.js?v=451';
-import { movementRow, openMovementSheet } from './movements.js?v=451';
-import { openVendorDecSheet } from './vendordec.js?v=451';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=451';
-import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=451';
-import { freightTitle, freightState, rateText } from '../freight.js?v=451';
-import { addressFields, readAddress } from '../address.js?v=451';
-import { cleanOrderDetail, contractMismatch, orderDefaults } from '../orderdetail.js?v=451';
-import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=451';
+import { db } from '../storage.js?v=452';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=452';
+import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=452';
+import { movementTonsToSale } from '../derived.js?v=452';
+import { activeSales } from '../paidsales.js?v=452';
+import { movementRow, openMovementSheet } from './movements.js?v=452';
+import { openVendorDecSheet } from './vendordec.js?v=452';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=452';
+import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=452';
+import { freightTitle, freightState, rateText } from '../freight.js?v=452';
+import { addressFields, readAddress } from '../address.js?v=452';
+import { cleanOrderDetail, contractMismatch, orderDefaults } from '../orderdetail.js?v=452';
+import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=452';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | filled | closed | all

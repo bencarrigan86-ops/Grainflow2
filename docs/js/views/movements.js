@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=451';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=451';
-import { commodityClass } from '../commoditycolor.js?v=451';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=451';
-import { movementsForEndpoint, bigFirst } from '../derived.js?v=451';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=451';
-import { withholdingClash } from '../fumigation.js?v=451';
-import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=451';
-import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=451';
-import { cleanStrokes } from '../signature.js?v=451';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=451';
-import { compressAndStampImage } from '../img.js?v=451';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=451';
-import { specText, extraSpecKey } from '../outload.js?v=451';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=451';
-import { pickableSilos } from '../silopick.js?v=451';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=451';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=451';
-import { activeSales } from '../paidsales.js?v=451';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=451';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=451';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=451';
-import { nowTime } from '../loadreport.js?v=451';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=451';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=451';
-import { openGinRunSheet } from './ginrun.js?v=451';
-import { openModuleMoveSheet } from './modulemove.js?v=451';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=451';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=451';
+import { db } from '../storage.js?v=452';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=452';
+import { commodityClass } from '../commoditycolor.js?v=452';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=452';
+import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=452';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=452';
+import { withholdingClash } from '../fumigation.js?v=452';
+import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=452';
+import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=452';
+import { cleanStrokes } from '../signature.js?v=452';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=452';
+import { compressAndStampImage } from '../img.js?v=452';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=452';
+import { specText, extraSpecKey } from '../outload.js?v=452';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=452';
+import { pickableSilos } from '../silopick.js?v=452';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=452';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=452';
+import { activeSales } from '../paidsales.js?v=452';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=452';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=452';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=452';
+import { nowTime } from '../loadreport.js?v=452';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=452';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=452';
+import { openGinRunSheet } from './ginrun.js?v=452';
+import { openModuleMoveSheet } from './modulemove.js?v=452';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=452';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=452';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -255,14 +255,14 @@ export function renderRelatedMovements(container, type, id, { collapsed = false 
   if (!container) return;
   const { fields, storages, sales, commodities, movements } = db.get();
   const related = movementsForEndpoint(type, id, movements);
-  const ctx = { fields, storages, sales, commodities };
+  const ctx = { fields, storages, sales, commodities, focus: { type, id } };
   container.className = collapsed ? '' : 'card';
   // A new load starting from this paddock, or going to this contract (a silo can be either end, so it has no shortcut here)
   const startTemplate = type === 'field' ? { froms: [{ type: 'field', id, tons: '' }], tos: [] } : type === 'sale' ? { froms: [], tos: [{ type: 'sale', id, tons: '' }] } : null;
   const body = `
     ${related.length === 0 ? `<div class="empty">No movements linked to this yet.</div>` : related.map((m) => movementRow(m, ctx)).join('')}
     ${startTemplate ? `<button type="button" class="btn secondary small" data-new-movement style="margin-top:8px">+ Add a movement${type === 'field' ? ' from this paddock' : ' to this contract'}</button>` : ''}`;
-  const sum = related.reduce((a, m) => a + (Number(m.tons) || 0), 0);
+  const sum = related.reduce((a, m) => a + tonsAtEndpoint(m, type, id), 0);   // only what belongs to this paddock, silo or contract
   container.innerHTML = collapsed
     ? `<details class="fold" id="related-fold">
         <summary><div><h2>Related movements</h2>
@@ -311,7 +311,7 @@ export function movementRow(m, ctx) {
     <div class="list-item stack${ctx.bandIndex === undefined ? '' : ` band ${ctx.bandIndex % 2 ? 'alt' : ''}`}" data-edit-movement="${m.id}">
       <div class="li-top">
         <div class="main">${ctx.grouped && commodity ? `<span class="mv-com ${commodityClass(commodity)}">${esc(commodity)}</span>` : ''}${esc(fromLabel)} &rarr; ${esc(toLabel)}</div>
-        <div class="main mv-qty">${hasGin(m) ? `${num(stdBales(m.gin.lintKg, m.gin.stdBaleKg), 2)} bales` : hasModules(m) ? `${num(m.modules.count, 0)} module${Number(m.modules.count) === 1 ? '' : 's'}` : tons(m.tons || 0)}</div>
+        <div class="main mv-qty">${hasGin(m) ? `${num(stdBales(m.gin.lintKg, m.gin.stdBaleKg), 2)} bales` : hasModules(m) ? `${num(m.modules.count, 0)} module${Number(m.modules.count) === 1 ? '' : 's'}` : tons(ctx.focus ? tonsAtEndpoint(m, ctx.focus.type, ctx.focus.id) : (m.tons || 0))}</div>
       </div>
       <div class="li-foot" style="margin-top:2px">
         <span class="meta">${details}</span>
