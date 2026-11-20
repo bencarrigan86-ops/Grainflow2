@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=448';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=448';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=448';
-import { payablesCost } from '../payables.js?v=448';
-import { commodityClass } from '../commoditycolor.js?v=448';
-import { hasCommodityOrder } from '../commodityorder.js?v=448';
-import { startProgress, missingLine } from '../helpcontent.js?v=448';
-import { openSetupWalk } from './setupwalk.js?v=448';
-import { attentionItems } from '../attention.js?v=448';
-import { lastBackup } from '../backup.js?v=448';
-import { supportWaitingCount } from './support.js?v=448';
-import { todayLocal, dmy } from '../fmt.js?v=448';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=448';
-import { openSheet, closeSheet } from '../ui.js?v=448';
-import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=448';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=448';
+import { db } from '../storage.js?v=449';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=449';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=449';
+import { payablesCost } from '../payables.js?v=449';
+import { commodityClass } from '../commoditycolor.js?v=449';
+import { hasCommodityOrder } from '../commodityorder.js?v=449';
+import { startProgress, missingLine } from '../helpcontent.js?v=449';
+import { openSetupWalk } from './setupwalk.js?v=449';
+import { attentionItems } from '../attention.js?v=449';
+import { lastBackup } from '../backup.js?v=449';
+import { supportWaitingCount } from './support.js?v=449';
+import { todayLocal, dmy } from '../fmt.js?v=449';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=449';
+import { openSheet, closeSheet } from '../ui.js?v=449';
+import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=449';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=449';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -177,13 +177,17 @@ function dashTop(totals) {
   const total = totals.soldValue + totals.unsoldValue;
   const soldShare = total > 0 ? totals.soldValue / total : 0;
   const opening = totals.openingValue || 0;
+  const openingTons = totals.openingTons || 0;
   return `<div class="pos-dash">
       ${opening ? `<div class="card dash-tile dash-sum">
         <div class="r"><span>Total value</span><span>${money(totals.totalValue + opening, 0)}</span></div>
         <div class="r"><span>Open stock</span><span>(${money(opening, 0)})</span></div>
         <div class="r end"><span>Current crop value</span><span class="n">${money(totals.totalValue, 0)}</span></div></div>` : `<div class="card dash-tile"><div class="l">Total position value</div><div class="n">${money(totals.totalValue, 0)}</div><div class="s">sold plus unsold at MTM</div></div>`}
-      <div class="card dash-tile"><div class="l">Produced</div><div class="n">${tons(totals.productionTons, 0)}</div>
-        ${totals.area > 0 ? `<div class="s">Income ${money(totals.totalValue / totals.area, 0)}/ha</div>` : ''}</div>
+      ${openingTons > 0 ? `<div class="card dash-tile dash-sum">
+        <div class="r"><span>Total volume</span><span>${tons(openingTons + totals.productionTons, 0)}</span></div>
+        <div class="r"><span>Open stock</span><span>(${tons(openingTons, 0)})</span></div>
+        <div class="r end"><span>Total produced</span><span class="n">${tons(totals.productionTons, 0)}</span></div></div>` : `<div class="card dash-tile"><div class="l">Produced</div><div class="n">${tons(totals.productionTons, 0)}</div>
+        ${totals.area > 0 ? `<div class="s">Income ${money(totals.totalValue / totals.area, 0)}/ha</div>` : ''}</div>`}
       <div class="card dash-tile dash-ringtile com-green">${ring(soldShare, 52, 8)}<div class="dash-ringtext"><div class="n">${pct(soldShare)} <span class="s">sold</span></div><div class="s">Sold ${money(totals.soldValue, 0)}</div><div class="s">Unsold ${money(totals.unsoldValue, 0)}</div></div></div>
       <div class="card dash-tile"><div class="l">Gross margin</div><div class="n">${money(totals.grossMargin, 0)}</div>
         <div class="s">${totals.area > 0 ? `${money(totals.grossMargin / totals.area, 0)} per ha` : '&nbsp;'}</div></div>
@@ -211,7 +215,7 @@ function cropTile(r) {
   const sold = r.pctSold >= 1 ? 'Sold out' : `${pct(r.pctSold)} sold`;
   return `<button type="button" class="card dash-crop ${commodityClass(r.commodity.name)}" data-crop="${esc(r.commodity.id)}">
       <div class="dc-top"><div><div class="dc-name">${esc(r.commodity.name)}${bales ? ' <small>in bales</small>' : ''}</div><div class="dc-pct">${sold}</div></div>
-        <div class="dc-right"><div class="dc-val">${money(r.totalValue, 0)}</div><div class="dc-gm">Margin ${money(r.grossMargin, 0)} &middot; ${pct(r.grossMarginPct)}</div></div></div>
+        <div class="dc-right"><div class="dc-val">${money(r.totalValue, 0)}</div></div></div>
       <div class="dc-body">${ring(r.pctSold, 44, 7)}
         <div class="dc-main">
           <div class="dc-stats">
@@ -221,6 +225,9 @@ function cropTile(r) {
             <div><small>Area</small><b>${r.area > 0 ? `${num(r.area, 0)} ha` : '&ndash;'}</b></div>
             <div><small>Yield</small><b>${num(r.yieldTHa, 2)}${bales ? '' : ' t'}/ha</b></div>
             <div><small>Avg price</small><b>${money(r.avgSoldPrice, 0)}/${per}</b></div>
+            <div><small>Margin</small><b>${money(r.grossMargin, 0)}</b></div>
+            <div><small>Margin %</small><b>${pct(r.grossMarginPct)}</b></div>
+            <div><small>Margin /ha</small><b>${r.area > 0 ? money(r.grossMargin / r.area, 0) : '&ndash;'}</b></div>
           </div></div></div></button>`;
 }
 

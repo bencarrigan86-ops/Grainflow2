@@ -307,5 +307,15 @@ check('the sheet offers the presets and a tick for every column, remembers them,
   assert.ok(v.includes('saveShow(show)') && v.includes('columns: keys.length ? keys : DEFAULT_COLUMNS'), 'remembered on this device');
 });
 
+check('Position: the Produced tile shows opening stock and total tons when there is opening stock, and each crop tile shows its margin per hectare', () => {
+  const v = readFileSync(new URL('../docs/js/views/position.js', import.meta.url), 'utf8');
+  assert.ok(v.includes('openingTons > 0') && v.includes('Total volume') && v.includes('Total produced'), 'total volume, less open stock, is the total produced, like the value tile');
+  assert.ok(v.includes('openingTons + totals.productionTons') && v.includes('<span class="n">${tons(totals.productionTons, 0)}</span>'), 'volume is opening plus produced; produced is the big figure');
+  assert.ok(v.includes('r.grossMargin / r.area, 0)}/ha') && v.includes('<small>Margin /ha</small>'), 'the crop tile has its margin, % and per hectare in the same columns as the figures above');
+  assert.ok(!v.includes('class="dc-gm"') && !v.includes('class="dc-foot"'), 'and not beside the value or in a line of their own');
+  const t = positionTotals(positionRows([{ id: 'w', name: 'Wheat', mtmPrice: 400, openingStock: 100, openingValue: 36000 }, { id: 'b', name: 'Barley', mtmPrice: 300, openingStock: 50 }], [], [], []));
+  assert.equal(t.openingTons, 150);
+});
+
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }
 console.log('\nall passed');

@@ -1,13 +1,13 @@
 // The traceability sheet: choose the loads (all going to contracts, one contract, or every load; dates and commodity if wanted),
 // see which paddocks made them up (load by load, or sale by sale), and send or download it as a PDF.
 
-import { db } from '../storage.js?v=448';
-import { num, todayLocal, dmy, esc } from '../fmt.js?v=448';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=448';
-import { exportRowsAsCSV } from '../csv.js?v=448';
-import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=448';
-import { nowTime, rangeText } from '../loadreport.js?v=448';
-import { traceReportRows, traceTotals, traceSummary, traceBySale, sourceText, traceCsvRows, TRACE_CSV_COLUMNS, buildTraceReportPdf } from '../tracereport.js?v=448';
+import { db } from '../storage.js?v=449';
+import { num, todayLocal, dmy, esc } from '../fmt.js?v=449';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=449';
+import { exportRowsAsCSV } from '../csv.js?v=449';
+import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=449';
+import { nowTime, rangeText } from '../loadreport.js?v=449';
+import { traceReportRows, traceTotals, traceSummary, traceBySale, sourceText, traceCsvRows, TRACE_CSV_COLUMNS, buildTraceReportPdf } from '../tracereport.js?v=449';
 
 const SHOWN = 40;   // loads listed on screen; the PDF has them all
 const KEY = 'grainflow.tracereport.by';

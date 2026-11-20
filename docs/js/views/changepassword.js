@@ -1,9 +1,9 @@
 // Change password, from the Account screen: the current one, then the new one twice.
 
-import { openSheet, closeSheet, field, getVal, toast } from '../ui.js?v=448';
-import { changePassword } from '../auth.js?v=448';
-import { checkNewPassword } from '../recovery.js?v=448';
-import { addShowPassword } from '../showpassword.js?v=448';
+import { openSheet, closeSheet, field, getVal, toast } from '../ui.js?v=449';
+import { changePassword } from '../auth.js?v=449';
+import { checkNewPassword } from '../recovery.js?v=449';
+import { addShowPassword } from '../showpassword.js?v=449';
 
 export function openChangePasswordSheet() {
   openSheet('Change password', (root) => {

@@ -3,8 +3,8 @@
 // room in the silos, as on the screen. The report's own figures (harvest.js) go in; nothing is worked out again here.
 // Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=448';
-import { roomSummary } from './harvest.js?v=448';
+import { createReport, fixed } from './reportpdf.js?v=449';
+import { roomSummary } from './harvest.js?v=449';
 
 const pct = (p) => `${Math.round((Number(p) || 0) * 100)}%`;
 const haPct = (done, area) => (area > 0 ? `${Math.round((done / area) * 100)}%` : '-');
