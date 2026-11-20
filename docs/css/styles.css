@@ -615,6 +615,9 @@ details.fold.fold-band.fold-alt {
    brings its own minimum width, so the column holding the date came out wider than its neighbour. */
 .grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
 .grid-2 > * { min-width: 0; }
+/* Area and the double crop tick on one row: the tick sits level with the area box. */
+.area-row { align-items: end; }
+.area-row .dc-tick { margin-bottom: 14px; align-items: center; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 
 .swipe-actions { display: flex; gap: 8px; margin-top: 8px; }
@@ -1030,6 +1033,19 @@ details.fold.feature[open] > summary { border-bottom: 1.5px solid var(--btn-edge
 details.fold.feature > *:not(summary) { margin-left: 14px; margin-right: 14px; }
 details.fold.feature > *:last-child { margin-bottom: 14px; }
 
+/* The sections of a storage, one after another, banded: each is a panel, and they alternate between the green tint and a plain grey, so
+   two folded sections next to each other are never the same colour. */
+.fold-bands > details.fold { background: var(--btn-tint); border: 1.5px solid var(--btn-edge); border-radius: 12px; margin: 12px 0; padding: 0; }
+.fold-bands > details.fold:nth-of-type(even) { background: var(--surface-2); border-color: var(--border); }
+.fold-bands > details.fold > summary { padding: 12px 14px; min-height: 56px; }
+.fold-bands > details.fold > summary h2 { font-size: 16px; font-weight: 800; color: var(--btn-ink); }
+.fold-bands > details.fold > summary .sub { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 3px; }
+.fold-bands > details.fold > summary::after { width: 10px; height: 10px; border-color: var(--btn-ink); border-width: 2.5px; }
+.fold-bands > details.fold[open] > summary { border-bottom: 1.5px solid var(--btn-edge); }
+.fold-bands > details.fold:nth-of-type(even)[open] > summary { border-bottom-color: var(--border); }
+.fold-bands > details.fold > *:not(summary) { margin-left: 14px; margin-right: 14px; }
+.fold-bands > details.fold > *:last-child { margin-bottom: 14px; }
+
 /* The figure for the whole outload stands apart from the trucks beneath it. */
 .card.whole-outload { border: 1.5px solid var(--btn-edge); background: var(--btn-tint); }
 .card.whole-outload h2 { color: var(--btn-ink); font-size: 16px; }
@@ -1040,7 +1056,7 @@ details.fold.feature > *:last-child { margin-bottom: 14px; }
 .transit-head strong { font-size: 15px; }
 
 /* On a field: a prompt to move from the estimate to the actual yield once harvest tickets exist. */
-.actual-callout { margin-top: 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--btn-tint); font-size: 14px; line-height: 1.4; }
+.actual-callout { margin-top: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--btn-tint); font-size: 14px; line-height: 1.4; }
 .actual-callout strong { display: block; margin-bottom: 2px; }
 .actual-callout.switch { border: 1.5px solid color-mix(in srgb, var(--warn) 55%, var(--border)); background: var(--warn-bg); }
 .actual-callout.using { border-color: var(--btn-edge); }

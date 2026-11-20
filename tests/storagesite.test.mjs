@@ -69,7 +69,7 @@ check('the load ticket shows the farm under the name, and is as it was with none
 
 check('the forms have the field, with the farms already used offered, in both the silo and the tally form', () => {
   const sv = read('docs/js/views/storage.js');
-  assert.equal(sv.split('${siteField(existing)}').length - 1, 2, 'silo/bunker form and tally form');
+  assert.equal(sv.split('${siteField(existing, { hint: false })}').length - 1, 2, 'silo/bunker form and tally form');
   assert.ok(sv.includes("id: 's-property'") && sv.includes('dl-sites') && sv.includes('farmNames(db.get())'));
   assert.equal(sv.split("property: getVal(root, 's-property')?.trim() || ''").length - 1, 2, 'saved from both');
   assert.ok(read('docs/js/storage.js').includes('if (merged.property) merged.__hasProperty = true'));

@@ -90,7 +90,7 @@ check('double crop is saved only once it is ticked, un-ticking reaches the serve
 console.log('\n=== on the screens ===');
 check('the paddock form has the tick, Position shows both yields in the crop detail (not on its tile), and the database column is in the paste-in files', () => {
   const p = read('docs/js/views/production.js');
-  assert.ok(p.includes("id: 'doubleCrop'") && p.includes("doubleCrop: getVal(root, 'doubleCrop') === 'yes'"));
+  assert.ok(p.includes('id="doubleCrop"') && p.includes("doubleCrop: !!root.querySelector('#doubleCrop')?.checked"), 'a tick beside the area, saved as true or false');
   const pos = read('docs/js/views/position.js');
   assert.ok(pos.includes('Double crop yield') && pos.includes('After fallow yield'), 'both yields are in the crop detail');
   assert.ok(!pos.includes('<small>Double crop</small>'), 'the tile on the front page keeps just the average yield');

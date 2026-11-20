@@ -3,9 +3,9 @@
 // It draws from the finished file's own bytes (pdfparse.js), so what is on screen is what would be sent. No PDF viewer is
 // needed on the device, which matters: Android Chrome cannot show a PDF, and an iPhone shows only the first page of one in a frame.
 
-import { openSheet, openOver, toast, escHtml } from './ui.js?v=456';
-import { sharePdf, canShareFiles, downloadFile, safeFileName } from './sharefile.js?v=456';
-import { parsePdf, drawPage } from './pdfparse.js?v=456';
+import { openSheet, openOver, toast, escHtml } from './ui.js?v=465';
+import { sharePdf, canShareFiles, downloadFile, safeFileName } from './sharefile.js?v=465';
+import { parsePdf, drawPage } from './pdfparse.js?v=465';
 
 const ZOOMS = [1, 1.5, 2, 3, 4];   // 1 is the page fitted to the width of the screen
 const MAX_SIDE = 4096;             // a canvas bigger than this is refused by some phones

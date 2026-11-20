@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=456';
-import { tileIcon } from '../tileicon.js?v=456';
-import { cropCostPerHa } from '../grossmargin.js?v=456';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=456';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=456';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=456';
-import { describeMerge } from '../merge.js?v=456';
-import { renderRelatedMovements } from './movements.js?v=456';
-import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=456';
-import { wireJumps } from '../jump.js?v=456';
-import { openMapSheet } from './farmmap.js?v=456';
-import { openInputsSheet } from './inputs.js?v=456';
-import { openSprayFormSheet, canSpray } from './spray.js?v=456';
-import { stockLevels } from '../inputs.js?v=456';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=456';
-import { openModulesPickedSheet } from './modulespicked.js?v=456';
-import { openBalesBaledSheet } from './balesbaled.js?v=456';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=456';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=456';
+import { db } from '../storage.js?v=465';
+import { tileIcon } from '../tileicon.js?v=465';
+import { cropCostPerHa } from '../grossmargin.js?v=465';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=465';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=465';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=465';
+import { describeMerge } from '../merge.js?v=465';
+import { renderRelatedMovements } from './movements.js?v=465';
+import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=465';
+import { wireJumps } from '../jump.js?v=465';
+import { openMapSheet } from './farmmap.js?v=465';
+import { openInputsSheet } from './inputs.js?v=465';
+import { openSprayFormSheet, canSpray } from './spray.js?v=465';
+import { stockLevels } from '../inputs.js?v=465';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=465';
+import { openModulesPickedSheet } from './modulespicked.js?v=465';
+import { openBalesBaledSheet } from './balesbaled.js?v=465';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=465';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=465';
 
 let unsub = null;
 
@@ -169,27 +169,22 @@ export function openFieldSheet(existing) {
 
   const body = openSheet(existing ? 'Edit field' : 'Add field', (root) => {
     root.innerHTML = `
-      ${field({ label: 'Field name', id: 'name', value: existing?.name, placeholder: 'e.g. SR1-3' })}
-      ${field({ label: 'Farm', id: 'property', value: existing?.property ?? '', list: 'dl-farms', placeholder: 'Which farm it is on, e.g. Aralu', hint: 'Used on the farm map to label each farm and to show or hide them.' })}
+      <div class="grid-2">
+        ${field({ label: 'Field name', id: 'name', value: existing?.name, placeholder: 'e.g. SR1-3' })}
+        ${field({ label: 'Farm', id: 'property', value: existing?.property ?? '', list: 'dl-farms', placeholder: 'e.g. Aralu' })}
+      </div>
+      <div class="hint" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">The farm is the property it is on. The farm map uses it to label each farm and to show or hide them.</div>
       <datalist id="dl-farms">${[...new Set(db.get().fields.map((f) => String(f.property || '').trim()).filter(Boolean))].sort().map((p) => `<option value="${esc(p)}">`).join('')}</datalist>
       ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
-      ${field({ label: 'Area (ha)', id: 'area', type: 'number', step: '0.01', value: existing?.areaHa })}
-      ${field({ label: 'Double crop', id: 'doubleCrop', type: 'select', value: existing?.doubleCrop ? 'yes' : 'no', options: [{ value: 'no', label: 'No, after fallow or a one-crop year' }, { value: 'yes', label: 'Yes, sown straight after another crop' }], hint: 'Position and Averages show the yield of double-cropped paddocks apart from the rest, as well as in the crop\'s average.' })}
-      <div class="yield-only" ${showYield ? '' : 'hidden'}>
-      ${field({ label: 'Yield estimate (t/ha)', id: 'yield', type: 'number', step: '0.01', value: existing ? existing.yieldTHa : (initialCommodity?.defaultYieldTHa || ''), hint: 'For production &amp; sales. Pre-filled from the commodity default below — type in this box to override it for this field.' })}
-      <div class="row"><span class="label">Commodity's default yield estimate</span><span class="value" id="commodity-yield-preview">— t/ha</span></div>
-      ${existing ? `<button class="btn secondary small" id="use-default-yield" style="margin-bottom:8px">Use commodity default</button>` : ''}
+      <div class="grid-2 area-row">
+        ${field({ label: 'Area (ha)', id: 'area', type: 'number', step: '0.01', value: existing?.areaHa })}
+        <label class="pp-col dc-tick" for="doubleCrop"><input type="checkbox" id="doubleCrop" ${existing?.doubleCrop ? 'checked' : ''} /><span>Double crop<small style="display:block;font-size:11.5px;color:var(--text-dim)">sown straight after another crop</small></span></label>
       </div>
-      ${canSetCost ? `<div class="gm-cost-field">${field({ label: 'Gross margin cost ($/ha)', id: 'gmCostHa', type: 'number', step: '1', value: existing?.gmCostHa ?? '', placeholder: String(Math.round(cropCostPerHa(initialCommodity, db.get().fields))), hint: 'Blank uses the crop\'s cost from Settings, shown faintly. Type a figure to use your own for this paddock (Gross margin report).' })}</div>` : ''}
-      ${field({ label: 'Harvest finished', id: 'harvestDone', type: 'select', value: existing?.harvestDone ? 'yes' : 'no', options: [{ value: 'no', label: 'No, still harvesting' }, { value: 'yes', label: 'Yes, all of it is in' }], hint: 'Shows in the harvest report. A finished paddock has nothing left to come, whatever its estimate said.' })}
+      <div class="yield-only" ${showYield ? '' : 'hidden'}>
       <div class="grid-2">
-        ${field({ label: 'Hectares left', id: 'harvestHaLeft', type: 'number', step: '0.01', value: existing?.harvestHaLeft ?? '', placeholder: 'Blank: not part cut' })}
-        <div class="yield-only" ${showYield ? '' : 'hidden'}>${field({ label: 'Yield for those (t/ha)', id: 'harvestLeftYield', type: 'number', step: '0.01', value: existing?.harvestLeftYield ?? '', placeholder: 'Blank: as above' })}</div>
+        ${field({ label: 'Yield estimate (t/ha)', id: 'yield', type: 'number', step: '0.01', value: existing ? existing.yieldTHa : (initialCommodity?.defaultYieldTHa || '') })}
+        <div class="field"><label>Crop default</label><div class="readout" style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span id="commodity-yield-preview">— t/ha</span>${existing ? '<button type="button" class="link-btn" id="use-default-yield" style="font-size:13px">Use it</button>' : ''}</div></div>
       </div>
-      <div class="hint" style="margin:-4px 0 4px;font-size:12px;color:var(--text-dim)">For a paddock part cut. The harvest report counts the hectares left at their own yield (or the yield estimate above if that is blank), on top of the tonnes already in. Leave the hectares blank to use the whole paddock's estimate less the tickets.</div>
-      <div class="hint" id="cut-so-far" style="margin:0 0 10px;font-size:12px;color:var(--text-dim)"></div>
-      ${modulesBlock}${balesBlock}
-      <div class="yield-only" ${showYield ? '' : 'hidden'}>
       <div class="field">
         <label>Drive tons from</label>
         <div class="segmented" id="f-mode">
@@ -198,8 +193,19 @@ export function openFieldSheet(existing) {
         </div>
         <div class="actual-callout" id="actual-hint"></div>
       </div>
-      <div class="row"><span class="label" id="tons-label">Total tons</span><span class="value" id="tons-preview">0.0 t</span></div>
+      <div style="display:none"><span id="tons-label">Total tons</span><span id="tons-preview">0.0 t</span><span id="actual-so-far">&ndash;</span></div>
       </div>
+      <details class="fold feature" ${existing?.harvestDone || (existing?.harvestHaLeft != null && existing.harvestHaLeft !== '') ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Harvest</h2><div class="sub">Finished, or part harvested</div></div></summary>
+      <div style="margin-top:10px">${field({ label: 'Harvest finished', id: 'harvestDone', type: 'select', value: existing?.harvestDone ? 'yes' : 'no', options: [{ value: 'no', label: 'No, still harvesting' }, { value: 'yes', label: 'Yes, all of it is in' }] })}</div>
+      <div class="grid-2">
+        ${field({ label: 'Hectares left', id: 'harvestHaLeft', type: 'number', step: '0.01', value: existing?.harvestHaLeft ?? '', placeholder: 'Blank: not part cut' })}
+        <div class="yield-only" ${showYield ? '' : 'hidden'}>${field({ label: 'Yield for those (t/ha)', id: 'harvestLeftYield', type: 'number', step: '0.01', value: existing?.harvestLeftYield ?? '', placeholder: 'Blank: as above' })}</div>
+      </div>
+      <div class="hint" style="margin:-4px 0 4px;font-size:12px;color:var(--text-dim)">For a paddock part harvested: the harvest report counts these hectares at their own yield (or the yield estimate below if that is blank), on top of the tonnes already in. Leave the hectares blank to use the whole paddock's estimate less the tickets.</div>
+      <div class="hint" id="cut-so-far" style="margin:0 0 10px;font-size:12px;color:var(--text-dim)"></div>
+      </details>
+      ${modulesBlock}${balesBlock}
       <details class="fold feature">
         <summary><div class="feature-head"><h2>Fertiliser planning</h2><div class="sub">Target yield, urea required and applied, nitrogen</div></div></summary>
       <div class="hint" style="margin:10px 14px 12px;font-size:12px;color:var(--text-dim)">Separate from the yield estimate above — used only for the urea and starter calculations below.</div>
@@ -247,6 +253,10 @@ export function openFieldSheet(existing) {
       </div>
       <div class="row"><span class="label">Seed required</span><span class="value" id="seed-preview">0.0 t</span></div>
       </details>
+      ${canSetCost ? `<details class="fold feature" ${existing?.gmCostHa != null && existing.gmCostHa !== '' ? 'open' : ''}>
+        <summary><div class="feature-head"><h2>Gross margin cost</h2><div class="sub">Cost per hectare for this paddock</div></div></summary>
+      <div class="gm-cost-field" style="margin-top:10px">${field({ label: 'Gross margin cost ($/ha)', id: 'gmCostHa', type: 'number', step: '1', value: existing?.gmCostHa ?? '', placeholder: String(Math.round(cropCostPerHa(initialCommodity, db.get().fields))), hint: 'Blank uses the crop\'s cost from Settings, shown faintly. Type a figure to use your own for this paddock (Gross margin report).' })}</div>
+      </details>` : ''}
       <div style="height:12px"></div>
       ${field({ label: 'Notes', id: 'notes', type: 'textarea', value: existing?.notes })}
       ${existing ? historyHtml(existing, showYield) : ''}
@@ -263,6 +273,7 @@ export function openFieldSheet(existing) {
     const tonsLabelEl = root.querySelector('#tons-label');
     const actualHintEl = root.querySelector('#actual-hint');
     const preview = root.querySelector('#tons-preview');
+    const actualSoFarEl = root.querySelector('#actual-so-far');
     const ureaPreview = root.querySelector('#urea-preview');
     const ureaAppliedTotalEl = root.querySelector('#urea-applied-total');
     const appListEl = root.querySelector('#urea-app-list');
@@ -329,15 +340,16 @@ export function openFieldSheet(existing) {
         const a = getNum(root, 'area');
         const actualRate = a > 0 ? actualTons / a : 0;
         const found = actualTons > 0 ? `${num(actualTons, 0)} ${unit} (${num(actualRate, 2)} ${unitPerHa})` : '';
+        if (actualSoFarEl) actualSoFarEl.textContent = actualTons > 0 && a > 0 ? `${num(actualRate, 2)} ${unitPerHa}` : '–';
         if (yieldMode === 'actual') {
           actualHintEl.className = 'actual-callout using';
-          actualHintEl.innerHTML = `<strong>Using the actual yield.</strong> Tonnes are the Movement tickets carted off this field${found ? `: ${found} so far` : ', and none have been recorded yet'}.`;
+          actualHintEl.innerHTML = `<strong>Using the Movement tickets.</strong> ${found ? `${found} off this field so far.` : 'None recorded yet.'}`;
         } else if (actualTons > 0) {
           actualHintEl.className = 'actual-callout switch';
-          actualHintEl.innerHTML = `<strong>Harvest tickets are in: ${found}.</strong> This field is still on the estimate. After harvest, switch to <em>Actual (movements)</em> so production, sales and reports use the real yield.`;
+          actualHintEl.innerHTML = `<strong>Harvest tickets are in: ${found}.</strong> After harvest, switch to <em>Actual (movements)</em> so reports use the real yield.`;
         } else {
           actualHintEl.className = 'actual-callout';
-          actualHintEl.innerHTML = `<strong>After harvest, switch to Actual (movements).</strong> It uses the tickets carted off this field instead of the estimate. None recorded yet.`;
+          actualHintEl.innerHTML = `After harvest, switch to <strong>Actual (movements)</strong> to use the tickets carted off this field. None recorded yet.`;
         }
       }
 
@@ -346,7 +358,7 @@ export function openFieldSheet(existing) {
         : estimateFieldTons({ areaHa: getNum(root, 'area'), yieldTHa: getNum(root, 'yield') });
       const area = getNum(root, 'area');
       const yieldTHa = area > 0 ? tonsVal / area : 0;
-      preview.textContent = `${num(tonsVal, 1)} ${unit} · ${num(yieldTHa, 2)} ${unitPerHa}`;
+      preview.textContent = `${num(tonsVal, 1)} ${unit}`;
       const barEl = root.querySelector('#tons-bar');
       if (barEl) barEl.textContent = `${num(tonsVal, 1)} ${unit}`;
       const applied = appliedKgHa();
@@ -356,8 +368,8 @@ export function openFieldSheet(existing) {
       soilNPreview.textContent = `${num(soilNUreaEquivalent(getNum(root, 'soilTestN')), 0)} kg/ha`;
       const selectedCommodity = commodities.find((c) => c.id === getVal(root, 'commodity'));
       const commodityDefaultYield = Number(selectedCommodity?.defaultYieldTHa) || 0;
-      commodityYieldPreview.textContent = commodityDefaultYield > 0 ? `${num(commodityDefaultYield, 2)} ${unitPerHa}` : '— (set one in Settings)';
-      const commodityDefault = Number(selectedCommodity?.targetYieldTHa) || 0;
+      commodityYieldPreview.textContent = commodityDefaultYield > 0 ? `${num(commodityDefaultYield, 2)} ${unitPerHa}` : '— not set';
+      const commodityDefault =Number(selectedCommodity?.targetYieldTHa) || 0;
       commodityTargetPreview.textContent = commodityDefault > 0 ? `${num(commodityDefault, 2)} t/ha` : '— (set one in Settings)';
       const targetCalc = currentTargetCalc();
       targetYieldPreview.textContent = targetCalc.targetYieldTHa > 0 ? `${num(targetCalc.targetYieldTHa, 2)} t/ha` : '— (set a target yield)';
@@ -506,7 +518,7 @@ export function openFieldSheet(existing) {
         property: String(getVal(root, 'property') ?? '').trim(),
         areaHa: getNum(root, 'area'),
         commodityId: getVal(root, 'commodity'),
-        doubleCrop: getVal(root, 'doubleCrop') === 'yes',
+        doubleCrop: !!root.querySelector('#doubleCrop')?.checked,
         harvestDone: getVal(root, 'harvestDone') === 'yes',
         harvestHaLeft: String(getVal(root, 'harvestHaLeft') ?? '').trim() === '' ? null : getNum(root, 'harvestHaLeft'),
         harvestLeftYield: String(getVal(root, 'harvestLeftYield') ?? '').trim() === '' ? null : getNum(root, 'harvestLeftYield'),
