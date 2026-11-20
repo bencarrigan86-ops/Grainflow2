@@ -1,34 +1,34 @@
-import { db } from '../storage.js?v=467';
-import { canDelete, canSeeBills, canSeeOrders, canSeeFreight, canAddContracts, canChangeArea } from '../nav.js?v=467';
-import { tileIcon } from '../tileicon.js?v=467';
+import { db } from '../storage.js?v=469';
+import { canDelete, canSeeBills, canSeeOrders, canSeeFreight, canAddContracts, canChangeArea } from '../nav.js?v=469';
+import { tileIcon } from '../tileicon.js?v=469';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=467';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=467';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=467';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify, freezeSheet, bandFolds } from '../ui.js?v=467';
-import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=467';
-import { patternsFor } from '../deliveryplan.js?v=467';
-import { INVOICING } from '../invoicing.js?v=467';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=467';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=467';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=467';
-import { renderRelatedMovements } from './movements.js?v=467';
-import { openInvoiceListSheet } from './invoice.js?v=467';
-import { openContractDocSheet } from './contract.js?v=467';
-import { wireJumps } from '../jump.js?v=467';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=467';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=467';
-import { freightState } from '../freight.js?v=467';
-import { activeSales, paidSales } from '../paidsales.js?v=467';
-import { openVendorDecSheet } from './vendordec.js?v=467';
-import { summarise as summariseOrders } from '../orders.js?v=467';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=467';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=467';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=467';
-import { standardFor } from '../grades.js?v=467';
-import { commodityClass } from '../commoditycolor.js?v=467';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort, searchSales } from '../salesort.js?v=467';
+} from '../documents.js?v=469';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=469';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=469';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify, freezeSheet, bandFolds } from '../ui.js?v=469';
+import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=469';
+import { patternsFor } from '../deliveryplan.js?v=469';
+import { INVOICING } from '../invoicing.js?v=469';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=469';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=469';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=469';
+import { renderRelatedMovements } from './movements.js?v=469';
+import { openInvoiceListSheet } from './invoice.js?v=469';
+import { openContractDocSheet } from './contract.js?v=469';
+import { wireJumps } from '../jump.js?v=469';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=469';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=469';
+import { freightState } from '../freight.js?v=469';
+import { activeSales, paidSales } from '../paidsales.js?v=469';
+import { openVendorDecSheet } from './vendordec.js?v=469';
+import { summarise as summariseOrders } from '../orders.js?v=469';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=469';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=469';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=469';
+import { standardFor } from '../grades.js?v=469';
+import { commodityClass } from '../commoditycolor.js?v=469';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort, searchSales } from '../salesort.js?v=469';
 
 let unsub = null;
 let saleSearch = '';   // what is typed in the contracts search box (kept while the screen repaints)
@@ -479,7 +479,14 @@ function openSaleSheet(existing) {
         ${field({ label: 'Delivery start', id: 'deliveryStart', type: 'date', value: existing?.deliveryStart })}
         ${field({ label: 'Delivery finish', id: 'deliveryEnd', type: 'date', value: existing?.deliveryEnd })}
       </div>
-      ${field({ label: 'How it is delivered', id: 'deliveryPattern', type: 'select', value: existing?.deliveryPattern ?? (cottonFirst ? 'ginrun' : ''), options: patternsFor(cottonFirst, existing?.deliveryPattern), hint: 'An even spread shows tonnes a week or a month on Deliveries to go. If the buyer calls it, grain orders give the dates.' })}
+      <div class="grid-2">
+        ${field({ label: 'Delivery option', id: 'deliveryPattern', type: 'select', value: existing?.deliveryPattern ?? (cottonFirst ? 'ginrun' : ''), options: patternsFor(cottonFirst, existing?.deliveryPattern) })}
+        ${field({ label: 'Freight paid by', id: 'freightPaidBy', type: 'select', value: existing?.freightPaidBy === 'buyer' ? 'buyer' : 'we', options: [
+          { value: 'we', label: 'We pay' },
+          { value: 'buyer', label: 'Buyer deducts' },
+        ] })}
+      </div>
+      <div class="hint" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">An even spread shows tonnes a week or a month on Deliveries to go; if the buyer calls it, grain orders give the dates. Freight: we pay the carrier (a bill in Payables), or the buyer deducts it from the invoice.</div>
       <div class="grid-2">
         ${field({ label: 'Weights & quality', id: 'weightsToGovern', type: 'select', value: existing?.weightsToGovern ?? '', options: [
           { value: '', label: '—' },
@@ -489,10 +496,6 @@ function openSaleSheet(existing) {
         ${field({ label: 'Freight ($/t)', id: 'freight', type: 'number', step: '0.01', value: existing?.freight ?? 0 })}
       </div>
       <div class="hint" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">Weights &amp; quality: whose weighbridge and quality test settles it.</div>
-      ${field({ label: 'Freight is paid by', id: 'freightPaidBy', type: 'select', value: existing?.freightPaidBy === 'buyer' ? 'buyer' : 'we', options: [
-        { value: 'we', label: 'We pay the carrier (a bill in Payables)' },
-        { value: 'buyer', label: 'Buyer deducts it from the invoice' },
-      ] })}
       </section>
 
       <div class="fold-bands by-js">

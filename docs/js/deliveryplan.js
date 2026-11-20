@@ -10,13 +10,13 @@
 // The same plan gives the money: each tonne is paid the contract's payment terms after it is delivered. Everything here
 // is a forecast at the contract price plus GST, before freight, levies and grade adjustments. Pure.
 
-import { daysBetween } from './orders.js?v=467';
+import { daysBetween } from './orders.js?v=469';
 
 export const PATTERNS = [
   { value: '', label: 'Not set' },
-  { value: 'call', label: "Buyer's call (loads ordered as needed)" },
-  { value: 'sellers', label: "Seller's option (you choose when it goes)" },
-  { value: 'even', label: 'Even spread over the delivery period' },
+  { value: 'call', label: "Buyer's call" },
+  { value: 'sellers', label: "Seller's option" },
+  { value: 'even', label: 'Even spread' },
   { value: 'ginrun', label: 'Gin run order' },
 ];
 /**
@@ -27,7 +27,7 @@ export function patternsFor(isCotton, current = '') {
   return PATTERNS.filter((p) => p.value === (current || '') || (isCotton ? ['', 'ginrun'].includes(p.value) : p.value !== 'ginrun'));
 }
 /** The delivery option as a contract confirmation words it: the contract's choice, without the note in brackets. */
-export const PATTERN_ON_CONTRACT = Object.fromEntries(PATTERNS.filter((p) => p.value).map((p) => [p.value, p.label.replace(/\s*\(.*\)\s*$/, '')]));
+export const PATTERN_ON_CONTRACT = { call: "Buyer's call", sellers: "Seller's option", even: 'Even spread over the delivery period', ginrun: 'Gin run order' };
 /** The pattern values the farm's records keep. */
 export const PATTERN_VALUES = PATTERNS.map((p) => p.value).filter(Boolean);
 export const patternLabel = (v) => PATTERNS.find((p) => p.value === (v || ''))?.label || 'Not set';
