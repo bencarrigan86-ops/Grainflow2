@@ -144,10 +144,57 @@ check('the cache is named after the build, so a new one cannot read the old', ()
   assert.ok(!CACHE_NAME.includes('undefined'), 'the version did not come through the URL');
 });
 
-check('the shell it precaches is asked for at this build', () => {
-  assert.ok(SHELL.includes('./index.html'), 'index.html is not precached — no offline start');
-  assert.ok(SHELL.some((p) => p.includes('styles.css?v=2026-09-01.84')),
-    'the stylesheet is precached at the wrong version');
+check('the shell is the page and its manifest; the rest of the build comes from precache.json', () => {
+  assert.ok(SHELL.includes('./index.html'), 'index.html is not precached: no offline start');
+  assert.ok(src.includes('precache.json'), 'the worker no longer downloads the build\'s file list');
+});
+
+// Run the real install handler against a fake cache and a fake server.
+async function runInstall({ manifest, missing = [] }) {
+  const added = [];
+  const store = {
+    open: async () => ({ add: async (req) => { if (missing.includes(req.url)) throw new Error('404 ' + req.url); added.push(req.url); } }),
+    keys: async () => [],
+  };
+  const fetched = [];
+  const fakeFetch = async (url) => { fetched.push(String(url)); return manifest ? { ok: true, json: async () => manifest } : { ok: false }; };
+  const l = {};
+  const sw = { ...self_, addEventListener: (n, fn) => { l[n] = fn; } };
+  new Function('self', 'caches', 'fetch', 'Request', src)(sw, store, fakeFetch, class { constructor(u) { this.url = u; } });
+  let done;
+  l.install({ waitUntil: (p) => { done = p; } });
+  let error = null;
+  try { await done; } catch (e) { error = e; }
+  return { added, fetched, error };
+}
+
+const acheck = async (name, fn) => {
+  try { await fn(); console.log(`  PASS  ${name}`); }
+  catch (e) { failures += 1; console.log(`  FAIL  ${name}\n         ${e.message}`); }
+};
+
+const LIST = { required: ['./js/main.js?v=84', './js/derived.js?v=84', './css/styles.css?v=84'], optional: ['./icons/icon-192.png'] };
+
+await acheck('installing downloads the whole build before it takes over', async () => {
+  const r = await runInstall({ manifest: LIST });
+  assert.equal(r.error, null);
+  for (const p of [...LIST.required, ...SHELL]) assert.ok(r.added.includes(p), p + ' was not cached');
+  assert.ok(r.fetched.some((u) => u.includes('precache.json')));
+});
+await acheck('one script that cannot be had fails the install, so the old version carries on', async () => {
+  const r = await runInstall({ manifest: LIST, missing: ['./js/derived.js?v=84'] });
+  assert.ok(r.error, 'the install went ahead with a build missing a script');
+});
+await acheck('no file list fails the install too', async () => {
+  const r = await runInstall({ manifest: null });
+  assert.ok(r.error);
+});
+await acheck('a missing icon does not stop an update', async () => {
+  const r = await runInstall({ manifest: LIST, missing: ['./icons/icon-192.png'] });
+  assert.equal(r.error, null);
+});
+check('a page request does not wait on a slow network when there is a saved page', () => {
+  assert.ok(src.includes('NAVIGATE_WAIT_MS') && src.includes('Promise.race'));
 });
 
 console.log('\n=== app code ===');

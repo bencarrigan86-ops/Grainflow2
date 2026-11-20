@@ -1,38 +1,38 @@
-import { db } from './storage.js?v=496';
-import { supabase, ENV } from './supabase.js?v=496';
-import { installErrorLog } from './supportinfo.js?v=496';
-import { loadMySeries, rememberedSeries } from './outloadseries.js?v=496';
-import { initTheme } from './theme.js?v=496';
+import { db } from './storage.js?v=497';
+import { supabase, ENV } from './supabase.js?v=497';
+import { installErrorLog } from './supportinfo.js?v=497';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=497';
+import { initTheme } from './theme.js?v=497';
 initTheme();
-import { renderPosition } from './views/position.js?v=496';
-import { renderProduction } from './views/production.js?v=496';
-import { renderReports } from './views/reports.js?v=496';
-import { renderSales } from './views/sales.js?v=496';
-import { renderMovements } from './views/movements.js?v=496';
-import { renderStorage } from './views/storage.js?v=496';
-import { renderSettings } from './views/settings.js?v=496';
-import { renderLogin } from './views/login.js?v=496';
-import { renderNewPassword } from './views/newpassword.js?v=496';
-import { isRecovering, endRecovery, takeResetExpired, noteRecoveryLink } from './recovery.js?v=496';
-import { RESET_EXPIRED } from './recovery.js?v=496';
-import { renderAccount } from './views/account.js?v=496';
-import { renderHelp } from './views/help.js?v=496';
+import { renderPosition } from './views/position.js?v=497';
+import { renderProduction } from './views/production.js?v=497';
+import { renderReports } from './views/reports.js?v=497';
+import { renderSales } from './views/sales.js?v=497';
+import { renderMovements } from './views/movements.js?v=497';
+import { renderStorage } from './views/storage.js?v=497';
+import { renderSettings } from './views/settings.js?v=497';
+import { renderLogin } from './views/login.js?v=497';
+import { renderNewPassword } from './views/newpassword.js?v=497';
+import { isRecovering, endRecovery, takeResetExpired, noteRecoveryLink } from './recovery.js?v=497';
+import { RESET_EXPIRED } from './recovery.js?v=497';
+import { renderAccount } from './views/account.js?v=497';
+import { renderHelp } from './views/help.js?v=497';
 import {
-  getSession, getMembership, sessionStillValid, onAuthChange, acceptInvitation, signOut, listMyInvitations,
-} from './auth.js?v=496';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=496';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=496';
-import { esc, todayLocal } from './fmt.js?v=496';
-import { isSheetOpen, notify, toast } from './ui.js?v=496';
-import { describeMerges } from './ticketmerge.js?v=496';
-import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=496';
-import { addDays } from './fumigation.js?v=496';
-import { watchLists } from './band.js?v=496';
-import { APP_VERSION } from './version.js?v=496';
-import { startUpdateCheck } from './updatecheck.js?v=496';
-import { emailFromTrialHash } from './trialtext.js?v=496';
-import { installWatch, requestPersistence } from './pwa.js?v=496';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=496';
+  getSession, getMembership, sessionStillValid, onAuthChange, acceptInvitation, signOut, listMyInvitations, offlineSession,
+} from './auth.js?v=497';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=497';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=497';
+import { esc, todayLocal } from './fmt.js?v=497';
+import { isSheetOpen, notify, toast } from './ui.js?v=497';
+import { describeMerges } from './ticketmerge.js?v=497';
+import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=497';
+import { addDays } from './fumigation.js?v=497';
+import { watchLists } from './band.js?v=497';
+import { APP_VERSION } from './version.js?v=497';
+import { startUpdateCheck } from './updatecheck.js?v=497';
+import { emailFromTrialHash } from './trialtext.js?v=497';
+import { installWatch, requestPersistence } from './pwa.js?v=497';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=497';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -143,11 +143,25 @@ settingsBtn.addEventListener('click', () => {
   location.hash = `#/${gearTargetFor(currentRole)}`;
 });
 
+// A screen that cannot be drawn says so, with a way out, rather than leaving a blank page (or half of one).
+function showScreenFault(message) {
+  app.innerHTML = `<div class="view"><div class="card">
+    <h2>This screen could not be drawn</h2>
+    <div class="hint" style="margin:6px 0 12px">Your records are safe. Try again, or open another screen. If it keeps happening, tell support what it says below.</div>
+    <div class="hint" style="font-size:11.5px;word-break:break-word">${esc(message || 'Unknown fault')}</div>
+    <button class="btn" id="fault-retry" style="margin-top:12px">Try again</button>
+  </div></div>`;
+  app.querySelector('#fault-retry').addEventListener('click', () => renderActiveView());
+}
+window.addEventListener('grainflow:view-failed', (e) => { if (currentRole) showScreenFault(e.detail?.error); });
+
 function renderActiveView() {
   const active = currentTabId();
   const route = ROUTES.find((t) => t.id === active);
+  db.leaveScreen();
   app.innerHTML = '';
-  route.render(app);
+  try { route.render(app); }
+  catch (e) { console.error('A screen failed to draw', e); showScreenFault(e?.message); }
   renderTabbar();
   // The gear stays for every role. It was hidden from a driver along with
   // Settings, which also removed the only route to Account — and so the only
@@ -185,6 +199,35 @@ async function refreshIfQuiet({ force = false } = {}) {
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshIfQuiet(); });
 window.addEventListener('online', () => refreshIfQuiet({ force: true }));
+// Opened with no signal on a login that had run out: when signal comes back, ask the library for the login again. If it renews,
+// carry on (what is owed is sent); if it cannot, the person is asked to sign in, and what is unsent stays on the device.
+window.addEventListener('online', async () => {
+  if (!offlineOpen) return;
+  const s = await getSession().catch(() => null);
+  if (s) { offlineOpen = false; db.pushNow(); refreshIfQuiet({ force: true }); }
+  else boot();
+});
+
+// This phone could not write to its own storage: the last change is only in memory, and closing the app loses it.
+function setSaveBanner(show) {
+  let bar = document.getElementById('save-banner');
+  if (!show) { bar?.remove(); return; }
+  if (bar) return;
+  bar = document.createElement('div');
+  bar.id = 'save-banner';
+  bar.setAttribute('role', 'alert');
+  bar.style.cssText = 'position:sticky;top:0;z-index:70;padding:8px 12px;text-align:center;font-size:13px;font-weight:700;background:var(--danger,#b3261e);color:#fff';
+  bar.append('This phone could not save your last change. Keep the app open and free some space on the phone. ');
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.textContent = 'Try again';
+  retry.style.cssText = 'margin-left:6px;padding:4px 10px;border-radius:8px;border:1px solid #fff;background:transparent;color:#fff;font-weight:700';
+  retry.addEventListener('click', () => { db.retrySave().catch(() => toast('Still could not save')); });
+  bar.appendChild(retry);
+  document.body.prepend(bar);
+}
+window.addEventListener('grainflow:save-failed', () => setSaveBanner(true));
+window.addEventListener('grainflow:save-ok', () => { setSaveBanner(false); toast('Saved on this phone'); });
 // Once shortly after start: a device that opened with old unsent markers or a
 // queue to send settles them first, then looks.
 // (Not forced: when startup has just read the server in the background, this one is skipped.)
@@ -375,8 +418,17 @@ function renderInvitationsWaiting(invitations) {
   });
 }
 
+// Who this page has opened the farm for (null while signed out or not yet open), and whether it opened without signal.
+let bootedFor = null;
+let offlineOpen = false;
+
 async function boot() {
-  const session = await getSession();
+  bootedFor = null;
+  offlineOpen = false;
+  // With no signal there is no asking Supabase (a login that has run out retries for a long while before it gives up).
+  let session = navigator.onLine === false ? await offlineSession() : null;
+  if (session) offlineOpen = true;
+  else session = await getSession();
   const pendingInvite = readInvite();
 
   if (!session) {
@@ -462,6 +514,7 @@ async function boot() {
   try {
     currentRole = membership.role;
     await db.init({ farmId: membership.farmId, role: membership.role, userId: session?.user?.id ?? null });
+    bootedFor = session?.user?.id ?? null;
     // this person's digit for outload numbers: what the phone last knew at once, then the server's word when it can be asked
     const myId = session?.user?.id;
     db.setOutloadSeries(rememberedSeries(myId, membership.farmId));
@@ -561,12 +614,16 @@ onAuthChange((event, session) => {
     const id = session?.user?.id ?? null;
     if (signedInAs && id && signedInAs !== id) { location.reload(); return; }
     if (id) signedInAs = id;
+    // The library says SIGNED_IN again when the app comes back to the front and the login is still good. Starting over then put
+    // "Loading your farm" over whatever was on screen (after the camera, a phone call) and ran the start-up a second time.
+    if (id && bootedFor === id) return;
     boot();
   } else if (event === 'PASSWORD_RECOVERY') {
     noteRecoveryLink('#type=recovery');
     boot();
   } else if (event === 'SIGNED_OUT') {
     endRecovery();
+    bootedFor = null;
     boot();
   }
 });

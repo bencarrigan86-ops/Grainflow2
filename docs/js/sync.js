@@ -15,15 +15,15 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=496';
-import { stateToRows } from './mapping.js?v=496';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems, setSending } from './local.js?v=496';
-import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=496';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=496';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=496';
-import { readAllIn } from './pages.js?v=496';
-import { farmSwitch, farmLevel } from './nav.js?v=496';
-import { LEVEL_TABLES } from './farmswitches.js?v=496';
+import { supabase } from './supabase.js?v=497';
+import { stateToRows } from './mapping.js?v=497';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems, setSending } from './local.js?v=497';
+import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=497';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=497';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=497';
+import { readAllIn } from './pages.js?v=497';
+import { farmSwitch, farmLevel } from './nav.js?v=497';
+import { LEVEL_TABLES } from './farmswitches.js?v=497';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -137,6 +137,9 @@ export function noteDelete(table, id) {
  */
 export async function push(state, farmId, role = 'owner') {
   if (inFlight) return inFlight;
+  // With no signal there is nothing to try: the changes stay owed, and the 'online' listener sends them. (Trying anyway ended in a
+  // "refused" message about a network failure.)
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return { skipped: true, offline: true };
   inFlight = (async () => {
     // Pre-tracking markers cannot be turned into rows and are not sent; they
     // are resolved once, at startup. Everything else is what this device owes.

@@ -9,17 +9,25 @@
 // state you are in for the few seconds between creating an account and creating
 // a farm. The app has to handle it rather than assume it away.
 
-import { supabase, isolatedClient } from './supabase.js?v=496';
-import { resetRedirect, accountGone } from './recovery.js?v=496';
-import { pickMembership, recallMembership, farmChoices } from './membership.js?v=496';
-import { newToken, expiryFrom } from './invites.js?v=496';
-import { clearStateIfSettled } from './local.js?v=496';
+import { supabase, isolatedClient } from './supabase.js?v=497';
+import { resetRedirect, accountGone } from './recovery.js?v=497';
+import { pickMembership, recallMembership, farmChoices } from './membership.js?v=497';
+import { newToken, expiryFrom } from './invites.js?v=497';
+import { clearStateIfSettled, loadFarmStamp, loadOwner } from './local.js?v=497';
+import { decideOfflineSession } from './offlinestart.js?v=497';
 
 /** The signed-in user, or null. */
 export async function getUser() {
   const { data, error } = await supabase.auth.getUser();
   if (error) return null;
   return data?.user ?? null;
+}
+
+/** Opening with no signal on a login that has run out: see offlinestart.js. */
+export async function offlineSession() {
+  if (globalThis.navigator?.onLine !== false) return null;
+  const [farmStamp, copyOwner] = await Promise.all([loadFarmStamp().catch(() => null), loadOwner().catch(() => null)]);
+  return decideOfflineSession({ online: false, storage: globalThis.localStorage, farmStamp, copyOwner });
 }
 
 /** The active session, or null. Cheap — reads from local storage, no network. */

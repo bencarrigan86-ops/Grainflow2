@@ -35,13 +35,18 @@ const CACHE_NAME = `grainflow-${VERSION}`;
 // release would make each update slower than the one before it.
 const VENDOR_CACHE = 'grainflow-vendor';
 
-// The minimum needed to paint something. Everything else — the thirty-odd
-// modules, the icons — arrives through runtime caching on the first online
-// visit, because main.js imports the whole graph eagerly and so one load
-// fetches the lot. Listing them here instead would be a second copy of the
-// module list to keep in step with the first, and that is how this codebase
-// ended up accepting a fill state the app never writes.
-const SHELL = ['./', './index.html', `./css/styles.css?v=${VERSION}`, './manifest.webmanifest'];
+// The page and its manifest. Everything else the build needs comes from precache.json (written by tools/make-precache.mjs, and
+// checked against docs/ by tests/precache.test.mjs), downloaded in full before this version takes over.
+//
+// Runtime caching alone was not enough, and it failed in the one place it matters. A new build's scripts were fetched through the
+// OLD worker into the OLD build's cache, which the new worker then deleted as stale. A phone that updated and was opened next with
+// no signal found the new index.html and none of its scripts: a blank page until one more launch with signal. The same happened on
+// a first install, because the worker does not control the page that registers it.
+const SHELL = ['./', './index.html', './manifest.webmanifest'];
+
+// How long a page request waits for the network before the saved page is used instead (a paddock with one bar of signal
+// answers slowly rather than not at all, and a white screen is worse than the saved page).
+const NAVIGATE_WAIT_MS = 4000;
 
 /**
  * What to do with one request. Pure, and exported to the tests via the source
@@ -99,10 +104,15 @@ function chooseStrategy({ url, method = 'GET', mode = '', origin = '' }) {
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
-    // Individually rather than addAll(), which rejects the whole install if any
-    // single file 404s. A missing icon should not leave a device with no
-    // service worker at all.
-    await Promise.all(SHELL.map((path) =>
+    // Everything this build needs. If any of it cannot be had, the install FAILS and the previous version carries on (and the
+    // browser tries again at the next check): taking over with half a build is how a phone ends up blank offline.
+    const res = await fetch(`./precache.json?v=${encodeURIComponent(VERSION)}`, { cache: 'reload' });
+    if (!res.ok) throw new Error('precache.json not found');
+    const list = await res.json();
+    const required = [...new Set([...SHELL, ...(list.required || [])])];
+    await Promise.all(required.map((path) => cache.add(new Request(path, { cache: 'reload' }))));
+    // Icons, help pictures and the form: wanted offline, but one missing must not stop an update.
+    await Promise.all((list.optional || []).map((path) =>
       cache.add(new Request(path, { cache: 'reload' })).catch(() => {})));
     await self.skipWaiting();
   })());
@@ -146,9 +156,20 @@ async function handle(request, strategy, cacheName) {
 
   if (strategy === 'network-first') {
     try {
-      const fresh = await fetch(request);
-      if (fresh && fresh.ok) cache.put(request, fresh.clone()).catch(() => {});
-      return fresh;
+      const attempt = fetch(request).then((fresh) => {
+        if (fresh && fresh.ok) cache.put(request, fresh.clone()).catch(() => {});
+        return fresh;
+      });
+      // A page open waits only so long for the network when there is a saved page to fall back on; the request carries on in the
+      // background and refreshes the saved page for next time.
+      if (request.mode === 'navigate') {
+        const saved = await cache.match(request) || await cache.match('./index.html');
+        if (saved) {
+          attempt.catch(() => {});
+          return await Promise.race([attempt, new Promise((resolve) => setTimeout(() => resolve(saved), NAVIGATE_WAIT_MS))]);
+        }
+      }
+      return await attempt;
     } catch {
       // No signal. This is the whole point of the exercise.
       const cached = await cache.match(request) || await cache.match('./index.html');

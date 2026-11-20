@@ -18,39 +18,39 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=496';
-import { setBrandLogo } from './brand.js?v=496';
+import { hydrate } from './hydrate.js?v=497';
+import { setBrandLogo } from './brand.js?v=497';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState, loadOwner, saveOwner,
-} from './local.js?v=496';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=496';
-import { isLegacyDirty } from './dirty.js?v=496';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=496';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=496';
-import { hasDeductions } from './deductions.js?v=496';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=496';
-import { hasHay, hasHayLoad } from './hay.js?v=496';
-import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=496';
-import { todayLocal } from './fmt.js?v=496';
-import { signLoad } from './driversign.js?v=496';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=496';
-import { settleLegs, dedupeLegs } from './legs.js?v=496';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=496';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=496';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=496';
-import { setCommodityOrder } from './commodityorder.js?v=496';
-import { setShrinkSource } from './shrink.js?v=496';
-import { storageLedgerStock } from './derived.js?v=496';
-import { setFarmSwitches, setFarmLevels } from './nav.js?v=496';
-import { readSwitches, readLevels } from './farmswitches.js?v=496';
-import { seasonYY, nextOutloadNo, isPlainNumber, renumberPlan, outloadParts } from './outloadno.js?v=496';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=496';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=496';
-import { schedulePush, pushOnReconnect } from './sync.js?v=496';
-import { hasParts as hasAddressParts } from './address.js?v=496';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=496';
-import { linePayableId } from './ginoffset.js?v=496';
+} from './local.js?v=497';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=497';
+import { isLegacyDirty } from './dirty.js?v=497';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=497';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=497';
+import { hasDeductions } from './deductions.js?v=497';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=497';
+import { hasHay, hasHayLoad } from './hay.js?v=497';
+import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=497';
+import { todayLocal } from './fmt.js?v=497';
+import { signLoad } from './driversign.js?v=497';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=497';
+import { settleLegs, dedupeLegs } from './legs.js?v=497';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=497';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=497';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=497';
+import { setCommodityOrder } from './commodityorder.js?v=497';
+import { setShrinkSource } from './shrink.js?v=497';
+import { storageLedgerStock } from './derived.js?v=497';
+import { setFarmSwitches, setFarmLevels } from './nav.js?v=497';
+import { readSwitches, readLevels } from './farmswitches.js?v=497';
+import { seasonYY, nextOutloadNo, isPlainNumber, renumberPlan, outloadParts } from './outloadno.js?v=497';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=497';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=497';
+import { schedulePush, pushOnReconnect } from './sync.js?v=497';
+import { hasParts as hasAddressParts } from './address.js?v=497';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=497';
+import { linePayableId } from './ginoffset.js?v=497';
 
 /**
  * A gin bill the lint buyer pays is settled once lint invoices have taken all of it off: the farm owes the gin nothing, the buyer settles
@@ -199,6 +199,19 @@ let outloadSeries = null;   // this person's digit for outload numbers, as the s
 let ready = false;
 
 const listeners = new Set();
+// A screen's repaint listener belongs to that screen. Epoch 0 is everything registered at start-up (the tab counts, the season
+// pill), which stays for good; each time a screen is opened the epoch moves on and the listeners the screen before it left
+// behind are dropped, so a save does not repaint six screens nobody is looking at (or draw Storage over the Help page).
+let epoch = 0;
+const listenerEpoch = new Map();
+
+/** A listener or a repaint threw. The save has happened, so say so quietly in the log and tell the screen to show its fault. */
+function viewFailed(when, e) {
+  console.error(`A view failed to re-render ${when}`, e);
+  try { window.dispatchEvent(new CustomEvent('grainflow:view-failed', { detail: { error: String(e?.message || e) } })); } catch { /* nothing to tell */ }
+}
+let saveFailed = false;   // the last write to this device failed, and nothing has been saved since
+let stopReconnect = null; // the one 'online' listener that sends what is owed (a second start must not add another)
 
 // What the save in progress has changed. Filled by the mutators just before they
 // call persist(), which hands it to the push and empties it. This is what lets a
@@ -286,8 +299,11 @@ function persist() {
   //
   // Nothing about durability on this device should depend on a network. That
   // is the whole premise of the app: it has to work in a paddock.
-  saveState(data, farmId).catch((e) => {
+  saveState(data, farmId).then(() => {
+    if (saveFailed) { saveFailed = false; window.dispatchEvent(new CustomEvent('grainflow:save-ok')); }
+  }, (e) => {
     console.error('LOCAL SAVE FAILED — this change exists only in this tab', e);
+    saveFailed = true;
     window.dispatchEvent(new CustomEvent('grainflow:save-failed', { detail: { error: String(e) } }));
   });
 
@@ -308,7 +324,7 @@ function persist() {
     try {
       fn(data);
     } catch (e) {
-      console.error('A view failed to re-render after a change', e);
+      viewFailed('after a change', e);
     }
   });
 }
@@ -327,7 +343,7 @@ window.addEventListener('grainflow:push-ok', () => {
 // Tickets were combined with another device's changes: keep the result, and redraw.
 window.addEventListener('grainflow:merged', () => {
   saveState(data, farmId).catch((e) => console.error('Local save failed', e));
-  listeners.forEach((fn) => { try { fn(data); } catch (e) { console.error('A view failed to re-render after a merge', e); } });
+  listeners.forEach((fn) => { try { fn(data); } catch (e) { viewFailed('after a merge', e); } });
 });
 
 window.addEventListener('grainflow:push-failed', (e) => {
@@ -496,7 +512,8 @@ export const db = {
     }
 
     ready = true;
-    pushOnReconnect(() => data, farmId, role);
+    stopReconnect?.();
+    stopReconnect = pushOnReconnect(() => data, farmId, role);
 
     // Anything this device owes goes now rather than waiting for the next edit.
     const startTouches = touched;
@@ -506,7 +523,7 @@ export const db = {
     }
 
     listeners.forEach((fn) => {
-      try { fn(data); } catch (e) { console.error('A view failed to render at startup', e); }
+      try { fn(data); } catch (e) { viewFailed('at startup', e); }
     });
     return data;
   },
@@ -604,7 +621,7 @@ export const db = {
       shareOrder();
       saveState(data, farmId).catch((e) => console.error('Local save failed', e));
       listeners.forEach((fn) => {
-        try { fn(data); } catch (e) { console.error('A view failed to re-render after a refresh', e); }
+        try { fn(data); } catch (e) { viewFailed('after a refresh', e); }
       });
       return { refreshed: true };
     } finally {
@@ -627,7 +644,22 @@ export const db = {
 
   subscribe(fn) {
     listeners.add(fn);
-    return () => listeners.delete(fn);
+    listenerEpoch.set(fn, epoch);
+    return () => { listeners.delete(fn); listenerEpoch.delete(fn); };
+  },
+
+  /** A new screen is about to be drawn: drop the repaint listeners the previous screen left behind. */
+  leaveScreen() {
+    epoch += 1;
+    for (const [fn, e] of [...listenerEpoch]) {
+      if (e >= 1 && e < epoch) { listeners.delete(fn); listenerEpoch.delete(fn); }
+    }
+  },
+
+  /** Try the write to this device again (after a failure the person may have put right, such as freeing space). */
+  async retrySave() {
+    await saveState(data, farmId);
+    if (saveFailed) { saveFailed = false; window.dispatchEvent(new CustomEvent('grainflow:save-ok')); }
   },
 
   get() { return current(); },

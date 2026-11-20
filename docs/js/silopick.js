@@ -6,7 +6,7 @@
 //
 // Pure. The screen decides what to draw; this decides who is on the list.
 
-import { storageLedgerStock } from './derived.js';
+import { storageLedgerStock } from './derived.js?v=497';
 
 // Under this many tonnes a silo counts as empty, as a rounding crumb is not grain.
 const EMPTY_T = 0.05;

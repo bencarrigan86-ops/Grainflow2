@@ -10,7 +10,7 @@
 //
 // Pure. The only import is the storage fee terms, which are kept in the same part (see storagefees.js).
 
-import { cleanFee } from './storagefees.js?v=496';
+import { cleanFee } from './storagefees.js?v=497';
 
 const norm = (g) => String(g ?? '').trim().toLowerCase();
 const round3 = (n) => Math.round(n * 1000) / 1000;
