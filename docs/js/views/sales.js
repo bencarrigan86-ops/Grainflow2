@@ -1,34 +1,34 @@
-import { db } from '../storage.js?v=472';
-import { canDelete, canSeeBills, canSeeOrders, canSeeFreight, canAddContracts, canChangeArea } from '../nav.js?v=472';
-import { tileIcon } from '../tileicon.js?v=472';
+import { db } from '../storage.js?v=475';
+import { canDelete, canSeeBills, canSeeOrders, canSeeFreight, canAddContracts, canChangeArea } from '../nav.js?v=475';
+import { tileIcon } from '../tileicon.js?v=475';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=472';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=472';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=472';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify, freezeSheet, bandFolds } from '../ui.js?v=472';
-import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=472';
-import { patternsFor } from '../deliveryplan.js?v=472';
-import { INVOICING } from '../invoicing.js?v=472';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=472';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=472';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=472';
-import { renderRelatedMovements } from './movements.js?v=472';
-import { openInvoiceListSheet } from './invoice.js?v=472';
-import { openContractDocSheet } from './contract.js?v=472';
-import { wireJumps } from '../jump.js?v=472';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=472';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=472';
-import { freightState } from '../freight.js?v=472';
-import { activeSales, paidSales } from '../paidsales.js?v=472';
-import { openVendorDecSheet } from './vendordec.js?v=472';
-import { summarise as summariseOrders } from '../orders.js?v=472';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=472';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=472';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=472';
-import { standardFor } from '../grades.js?v=472';
-import { commodityClass } from '../commoditycolor.js?v=472';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort, searchSales } from '../salesort.js?v=472';
+} from '../documents.js?v=475';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=475';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=475';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify, freezeSheet, bandFolds } from '../ui.js?v=475';
+import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=475';
+import { patternsFor } from '../deliveryplan.js?v=475';
+import { INVOICING } from '../invoicing.js?v=475';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=475';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=475';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=475';
+import { renderRelatedMovements } from './movements.js?v=475';
+import { openInvoiceListSheet } from './invoice.js?v=475';
+import { openContractDocSheet } from './contract.js?v=475';
+import { wireJumps } from '../jump.js?v=475';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=475';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=475';
+import { freightState } from '../freight.js?v=475';
+import { activeSales, paidSales } from '../paidsales.js?v=475';
+import { openVendorDecSheet } from './vendordec.js?v=475';
+import { summarise as summariseOrders } from '../orders.js?v=475';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=475';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=475';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=475';
+import { standardFor } from '../grades.js?v=475';
+import { commodityClass } from '../commoditycolor.js?v=475';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort, searchSales } from '../salesort.js?v=475';
 
 let unsub = null;
 let saleSearch = '';   // what is typed in the contracts search box (kept while the screen repaints)
@@ -502,7 +502,11 @@ function openSaleSheet(existing) {
       <details class="fold feature" id="pay-fold">
         <summary><div class="feature-head"><h2>Payment terms and brokerage</h2>
           <div class="sub">Invoicing, payment days, carry, broker, trade rules</div></div></summary>
-      ${field({ label: 'Contract invoicing', id: 'invoicing', type: 'select', value: existing?.invoicing ?? '', options: INVOICING, hint: 'Who raises the invoice: we do, or the buyer sends a recipient created tax invoice (RCTI). Printed on the confirmation.' })}
+      <div class="grid-2">
+        ${field({ label: 'Contract invoicing', id: 'invoicing', type: 'select', value: existing?.invoicing ?? '', options: INVOICING })}
+        ${field({ label: 'Trade rules', id: 'tradeRules', value: existing?.tradeRules, placeholder: 'e.g. GTA 3' })}
+      </div>
+      <div class="hint" style="margin:-6px 14px 10px;font-size:11.5px;color:var(--text-dim)">Invoicing: we raise it, or the buyer sends a recipient created tax invoice (RCTI). Trade rules only if different; blank prints Grain Trade Australia (ICA for cotton).</div>
       <div class="grid-2">
         ${field({ label: 'Payment terms (days)', id: 'paymentTermsDays', type: 'number', step: '1', value: existing?.paymentTermsDays ?? '' })}
         ${field({ label: 'Counted from', id: 'paymentTermsBasis', type: 'select', value: existing?.paymentTermsBasis ?? '', options: [
@@ -511,7 +515,7 @@ function openSaleSheet(existing) {
           { value: 'end of week of transfer', label: 'End of week of transfer' },
           { value: 'date of delivery', label: 'Date of delivery' },
           { value: 'invoice date', label: 'Invoice date' },
-        ], hint: '"30 days" and "30 days from end of week" are up to six days apart' })}
+        ] })}
       </div>
       <div class="grid-2">
         ${field({ label: 'Carry ($/t/month)', id: 'carryRate', type: 'number', step: '0.01', value: existing?.carryRate ?? 0, hint: 'Paid to leave grain on farm' })}
@@ -529,7 +533,6 @@ function openSaleSheet(existing) {
         ] })}
         ${field({ label: 'Brokerage ($/t)', id: 'brokerageRate', type: 'number', step: '0.01', value: existing?.brokerageRate || '', placeholder: '0', hint: 'On tonnes delivered. Bills go in Payables.' })}
       </div>
-      ${field({ label: 'Trade rules', id: 'tradeRules', value: existing?.tradeRules, placeholder: 'e.g. GTA contract 3', hint: 'Only if different. Left blank, the confirmation says Grain Trade Australia Trade Rules apply (ICA for cotton).' })}
       </details>
 
 
@@ -548,9 +551,8 @@ function openSaleSheet(existing) {
       <details class="fold feature" id="grade-fold" ${openGrades ? 'open' : ''}>
         <summary><div class="feature-head"><h2>Multigrade</h2>
           <div class="sub">A premium or discount for each grade the buyer will take</div></div></summary>
-        <div class="field hint" style="margin:10px 14px">List the grades this contract accepts, each with its $/t
-          premium or discount. Every load delivered is paid the price above plus the adjustment for its own grade.
-          A load whose grade is not listed is paid the price as it stands.</div>
+        <div class="field hint" style="margin:10px 14px">The grades this contract accepts, each with a $/t premium
+          or discount. A load is paid the price above plus its own grade's adjustment; an unlisted grade is paid the price as it stands.</div>
         <div id="go-rows"></div>
         <button type="button" class="btn secondary small" id="go-add">+ Add a grade</button>
         <div id="go-summary" style="margin-top:10px"></div>
@@ -559,10 +561,9 @@ function openSaleSheet(existing) {
       <details class="fold feature" id="oil-fold" ${openOil ? 'open' : ''} ${showOil ? '' : 'hidden'}>
         <summary><div class="feature-head"><h2>Oil</h2>
           <div class="sub">Canola priced for its oil content</div></div></summary>
-        <div class="field hint" style="margin:10px 14px">Canola is paid on a base oil level, with the price moving a set
-          percentage for every 1% of oil above or below it. Under the AOF terms that is 42% oil and 1.5% of the price
-          per 1%. Each load is priced on its own oil, recorded on the load. A load with no oil recorded is paid the
-          price as it stands.</div>
+        <div class="field hint" style="margin:10px 14px">Paid on a base oil level, with the price moving a set percentage
+          for each 1% of oil above or below it (AOF terms: 42% oil, 1.5% of the price per 1%). Each load is priced on its own
+          oil; a load with none recorded is paid the price as it stands.</div>
         ${field({ label: 'Price for oil', id: 'oil-on', type: 'select', value: openOil ? 'yes' : 'no', options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }] })}
         <div id="oil-terms" ${openOil ? '' : 'hidden'}>
           <div class="grid-2">

@@ -3,15 +3,15 @@
 // The words are in helpcontent.js, checked against nav.js and the database policies by tests/help.test.mjs. This only lays
 // them out, and offers each guide only to the roles that have it.
 
-import { db } from '../storage.js?v=472';
-import { esc } from '../fmt.js?v=472';
-import { canOpen } from '../nav.js?v=472';
-import { ROLE_INFO, ACCESS, LEVELS, effectiveAccess, guidesForRole, startProgress } from '../helpcontent.js?v=472';
-import { readSwitches, readLevels } from '../farmswitches.js?v=472';
-import { openSetupWalk } from './setupwalk.js?v=472';
-import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=472';
+import { db } from '../storage.js?v=475';
+import { esc } from '../fmt.js?v=475';
+import { canOpen } from '../nav.js?v=475';
+import { ROLE_INFO, ACCESS, LEVELS, effectiveAccess, guidesForRole, startProgress } from '../helpcontent.js?v=475';
+import { readSwitches, readLevels } from '../farmswitches.js?v=475';
+import { openSetupWalk } from './setupwalk.js?v=475';
+import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=475';
 
-import { pill, ROLE_SHORT } from './levelpill.js?v=472';
+import { pill, ROLE_SHORT } from './levelpill.js?v=475';
 
 const SHORT = ROLE_SHORT;
 

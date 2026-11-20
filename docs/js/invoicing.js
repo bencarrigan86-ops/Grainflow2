@@ -4,8 +4,8 @@
 
 export const INVOICING = [
   { value: '', label: 'Not set' },
-  { value: 'seller', label: 'Seller invoicing (we invoice the buyer)' },
-  { value: 'rcti', label: 'Buyer RCTI (the buyer issues the invoice)' },
+  { value: 'seller', label: 'We invoice' },
+  { value: 'rcti', label: 'Buyer RCTI' },
 ];
 /** The invoicing words a contract confirmation prints. */
 export const INVOICING_ON_CONTRACT = { seller: 'Seller invoicing', rcti: 'Buyer RCTI' };

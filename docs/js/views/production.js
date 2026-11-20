@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=472';
-import { tileIcon } from '../tileicon.js?v=472';
-import { cropCostPerHa } from '../grossmargin.js?v=472';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=472';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=472';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=472';
-import { describeMerge } from '../merge.js?v=472';
-import { renderRelatedMovements } from './movements.js?v=472';
-import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=472';
-import { wireJumps } from '../jump.js?v=472';
-import { openMapSheet } from './farmmap.js?v=472';
-import { openInputsSheet } from './inputs.js?v=472';
-import { openSprayFormSheet, canSpray } from './spray.js?v=472';
-import { stockLevels } from '../inputs.js?v=472';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=472';
-import { openModulesPickedSheet } from './modulespicked.js?v=472';
-import { openBalesBaledSheet } from './balesbaled.js?v=472';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=472';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=472';
+import { db } from '../storage.js?v=475';
+import { tileIcon } from '../tileicon.js?v=475';
+import { cropCostPerHa } from '../grossmargin.js?v=475';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=475';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=475';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=475';
+import { describeMerge } from '../merge.js?v=475';
+import { renderRelatedMovements } from './movements.js?v=475';
+import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=475';
+import { wireJumps } from '../jump.js?v=475';
+import { openMapSheet } from './farmmap.js?v=475';
+import { openInputsSheet } from './inputs.js?v=475';
+import { openSprayFormSheet, canSpray } from './spray.js?v=475';
+import { stockLevels } from '../inputs.js?v=475';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=475';
+import { openModulesPickedSheet } from './modulespicked.js?v=475';
+import { openBalesBaledSheet } from './balesbaled.js?v=475';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=475';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=475';
 
 let unsub = null;
 
@@ -173,7 +173,7 @@ export function openFieldSheet(existing) {
         ${field({ label: 'Field name', id: 'name', value: existing?.name, placeholder: 'e.g. SR1-3' })}
         ${field({ label: 'Farm', id: 'property', value: existing?.property ?? '', list: 'dl-farms', placeholder: 'e.g. Aralu' })}
       </div>
-      <div class="hint" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">The farm is the property it is on. The farm map uses it to label each farm and to show or hide them.</div>
+      <div class="hint" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">The farm is the property it is on. The farm map labels and shows or hides by farm.</div>
       <datalist id="dl-farms">${[...new Set(db.get().fields.map((f) => String(f.property || '').trim()).filter(Boolean))].sort().map((p) => `<option value="${esc(p)}">`).join('')}</datalist>
       ${field({ label: 'Commodity', id: 'commodity', type: 'select', value: existing?.commodityId ?? commodities[0]?.id, options: commodityOptions })}
       <div class="grid-2 area-row">
@@ -202,28 +202,34 @@ export function openFieldSheet(existing) {
         ${field({ label: 'Hectares left', id: 'harvestHaLeft', type: 'number', step: '0.01', value: existing?.harvestHaLeft ?? '', placeholder: 'Blank: not part cut' })}
         <div class="yield-only" ${showYield ? '' : 'hidden'}>${field({ label: 'Yield for those (t/ha)', id: 'harvestLeftYield', type: 'number', step: '0.01', value: existing?.harvestLeftYield ?? '', placeholder: 'Blank: as above' })}</div>
       </div>
-      <div class="hint" style="margin:-4px 0 4px;font-size:12px;color:var(--text-dim)">For a paddock part harvested: the harvest report counts these hectares at their own yield (or the yield estimate below if that is blank), on top of the tonnes already in. Leave the hectares blank to use the whole paddock's estimate less the tickets.</div>
+      <div class="hint" style="margin:-4px 0 4px;font-size:12px;color:var(--text-dim)">For a part-harvested paddock: the harvest report counts these hectares at their own yield (or the estimate if blank), on top of the tonnes already in. Blank hectares: the whole paddock's estimate less the tickets.</div>
       <div class="hint" id="cut-so-far" style="margin:0 0 10px;font-size:12px;color:var(--text-dim)"></div>
       </details>
       ${modulesBlock}${balesBlock}
       <details class="fold feature">
         <summary><div class="feature-head"><h2>Fertiliser planning</h2><div class="sub">Target yield, urea required and applied, nitrogen</div></div></summary>
-      <div class="hint" style="margin:10px 14px 12px;font-size:12px;color:var(--text-dim)">Separate from the yield estimate above — used only for the urea and starter calculations below.</div>
-      <div class="row"><span class="label">Commodity's default target yield</span><span class="value" id="commodity-target-preview">— t/ha</span></div>
-      ${field({ label: 'Target yield override (t/ha)', id: 'targetYieldOverride', type: 'number', step: '0.1', value: existing?.targetYieldOverrideTHa || '', placeholder: 'Commodity default', hint: "Leave blank to use the commodity's default above — type a value here to override it for this field" })}
-      ${field({ label: 'Soil test N (kg/ha)', id: 'soilTestN', type: 'number', step: '1', value: existing?.soilTestNKgHa ?? 0, hint: 'From your soil test report' })}
-      <div class="row"><span class="label">Target yield in use</span><span class="value" id="target-yield-preview">— t/ha</span></div>
-      <div class="row"><span class="label">Soil N (urea equivalent)</span><span class="value" id="soiln-preview">0 kg/ha</span></div>
-      <div class="row"><span class="label">N needed for that yield</span><span class="value" id="n-demand-preview">0 kg N/ha</span></div>
-      <div class="row"><span class="label"><strong>Urea required to hit target</strong></span><span class="value" id="target-urea-preview" style="font-size:18px">0 kg/ha</span></div>
+      <div class="hint" style="margin:10px 14px 8px;font-size:12px;color:var(--text-dim)">Separate from the yield estimate above. Used only for the urea and starter sums.</div>
+      <span id="commodity-target-preview" hidden>— t/ha</span><span id="target-yield-preview" hidden>— t/ha</span>
+      <div class="grid-2">
+        ${field({ label: 'Target yield (t/ha)', id: 'targetYieldOverride', type: 'number', step: '0.1', value: existing?.targetYieldOverrideTHa || '', placeholder: 'Crop default' })}
+        ${field({ label: 'Soil test N (kg/ha)', id: 'soilTestN', type: 'number', step: '1', value: existing?.soilTestNKgHa ?? 0 })}
+      </div>
+      <div class="stat-grid tight">
+        <div class="stat"><div class="n" id="soiln-preview">0 kg/ha</div><div class="l">Soil N as urea</div></div>
+        <div class="stat"><div class="n" id="n-demand-preview">0 kg N/ha</div><div class="l">N needed</div></div>
+        <div class="stat" style="grid-column:1 / -1"><div class="n" id="target-urea-preview">0 kg/ha</div><div class="l">Urea to hit target</div></div>
+      </div>
       <div class="field hint" id="n-unit-warning" style="display:none;margin:6px 0 0;color:var(--danger)"></div>
-      <button class="btn secondary small" id="use-target-urea" style="margin:8px 0">Use as "Urea required" below</button>
-      <hr class="sep" />
-      ${field({ label: 'Urea required (kg/ha)', id: 'ureaReq', type: 'number', step: '1', value: existing?.ureaRequiredKgHa ?? 0 })}
-      <div class="row"><span class="label">Urea applied (kg/ha)</span><span class="value" id="urea-applied-total">0 kg/ha</span></div>
-      <div class="row"><span class="label">N available (soil + applied)</span><span class="value" id="n-available-preview">0 kg N/ha</span></div>
-      <div class="row"><span class="label"><strong>Max yield from N applied</strong></span><span class="value" id="max-yield-preview" style="font-size:18px">— t/ha</span></div>
-      <div class="field hint" style="margin:-2px 0 12px">A ceiling set by nitrogen alone. Water, disease and everything else can take the crop below this; nothing takes it above.</div>
+      <div class="field"><button class="btn secondary small" id="use-target-urea" style="margin:0">Use as "Urea required" below</button></div>
+      <div class="grid-2">
+        ${field({ label: 'Urea required (kg/ha)', id: 'ureaReq', type: 'number', step: '1', value: existing?.ureaRequiredKgHa ?? 0 })}
+        <div class="field"><label>Urea applied</label><div class="readout" id="urea-applied-total">0 kg/ha</div></div>
+      </div>
+      <div class="stat-grid tight">
+        <div class="stat"><div class="n" id="n-available-preview">0 kg N/ha</div><div class="l">N available</div></div>
+        <div class="stat"><div class="n" id="max-yield-preview">— t/ha</div><div class="l">Max yield from N</div></div>
+      </div>
+      <div class="field hint" style="margin:-4px 14px 12px;font-size:11.5px;color:var(--text-dim)">Max yield is a ceiling set by nitrogen alone. Water or disease can only lower it.</div>
       <div id="urea-app-list"></div>
       <button class="btn secondary small" id="toggle-urea-app-form" style="margin-bottom:10px">+ Add application</button>
       <div id="urea-app-form" style="display:none;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
@@ -245,13 +251,14 @@ export function openFieldSheet(existing) {
         ${field({ label: 'Starter required (kg/ha)', id: 'starterReq', type: 'number', step: '1', value: existing?.starterRequiredKgHa ?? 0 })}
         ${field({ label: 'Starter applied (kg/ha)', id: 'starterApp', type: 'number', step: '1', value: existing?.starterAppliedKgHa ?? 0 })}
       </div>
-      <div class="row"><span class="label">Starter left</span><span class="value" id="starter-preview">0.0 t</span></div>
-      <hr class="sep" />
       <div class="grid-2">
         ${field({ label: 'Seed variety', id: 'seedVariety', value: existing?.seedVariety })}
         ${field({ label: 'Seed rate (kg/ha)', id: 'seedRate', type: 'number', step: '1', value: existing?.seedRateKgHa ?? 0 })}
       </div>
-      <div class="row"><span class="label">Seed required</span><span class="value" id="seed-preview">0.0 t</span></div>
+      <div class="stat-grid tight">
+        <div class="stat"><div class="n" id="starter-preview">0.0 t</div><div class="l">Starter left</div></div>
+        <div class="stat"><div class="n" id="seed-preview">0.0 t</div><div class="l">Seed required</div></div>
+      </div>
       </details>
       ${canSetCost ? `<details class="fold feature" ${existing?.gmCostHa != null && existing.gmCostHa !== '' ? 'open' : ''}>
         <summary><div class="feature-head"><h2>Gross margin cost</h2><div class="sub">Cost per hectare for this paddock</div></div></summary>
@@ -372,7 +379,10 @@ export function openFieldSheet(existing) {
       const commodityDefault =Number(selectedCommodity?.targetYieldTHa) || 0;
       commodityTargetPreview.textContent = commodityDefault > 0 ? `${num(commodityDefault, 2)} t/ha` : '— (set one in Settings)';
       const targetCalc = currentTargetCalc();
-      targetYieldPreview.textContent = targetCalc.targetYieldTHa > 0 ? `${num(targetCalc.targetYieldTHa, 2)} t/ha` : '— (set a target yield)';
+      targetYieldPreview.textContent = targetCalc.targetYieldTHa > 0 ? `${num(targetCalc.targetYieldTHa, 2)} t/ha` : '— not set';
+      // the crop's own target shows in the box as its faint default, so nothing needs a line of its own
+      const targetBox = root.querySelector('#targetYieldOverride');
+      if (targetBox) targetBox.placeholder = commodityDefault > 0 ? `${num(commodityDefault, 2)} (crop)` : 'Crop default';
       targetUreaPreview.textContent = `${num(targetCalc.requiredKgHa, 0)} kg/ha`;
 
       // Show the nitrogen demand as well as the urea, because the two differ
@@ -395,7 +405,7 @@ export function openFieldSheet(existing) {
       nAvailablePreview.textContent = `${num(maxYield.nAvailableKgHa, 0)} kg N/ha`;
       maxYieldPreview.textContent = nPerTonne > 0
         ? `${num(maxYield.maxYieldTHa, 2)} t/ha`
-        : '— (set N required on the commodity)';
+        : '— N not set';
       const st = fieldStarter({ areaHa: getNum(root, 'area'), starterRequiredKgHa: getNum(root, 'starterReq'), starterAppliedKgHa: getNum(root, 'starterApp') });
       starterPreview.textContent = tons(st.leftTons);
       const s = fieldSeed({ areaHa: getNum(root, 'area'), seedRateKgHa: getNum(root, 'seedRate') });

@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=472';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=472';
-import { commodityClass } from '../commoditycolor.js?v=472';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=472';
-import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=472';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=472';
-import { withholdingClash } from '../fumigation.js?v=472';
-import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=472';
-import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=472';
-import { cleanStrokes } from '../signature.js?v=472';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=472';
-import { compressAndStampImage } from '../img.js?v=472';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=472';
-import { specText, extraSpecKey } from '../outload.js?v=472';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=472';
-import { pickableSilos } from '../silopick.js?v=472';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=472';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=472';
-import { activeSales } from '../paidsales.js?v=472';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=472';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=472';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=472';
-import { nowTime } from '../loadreport.js?v=472';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=472';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=472';
-import { openGinRunSheet } from './ginrun.js?v=472';
-import { openModuleMoveSheet } from './modulemove.js?v=472';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=472';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=472';
+import { db } from '../storage.js?v=475';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=475';
+import { commodityClass } from '../commoditycolor.js?v=475';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=475';
+import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=475';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=475';
+import { withholdingClash } from '../fumigation.js?v=475';
+import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=475';
+import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=475';
+import { cleanStrokes } from '../signature.js?v=475';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=475';
+import { compressAndStampImage } from '../img.js?v=475';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=475';
+import { specText, extraSpecKey } from '../outload.js?v=475';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=475';
+import { pickableSilos } from '../silopick.js?v=475';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=475';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=475';
+import { activeSales } from '../paidsales.js?v=475';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=475';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=475';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=475';
+import { nowTime } from '../loadreport.js?v=475';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=475';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=475';
+import { openGinRunSheet } from './ginrun.js?v=475';
+import { openModuleMoveSheet } from './modulemove.js?v=475';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=475';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=475';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -598,7 +598,7 @@ export function openMovementSheet(existing, template) {
           ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
           ${field({ label: "Driver's phone", id: 'driverPhone', type: 'tel', value: src?.driverPhone, placeholder: '0412 345 678' })}
         </div>
-        <div class="field" style="margin-top:-6px"><div class="hint">Shown on the load ticket. The company fills in from the freight order, the phone from this driver's last load.</div></div>
+        <div class="field" style="margin-top:-6px"><div class="hint">Shown on the load ticket. Company and phone fill in from the freight order and the driver's last load.</div></div>
         <div class="grid-2">
           ${field({ label: 'Delivery no.', id: 'extTicket', value: existing?.externalTicketNo, placeholder: 'On their ticket' })}
           ${field({ label: 'Manual docket no.', id: 'manualDocket', value: existing?.manualDocketNo, placeholder: 'Our paper docket' })}
@@ -645,17 +645,17 @@ export function openMovementSheet(existing, template) {
         <div class="grid-2">
           ${field({ label: 'Falling number (seconds)', id: 'lq-fn', type: 'number', step: '1', value: existing?.fallingNumber ?? '' })}
           <div id="lq-extra">
-            <div id="lq-oil-wrap">${field({ label: 'Oil (%)', id: 'lq-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '', hint: 'Canola' })}</div>
-            <div id="lq-ret-wrap" hidden>${field({ label: 'Retention (%)', id: 'lq-ret', type: 'number', step: '0.1', value: existing?.retentionPct ?? '', hint: 'Barley: kept above 2.5 mm' })}</div>
+            <div id="lq-oil-wrap">${field({ label: 'Oil (%, canola)', id: 'lq-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '' })}</div>
+            <div id="lq-ret-wrap" hidden>${field({ label: 'Retention (%, barley)', id: 'lq-ret', type: 'number', step: '0.1', value: existing?.retentionPct ?? '', placeholder: 'Kept above 2.5 mm' })}</div>
           </div>
         </div>
-        <div id="lq-ffa-wrap" class="grid-2">${field({ label: 'Free fatty acid (%)', id: 'lq-ffa', type: 'number', step: '0.01', value: existing?.ffaPct ?? '', hint: 'Canola' })}</div>
+        <div id="lq-ffa-wrap" class="grid-2">${field({ label: 'Free fatty acid (%, canola)', id: 'lq-ffa', type: 'number', step: '0.01', value: existing?.ffaPct ?? '' })}</div>
       </details>
       <details class="fold" id="ded-fold" ${cleanDeductions(existing?.deductions).length ? 'open' : ''}>
         <summary><div class="feature-head"><h2>Premium / discount</h2><div class="sub" id="ded-sub">${esc(dedSummary(existing?.deductions))}</div></div></summary>
         <div id="ded-rows">${cleanDeductions(existing?.deductions).map(dedRowHtml).join('')}</div>
         <button type="button" class="btn secondary small" id="ded-add">Add a premium / discount</button>
-        <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">For something the contract does not cover. Tap +/&minus; to make it a discount (minus) or a premium (plus), for example -10 or 4. It moves this load's price on the invoice, with the reason under the load.</div>
+        <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">For something the contract does not cover. Minus is a discount, plus a premium (-10 or 4). It moves this load's price on the invoice, with the reason under the load.</div>
       </details>
       <details class="fold" id="ds-fold" ${existing?.driverSignature ? 'open' : ''}>
         <summary><div class="feature-head"><h2>Driver signature</h2><div class="sub" id="ds-sub">The driver signs on the phone</div></div></summary>

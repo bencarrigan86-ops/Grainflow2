@@ -9,7 +9,7 @@ import { SWITCHES, readSwitches, withSwitch, switchGroups, switchesForArea } fro
 import { ACCESS, LEVELS, effectiveAccess } from '../docs/js/helpcontent.js';
 import { setFarmSwitches, tabsForRole, routesForRole, landingTabFor, canOpen, canSeeYield, canEditLoads, canDelete, canMarkFinal, canSeeBills } from '../docs/js/nav.js';
 import { hubGroups } from '../docs/js/reportshub.js';
-import { setFarmSwitches as setStampedSwitches } from '../docs/js/nav.js?v=472';   // the copy the app's own modules import
+import { setFarmSwitches as setStampedSwitches } from '../docs/js/nav.js?v=475';   // the copy the app's own modules import
 import { stateToRows, rowsToState } from '../docs/js/mapping.js';
 
 let failures = 0;

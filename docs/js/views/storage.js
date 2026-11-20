@@ -1,28 +1,28 @@
-import { db } from '../storage.js?v=472';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=472';
-import { isHay, balesInStorage, describeBales } from '../hay.js?v=472';
-import { modulesReport } from '../modulesreport.js?v=472';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=472';
-import { isTransit } from '../transit.js?v=472';
-import { isOffFarm } from '../offfarm.js?v=472';
-import { paintOffFarmCard, openOffFarmSheet } from './offfarm.js?v=472';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=472';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=472';
-import { hasStorageQuality } from '../mapping.js?v=472';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=472';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=472';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=472';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=472';
-import { renderRelatedMovements } from './movements.js?v=472';
-import { openSiloSetupSheet } from './silosetup.js?v=472';
-import { openCalculatorSheet } from './calculator.js?v=472';
-import { commodityFills } from '../commodityfill.js?v=472';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=472';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=472';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=472';
+import { db } from '../storage.js?v=475';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=475';
+import { isHay, balesInStorage, describeBales } from '../hay.js?v=475';
+import { modulesReport } from '../modulesreport.js?v=475';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=475';
+import { isTransit } from '../transit.js?v=475';
+import { isOffFarm } from '../offfarm.js?v=475';
+import { paintOffFarmCard, openOffFarmSheet } from './offfarm.js?v=475';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=475';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=475';
+import { hasStorageQuality } from '../mapping.js?v=475';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=475';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=475';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=475';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=475';
+import { renderRelatedMovements } from './movements.js?v=475';
+import { openSiloSetupSheet } from './silosetup.js?v=475';
+import { openCalculatorSheet } from './calculator.js?v=475';
+import { commodityFills } from '../commodityfill.js?v=475';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=475';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=475';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=475';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=472';
+} from '../silolayers.js?v=475';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -474,9 +474,9 @@ function qualityFold(existing, commodity) {
         ${field({ label: 'Test weight (kg/hL)', id: 'q-tw', type: 'number', step: '0.1', value: existing?.testWeightKgHl ?? '', hint: 'As measured. Not the volume density below.' })}
       </div>
       ${field({ label: 'Falling number (seconds)', id: 'q-fn', type: 'number', step: '1', value: existing?.fallingNumber ?? '' })}
-      <div id="q-oil-wrap" ${extraSpecKey(commodity?.name) === 'oilPct' || existing?.oilPct != null ? '' : 'hidden'}>${field({ label: 'Oil (%)', id: 'q-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '', hint: 'Canola' })}</div>
-      <div id="q-ffa-wrap" ${extraSpecKey(commodity?.name) === 'oilPct' || existing?.ffaPct != null ? '' : 'hidden'}>${field({ label: 'Free fatty acid (%)', id: 'q-ffa', type: 'number', step: '0.01', value: existing?.ffaPct ?? '', hint: 'Canola' })}</div>
-      <div id="q-ret-wrap" ${extraSpecKey(commodity?.name) === 'retentionPct' || existing?.retentionPct != null ? '' : 'hidden'}>${field({ label: 'Retention (%)', id: 'q-ret', type: 'number', step: '0.1', value: existing?.retentionPct ?? '', hint: 'Barley: kept above 2.5 mm' })}</div>
+      <div id="q-oil-wrap" ${extraSpecKey(commodity?.name) === 'oilPct' || existing?.oilPct != null ? '' : 'hidden'}>${field({ label: 'Oil (%, canola)', id: 'q-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '' })}</div>
+      <div id="q-ffa-wrap" ${extraSpecKey(commodity?.name) === 'oilPct' || existing?.ffaPct != null ? '' : 'hidden'}>${field({ label: 'Free fatty acid (%, canola)', id: 'q-ffa', type: 'number', step: '0.01', value: existing?.ffaPct ?? '' })}</div>
+      <div id="q-ret-wrap" ${extraSpecKey(commodity?.name) === 'retentionPct' || existing?.retentionPct != null ? '' : 'hidden'}>${field({ label: 'Retention (%, barley)', id: 'q-ret', type: 'number', step: '0.1', value: existing?.retentionPct ?? '', placeholder: 'Kept above 2.5 mm' })}</div>
     </details>`;
 }
 
@@ -1265,10 +1265,10 @@ export function openStorageSheet(existing) {
           ${field({ label: 'Capacity (t, optional)', id: 's-capacity', type: 'number', step: '1', value: existing?.capacityTons })}
           <div class="field hint" id="s-cap-line" hidden></div>
           <hr class="sep" />
-          ${field({ label: 'Current filled length (m)', id: 's-length', type: 'number', step: '0.01', value: existing?.length, hint: 'How much of the bunker currently has grain in it' })}
-          ${field({ label: 'Wall height (m, optional)', id: 's-wall', type: 'number', step: '0.01', value: existing?.wallHeight || '', hint: 'Bunkers and sheds can have walls: the grain is held straight up to the top of them, with the peak on top. Leave blank if it has none' })}
+          ${field({ label: 'Current filled length (m)', id: 's-length', type: 'number', step: '0.01', value: existing?.length })}
+          ${field({ label: 'Wall height (m, optional)', id: 's-wall', type: 'number', step: '0.01', value: existing?.wallHeight || '', hint: 'Grain is held straight up to the top of the walls, with the peak on top. Blank if none.' })}
         `}
-        ${field({ label: 'Angle of repose override (°, optional)', id: 's-angle', type: 'number', step: '1', value: existing?.angleOfRepose, hint: 'Leave blank to use the commodity default' })}
+        ${field({ label: 'Angle of repose override (°, optional)', id: 's-angle', type: 'number', step: '1', value: existing?.angleOfRepose, placeholder: 'Commodity default' })}
         ${field({ label: 'Test weight (t/m³, optional)', id: 's-tw', type: 'number', step: '0.001', value: existing?.testWeight })}
         <div class="field hint" id="s-tw-line"></div>
         ${kind === 'silo' ? `
@@ -1433,7 +1433,7 @@ export function openStorageSheet(existing) {
         </div>
         ${pairHint('The farm or site is where it sits, and is shown on the load ticket.')}
         ${field({ label: 'Commodity', id: 's-commodity', type: 'select', value: existing?.commodityId, options: commodityOptions(commodities) })}
-        ${field({ label: 'Unit', id: 's-unit', value: existing?.unitLabel, placeholder: 'e.g. round bales, bales, t', hint: "Whatever this storage counts — shown next to the tracked stock figure" })}
+        ${field({ label: 'Unit', id: 's-unit', value: existing?.unitLabel, placeholder: 'e.g. round bales, bales, t' })}
         ${field({ label: 'Opening / current stock', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0, hint: 'A stocktake baseline — movements adjust from here' })}
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
         ${qualityFold(existing, commodities.find((c) => c.id === existing?.commodityId))}
