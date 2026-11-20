@@ -1,8 +1,8 @@
 // The quick silo and bunker calculator: a one-off sum with nothing saved. It opens from Reports (Silo calculator).
-import { db } from '../storage.js?v=475';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=475';
-import { num } from '../fmt.js?v=475';
-import { openSheet, field, getVal, getNum } from '../ui.js?v=475';
+import { db } from '../storage.js?v=478';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=478';
+import { num } from '../fmt.js?v=478';
+import { openSheet, field, getVal, getNum } from '../ui.js?v=478';
 
 let quickKind = 'silo';
 

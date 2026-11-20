@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=475';
-import { tileIcon } from '../tileicon.js?v=475';
-import { cropCostPerHa } from '../grossmargin.js?v=475';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=475';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=475';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=475';
-import { describeMerge } from '../merge.js?v=475';
-import { renderRelatedMovements } from './movements.js?v=475';
-import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=475';
-import { wireJumps } from '../jump.js?v=475';
-import { openMapSheet } from './farmmap.js?v=475';
-import { openInputsSheet } from './inputs.js?v=475';
-import { openSprayFormSheet, canSpray } from './spray.js?v=475';
-import { stockLevels } from '../inputs.js?v=475';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=475';
-import { openModulesPickedSheet } from './modulespicked.js?v=475';
-import { openBalesBaledSheet } from './balesbaled.js?v=475';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=475';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=475';
+import { db } from '../storage.js?v=478';
+import { tileIcon } from '../tileicon.js?v=478';
+import { cropCostPerHa } from '../grossmargin.js?v=478';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=478';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=478';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=478';
+import { describeMerge } from '../merge.js?v=478';
+import { renderRelatedMovements } from './movements.js?v=478';
+import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=478';
+import { wireJumps } from '../jump.js?v=478';
+import { openMapSheet } from './farmmap.js?v=478';
+import { openInputsSheet } from './inputs.js?v=478';
+import { openSprayFormSheet, canSpray } from './spray.js?v=478';
+import { stockLevels } from '../inputs.js?v=478';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=478';
+import { openModulesPickedSheet } from './modulespicked.js?v=478';
+import { openBalesBaledSheet } from './balesbaled.js?v=478';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=478';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=478';
 
 let unsub = null;
 
@@ -212,15 +212,17 @@ export function openFieldSheet(existing) {
       <span id="commodity-target-preview" hidden>— t/ha</span><span id="target-yield-preview" hidden>— t/ha</span>
       <div class="grid-2">
         ${field({ label: 'Target yield (t/ha)', id: 'targetYieldOverride', type: 'number', step: '0.1', value: existing?.targetYieldOverrideTHa || '', placeholder: 'Crop default' })}
+        <div class="field"><label>N needed</label><div class="readout" id="n-demand-preview">0 kg N/ha</div></div>
+      </div>
+      <div class="grid-2">
         ${field({ label: 'Soil test N (kg/ha)', id: 'soilTestN', type: 'number', step: '1', value: existing?.soilTestNKgHa ?? 0 })}
+        <div class="field"><label>Soil N as urea</label><div class="readout" id="soiln-preview">0 kg/ha</div></div>
       </div>
       <div class="stat-grid tight">
-        <div class="stat"><div class="n" id="soiln-preview">0 kg/ha</div><div class="l">Soil N as urea</div></div>
-        <div class="stat"><div class="n" id="n-demand-preview">0 kg N/ha</div><div class="l">N needed</div></div>
-        <div class="stat" style="grid-column:1 / -1"><div class="n" id="target-urea-preview">0 kg/ha</div><div class="l">Urea to hit target</div></div>
+        <button class="btn secondary small" id="use-target-urea" style="margin:0;width:100%;height:100%;min-height:0">Use as "Urea required" below</button>
+        <div class="stat"><div class="n" id="target-urea-preview">0 kg/ha</div><div class="l">Urea to hit target</div></div>
       </div>
-      <div class="field hint" id="n-unit-warning" style="display:none;margin:6px 0 0;color:var(--danger)"></div>
-      <div class="field"><button class="btn secondary small" id="use-target-urea" style="margin:0">Use as "Urea required" below</button></div>
+      <div class="field hint" id="n-unit-warning" style="display:none;margin:0 0 10px;color:var(--danger)"></div>
       <div class="grid-2">
         ${field({ label: 'Urea required (kg/ha)', id: 'ureaReq', type: 'number', step: '1', value: existing?.ureaRequiredKgHa ?? 0 })}
         <div class="field"><label>Urea applied</label><div class="readout" id="urea-applied-total">0 kg/ha</div></div>

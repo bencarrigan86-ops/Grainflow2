@@ -4,7 +4,7 @@
 // season it was in, the crop, the area, the tonnes (the actual loads once the paddock is on actual, otherwise the
 // estimate) and the yield. This is the rotation question: what went where, and how did it do. Pure.
 
-import { fieldTons } from './derived.js?v=475';
+import { fieldTons } from './derived.js?v=478';
 
 const key = (name) => String(name || '').trim().toLowerCase();
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };

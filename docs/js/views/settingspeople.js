@@ -1,12 +1,12 @@
-import { db } from '../storage.js?v=475';
-import { esc } from '../fmt.js?v=475';
-import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=475';
-import { SWITCHES, switchesForArea, readSwitches, withSwitch, readLevels, withLevel, levelChoices, levelNow, levelRank, LEVEL_AREAS, LEVEL_ROLES, SCREEN_AREAS } from '../farmswitches.js?v=475';
-import { ACCESS, LEVELS, effectiveAccess, pickWarning } from '../helpcontent.js?v=475';
-import { pill, ROLE_SHORT } from './levelpill.js?v=475';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=475';
-import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=475';
-import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=475';
+import { db } from '../storage.js?v=478';
+import { esc } from '../fmt.js?v=478';
+import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=478';
+import { SWITCHES, switchesForArea, readSwitches, withSwitch, readLevels, withLevel, levelChoices, levelNow, levelRank, LEVEL_AREAS, LEVEL_ROLES, SCREEN_AREAS } from '../farmswitches.js?v=478';
+import { ACCESS, LEVELS, effectiveAccess, pickWarning } from '../helpcontent.js?v=478';
+import { pill, ROLE_SHORT } from './levelpill.js?v=478';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=478';
+import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=478';
+import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=478';
 
 // ---------------------------------------------------------------------------
 // People
