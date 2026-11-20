@@ -11,7 +11,7 @@
 //
 // Bills count at their amount ex GST: the GST on a bill is claimed back, so it is owed but is not a cost.
 
-import { saleEconomics } from './derived.js?v=497';
+import { saleEconomics } from './derived.js?v=498';
 
 export const KINDS = [
   { key: 'brokerage', label: 'Brokerage' },

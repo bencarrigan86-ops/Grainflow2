@@ -6,7 +6,7 @@
 // anything; it only reports, so a figure that does not match can be traced to
 // the load that caused it instead of being argued about in totals.
 
-import { refFromNotes, targetOf } from './loadimport.js?v=497';
+import { refFromNotes, targetOf } from './loadimport.js?v=498';
 
 const num = (v) => Number(v) || 0;
 const sum = (legs) => legs.reduce((a, l) => a + num(l.tons), 0);

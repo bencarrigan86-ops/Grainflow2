@@ -2,8 +2,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { APP_VERSION } from '../docs/js/version.js?v=497';
-import { hasStoredLogin, decideOfflineSession } from '../docs/js/offlinestart.js?v=497';
+import { APP_VERSION } from '../docs/js/version.js?v=498';
+import { hasStoredLogin, decideOfflineSession } from '../docs/js/offlinestart.js?v=498';
 import { buildPrecache, listFiles } from '../tools/make-precache.mjs';
 
 const docs = new URL('../docs/', import.meta.url);

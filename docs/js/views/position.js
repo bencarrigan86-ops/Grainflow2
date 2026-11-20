@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=497';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=497';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=497';
-import { payablesCost } from '../payables.js?v=497';
-import { commodityClass } from '../commoditycolor.js?v=497';
-import { hasCommodityOrder } from '../commodityorder.js?v=497';
-import { startProgress, missingLine } from '../helpcontent.js?v=497';
-import { openSetupWalk } from './setupwalk.js?v=497';
-import { attentionItems } from '../attention.js?v=497';
-import { lastBackup } from '../backup.js?v=497';
-import { supportWaitingCount } from './support.js?v=497';
-import { todayLocal, dmy } from '../fmt.js?v=497';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=497';
-import { openSheet, closeSheet } from '../ui.js?v=497';
-import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=497';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=497';
-import { viewPdf } from '../pdfview.js?v=497';
+import { db } from '../storage.js?v=498';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=498';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=498';
+import { payablesCost } from '../payables.js?v=498';
+import { commodityClass } from '../commoditycolor.js?v=498';
+import { hasCommodityOrder } from '../commodityorder.js?v=498';
+import { startProgress, missingLine } from '../helpcontent.js?v=498';
+import { openSetupWalk } from './setupwalk.js?v=498';
+import { attentionItems } from '../attention.js?v=498';
+import { lastBackup } from '../backup.js?v=498';
+import { supportWaitingCount } from './support.js?v=498';
+import { todayLocal, dmy } from '../fmt.js?v=498';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=498';
+import { openSheet, closeSheet } from '../ui.js?v=498';
+import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=498';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=498';
+import { viewPdf } from '../pdfview.js?v=498';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -108,7 +108,7 @@ function paint(root) {
   root.querySelector('#tile-figures')?.addEventListener('click', () => openTileSheet(() => { root.querySelector('.pos-tiles').innerHTML = cropTiles(rows); bindCrops(); }));
   root.querySelector('#position-pdf')?.addEventListener('click', () => openPdfSheet({ rows, totals, overheads, pl, cost }));
   root.querySelectorAll('[data-start-go]').forEach((el) => el.addEventListener('click', () => { location.hash = `#/${el.dataset.startGo}`; }));
-  root.querySelector('#attention-fold')?.addEventListener('toggle', (e) => { root.querySelector('#attn-sub').hidden = e.target.open; try { localStorage.setItem(ATTN_KEY, e.target.open ? '1' : '0'); } catch { /* opens again next time */ } });
+  root.querySelector('#attention-fold')?.addEventListener('toggle', (e) => { const sub = root.querySelector('#attn-sub'); if (sub) sub.hidden = e.target.open; try { localStorage.setItem(ATTN_KEY, e.target.open ? '1' : '0'); } catch { /* opens again next time */ } });
   root.querySelectorAll('[data-attn]').forEach((el) => el.addEventListener('click', () => {
     const go = el.dataset.attn;
     if (go === 'money') openMoneySheet();
