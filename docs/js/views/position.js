@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=494';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=494';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=494';
-import { payablesCost } from '../payables.js?v=494';
-import { commodityClass } from '../commoditycolor.js?v=494';
-import { hasCommodityOrder } from '../commodityorder.js?v=494';
-import { startProgress, missingLine } from '../helpcontent.js?v=494';
-import { openSetupWalk } from './setupwalk.js?v=494';
-import { attentionItems } from '../attention.js?v=494';
-import { lastBackup } from '../backup.js?v=494';
-import { supportWaitingCount } from './support.js?v=494';
-import { todayLocal, dmy } from '../fmt.js?v=494';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=494';
-import { openSheet, closeSheet } from '../ui.js?v=494';
-import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=494';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=494';
-import { viewPdf } from '../pdfview.js?v=494';
+import { db } from '../storage.js?v=495';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=495';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=495';
+import { payablesCost } from '../payables.js?v=495';
+import { commodityClass } from '../commoditycolor.js?v=495';
+import { hasCommodityOrder } from '../commodityorder.js?v=495';
+import { startProgress, missingLine } from '../helpcontent.js?v=495';
+import { openSetupWalk } from './setupwalk.js?v=495';
+import { attentionItems } from '../attention.js?v=495';
+import { lastBackup } from '../backup.js?v=495';
+import { supportWaitingCount } from './support.js?v=495';
+import { todayLocal, dmy } from '../fmt.js?v=495';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=495';
+import { openSheet, closeSheet } from '../ui.js?v=495';
+import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=495';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=495';
+import { viewPdf } from '../pdfview.js?v=495';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 

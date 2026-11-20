@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=494';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=494';
-import { commodityClass } from '../commoditycolor.js?v=494';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=494';
-import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=494';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=494';
-import { withholdingClash } from '../fumigation.js?v=494';
-import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=494';
-import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=494';
-import { cleanStrokes } from '../signature.js?v=494';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=494';
-import { compressAndStampImage } from '../img.js?v=494';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=494';
-import { specText, extraSpecKey } from '../outload.js?v=494';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=494';
-import { pickableSilos } from '../silopick.js?v=494';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=494';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=494';
-import { activeSales } from '../paidsales.js?v=494';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=494';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=494';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=494';
-import { nowTime } from '../loadreport.js?v=494';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=494';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=494';
-import { openGinRunSheet } from './ginrun.js?v=494';
-import { openModuleMoveSheet } from './modulemove.js?v=494';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=494';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=494';
+import { db } from '../storage.js?v=495';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=495';
+import { commodityClass } from '../commoditycolor.js?v=495';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=495';
+import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=495';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=495';
+import { withholdingClash } from '../fumigation.js?v=495';
+import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=495';
+import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=495';
+import { cleanStrokes } from '../signature.js?v=495';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=495';
+import { compressAndStampImage } from '../img.js?v=495';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=495';
+import { specText, extraSpecKey } from '../outload.js?v=495';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=495';
+import { pickableSilos } from '../silopick.js?v=495';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=495';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=495';
+import { activeSales } from '../paidsales.js?v=495';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=495';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=495';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=495';
+import { nowTime } from '../loadreport.js?v=495';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=495';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=495';
+import { openGinRunSheet } from './ginrun.js?v=495';
+import { openModuleMoveSheet } from './modulemove.js?v=495';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=495';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=495';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -644,12 +644,10 @@ export function openMovementSheet(existing, template) {
         </div>
         <div class="grid-2">
           ${field({ label: 'Falling number (seconds)', id: 'lq-fn', type: 'number', step: '1', value: existing?.fallingNumber ?? '' })}
-          <div id="lq-extra">
-            <div id="lq-oil-wrap">${field({ label: 'Oil (%, canola)', id: 'lq-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '' })}</div>
-            <div id="lq-ret-wrap" hidden>${field({ label: 'Retention (%, barley)', id: 'lq-ret', type: 'number', step: '0.1', value: existing?.retentionPct ?? '', placeholder: 'Kept above 2.5 mm' })}</div>
-          </div>
+          <div id="lq-oil-wrap">${field({ label: 'Oil (%, canola)', id: 'lq-oil', type: 'number', step: '0.1', value: existing?.oilPct ?? '' })}</div>
+          <div id="lq-ffa-wrap">${field({ label: 'Free fatty acid (%, canola)', id: 'lq-ffa', type: 'number', step: '0.01', value: existing?.ffaPct ?? '' })}</div>
+          <div id="lq-ret-wrap" hidden>${field({ label: 'Retention (%, barley)', id: 'lq-ret', type: 'number', step: '0.1', value: existing?.retentionPct ?? '', placeholder: 'Kept above 2.5 mm' })}</div>
         </div>
-        <div id="lq-ffa-wrap" class="grid-2">${field({ label: 'Free fatty acid (%, canola)', id: 'lq-ffa', type: 'number', step: '0.01', value: existing?.ffaPct ?? '' })}</div>
       </details>
       <details class="fold" id="ded-fold" ${cleanDeductions(existing?.deductions).length ? 'open' : ''}>
         <summary><div class="feature-head"><h2>Premium / discount</h2><div class="sub" id="ded-sub">${esc(dedSummary(existing?.deductions))}</div></div></summary>

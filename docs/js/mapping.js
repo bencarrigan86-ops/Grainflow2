@@ -27,18 +27,18 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=494';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=494';
-import { cleanCottonTerms } from './cottonkinds.js?v=494';
-import { cleanLate } from './cottonlate.js?v=494';
-import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=494';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=494';
-import { cleanPicked } from './modulespicked.js?v=494';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=494';
-import { cleanHistory, hasHistory } from './pricehistory.js?v=494';
-import { cleanOffFarm } from './offfarm.js?v=494';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=494';
-import { cleanDriverSignature } from './driversign.js?v=494';
+import { cleanGradeOptions } from './gradeprice.js?v=495';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=495';
+import { cleanCottonTerms } from './cottonkinds.js?v=495';
+import { cleanLate } from './cottonlate.js?v=495';
+import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=495';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=495';
+import { cleanPicked } from './modulespicked.js?v=495';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=495';
+import { cleanHistory, hasHistory } from './pricehistory.js?v=495';
+import { cleanOffFarm } from './offfarm.js?v=495';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=495';
+import { cleanDriverSignature } from './driversign.js?v=495';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
