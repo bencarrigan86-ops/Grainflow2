@@ -4,26 +4,26 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { canSeeBills, canSeeOrders } from '../nav.js?v=506';
-import { db } from '../storage.js?v=506';
-import { openSheet, openOver, closeSheet } from '../ui.js?v=506';
-import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=506';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=506';
-import { windowText } from '../orders.js?v=506';
-import { openOrderSheet } from './orders.js?v=506';
-import { openInvoiceListSheet } from './invoice.js?v=506';
-import { renderPayables, returnToAfterBill } from './payables.js?v=506';
-import { openXeroSheet } from './xero.js?v=506';
-import { cashflow } from '../cashflow.js?v=506';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=506';
-import { buyerStatements, statementPdf } from '../statement.js?v=506';
-import { buyerExposure } from '../exposure.js?v=506';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=506';
-import { viewPdf } from '../pdfview.js?v=506';
-import { exposurePdf, EXPOSURE_COLUMNS, DEFAULT_EXPOSURE_COLUMNS, EXPOSURE_PRESETS } from '../exposurepdf.js?v=506';
-import { emailIn } from '../vendordec.js?v=506';
-import { invoiceLabel } from '../adjustment.js?v=506';
-import { matchesAll, amountText } from '../listsearch.js?v=506';
+import { canSeeBills, canSeeOrders } from '../nav.js?v=507';
+import { db } from '../storage.js?v=507';
+import { openSheet, openOver, closeSheet } from '../ui.js?v=507';
+import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=507';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=507';
+import { windowText } from '../orders.js?v=507';
+import { openOrderSheet } from './orders.js?v=507';
+import { openInvoiceListSheet } from './invoice.js?v=507';
+import { renderPayables, returnToAfterBill } from './payables.js?v=507';
+import { openXeroSheet } from './xero.js?v=507';
+import { cashflow } from '../cashflow.js?v=507';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=507';
+import { buyerStatements, statementPdf } from '../statement.js?v=507';
+import { buyerExposure } from '../exposure.js?v=507';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=507';
+import { viewPdf } from '../pdfview.js?v=507';
+import { exposurePdf, EXPOSURE_COLUMNS, DEFAULT_EXPOSURE_COLUMNS, EXPOSURE_PRESETS } from '../exposurepdf.js?v=507';
+import { emailIn } from '../vendordec.js?v=507';
+import { invoiceLabel } from '../adjustment.js?v=507';
+import { matchesAll, amountText } from '../listsearch.js?v=507';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);

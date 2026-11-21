@@ -1,8 +1,8 @@
 // The quick silo and bunker calculator: a one-off sum with nothing saved. It opens from Reports (Silo calculator).
-import { db } from '../storage.js?v=506';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=506';
-import { num } from '../fmt.js?v=506';
-import { openSheet, field, getVal, getNum } from '../ui.js?v=506';
+import { db } from '../storage.js?v=507';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=507';
+import { num } from '../fmt.js?v=507';
+import { openSheet, field, getVal, getNum } from '../ui.js?v=507';
 
 let quickKind = 'silo';
 
@@ -153,7 +153,7 @@ function tarpResultHTML(t) {
 function quickResultHTML(tonsVal, extraRows) {
   return `
     <hr class="sep" />
-    <div class="row"><span class="label"><strong>Tons</strong></span><span class="value" style="font-size:22px">${num(tonsVal, 1)} t</span></div>
+    <div class="row"><span class="label"><strong>Tonnes</strong></span><span class="value" style="font-size:22px">${num(tonsVal, 1)} t</span></div>
     ${extraRows.map(([l, v]) => `<div class="row"><span class="label">${l}</span><span class="value">${v}</span></div>`).join('')}
   `;
 }

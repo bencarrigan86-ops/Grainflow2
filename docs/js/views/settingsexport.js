@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=506';
-import { num, esc, todayLocal } from '../fmt.js?v=506';
-import { openSheet } from '../ui.js?v=506';
-import { cleanDriverSignature, signedWhen } from '../driversign.js?v=506';
-import { exportRowsAsCSV } from '../csv.js?v=506';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=506';
-import { endpointLabel } from './movements.js?v=506';
-import { layersForStorage } from '../outload.js?v=506';
-import { traceLoads, traceText } from '../trace.js?v=506';
-import { holdings, totalHeld } from '../offfarm.js?v=506';
-import { kindLabel, billTotal } from '../payables.js?v=506';
-import { orderState, STATE_LABEL } from '../orders.js?v=506';
-import { fieldHarvest } from '../harvest.js?v=506';
-import { capacityFor } from '../storagecapacity.js?v=506';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=506';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=506';
+import { db } from '../storage.js?v=507';
+import { num, esc, todayLocal } from '../fmt.js?v=507';
+import { openSheet } from '../ui.js?v=507';
+import { cleanDriverSignature, signedWhen } from '../driversign.js?v=507';
+import { exportRowsAsCSV } from '../csv.js?v=507';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=507';
+import { endpointLabel } from './movements.js?v=507';
+import { layersForStorage } from '../outload.js?v=507';
+import { traceLoads, traceText } from '../trace.js?v=507';
+import { holdings, totalHeld } from '../offfarm.js?v=507';
+import { kindLabel, billTotal } from '../payables.js?v=507';
+import { orderState, STATE_LABEL } from '../orders.js?v=507';
+import { fieldHarvest } from '../harvest.js?v=507';
+import { capacityFor } from '../storagecapacity.js?v=507';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=507';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=507';
 
 function commodityName(commodities, id) {
   return commodities.find((c) => c.id === id)?.name || '';
@@ -89,9 +89,9 @@ function exportSalesCSV(year, stamp) {
     { label: 'Location', get: (s) => s.location ?? '' },
     { label: 'Delivery start', get: (s) => s.deliveryStart ?? '' },
     { label: 'Delivery end', get: (s) => s.deliveryEnd ?? '' },
-    { label: 'Tons contracted', get: (s) => s.tons ?? '' },
-    { label: 'Tons delivered', get: (s) => num(saleEconomics(s, movements).tonsDelivered, 2) },
-    { label: 'Tons due', get: (s) => num(saleEconomics(s, movements).tonsDue, 2) },
+    { label: 'Tonnes contracted', get: (s) => s.tons ?? '' },
+    { label: 'Tonnes delivered', get: (s) => num(saleEconomics(s, movements).tonsDelivered, 2) },
+    { label: 'Tonnes due', get: (s) => num(saleEconomics(s, movements).tonsDue, 2) },
     { label: 'Price ($/t)', get: (s) => s.price ?? '' },
     { label: 'Freight ($/t)', get: (s) => s.freight ?? '' },
     { label: 'Premium/Discount ($/t)', get: (s) => s.premiumDiscount ?? '' },
@@ -138,7 +138,7 @@ function exportMovementsCSV(year, stamp) {
     { label: 'Date', get: (m) => m.date ?? '' },
     { label: 'From', get: (m) => endpointsLabel(m.froms, data) },
     { label: 'To', get: (m) => endpointsLabel(m.tos, data) },
-    { label: 'Tons', get: (m) => m.tons ?? '' },
+    { label: 'Tonnes', get: (m) => m.tons ?? '' },
     { label: 'Truck rego', get: (m) => m.truckRego ?? '' },
     { label: 'Transport company', get: (m) => m.truckCompany ?? '' },
     { label: 'Driver signed', get: (m) => signedWhen(cleanDriverSignature(m.driverSignature)) },
@@ -239,7 +239,7 @@ function exportInvoicesCSV(year, stamp) {
     { label: 'Issue date', get: (i) => i.issueDate ?? '' },
     { label: 'Due date', get: (i) => i.dueDate ?? '' },
     { label: 'Sale', get: (i) => saleLabel(i.saleId) },
-    { label: 'Total tons', get: (i) => num(i.totalTons, 2) },
+    { label: 'Total tonnes', get: (i) => num(i.totalTons, 2) },
     { label: 'Subtotal ex GST ($)', get: (i) => num(i.subtotalExGST, 2) },
     { label: 'Freight total ($)', get: (i) => num(i.freightTotal, 2) },
     { label: 'Levies ($)', get: (i) => num(i.levies, 2) },

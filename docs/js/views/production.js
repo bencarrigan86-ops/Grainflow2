@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=506';
-import { tileIcon } from '../tileicon.js?v=506';
-import { cropCostPerHa } from '../grossmargin.js?v=506';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=506';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=506';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=506';
-import { describeMerge } from '../merge.js?v=506';
-import { renderRelatedMovements } from './movements.js?v=506';
-import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=506';
-import { wireJumps } from '../jump.js?v=506';
-import { openMapSheet } from './farmmap.js?v=506';
-import { openInputsSheet } from './inputs.js?v=506';
-import { openSprayFormSheet, canSpray } from './spray.js?v=506';
-import { stockLevels } from '../inputs.js?v=506';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=506';
-import { openModulesPickedSheet } from './modulespicked.js?v=506';
-import { openBalesBaledSheet } from './balesbaled.js?v=506';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=506';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=506';
+import { db } from '../storage.js?v=507';
+import { tileIcon } from '../tileicon.js?v=507';
+import { cropCostPerHa } from '../grossmargin.js?v=507';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=507';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=507';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=507';
+import { describeMerge } from '../merge.js?v=507';
+import { renderRelatedMovements } from './movements.js?v=507';
+import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=507';
+import { wireJumps } from '../jump.js?v=507';
+import { openMapSheet } from './farmmap.js?v=507';
+import { openInputsSheet } from './inputs.js?v=507';
+import { openSprayFormSheet, canSpray } from './spray.js?v=507';
+import { stockLevels } from '../inputs.js?v=507';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=507';
+import { openModulesPickedSheet } from './modulespicked.js?v=507';
+import { openBalesBaledSheet } from './balesbaled.js?v=507';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=507';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=507';
 
 let unsub = null;
 
@@ -54,7 +54,7 @@ function paint(root) {
         <h2><span class="dot report"></span>By commodity</h2>
         <div class="table-scroll">
           <table>
-            <thead><tr><th>Commodity</th><th>Area</th><th>% of area</th>${showYield ? '<th>Yield</th><th>Tons</th>' : ''}</tr></thead>
+            <thead><tr><th>Commodity</th><th>Area</th><th>% of area</th>${showYield ? '<th>Yield</th><th>Tonnes</th>' : ''}</tr></thead>
             <tbody>
               ${rollup.map((r) => `
                 <tr class="jump-row" data-jump="grp-${esc(r.commodity.id)}">
@@ -193,7 +193,7 @@ export function openFieldSheet(existing) {
         </div>
         <div class="actual-callout" id="actual-hint"></div>
       </div>
-      <div style="display:none"><span id="tons-label">Total tons</span><span id="tons-preview">0.0 t</span><span id="actual-so-far">&ndash;</span></div>
+      <div style="display:none"><span id="tons-label">Total tonnes</span><span id="tons-preview">0.0 t</span><span id="actual-so-far">&ndash;</span></div>
       </div>
       <details class="fold feature">
         <summary><div class="feature-head"><h2>Harvest</h2><div class="sub">${existing?.harvestDone ? 'Finished: all of it is in' : (existing?.harvestHaLeft != null && existing.harvestHaLeft !== '' ? `Part harvested: ${num(existing.harvestHaLeft, 1)} ha left to cut` : 'Finished, or part harvested')}</div></div></summary>
@@ -272,7 +272,7 @@ export function openFieldSheet(existing) {
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
       ${existing && ['owner', 'manager'].includes(db.getRole()) && db.get().fields.length > 1 ? `<button class="btn secondary" id="merge-field" style="margin-top:12px">Merge another paddock into this one&hellip;</button>` : ''}
       ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
-      <div class="save-bar"><div class="total" ${showYield ? '' : 'hidden'}><div class="l">Total tons</div><div class="v" id="tons-bar">—</div></div><button class="btn" id="save">Save</button></div>
+      <div class="save-bar"><div class="total" ${showYield ? '' : 'hidden'}><div class="l">Total tonnes</div><div class="v" id="tons-bar">—</div></div><button class="btn" id="save">Save</button></div>
     `;
     if (existing) renderRelatedMovements(root.querySelector('#related-movements'), 'field', existing.id, { collapsed: true });
 
@@ -344,7 +344,7 @@ export function openFieldSheet(existing) {
       const unit = isBales ? 'bales' : 't';
       const unitPerHa = isBales ? 'bales/ha' : 't/ha';
       yieldLabelEl.textContent = `Yield estimate (${unitPerHa})`;
-      tonsLabelEl.textContent = isBales ? 'Total bales' : 'Total tons';
+      tonsLabelEl.textContent = isBales ? 'Total bales' : 'Total tonnes';
       {
         const a = getNum(root, 'area');
         const actualRate = a > 0 ? actualTons / a : 0;
@@ -636,7 +636,7 @@ function historyHtml(existing, showYield) {
     <details class="fold" style="margin:12px 0">
       <summary><div><h2>History</h2><div class="sub">${esc(rotationLine(rows))}</div></div></summary>
       <div class="table-scroll"><table>
-        <thead><tr><th style="text-align:left">Season</th><th style="text-align:left">Crop</th><th>Ha</th>${showYield ? '<th>t/ha</th><th>Tons</th>' : ''}</tr></thead>
+        <thead><tr><th style="text-align:left">Season</th><th style="text-align:left">Crop</th><th>Ha</th>${showYield ? '<th>t/ha</th><th>Tonnes</th>' : ''}</tr></thead>
         <tbody>${rows.map((r) => `<tr><td style="text-align:left">${esc(r.year)}</td><td style="text-align:left">${esc(r.crop || '–')}</td><td>${num(r.areaHa, 0)}</td>${showYield ? `<td>${num(r.yieldTHa, 2)}</td><td>${num(r.tons, 0)}${r.actual ? '' : ' <span class="meta">est</span>'}</td>` : ''}</tr>`).join('')}</tbody>
       </table></div>
       ${again.length ? `<div class="hint" style="margin-top:6px">${esc(rows.find((r) => r.year === again[0][1]).crop)} two seasons running: ${again.map(([a, b]) => `${esc(a)} and ${esc(b)}`).join('; ')}.</div>` : ''}

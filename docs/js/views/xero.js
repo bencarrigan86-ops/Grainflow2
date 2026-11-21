@@ -2,11 +2,11 @@
 // (Business > Invoices > Import for sales invoices, Business > Bills to pay > Import for bills). The account codes
 // are the accountant's, so they are asked for here and remembered on this device. The files are made in xero.js.
 
-import { db } from '../storage.js?v=506';
-import { openSheet, field, getVal } from '../ui.js?v=506';
-import { esc, todayLocal } from '../fmt.js?v=506';
-import { downloadCSV } from '../csv.js?v=506';
-import { xeroInvoices, xeroAdjustments, xeroBills, xeroCsv, DEFAULT_CODES, financialYearStart } from '../xero.js?v=506';
+import { db } from '../storage.js?v=507';
+import { openSheet, field, getVal } from '../ui.js?v=507';
+import { esc, todayLocal } from '../fmt.js?v=507';
+import { downloadCSV } from '../csv.js?v=507';
+import { xeroInvoices, xeroAdjustments, xeroBills, xeroCsv, DEFAULT_CODES, financialYearStart } from '../xero.js?v=507';
 
 const CODES_KEY = 'grainflow.xero.codes';
 const loadCodes = () => { try { return { ...DEFAULT_CODES, ...JSON.parse(localStorage.getItem(CODES_KEY) || '{}') }; } catch { return { ...DEFAULT_CODES }; } };

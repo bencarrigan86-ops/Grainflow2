@@ -9,8 +9,8 @@
 //
 // Pure. The averaging is the same the outload predictor uses (outload.js).
 
-import { SPECS, specOf, summarise } from './outload.js?v=506';
-import { gradeMix, mixText, hasGrades } from './silolayers.js?v=506';
+import { SPECS, specOf, summarise } from './outload.js?v=507';
+import { gradeMix, mixText, hasGrades } from './silolayers.js?v=507';
 
 const dpOf = Object.fromEntries(SPECS.map((s) => [s.key, s.dp]));
 const round = (v, dp) => Math.round(v * 10 ** dp) / 10 ** dp;

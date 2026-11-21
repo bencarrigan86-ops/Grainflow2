@@ -4,10 +4,10 @@
 // Half of it is dollars — position value and profit — and the roles that cannot
 // see Position are the ones the app keeps money from.
 
-import { db } from '../storage.js?v=506';
-import { positionRows, positionAtYield, positionTotals, farmProfitLoss, paddockAtYield } from '../derived.js?v=506';
-import { payablesCost } from '../payables.js?v=506';
-import { num, money, esc } from '../fmt.js?v=506';
+import { db } from '../storage.js?v=507';
+import { positionRows, positionAtYield, positionTotals, farmProfitLoss, paddockAtYield } from '../derived.js?v=507';
+import { payablesCost } from '../payables.js?v=507';
+import { num, money, esc } from '../fmt.js?v=507';
 
 // Starts folded away: it is a what-if, not the first thing the Yield tab is for.
 // Kept across repaints so a sync arriving does not change what you left open.
@@ -57,7 +57,7 @@ export function sensitivityCard() {
         <button type="button" class="btn secondary small" id="sens-toggle" aria-expanded="${sensOpen}" aria-controls="sens-body" style="margin-left:auto">${sensOpen ? 'Collapse' : 'Expand'}</button></h2>
       <div id="sens-body" ${sensOpen ? '' : 'hidden'}>
         <div class="segmented" id="sens-mode" style="margin-bottom:10px">
-          <button type="button" data-mode="tons" class="${sensMode === 'tons' ? 'active' : ''}">Total tons</button>
+          <button type="button" data-mode="tons" class="${sensMode === 'tons' ? 'active' : ''}">Total tonnes</button>
           <button type="button" data-mode="yield" class="${sensMode === 'yield' ? 'active' : ''}">Yield (t/ha)</button>
         </div>
         <div class="field" style="margin-bottom:10px">
@@ -118,7 +118,7 @@ function paintSensitivity(root) {
   }).join('');
   // Whole-farm yield is tonnes over hectares, not an average of the rows' yields.
   const totalRow = `<tr><td>${asYield ? 'Farm' : 'Total'}</td>${cols.map((c) => cell(c, asYield ? num(areaOf(c.rows) > 0 ? c.t.productionTons / areaOf(c.rows) : 0, 2) : num(c.t.productionTons, 0))).join('')}</tr>`;
-  card.querySelector('#sens-tons').innerHTML = `<thead><tr><th>${asYield ? 't/ha' : 'Tons'}</th>${STEPS.map((p) => `<th>${stepLabel(p)}</th>`).join('')}</tr></thead><tbody>${tonRows}</tbody><tfoot>${totalRow}</tfoot>`;
+  card.querySelector('#sens-tons').innerHTML = `<thead><tr><th>${asYield ? 't/ha' : 'Tonnes'}</th>${STEPS.map((p) => `<th>${stepLabel(p)}</th>`).join('')}</tr></thead><tbody>${tonRows}</tbody><tfoot>${totalRow}</tfoot>`;
 
   // ---- money: one row per yield change ------------------------------------
   const asEntered = cols.find((c) => c.pct === 0);

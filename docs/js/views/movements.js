@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=506';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=506';
-import { commodityClass } from '../commoditycolor.js?v=506';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=506';
-import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=506';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=506';
-import { withholdingClash } from '../fumigation.js?v=506';
-import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=506';
-import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=506';
-import { cleanStrokes } from '../signature.js?v=506';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=506';
-import { compressAndStampImage } from '../img.js?v=506';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=506';
-import { specText, extraSpecKey } from '../outload.js?v=506';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=506';
-import { pickableSilos } from '../silopick.js?v=506';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=506';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=506';
-import { activeSales } from '../paidsales.js?v=506';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=506';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=506';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=506';
-import { nowTime } from '../loadreport.js?v=506';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=506';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=506';
-import { openGinRunSheet } from './ginrun.js?v=506';
-import { openModuleMoveSheet } from './modulemove.js?v=506';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=506';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=506';
+import { db } from '../storage.js?v=507';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=507';
+import { commodityClass } from '../commoditycolor.js?v=507';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=507';
+import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=507';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=507';
+import { withholdingClash } from '../fumigation.js?v=507';
+import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=507';
+import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=507';
+import { cleanStrokes } from '../signature.js?v=507';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=507';
+import { compressAndStampImage } from '../img.js?v=507';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=507';
+import { specText, extraSpecKey } from '../outload.js?v=507';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=507';
+import { pickableSilos } from '../silopick.js?v=507';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=507';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=507';
+import { activeSales } from '../paidsales.js?v=507';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=507';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=507';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=507';
+import { nowTime } from '../loadreport.js?v=507';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=507';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=507';
+import { openGinRunSheet } from './ginrun.js?v=507';
+import { openModuleMoveSheet } from './modulemove.js?v=507';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=507';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=507';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -367,7 +367,7 @@ function addFromRow(container, ctx, onChange, existingFrom) {
         <select class="from-select"></select>
       </div>
       <div class="field" style="flex:1;margin-bottom:0">
-        <label>Tons</label>
+        <label>Tonnes</label>
         <input type="number" step="0.01" inputmode="decimal" class="from-tons" value="${existingFrom?.tons ?? ''}" />
       </div>
       <button type="button" class="btn ghost-danger small from-remove" style="width:auto;margin:0;padding:8px 12px" aria-label="Remove this source">&times;</button>
@@ -430,7 +430,7 @@ function addToRow(container, ctx, onChange, existingTo) {
       <select class="to-select"></select>
     </div>
     <div class="field" style="flex:1;margin-bottom:0">
-      <label>Tons</label>
+      <label>Tonnes</label>
       <input type="number" step="0.01" inputmode="decimal" class="to-tons" value="${existingTo?.tons ?? ''}" />
     </div>
     <button type="button" class="btn ghost-danger small to-remove" style="width:auto;margin:0;padding:8px 12px" aria-label="Remove this destination">&times;</button>

@@ -6,18 +6,18 @@
 // contract or a storage, which should add up to the bales pressed. The gin's invoice is saved as a bill when we pay it
 // (see ginning.js).
 
-import { db } from '../storage.js?v=506';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=506';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=506';
-import { activeSales } from '../paidsales.js?v=506';
-import { isGinContract, cottonKind, ginContracts, cleanCottonTerms, kindSummary } from '../cottonkinds.js?v=506';
-import { storageLedgerStock, movementTonsToSale } from '../derived.js?v=506';
-import { offerGinYard } from './modulemove.js?v=506';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=506';
+import { db } from '../storage.js?v=507';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=507';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=507';
+import { activeSales } from '../paidsales.js?v=507';
+import { isGinContract, cottonKind, ginContracts, cleanCottonTerms, kindSummary } from '../cottonkinds.js?v=507';
+import { storageLedgerStock, movementTonsToSale } from '../derived.js?v=507';
+import { offerGinYard } from './modulemove.js?v=507';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=507';
 import {
   STD_BALE_KG, cleanGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice,
   baleRangeCount, allocateLint, allocationProblems, padOffBy,
-} from '../ginning.js?v=506';
+} from '../ginning.js?v=507';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 

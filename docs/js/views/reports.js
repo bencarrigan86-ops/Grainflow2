@@ -1,38 +1,38 @@
-import { db } from '../storage.js?v=506';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=506';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT, areaShare, productionSummary } from '../derived.js?v=506';
-import { fertPdf } from '../fertpdf.js?v=506';
-import { seedPdf } from '../seedpdf.js?v=506';
-import { yieldPdf } from '../yieldpdf.js?v=506';
-import { harvestPdf } from '../harvestpdf.js?v=506';
-import { modulesPdf } from '../modulespdf.js?v=506';
-import { modulesReport } from '../modulesreport.js?v=506';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=506';
-import { viewPdf } from '../pdfview.js?v=506';
-import { num, tons, esc, money, todayLocal, dmy } from '../fmt.js?v=506';
-import { field, getVal, getNum } from '../ui.js?v=506';
-import { canSeeYield, canOpen, canSeePrices } from '../nav.js?v=506';
-import { gmReport } from '../grossmargin.js?v=506';
-import { gmPdf } from '../gmpdf.js?v=506';
-import { levelFor } from '../helpcontent.js?v=506';
-import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=506';
-import { openMoneySheet, openMtmSheet, openDeliveriesSheet } from './outstanding.js?v=506';
-import { openOptimiserSheet } from './optimiser.js?v=506';
-import { openCalculatorSheet } from './calculator.js?v=506';
-import { openEofySheet } from './eofy.js?v=506';
-import { openPricesSheet } from './prices.js?v=506';
-import { openRotationSheet } from './rotation.js?v=506';
-import { openAveragesSheet } from './averages.js?v=506';
-import { openLoadReportSheet } from './loadreport.js?v=506';
-import { openStockByLocationSheet } from './stocklocation.js?v=506';
-import { openTraceSheet } from './tracereport.js?v=506';
-import { openXeroSheet } from './xero.js?v=506';
-import { openMapSheet } from './farmmap.js?v=506';
-import { openExportCsvSheet } from './settingsexport.js?v=506';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=506';
-import { harvestReport, siloSpace, roomSplit, roomSummary, pctText } from '../harvest.js?v=506';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=506';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=506';
+import { db } from '../storage.js?v=507';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=507';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT, areaShare, productionSummary } from '../derived.js?v=507';
+import { fertPdf } from '../fertpdf.js?v=507';
+import { seedPdf } from '../seedpdf.js?v=507';
+import { yieldPdf } from '../yieldpdf.js?v=507';
+import { harvestPdf } from '../harvestpdf.js?v=507';
+import { modulesPdf } from '../modulespdf.js?v=507';
+import { modulesReport } from '../modulesreport.js?v=507';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=507';
+import { viewPdf } from '../pdfview.js?v=507';
+import { num, tons, esc, money, todayLocal, dmy } from '../fmt.js?v=507';
+import { field, getVal, getNum } from '../ui.js?v=507';
+import { canSeeYield, canOpen, canSeePrices } from '../nav.js?v=507';
+import { gmReport } from '../grossmargin.js?v=507';
+import { gmPdf } from '../gmpdf.js?v=507';
+import { levelFor } from '../helpcontent.js?v=507';
+import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=507';
+import { openMoneySheet, openMtmSheet, openDeliveriesSheet } from './outstanding.js?v=507';
+import { openOptimiserSheet } from './optimiser.js?v=507';
+import { openCalculatorSheet } from './calculator.js?v=507';
+import { openEofySheet } from './eofy.js?v=507';
+import { openPricesSheet } from './prices.js?v=507';
+import { openRotationSheet } from './rotation.js?v=507';
+import { openAveragesSheet } from './averages.js?v=507';
+import { openLoadReportSheet } from './loadreport.js?v=507';
+import { openStockByLocationSheet } from './stocklocation.js?v=507';
+import { openTraceSheet } from './tracereport.js?v=507';
+import { openXeroSheet } from './xero.js?v=507';
+import { openMapSheet } from './farmmap.js?v=507';
+import { openExportCsvSheet } from './settingsexport.js?v=507';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=507';
+import { harvestReport, siloSpace, roomSplit, roomSummary, pctText } from '../harvest.js?v=507';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=507';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=507';
 
 let unsub = null;
 let view = null;   // null is the screen of tiles; otherwise the report that is open
@@ -1068,7 +1068,7 @@ function yieldSummaryCard({ rows, totals }) {
       <h2><span class="dot report"></span>Production summary</h2>
       <div class="table-scroll">
         <table class="tight">
-          <thead><tr><th>Commodity</th><th>Area</th><th>% of area</th><th>Yield</th><th>Tons</th></tr></thead>
+          <thead><tr><th>Commodity</th><th>Area</th><th>% of area</th><th>Yield</th><th>Tonnes</th></tr></thead>
           <tbody>${rows.map((r) => `<tr><td>${esc(r.commodity.name)}</td><td>${num(r.area, 0)}</td><td>${areaShare(r.area, totals.area)}</td><td>${num(r.yieldTHa, 2)}</td><td>${num(r.tons, 0)}</td></tr>`).join('')}</tbody>
           <tfoot><tr><td>Total</td><td>${num(totals.area, 0)}</td><td>${totals.area > 0 ? '100%' : ''}</td><td>${num(totals.yieldTHa, 2)}</td><td>${num(totals.tons, 0)}</td></tr></tfoot>
         </table>
@@ -1118,7 +1118,7 @@ function yieldTable(g, movements) {
     <div class="group-label"><span>${esc(g.name)}</span><span class="n">${tons(totals.tons)}</span></div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Field</th><th>Area</th><th>Mode</th><th>Yield t/ha</th><th>Tons</th></tr></thead>
+        <thead><tr><th>Field</th><th>Area</th><th>Mode</th><th>Yield t/ha</th><th>Tonnes</th></tr></thead>
         <tbody>
           ${rows.map(({ f, t, yieldTHa }) => `
             <tr>
