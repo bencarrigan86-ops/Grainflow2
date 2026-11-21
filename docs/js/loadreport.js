@@ -3,13 +3,13 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=508';
-import { gradeSorter } from './grades.js?v=508';
-import { drawBrandLogo } from './brand.js?v=508';
-import { dmy } from './fmt.js?v=508';
-import { SPECS, specOf } from './outload.js?v=508';
-import { ASPECT, strokesInBox } from './signature.js?v=508';
-import { SIGN_WORDS, cleanDriverSignature, signState, signedWhen } from './driversign.js?v=508';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=509';
+import { gradeSorter } from './grades.js?v=509';
+import { drawBrandLogo } from './brand.js?v=509';
+import { dmy } from './fmt.js?v=509';
+import { SPECS, specOf } from './outload.js?v=509';
+import { ASPECT, strokesInBox } from './signature.js?v=509';
+import { SIGN_WORDS, cleanDriverSignature, signState, signedWhen } from './driversign.js?v=509';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 

@@ -45,6 +45,16 @@ check('the Destination hint shows only for a contract', () => {
   assert.ok(mv.includes('id="dest-hint"') && mv.includes("h.hidden = toKind !== 'sale'"));
 });
 
+check('Commodity is the first box, tinted and outlined so it is not skipped', () => {
+  assert.ok(mv.indexOf('class="field must-pick"') > 0 && mv.indexOf('class="field must-pick"') < mv.indexOf("label: 'Date', id: 'date'"));
+  assert.ok(read('docs/css/styles.css').includes('.form-section .field.must-pick select'));
+});
+check('a warning shows when the sources or the silos do not add up to the Net weight', () => {
+  assert.ok(mv.includes('id="legs-warn"') && mv.includes('function legsWarn()'));
+  assert.ok(mv.includes('The sources add up to') && mv.includes('The silos add up to'));
+  assert.ok(mv.includes('markSingle() {\n      legsWarn();'), 'checked wherever the figures change');
+});
+
 console.log('\n=== deletes say so ===');
 for (const f of ['movements', 'offfarm', 'production', 'settings', 'storage', 'payables', 'freightorders', 'orders', 'sales', 'invoice']) {
   check(`${f}: a delete shows "Deleted"`, () => assert.ok(read(`docs/js/views/${f}.js`).includes("toast('Deleted')")));

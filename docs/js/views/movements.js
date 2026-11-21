@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=508';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=508';
-import { commodityClass } from '../commoditycolor.js?v=508';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=508';
-import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=508';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=508';
-import { withholdingClash } from '../fumigation.js?v=508';
-import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=508';
-import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=508';
-import { cleanStrokes } from '../signature.js?v=508';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=508';
-import { compressAndStampImage } from '../img.js?v=508';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=508';
-import { specText, extraSpecKey } from '../outload.js?v=508';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=508';
-import { pickableSilos } from '../silopick.js?v=508';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=508';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=508';
-import { activeSales } from '../paidsales.js?v=508';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=508';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=508';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=508';
-import { nowTime } from '../loadreport.js?v=508';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=508';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=508';
-import { openGinRunSheet } from './ginrun.js?v=508';
-import { openModuleMoveSheet } from './modulemove.js?v=508';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=508';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=508';
+import { db } from '../storage.js?v=509';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=509';
+import { commodityClass } from '../commoditycolor.js?v=509';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=509';
+import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=509';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=509';
+import { withholdingClash } from '../fumigation.js?v=509';
+import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=509';
+import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=509';
+import { cleanStrokes } from '../signature.js?v=509';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=509';
+import { compressAndStampImage } from '../img.js?v=509';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=509';
+import { specText, extraSpecKey } from '../outload.js?v=509';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=509';
+import { pickableSilos } from '../silopick.js?v=509';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=509';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=509';
+import { activeSales } from '../paidsales.js?v=509';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=509';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=509';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=509';
+import { nowTime } from '../loadreport.js?v=509';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=509';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=509';
+import { openGinRunSheet } from './ginrun.js?v=509';
+import { openModuleMoveSheet } from './modulemove.js?v=509';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=509';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=509';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -542,15 +542,11 @@ export function openMovementSheet(existing, template) {
       <datalist id="dl-companies">${[...new Set([...distinctOf(movements, 'truckCompany'), ...db.getFreightOrders().map((f) => String(f.carrier || '').trim()).filter(Boolean)])].sort((a, b) => a.localeCompare(b)).map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
       <section class="form-section">
         <div class="subhead">Load</div>
-        <div class="grid-2">
-          ${field({ label: 'Date', id: 'date', type: 'date', value: existing ? existing.date : todayLocal() })}
-          ${field({ label: 'Time', id: 'loadTime', type: 'time', value: existing ? (existing.loadTime || '') : nowTime() })}
-        </div>
         <div class="${pickableOrders.length ? 'grid-2 commodity-order' : ''}">
-        <div class="field">
+        <div class="field must-pick">
           <label for="m-commodity">Commodity</label>
           <select id="m-commodity">
-            <option value="">${pickableOrders.length ? 'All' : 'All commodities'}</option>
+            <option value="">${pickableOrders.length ? 'Choose…' : 'Choose a commodity'}</option>
             ${commodities.map((c) => `<option value="${c.id}" ${c.id === ctx.commodityId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
           </select>
           ${pickableOrders.length ? '' : '<div class="hint">Narrows the lists below to this grain.</div>'}
@@ -565,6 +561,10 @@ export function openMovementSheet(existing, template) {
         </div>` : ''}
         </div>
         ${pickableOrders.length ? '<div class="hint" id="m-order-note" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">Commodity narrows the lists below. Choosing a grain order fills in its contract, the commodity and the grade.</div>' : ''}
+        <div class="grid-2">
+          ${field({ label: 'Date', id: 'date', type: 'date', value: existing ? existing.date : todayLocal() })}
+          ${field({ label: 'Time', id: 'loadTime', type: 'time', value: existing ? (existing.loadTime || '') : nowTime() })}
+        </div>
       </section>
 
       <section class="form-section alt">
@@ -606,6 +606,7 @@ export function openMovementSheet(existing, template) {
           </div>
         </div>
         <div id="to-body" style="margin-top:4px"></div>
+        <div id="legs-warn" class="legs-warn" hidden></div>
         <datalist id="dl-destinations">${[...new Set([...distinctOf(movements, 'destination'), ...distinctOf(db.get().sales, 'location')])].sort((a, b) => a.localeCompare(b)).map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
         ${field({ label: 'Destination', id: 'destination', value: src?.destination, list: 'dl-destinations', placeholder: DEST_HINT })}
         <div class="hint" id="dest-hint" style="margin:-6px 0 4px" hidden>Blank uses the contract's delivery site.</div>
@@ -705,7 +706,27 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
     let offFarmNoteHook = null;   // set once the grade box exists, below
     // One source going to one place weighs one thing, the Net weight: its own Tonnes box (and the total under it) is left out
     // while it only repeats Net. A second source or destination, or a figure that differs from Net, brings the boxes back.
+    // Where the grain came from, and where it went, should each add up to the load's Net weight: say so when it does not.
+    function legsWarn() {
+      const el = root.querySelector('#legs-warn');
+      if (!el) return;
+      const net = parseFloat(root.querySelector('#tons')?.value);
+      const lines = [];
+      if (net > 0) {
+        const sum = (rows) => rows.reduce((t, r) => t + (Number(r.tons) || 0), 0);
+        const fromSum = sum(readFromRows(fromRowsEl));
+        if (Math.abs(fromSum - net) > 0.005) lines.push(`The sources add up to ${tons(fromSum)}; the load is ${tons(net)}.`);
+        const toRowsBox = root.querySelector('#to-rows');
+        if (toRowsBox) {
+          const toSum = sum(readToRows(toRowsBox));
+          if (Math.abs(toSum - net) > 0.005) lines.push(`The silos add up to ${tons(toSum)}; the load is ${tons(net)}.`);
+        }
+      }
+      el.hidden = lines.length === 0;
+      el.textContent = lines.join(' ');
+    }
     function markSingle() {
+      legsWarn();
       const a = document.activeElement;
       if (a?.matches?.('.from-tons, .to-tons')) return;   // never hide the box being typed in
       const net = parseFloat(root.querySelector('#tons')?.value);
@@ -1305,7 +1326,7 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
     const del = root.querySelector('#del');
     if (del) {
       del.addEventListener('click', () => {
-        confirmDelete('Delete this movement?', () => {
+        confirmDelete('Delete this movement? An owner or manager can bring it back from Settings, Recently deleted.', () => {
           db.deleteMovement(existing.id);
           closeSheet();
           toast('Deleted');

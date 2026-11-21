@@ -10,10 +10,10 @@
 // out. Pure functions over plain records, so it is tested without the app. The screen is views/optimiser.js, and the
 // only other place that knows of it is the one button that opens it.
 
-import { layersForStorage, outloadEndOf, SPECS } from './outload.js?v=508';
-import { fumigationState } from './fumigation.js?v=508';
-import { isTransit } from './transit.js?v=508';
-import { isOffFarm } from './offfarm.js?v=508';
+import { layersForStorage, outloadEndOf, SPECS } from './outload.js?v=509';
+import { fumigationState } from './fumigation.js?v=509';
+import { isTransit } from './transit.js?v=509';
+import { isOffFarm } from './offfarm.js?v=509';
 
 const EPS = 1e-9;
 const num = (v) => Number(v) || 0;

@@ -2,7 +2,7 @@
 // and ABN, the document's title and its reference line on a green band, with the farm's logo at the right when it has one.
 // One place, so every document carries the same letterhead. Pure: takes the business details, returns HTML.
 
-import { esc } from './fmt.js?v=508';
+import { esc } from './fmt.js?v=509';
 
 /** The farm's own name line: the entity, with its ABN, as it would be printed on letterhead. */
 export function letterheadLine(business) {

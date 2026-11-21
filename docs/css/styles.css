@@ -1669,3 +1669,11 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 /* A load from one place to one place weighs one thing, so its own Tonnes boxes are left out (see markSingle in movements.js) */
 .single > .from-row .tons-field, .single > .to-row .tons-field,
 .single > .from-row .from-remove, .single > .to-row .to-remove { display: none; }
+
+/* The box a form should not be saved without looking at (the load's Commodity): tinted and outlined so it is not skipped */
+.form-section .field.must-pick select { border: 2px solid var(--btn-edge); background: var(--btn-tint); font-weight: 600; }
+.field.must-pick > label { color: var(--btn-ink); font-weight: 700; }
+
+/* The tonnes of a load's sources or silos do not add up to its Net weight */
+.legs-warn { margin: 6px 0 10px; padding: 8px 10px; border-radius: 10px; background: var(--warn-bg); color: var(--warn); font-size: 13px; font-weight: 600; }
+.legs-warn[hidden] { display: none; }

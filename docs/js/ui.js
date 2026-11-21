@@ -155,7 +155,7 @@ export function confirmDelete(message, onConfirm) {
 }
 
 /** A line that confirms something happened, then goes away on its own. */
-export function toast(message, ms = 2200) {
+export function toast(message, ms = 3200) {
   const el = document.createElement('div');
   el.className = 'toast';
   el.setAttribute('role', 'status');

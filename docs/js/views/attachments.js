@@ -6,12 +6,12 @@
 // nothing to hang the file on yet, so the sheet mints the record's id up front, holds the files, and hands them
 // over with the rest when Save is pressed.
 
-import { db } from '../storage.js?v=508';
+import { db } from '../storage.js?v=509';
 import {
   RECORD_DOCUMENT_KINDS, kindLabel, uploadRecordDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=508';
-import { esc } from '../fmt.js?v=508';
-import { confirmDelete, getVal } from '../ui.js?v=508';
+} from '../documents.js?v=509';
+import { esc } from '../fmt.js?v=509';
+import { confirmDelete, getVal, toast } from '../ui.js?v=509';
 
 /** The markup. `open` keeps the fold open when there is already something attached. */
 export function attachmentsHtml(parentType, docs = [], { title = 'Documents', sub = 'Files kept with this record' } = {}) {
@@ -87,6 +87,7 @@ export function wireAttachments(root, { parentType, parentId, docs: initial = []
           render();
           db.deleteDocument('record_documents', d.id);      // the row too, or it comes back on the next refresh
           persist?.(docs);
+          toast('Deleted');
           await removeSaleDocument(d?.storagePath);
         });
       });
