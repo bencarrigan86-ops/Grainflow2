@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=507';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=507';
-import { commodityClass } from '../commoditycolor.js?v=507';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=507';
-import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=507';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=507';
-import { withholdingClash } from '../fumigation.js?v=507';
-import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=507';
-import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=507';
-import { cleanStrokes } from '../signature.js?v=507';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=507';
-import { compressAndStampImage } from '../img.js?v=507';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=507';
-import { specText, extraSpecKey } from '../outload.js?v=507';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=507';
-import { pickableSilos } from '../silopick.js?v=507';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=507';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=507';
-import { activeSales } from '../paidsales.js?v=507';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=507';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=507';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=507';
-import { nowTime } from '../loadreport.js?v=507';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=507';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=507';
-import { openGinRunSheet } from './ginrun.js?v=507';
-import { openModuleMoveSheet } from './modulemove.js?v=507';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=507';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=507';
+import { db } from '../storage.js?v=508';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=508';
+import { commodityClass } from '../commoditycolor.js?v=508';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=508';
+import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=508';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=508';
+import { withholdingClash } from '../fumigation.js?v=508';
+import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=508';
+import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=508';
+import { cleanStrokes } from '../signature.js?v=508';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=508';
+import { compressAndStampImage } from '../img.js?v=508';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=508';
+import { specText, extraSpecKey } from '../outload.js?v=508';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=508';
+import { pickableSilos } from '../silopick.js?v=508';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=508';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=508';
+import { activeSales } from '../paidsales.js?v=508';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=508';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=508';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=508';
+import { nowTime } from '../loadreport.js?v=508';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=508';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=508';
+import { openGinRunSheet } from './ginrun.js?v=508';
+import { openModuleMoveSheet } from './modulemove.js?v=508';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=508';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=508';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -366,7 +366,7 @@ function addFromRow(container, ctx, onChange, existingFrom) {
         <label>From</label>
         <select class="from-select"></select>
       </div>
-      <div class="field" style="flex:1;margin-bottom:0">
+      <div class="field tons-field" style="flex:1;margin-bottom:0">
         <label>Tonnes</label>
         <input type="number" step="0.01" inputmode="decimal" class="from-tons" value="${existingFrom?.tons ?? ''}" />
       </div>
@@ -429,7 +429,7 @@ function addToRow(container, ctx, onChange, existingTo) {
       <label>Silo</label>
       <select class="to-select"></select>
     </div>
-    <div class="field" style="flex:1;margin-bottom:0">
+    <div class="field tons-field" style="flex:1;margin-bottom:0">
       <label>Tonnes</label>
       <input type="number" step="0.01" inputmode="decimal" class="to-tons" value="${existingTo?.tons ?? ''}" />
     </div>
@@ -568,52 +568,13 @@ export function openMovementSheet(existing, template) {
       </section>
 
       <section class="form-section alt">
-        <div class="subhead">From and to</div>
-        <div id="from-rows"></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 12px">
-          <button type="button" class="btn secondary small" id="add-from" title="Add a source if the load blends silos or fields" style="width:auto;margin:0">+ Add source</button>
-          <span class="meta" style="font-size:14px">Sources total <strong id="from-sources-total" style="font-size:15px;color:var(--text)">0.0 t</strong></span>
-        </div>
-        <div id="offfarm-note" class="hint" style="margin:-6px 0 8px"></div>
-        <div class="field">
-          <label>To</label>
-          <div class="segmented" id="to-kind">
-            <button type="button" data-kind="silo" class="${!existingSaleTo && !existingUse ? 'active' : ''}">Silo</button>
-            <button type="button" data-kind="sale" class="${existingSaleTo ? 'active' : ''}">Contract</button>
-            <button type="button" data-tokind="use" id="to-use-btn" class="${existingUse ? 'active' : ''}" ${isHay(commodities.find((c) => c.id === ctx.commodityId)) || existingUse ? '' : 'hidden'}>Used on farm</button>
-          </div>
-        </div>
-        <div id="to-body" style="margin-top:4px"></div>
-        <datalist id="dl-destinations">${[...new Set([...distinctOf(movements, 'destination'), ...distinctOf(db.get().sales, 'location')])].sort((a, b) => a.localeCompare(b)).map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
-        ${field({ label: 'Destination', id: 'destination', value: src?.destination, list: 'dl-destinations', placeholder: DEST_HINT, hint: "On the load ticket. Blank uses the contract's delivery site." })}
-      </section>
-
-      <section class="form-section">
-        <div class="subhead">Truck and tickets</div>
-        <div class="grid-2">
-          ${field({ label: 'Truck rego', id: 'truckRego', value: src?.truckRego, list: 'dl-regos' })}
-          ${field({ label: 'Transport company', id: 'truckCompany', value: src?.truckCompany, list: 'dl-companies', placeholder: 'Who carted it' })}
-        </div>
-        <div class="grid-2">
-          ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
-          ${field({ label: "Driver's phone", id: 'driverPhone', type: 'tel', value: src?.driverPhone, placeholder: '0412 345 678' })}
-        </div>
-        <div class="field" style="margin-top:-6px"><div class="hint">Shown on the load ticket. A truck carted before fills in its company, driver and phone; the freight order fills the company.</div></div>
-        <div class="grid-2">
-          ${field({ label: 'Delivery no.', id: 'extTicket', value: existing?.externalTicketNo, placeholder: 'On their ticket' })}
-          ${field({ label: 'Manual docket no.', id: 'manualDocket', value: existing?.manualDocketNo, placeholder: 'Our paper docket' })}
-        </div>
-        ${existing?.outloadNo && String(existing.outloadNo) !== String(existing.ticketNo) ? `<div class="field" style="margin-top:-6px"><div class="hint">Old outload number: ${esc(existing.outloadNo)}.</div></div>` : ''}
-      </section>
-
-      <section class="form-section alt">
         <div class="subhead">Weight</div>
         <div class="grid-3">
           ${field({ label: 'Gross (t)', id: 'gross', type: 'number', step: '0.01', value: src?.grossWeight })}
           ${field({ label: 'Tare (t)', id: 'tare', type: 'number', step: '0.01', value: src?.tareWeight })}
           ${field({ label: 'Net (t)', id: 'tons', type: 'number', step: '0.01', value: src?.tons })}
         </div>
-        <div class="hint" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">Net fills from gross minus tare, or enter it directly. Gross and tare are optional.</div>
+        <div class="hint" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">Net is gross minus tare, or type it. Gross and tare are optional.</div>
         <div id="hay-wrap" ${isHay(commodities.find((c) => c.id === ctx.commodityId)) || hasHayLoad(src) ? '' : 'hidden'}>
           ${field({ label: 'Bales', id: 'm-bales', type: 'number', step: '1', value: src?.hayLoad?.bales || '' })}
           <div class="field" style="margin-top:-6px"><div class="hint" id="m-bales-note"></div></div>
@@ -626,6 +587,46 @@ export function openMovementSheet(existing, template) {
           </div>
         </div>
         ${existing?.sourceRef ? `<div class="hint" style="margin-bottom:8px">Movement number from the freight platform: <strong>${esc(existing.sourceRef)}</strong></div>` : ''}
+      </section>
+
+      <section class="form-section">
+        <div class="subhead">From and to</div>
+        <div id="from-rows"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 12px">
+          <button type="button" class="btn secondary small" id="add-from" title="Add a source if the load blends silos or fields" style="width:auto;margin:0">+ Add source</button>
+          <span class="meta" id="from-total-wrap" style="font-size:14px">Sources total <strong id="from-sources-total" style="font-size:15px;color:var(--text)">0.0 t</strong></span>
+        </div>
+        <div id="offfarm-note" class="hint" style="margin:-6px 0 8px"></div>
+        <div class="field">
+          <label>To</label>
+          <div class="segmented" id="to-kind">
+            <button type="button" data-kind="silo" class="${!existingSaleTo && !existingUse ? 'active' : ''}">Silo</button>
+            <button type="button" data-kind="sale" class="${existingSaleTo ? 'active' : ''}">Contract</button>
+            <button type="button" data-tokind="use" id="to-use-btn" class="${existingUse ? 'active' : ''}" ${isHay(commodities.find((c) => c.id === ctx.commodityId)) || existingUse ? '' : 'hidden'}>Used on farm</button>
+          </div>
+        </div>
+        <div id="to-body" style="margin-top:4px"></div>
+        <datalist id="dl-destinations">${[...new Set([...distinctOf(movements, 'destination'), ...distinctOf(db.get().sales, 'location')])].sort((a, b) => a.localeCompare(b)).map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
+        ${field({ label: 'Destination', id: 'destination', value: src?.destination, list: 'dl-destinations', placeholder: DEST_HINT })}
+        <div class="hint" id="dest-hint" style="margin:-6px 0 4px" hidden>Blank uses the contract's delivery site.</div>
+      </section>
+
+      <section class="form-section alt">
+        <div class="subhead">Truck and tickets</div>
+        <div class="grid-2">
+          ${field({ label: 'Truck rego', id: 'truckRego', value: src?.truckRego, list: 'dl-regos' })}
+          ${field({ label: 'Transport company', id: 'truckCompany', value: src?.truckCompany, list: 'dl-companies', placeholder: 'Who carted it' })}
+        </div>
+        <div class="grid-2">
+          ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
+          ${field({ label: "Driver's phone", id: 'driverPhone', type: 'tel', value: src?.driverPhone, placeholder: '0412 345 678' })}
+        </div>
+        <div class="field" style="margin-top:-6px"><div class="hint">On the load ticket. A truck used before fills in the rest.</div></div>
+        <div class="grid-2">
+          ${field({ label: 'Delivery no.', id: 'extTicket', value: existing?.externalTicketNo, placeholder: 'On their ticket' })}
+          ${field({ label: 'Manual docket no.', id: 'manualDocket', value: existing?.manualDocketNo, placeholder: 'Our paper docket' })}
+        </div>
+        ${existing?.outloadNo && String(existing.outloadNo) !== String(existing.ticketNo) ? `<div class="field" style="margin-top:-6px"><div class="hint">Old outload number: ${esc(existing.outloadNo)}.</div></div>` : ''}
       </section>
 
       <div class="fold-bands">
@@ -702,13 +703,37 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
     const fromRowsEl = root.querySelector('#from-rows');
     const sourcesTotalEl = root.querySelector('#from-sources-total');
     let offFarmNoteHook = null;   // set once the grade box exists, below
+    // One source going to one place weighs one thing, the Net weight: its own Tonnes box (and the total under it) is left out
+    // while it only repeats Net. A second source or destination, or a figure that differs from Net, brings the boxes back.
+    function markSingle() {
+      const a = document.activeElement;
+      if (a?.matches?.('.from-tons, .to-tons')) return;   // never hide the box being typed in
+      const net = parseFloat(root.querySelector('#tons')?.value);
+      const fromRows = [...fromRowsEl.querySelectorAll('.from-row')];
+      const toRowsBox = root.querySelector('#to-rows');
+      const toRows = toRowsBox ? [...toRowsBox.querySelectorAll('.to-row')] : [];
+      const followable = fromRows.length === 1 && (!toRowsBox || toRows.length === 1);
+      const alone = (row, sel) => {
+        const t = parseFloat(row.querySelector(sel).value);
+        return followable && (!t || (Number.isFinite(net) && Math.abs(t - net) < 0.005));
+      };
+      const fromAlone = fromRows.length === 1 && alone(fromRows[0], '.from-tons');
+      fromRowsEl.classList.toggle('single', fromAlone);
+      const fromTotal = root.querySelector('#from-total-wrap'); if (fromTotal) fromTotal.style.display = fromAlone ? 'none' : '';
+      if (toRowsBox) {
+        const toAlone = toRows.length === 1 && alone(toRows[0], '.to-tons');
+        toRowsBox.classList.toggle('single', toAlone);
+        const toTotal = root.querySelector('#to-total-wrap'); if (toTotal) toTotal.style.display = toAlone ? 'none' : '';
+      }
+    }
     function recomputeSourcesTotal() {
       const total = readFromRows(fromRowsEl).reduce((s, f) => s + (Number(f.tons) || 0), 0);
       sourcesTotalEl.textContent = tons(total);
+      markSingle();
       offFarmNoteHook?.();
     }
     existingFroms.forEach((f) => addFromRow(fromRowsEl, ctx, recomputeSourcesTotal, f));
-    root.querySelector('#add-from').addEventListener('click', () => addFromRow(fromRowsEl, ctx, recomputeSourcesTotal));
+    root.querySelector('#add-from').addEventListener('click', () => { addFromRow(fromRowsEl, ctx, recomputeSourcesTotal); recomputeSourcesTotal(); });
     recomputeSourcesTotal();
 
     // the grade dropdown follows the commodity: its published grades and the farm's own
@@ -972,21 +997,24 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
         toBody.innerHTML = `
           <div id="to-rows"></div>
           <button type="button" class="btn secondary small" id="add-to">+ Add destination</button>
-          <div class="row" style="margin-bottom:14px"><span class="label">Destinations total</span><span class="value" id="to-destinations-total">0.0 t</span></div>
+          <div class="row" id="to-total-wrap" style="margin-bottom:14px"><span class="label">Destinations total</span><span class="value" id="to-destinations-total">0.0 t</span></div>
         `;
         const toRowsEl = toBody.querySelector('#to-rows');
         const destTotalEl = toBody.querySelector('#to-destinations-total');
         function recomputeDestTotal() {
           const total = readToRows(toRowsEl).reduce((s, t) => s + (Number(t.tons) || 0), 0);
           destTotalEl.textContent = tons(total);
+          markSingle();
         }
         const initialTos = existingSiloTos.length > 0 ? existingSiloTos : [{ type: '', id: '', tons: '' }];
         initialTos.forEach((t) => addToRow(toRowsEl, ctx, recomputeDestTotal, t));
-        toBody.querySelector('#add-to').addEventListener('click', () => addToRow(toRowsEl, ctx, recomputeDestTotal));
+        toBody.querySelector('#add-to').addEventListener('click', () => { addToRow(toRowsEl, ctx, recomputeDestTotal); recomputeDestTotal(); recomputeSourcesTotal(); });
         recomputeDestTotal();
       }
     }
     renderToBody();
+    const updateDestHint = () => { const h = root.querySelector('#dest-hint'); if (h) h.hidden = toKind !== 'sale'; };
+    updateDestHint();
     root.querySelector('#to-kind').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-kind], button[data-tokind]');
       const kind = btn?.dataset.kind || btn?.dataset.tokind;   // 'use' (hay used on the farm) is not a place a load goes, so it is not a leg type
@@ -994,13 +1022,16 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
       toKind = kind;
       root.querySelectorAll('#to-kind button').forEach((b) => b.classList.toggle('active', b === btn));
       renderToBody();
+      syncSingleLegs();   // a new silo row takes the net weight already typed
+      markSingle();
+      updateDestHint();
     });
 
     const grossEl = root.querySelector('#gross');
     const tareEl = root.querySelector('#tare');
     const tonsEl = root.querySelector('#tons');
     const loadPreviewEl = root.querySelector('#load-preview');
-    const showLoad = () => { loadPreviewEl.textContent = tons(getNum(root, 'tons')); };
+    const showLoad = () => { loadPreviewEl.textContent = tons(getNum(root, 'tons')); };   // (markSingle is called after the legs follow, below)
     // A load from one paddock into one silo (or one contract) weighs one thing. When the
     // net load is changed — the estimate corrected, or the final weight entered after
     // tipping — the paddock and silo figures follow it, rather than keeping the old weight
@@ -1026,10 +1057,11 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
       }
       showLoad();
       syncSingleLegs();
+      markSingle();
     }
     grossEl.addEventListener('input', recomputeNet);
     tareEl.addEventListener('input', recomputeNet);
-    tonsEl.addEventListener('input', () => { showLoad(); syncSingleLegs(); });
+    tonsEl.addEventListener('input', () => { showLoad(); syncSingleLegs(); markSingle(); });
     showLoad();
 
     // Hay: a load is counted in bales as well as tonnes. Until the net weight is typed in (or the weighbridge gives it), the
@@ -1276,6 +1308,7 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
         confirmDelete('Delete this movement?', () => {
           db.deleteMovement(existing.id);
           closeSheet();
+          toast('Deleted');
         });
       });
     }

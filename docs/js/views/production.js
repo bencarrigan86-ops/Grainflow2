@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=507';
-import { tileIcon } from '../tileicon.js?v=507';
-import { cropCostPerHa } from '../grossmargin.js?v=507';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=507';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=507';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=507';
-import { describeMerge } from '../merge.js?v=507';
-import { renderRelatedMovements } from './movements.js?v=507';
-import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=507';
-import { wireJumps } from '../jump.js?v=507';
-import { openMapSheet } from './farmmap.js?v=507';
-import { openInputsSheet } from './inputs.js?v=507';
-import { openSprayFormSheet, canSpray } from './spray.js?v=507';
-import { stockLevels } from '../inputs.js?v=507';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=507';
-import { openModulesPickedSheet } from './modulespicked.js?v=507';
-import { openBalesBaledSheet } from './balesbaled.js?v=507';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=507';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=507';
+import { db } from '../storage.js?v=508';
+import { tileIcon } from '../tileicon.js?v=508';
+import { cropCostPerHa } from '../grossmargin.js?v=508';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=508';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=508';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=508';
+import { describeMerge } from '../merge.js?v=508';
+import { renderRelatedMovements } from './movements.js?v=508';
+import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=508';
+import { wireJumps } from '../jump.js?v=508';
+import { openMapSheet } from './farmmap.js?v=508';
+import { openInputsSheet } from './inputs.js?v=508';
+import { openSprayFormSheet, canSpray } from './spray.js?v=508';
+import { stockLevels } from '../inputs.js?v=508';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=508';
+import { openModulesPickedSheet } from './modulespicked.js?v=508';
+import { openBalesBaledSheet } from './balesbaled.js?v=508';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=508';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=508';
 
 let unsub = null;
 
@@ -567,6 +567,7 @@ export function openFieldSheet(existing) {
         confirmDelete(`Delete field "${existing.name}"?`, () => {
           db.deleteField(existing.id);
           closeSheet();
+          toast('Deleted');
         });
       });
     }

@@ -5,24 +5,24 @@
 // It goes to the carrier as a PDF (shared or emailed) and a copy is filed with the contract. Loads then name the
 // freight order they travel on, and the carrier's bill is recorded against it. The arithmetic is in freight.js.
 
-import { db } from '../storage.js?v=507';
-import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=507';
-import { signerName } from '../signdoc.js?v=507';
-import { addressFields, readAddress, partsOf, joinAddress } from '../address.js?v=507';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=507';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=507';
-import { orderTitle } from '../orders.js?v=507';
-import { orderDelivery, bookingRows, nilToleranceLines, cleanFreightDetail, freightDetailDefaults, showsRate } from '../orderdetail.js?v=507';
-import { activeSales } from '../paidsales.js?v=507';
+import { db } from '../storage.js?v=508';
+import { signToggleHtml, wireSignToggle, signerPickHtml, wireSignerPick } from './signtoggle.js?v=508';
+import { signerName } from '../signdoc.js?v=508';
+import { addressFields, readAddress, partsOf, joinAddress } from '../address.js?v=508';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=508';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=508';
+import { orderTitle } from '../orders.js?v=508';
+import { orderDelivery, bookingRows, nilToleranceLines, cleanFreightDetail, freightDetailDefaults, showsRate } from '../orderdetail.js?v=508';
+import { activeSales } from '../paidsales.js?v=508';
 import {
   BASES, STATE_LABEL, contractFreightNo, freightState, freightOwed, freightTitle, freightDefaults, freightProblems,
   perTonne, rateText, estimatedTotal, windowText, freightOrderPdf,
-} from '../freight.js?v=507';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=507';
-import { viewPdf } from '../pdfview.js?v=507';
-import { fileSentCopy } from '../sentcopy.js?v=507';
-import { movementRow, openMovementSheet } from './movements.js?v=507';
-import { openBillSheet, returnToAfterBill } from './payables.js?v=507';
+} from '../freight.js?v=508';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=508';
+import { viewPdf } from '../pdfview.js?v=508';
+import { fileSentCopy } from '../sentcopy.js?v=508';
+import { movementRow, openMovementSheet } from './movements.js?v=508';
+import { openBillSheet, returnToAfterBill } from './payables.js?v=508';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | closed | all
@@ -377,7 +377,7 @@ export function openFreightOrderSheet(existing, start = {}) {
       root.querySelector('#fo-download').addEventListener('click', () => send(false));
       root.querySelector('#fo-bill')?.addEventListener('click', () => recordBill());
       root.querySelector('#fo-del')?.addEventListener('click', () => {
-        confirmDelete('Delete this freight order? Loads carted on it and bills for it stay, but no longer name it.', () => { db.deleteFreightOrder(existing.id); openFreightOrdersSheet(); });
+        confirmDelete('Delete this freight order? Loads carted on it and bills for it stay, but no longer name it.', () => { db.deleteFreightOrder(existing.id); openFreightOrdersSheet(); toast('Deleted'); });
       });
     };
 

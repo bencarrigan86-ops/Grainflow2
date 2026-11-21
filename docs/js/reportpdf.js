@@ -3,8 +3,8 @@
 // total row, a footer with the page number). The reports say what goes on it; this does the laying out, and runs a long
 // table on to the next page with its heading and table head repeated. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=507';
-import { drawBrandLogo } from './brand.js?v=507';
+import { Pdf, wrapText } from './pdf.js?v=508';
+import { drawBrandLogo } from './brand.js?v=508';
 
 const PORTRAIT = { width: 595.28, height: 841.89 };
 const LANDSCAPE = { width: 841.89, height: 595.28 };

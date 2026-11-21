@@ -4,17 +4,17 @@
 // what is unpaid and overdue, and the brokerage that has run up on contracts but has not been billed yet. Each
 // bill is recorded in a form of its own. The arithmetic is in payables.js.
 
-import { db } from '../storage.js?v=507';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=507';
-import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=507';
+import { db } from '../storage.js?v=508';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=508';
+import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=508';
 import {
   KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed, paidByBuyer,
-} from '../payables.js?v=507';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=507';
-import { activeSales } from '../paidsales.js?v=507';
-import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=507';
-import { ginOffsetOptions, ginBillTotal, ginBillTakenOff } from '../ginoffset.js?v=507';
-import { matchesAll, amountText } from '../listsearch.js?v=507';
+} from '../payables.js?v=508';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=508';
+import { activeSales } from '../paidsales.js?v=508';
+import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=508';
+import { ginOffsetOptions, ginBillTotal, ginBillTakenOff } from '../ginoffset.js?v=508';
+import { matchesAll, amountText } from '../listsearch.js?v=508';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'unpaid';   // unpaid | paid | all
@@ -270,7 +270,7 @@ export function openBillSheet(existing, defaults = {}) {
 
     if (existing) {
       root.querySelector('#b-del').addEventListener('click', () => {
-        confirmDelete('Delete this bill?', () => { db.deletePayable(existing.id); backToList(); });
+        confirmDelete('Delete this bill?', () => { db.deletePayable(existing.id); backToList(); toast('Deleted'); });
       });
     }
 

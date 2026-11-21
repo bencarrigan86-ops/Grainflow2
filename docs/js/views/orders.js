@@ -4,19 +4,19 @@
 // carting it and the buyer's own order number. Everything else about the sale is the contract's and is shown from it.
 // Loads are matched to an order on the movement. The arithmetic is in orders.js.
 
-import { db } from '../storage.js?v=507';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=507';
-import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=507';
-import { movementTonsToSale } from '../derived.js?v=507';
-import { activeSales } from '../paidsales.js?v=507';
-import { movementRow, openMovementSheet } from './movements.js?v=507';
-import { openVendorDecSheet } from './vendordec.js?v=507';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=507';
-import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=507';
-import { freightTitle, freightState, rateText } from '../freight.js?v=507';
-import { addressFields, readAddress } from '../address.js?v=507';
-import { cleanOrderDetail, contractMismatch, orderDefaults } from '../orderdetail.js?v=507';
-import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=507';
+import { db } from '../storage.js?v=508';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=508';
+import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=508';
+import { movementTonsToSale } from '../derived.js?v=508';
+import { activeSales } from '../paidsales.js?v=508';
+import { movementRow, openMovementSheet } from './movements.js?v=508';
+import { openVendorDecSheet } from './vendordec.js?v=508';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=508';
+import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=508';
+import { freightTitle, freightState, rateText } from '../freight.js?v=508';
+import { addressFields, readAddress } from '../address.js?v=508';
+import { cleanOrderDetail, contractMismatch, orderDefaults } from '../orderdetail.js?v=508';
+import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=508';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | filled | closed | all
@@ -275,7 +275,7 @@ export function openOrderSheet(existing, defaults = {}) {
       });
       root.querySelector('#o-vendordec').addEventListener('click', () => openVendorDecSheet({ orderId: existing.id }));
       root.querySelector('#o-del').addEventListener('click', () => {
-        confirmDelete('Delete this grain order? Loads delivered against it stay, but are no longer against a grain order.', () => { db.deleteOrder(existing.id); openOrdersSheet(); });
+        confirmDelete('Delete this grain order? Loads delivered against it stay, but are no longer against a grain order.', () => { db.deleteOrder(existing.id); openOrdersSheet(); toast('Deleted'); });
       });
       root.querySelector('#save').addEventListener('click', () => save(status));
     } else {

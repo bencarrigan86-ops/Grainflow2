@@ -1,29 +1,29 @@
-import { db } from '../storage.js?v=507';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=507';
-import { isHay, balesInStorage, describeBales } from '../hay.js?v=507';
-import { modulesReport } from '../modulesreport.js?v=507';
-import { shrinkInSilo, shrinkFraction } from '../shrink.js?v=507';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=507';
-import { isTransit } from '../transit.js?v=507';
-import { isOffFarm } from '../offfarm.js?v=507';
-import { paintOffFarmCard, openOffFarmSheet } from './offfarm.js?v=507';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=507';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=507';
-import { hasStorageQuality } from '../mapping.js?v=507';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=507';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=507';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=507';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=507';
-import { renderRelatedMovements } from './movements.js?v=507';
-import { openSiloSetupSheet } from './silosetup.js?v=507';
-import { openCalculatorSheet } from './calculator.js?v=507';
-import { commodityFills } from '../commodityfill.js?v=507';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=507';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=507';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=507';
+import { db } from '../storage.js?v=508';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=508';
+import { isHay, balesInStorage, describeBales } from '../hay.js?v=508';
+import { modulesReport } from '../modulesreport.js?v=508';
+import { shrinkInSilo, shrinkFraction } from '../shrink.js?v=508';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=508';
+import { isTransit } from '../transit.js?v=508';
+import { isOffFarm } from '../offfarm.js?v=508';
+import { paintOffFarmCard, openOffFarmSheet } from './offfarm.js?v=508';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=508';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=508';
+import { hasStorageQuality } from '../mapping.js?v=508';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=508';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=508';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=508';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=508';
+import { renderRelatedMovements } from './movements.js?v=508';
+import { openSiloSetupSheet } from './silosetup.js?v=508';
+import { openCalculatorSheet } from './calculator.js?v=508';
+import { commodityFills } from '../commodityfill.js?v=508';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=508';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=508';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=508';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=507';
+} from '../silolayers.js?v=508';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -1405,6 +1405,7 @@ export function openStorageSheet(existing) {
           confirmDelete(`Delete "${existing.name}"?`, () => {
             db.deleteStorage(existing.id);
             closeSheet();
+            toast('Deleted');
           });
         });
       }
@@ -1493,6 +1494,7 @@ export function openStorageSheet(existing) {
           confirmDelete(`Delete "${existing.name}"?`, () => {
             db.deleteStorage(existing.id);
             closeSheet();
+            toast('Deleted');
           });
         });
       }

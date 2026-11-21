@@ -4,8 +4,8 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=507';
-import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=507';
+import { ROLES, canOpen } from './nav.js?v=508';
+import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=508';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -176,7 +176,7 @@ export const GUIDES = [
     blurb: 'One walk-through sets the farm up.',
     steps: [
       'Tap Start setup on Position, or Open the walk-through at the top of this page.',
-      'It asks one thing at a time: business, season, crops, paddocks, silos, a contract, a load and an invoice. Short answers sit side by side, and the Farm box appears only if you run more than one property.',
+      'It asks one thing at a time: business, season, crops, paddocks, silos, a contract, a load and an invoice. Short answers sit side by side. The Farm box on a paddock is optional: fill it in only if you run more than one property.',
       'Skip what you do not have yet. Continue setup picks up where you stopped.',
     ],
     tips: [
@@ -211,7 +211,7 @@ export const GUIDES = [
     blurb: 'Area, crop, yield, fertiliser and seed for each paddock.',
     steps: [
       'On Production, tap + to add a paddock: name, farm, hectares and crop. Tick Double crop if it was sown straight after another crop.',
-      'Yield estimate sits beside the crop\'s default yield. Tap Use it to take the default.',
+      'Yield estimate sits beside the crop\'s default yield. When you edit a paddock, tap Use it to take the default.',
       'Drive tons from says where the tonnes come from. Estimate is hectares times the yield estimate. Actual (movements) is the loads recorded from the paddock.',
       'Harvest: mark it finished, or enter the hectares still to cut.',
       'Fertiliser planning: enter a target yield and the soil test N. It works out the N needed, and Use as Urea required fills in the urea to hit the target. Starter and seed has the sums for those.',
@@ -244,7 +244,7 @@ export const GUIDES = [
       'Shrink: give the commodity a Shrink in silos % in Settings (normally 0.7). It comes off grain going from a paddock into a silo, and shows on Position as its own line.',
     ],
     tips: [
-      'Search, Sort by and More (measured view, grouping, the Silo calculator) are at the top.',
+      'Search, the sort menu and More (measured view, grouping, the Silo calculator) are at the top.',
       'Grain held by a third party is an off-farm store, with storage fees worked out for you.',
     ],
   },
@@ -269,7 +269,7 @@ export const GUIDES = [
       'Paddocks to spray lists your properties. Tap a property to open its paddocks, or tick the property to take them all.',
       'Add the products with a rate per hectare, and the water rate.',
       'Who and when: the contractor and their email, the form to send it on, and the date required. The job has the property, crop, purchase order and who supplies the chemical.',
-      'Tap View to look at the PDF, then send it. The map is the last page.',
+      'Tap View PDF to look at it, then send it. The map is the last page.',
     ],
     tips: [
       'A different rate on some paddocks is under the product list, and is optional.',
