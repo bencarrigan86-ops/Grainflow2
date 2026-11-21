@@ -1,12 +1,13 @@
-import { db } from '../storage.js?v=512';
-import { esc } from '../fmt.js?v=512';
-import { openSheet, closeSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=512';
-import { SWITCHES, switchesForArea, readSwitches, withSwitch, readLevels, withLevel, levelChoices, levelNow, levelRank, LEVEL_AREAS, LEVEL_ROLES, SCREEN_AREAS } from '../farmswitches.js?v=512';
-import { ACCESS, LEVELS, effectiveAccess, pickWarning } from '../helpcontent.js?v=512';
-import { pill, ROLE_SHORT } from './levelpill.js?v=512';
-import { listSeries, setMemberSeries } from '../outloadseries.js?v=512';
-import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=512';
-import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=512';
+import { db } from '../storage.js?v=513';
+import { esc } from '../fmt.js?v=513';
+import { openSheet, closeSheet, holdSheet, field, getVal, confirmDelete, notify, askConfirm, toast } from '../ui.js?v=513';
+import { accessReview } from '../accessreview.js?v=513';
+import { SWITCHES, switchesForArea, readSwitches, withSwitch, readLevels, withLevel, levelChoices, levelNow, levelRank, LEVEL_AREAS, LEVEL_ROLES, SCREEN_AREAS } from '../farmswitches.js?v=513';
+import { ACCESS, LEVELS, effectiveAccess, pickWarning } from '../helpcontent.js?v=513';
+import { pill, ROLE_SHORT } from './levelpill.js?v=513';
+import { listSeries, setMemberSeries } from '../outloadseries.js?v=513';
+import { INVITABLE_ROLES, roleLabel, inviteLink, validateInvite, expiryText, canEditMember } from '../invites.js?v=513';
+import { createInvitation, listMembers, listPendingInvitations, revokeInvitation, removeMember, changeMemberRole, getSession } from '../auth.js?v=513';
 
 // ---------------------------------------------------------------------------
 // People
@@ -287,13 +288,22 @@ function openMemberSheet(m) {
           && !await askConfirm(`Make ${m.email} an owner? They will be able to see the bank details and contract pricing, and to remove anyone from this farm — including you.`)) {
         return;
       }
+      const production = isField(role) && getVal(root, 'mem-prod') === 'yes';
+      // A different level is a different list of what they can open, so it is read through once before it is given.
+      if (role !== m.role || production !== !!(isField(m.role) && m.canWriteProduction)) {
+        openAccessReview({ who: m.email, role, canWriteProduction: production, confirmLabel: 'Save changes', onConfirm: () => save(role, production) });
+        return;
+      }
+      save(role, production);
+    });
+
+    const save = async (role, production) => {
       busy = true;
       saveBtn.textContent = 'Saving…';
       try {
         const digit = getVal(root, 'mem-series') || '';
         if (digit !== (m.series ? String(m.series) : '')) await setMemberSeries(db.getFarmId(), m.userId, digit ? Number(digit) : null);
-        await changeMemberRole(db.getFarmId(), m.userId, role,
-          isField(role) && getVal(root, 'mem-prod') === 'yes');
+        await changeMemberRole(db.getFarmId(), m.userId, role, production);
         refreshPeople();
         closeSheet();
       } catch (e) {
@@ -301,7 +311,7 @@ function openMemberSheet(m) {
         saveBtn.textContent = 'Save changes';
         problemEl.innerHTML = `<div class="hint" style="color:var(--danger);margin-bottom:4px">${esc(e.message)}</div>`;
       }
-    });
+    };
 
     root.querySelector('#mem-remove').addEventListener('click', () => {
       confirmDelete(`Remove ${m.email} from this farm? They keep their account but lose access to the farm's data. Inviting them again brings them straight back.`, async () => {
@@ -384,6 +394,34 @@ function showLinkSheet(link) {
   });
 }
 
+/**
+ * The step before a person is given access: every area of the app, said back as "can open" (with how much) or "cannot see", so the
+ * owner goes down the whole list once and checks nothing is there that should not be. Opens over the sheet that asked for it;
+ * Go back (or Close) returns to that sheet as it was left, and only the ticked, confirmed button carries on.
+ */
+function openAccessReview({ who, role, canWriteProduction = false, confirmLabel, onConfirm }) {
+  const rv = accessReview(role, db.getBusinessDetails().switches, { canWriteProduction });
+  holdSheet();
+  openSheet('Check their access', (root) => {
+    const row = (c) => `<div class="row" style="align-items:center"><span class="label"><strong>${esc(c.area)}</strong><span class="meta" style="display:block;font-size:12px">${esc(c.levelLabel)}</span><span class="meta" style="display:block;font-size:11px">${esc(c.hint)}</span></span><span class="value">${pill(c.level)}</span></div>`;
+    root.innerHTML = `
+      <div class="field hint" style="margin-bottom:10px"><strong>${esc(who)}</strong> will be a <strong>${esc(rv.label)}</strong>. Go down the whole list before you carry on. If they should not have something under Can open, go back and pick a different level.</div>
+      <div class="subhead">Can open (${rv.can.length})</div>
+      ${rv.can.length ? rv.can.map(row).join('') : '<div class="empty">Nothing.</div>'}
+      <div class="subhead" style="margin-top:14px">Cannot see (${rv.cannot.length})</div>
+      <div class="meta" style="margin-bottom:8px">${rv.cannot.length ? rv.cannot.map((c) => esc(c.area)).join(', ') : 'Nothing is kept from them.'}</div>
+      ${rv.extras.map((e) => `<div class="hint" style="margin:6px 0">${esc(e)}</div>`).join('')}
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:14px 0 10px"><input type="checkbox" id="ar-ok" style="width:18px;height:18px" /> I have gone through this list and it is right</label>
+      <button class="btn" id="ar-go" disabled>${esc(confirmLabel)}</button>
+      <button class="btn secondary" id="ar-back" style="margin-top:8px">Go back and change it</button>
+    `;
+    const go = root.querySelector('#ar-go');
+    root.querySelector('#ar-ok').addEventListener('change', (e) => { go.disabled = !e.target.checked; });
+    root.querySelector('#ar-back').addEventListener('click', () => closeSheet());
+    go.addEventListener('click', () => { closeSheet(); onConfirm(); });
+  }, { askBeforeClose: false });
+}
+
 function openInviteSheet() {
   openSheet('Invite someone', (root) => {
     root.innerHTML = `
@@ -454,6 +492,14 @@ function openInviteSheet() {
         return;
       }
 
+      openAccessReview({
+        who: v.email, role: v.role, canWriteProduction: getVal(root, 'inv-prod') === 'yes',
+        confirmLabel: 'Create invitation',
+        onConfirm: () => create(v),
+      });
+    });
+
+    const create = async (v) => {
       busy = true;
       btn.textContent = 'Creating…';
       try {
@@ -473,6 +519,6 @@ function openInviteSheet() {
         btn.textContent = 'Create invitation';
         problemsEl.innerHTML = `<div class="hint" style="color:var(--danger);margin-bottom:4px">${esc(e.message)}</div>`;
       }
-    });
+    };
   });
 }

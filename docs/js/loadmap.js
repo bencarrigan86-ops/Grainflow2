@@ -10,7 +10,7 @@
 // done through a `store` with getItem/setItem (localStorage in the app, a plain
 // object in the tests).
 
-import { PLATFORM_SETUP, parseCsv, detectDelimiter } from './loadimport.js?v=512';
+import { PLATFORM_SETUP, parseCsv, detectDelimiter } from './loadimport.js?v=513';
 
 /**
  * What the importer can use from a file. `key` is the name the importer reads by;

@@ -112,5 +112,45 @@ check('the setup button has one name', () => {
   assert.ok(src('views/help.js').includes('id="help-walk">Start setup<') && !src('helpcontent.js').includes('Open the walk-through'));
 });
 
+console.log('\n=== the access review before a person is given access ===');
+const { accessReview } = await import('../docs/js/accessreview.js?v=513');
+const { withLevel } = await import('../docs/js/farmswitches.js?v=513');
+const { ACCESS: ACC } = await import('../docs/js/helpcontent.js?v=513');
+check('every area is either something they can open or something they cannot see', () => {
+  for (const role of ['owner', 'manager', 'bookkeeper', 'farm_worker', 'driver', 'advisor']) {
+    const r = accessReview(role, {});
+    assert.equal(r.can.length + r.cannot.length, ACC.length, role);
+  }
+});
+check('an owner can open everything; a driver is kept out of the money', () => {
+  assert.equal(accessReview('owner', {}).cannot.length, 0);
+  const d = accessReview('driver', {});
+  assert.ok(d.cannot.length > 0 && d.can.length > 0);
+});
+check('the review follows the farm own levels (set an area to None and it moves to Cannot see)', () => {
+  const base = accessReview('manager', {});
+  assert.ok(base.can.some((c) => c.key === 'production'));
+  const after = accessReview('manager', withLevel({}, 'production', 'manager', 'none'));
+  assert.ok(after.cannot.some((c) => c.key === 'production') && after.can.length === base.can.length - 1);
+});
+check('a field role allowed production says so', () => {
+  assert.equal(accessReview('farm_worker', {}, { canWriteProduction: true }).extras.length, 1);
+  assert.equal(accessReview('farm_worker', {}).extras.length, 0);
+  assert.equal(accessReview('manager', {}, { canWriteProduction: true }).extras.length, 0);
+});
+const people = read('docs/js/views/settingspeople.js');
+check('an invitation is only created after the list is gone through and ticked', () => {
+  assert.ok(people.includes('who: v.email, role: v.role'));
+  assert.ok(people.includes("onConfirm: () => create(v)"));
+  assert.ok(people.includes('id="ar-ok"') && people.includes('<button class="btn" id="ar-go" disabled>'));
+  assert.ok(people.includes("go.disabled = !e.target.checked"));
+  const at = people.indexOf('createInvitation({');
+  assert.ok(at > people.indexOf('const create = async'), 'createInvitation is only called from create()');
+});
+check('changing a member level or production setting goes through the same review', () => {
+  assert.ok(people.includes("onConfirm: () => save(role, production)"));
+  assert.ok(people.includes("if (role !== m.role ||"));
+});
+
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
 console.log('\nall passed');
