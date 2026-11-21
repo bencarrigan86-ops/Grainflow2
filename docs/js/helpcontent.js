@@ -4,8 +4,8 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=511';
-import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=511';
+import { ROLES, canOpen } from './nav.js?v=512';
+import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=512';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -175,7 +175,7 @@ export const GUIDES = [
     shot: 'help/walk.jpg', shotAlt: 'A step of the setup walk-through asking what you grow',
     blurb: 'One walk-through sets the farm up.',
     steps: [
-      'Tap Start setup on Position, or Open the walk-through at the top of this page.',
+      'Tap Start setup on Position, or at the top of this page.',
       'It asks one thing at a time: business, season, crops, fields, silos, a contract, a load and an invoice. Short answers sit side by side. The Farm box on a field is optional: fill it in only if you run more than one property.',
       'Skip what you do not have yet. Continue setup picks up where you stopped.',
     ],

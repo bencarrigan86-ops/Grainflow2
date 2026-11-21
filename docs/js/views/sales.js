@@ -1,35 +1,35 @@
-import { db } from '../storage.js?v=511';
-import { canDelete, canSeeBills, canSeeOrders, canSeeFreight, canAddContracts, canChangeArea } from '../nav.js?v=511';
-import { tileIcon } from '../tileicon.js?v=511';
+import { db } from '../storage.js?v=512';
+import { canDelete, canSeeBills, canSeeOrders, canSeeFreight, canAddContracts, canChangeArea } from '../nav.js?v=512';
+import { tileIcon } from '../tileicon.js?v=512';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=511';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=511';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=511';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify, freezeSheet, bandFolds } from '../ui.js?v=511';
-import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=511';
-import { patternsFor } from '../deliveryplan.js?v=511';
-import { INVOICING } from '../invoicing.js?v=511';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=511';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=511';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=511';
-import { renderRelatedMovements } from './movements.js?v=511';
-import { openInvoiceListSheet } from './invoice.js?v=511';
-import { openContractDocSheet } from './contract.js?v=511';
-import { wireJumps } from '../jump.js?v=511';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=511';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=511';
-import { freightState } from '../freight.js?v=511';
-import { activeSales, paidSales } from '../paidsales.js?v=511';
-import { openVendorDecSheet } from './vendordec.js?v=511';
-import { summarise as summariseOrders } from '../orders.js?v=511';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=511';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=511';
-import { parseLate, lateText } from '../cottonlate.js?v=511';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=511';
-import { standardFor } from '../grades.js?v=511';
-import { commodityClass } from '../commoditycolor.js?v=511';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort, searchSales } from '../salesort.js?v=511';
+} from '../documents.js?v=512';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=512';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=512';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify, freezeSheet, bandFolds } from '../ui.js?v=512';
+import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=512';
+import { patternsFor } from '../deliveryplan.js?v=512';
+import { INVOICING } from '../invoicing.js?v=512';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=512';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=512';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=512';
+import { renderRelatedMovements } from './movements.js?v=512';
+import { openInvoiceListSheet } from './invoice.js?v=512';
+import { openContractDocSheet } from './contract.js?v=512';
+import { wireJumps } from '../jump.js?v=512';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=512';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=512';
+import { freightState } from '../freight.js?v=512';
+import { activeSales, paidSales } from '../paidsales.js?v=512';
+import { openVendorDecSheet } from './vendordec.js?v=512';
+import { summarise as summariseOrders } from '../orders.js?v=512';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=512';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=512';
+import { parseLate, lateText } from '../cottonlate.js?v=512';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=512';
+import { standardFor } from '../grades.js?v=512';
+import { commodityClass } from '../commoditycolor.js?v=512';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort, searchSales } from '../salesort.js?v=512';
 
 let unsub = null;
 let saleSearch = '';   // what is typed in the contracts search box (kept while the screen repaints)
@@ -425,6 +425,10 @@ function openSaleSheet(existing) {
       </div>
       <div class="copy-last" id="copy-last"></div>
       <div id="buyer-filled"></div>
+      <div class="grid-2" style="margin-top:0">
+        ${field({ label: "Buyer's contract no.", id: 'contractNo', value: existing?.contractNo })}
+        ${field({ label: 'Our contract no.', id: 'ourRef', value: existing?.ourRef, placeholder: 'Optional' })}
+      </div>
       <details class="fold feature" id="buyer-fold">
         <summary><div class="feature-head"><h2>Buyer details</h2>
           <div class="sub">Contact, number, email, ABN and address</div></div></summary>
@@ -438,10 +442,6 @@ function openSaleSheet(existing) {
         </div>
         ${addressFields('buyerAddr', partsOf(existing?.buyerAddress, existing?.buyerAddressParts), { label: 'Buyer address', optional: true })}
       </details>
-      <div class="grid-2" style="margin-top:12px">
-        ${field({ label: "Buyer's contract no.", id: 'contractNo', value: existing?.contractNo })}
-        ${field({ label: 'Our contract no.', id: 'ourRef', value: existing?.ourRef, placeholder: 'Optional' })}
-      </div>
       </section>
 
       <section class="form-section alt">

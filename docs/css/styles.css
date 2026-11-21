@@ -111,7 +111,7 @@ html.has-banner .topbar { top: var(--banner-h, 0px); margin-top: 0; padding-top:
 
 /* Position's Display button: a small round icon beside the PDF button on the season row. */
 .pos-actions { display: flex; align-items: center; gap: 8px; }
-.pos-display { flex: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--btn-edge); border-radius: 50%; background: var(--btn-tint); color: var(--btn-ink); padding: 0; }
+.pos-display { flex: none; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--btn-edge); border-radius: 50%; background: var(--btn-tint); color: var(--btn-ink); padding: 0; }
 .pos-display:active { background: var(--surface-2); }
 .topbar .sub {
   font-size: 13px;
@@ -308,10 +308,12 @@ tfoot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid var(--
 /* A name in a table that jumps to its section further down the page. */
 tr.jump-row { cursor: pointer; }
 .jump-link {
-  appearance: none; background: none; border: none; padding: 6px 0; margin: 0;
+  appearance: none; background: none; border: none; padding: 6px 0; margin: 0; position: relative;
   font: inherit; font-weight: 700; color: var(--text); text-align: left; cursor: pointer;
   text-decoration: underline dotted var(--accent-summary); text-decoration-thickness: 2px; text-underline-offset: 4px;
 }
+/* the finger needs about 40px: the touch area grows without making the table row taller */
+.jump-link::before { content: ""; position: absolute; left: -4px; right: -4px; top: -5px; bottom: -5px; }
 .jump-link::after { content: " \2193"; display: inline-block; text-decoration: none; color: var(--accent-summary); font-weight: 800; }
 
 .list-item {
@@ -827,7 +829,7 @@ details.fold > summary .sub { font-size: 12px; color: var(--text-dim); margin-to
 .chips::-webkit-scrollbar { display: none; }
 .chip {
   flex: none; border: 1.5px solid var(--btn-edge); background: var(--btn-tint); color: var(--btn-ink);
-  border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 700; min-height: 38px;
+  border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 700; min-height: 40px;
 }
 .chip.active { background: var(--accent-summary); border-color: var(--accent-summary); color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.18); }
 
@@ -1380,7 +1382,7 @@ table.cf thead tr:first-child th { font-size: 11px; letter-spacing: 0; }
 .reports-bar #reports-back { margin: 0; white-space: nowrap; }
 .rep-cell { position: relative; min-width: 0; }
 .rep-cell .rep-tile { width: 100%; }
-.rep-star { position: absolute; top: 2px; right: 2px; width: 36px; height: 36px; border: 0; background: none; font-size: 20px; line-height: 1; color: var(--text-dim); border-radius: 8px; }
+.rep-star { position: absolute; top: 0; right: 0; width: 40px; height: 40px; border: 0; background: none; font-size: 20px; line-height: 1; color: var(--text-dim); border-radius: 8px; }
 .rep-star.on { color: #c98a00; }
 /* A commodity's name in its own colour (commoditycolor.js), mixed with the text colour so it reads in both themes */
 .com-amber { color: color-mix(in srgb, #b7791f 82%, var(--text)); }

@@ -97,5 +97,20 @@ check('the load form says Storage where it used to say Silo', () => {
   assert.ok(mv.includes('>Storage</button>') && mv.includes('<label>Storage</label>'));
 });
 
+console.log('\n=== screens ===');
+check('a menu of one tool is that tool, and the contractor questions are folded', () => {
+  assert.ok(mv.includes('const only = toolButtons.length === 1 ? toolButtons[0] : null;') && mv.includes('if (toolButtons.length === 0) toolsBtn.hidden = true;'));
+  assert.ok(src('views/spray.js').includes('id="sp-q-fold"'));
+});
+check('small tap targets are enlarged, and the contract numbers sit under the buyer', () => {
+  const css = read('docs/css/styles.css');
+  assert.ok(css.includes('.jump-link::before') && css.includes('.rep-star { position: absolute; top: 0; right: 0; width: 40px; height: 40px;') && css.includes('min-height: 40px;'));
+  const sales = src('views/sales.js');
+  assert.ok(sales.indexOf("id: 'contractNo'") < sales.indexOf('id="buyer-fold"'));
+});
+check('the setup button has one name', () => {
+  assert.ok(src('views/help.js').includes('id="help-walk">Start setup<') && !src('helpcontent.js').includes('Open the walk-through'));
+});
+
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }
 console.log('\nall passed');

@@ -8,11 +8,11 @@
 //
 // The reading and the rules are in silosetup.js, where they are tested.
 
-import { db } from '../storage.js?v=511';
-import { openSheet, closeSheet, toast, askConfirm, notify } from '../ui.js?v=511';
-import { esc, num } from '../fmt.js?v=511';
-import { isTransit } from '../transit.js?v=511';
-import { parseCarryOver, decisionsFromList, summarise, patchesFor } from '../silosetup.js?v=511';
+import { db } from '../storage.js?v=512';
+import { openSheet, closeSheet, toast, askConfirm, notify } from '../ui.js?v=512';
+import { esc, num } from '../fmt.js?v=512';
+import { isTransit } from '../transit.js?v=512';
+import { parseCarryOver, decisionsFromList, summarise, patchesFor } from '../silosetup.js?v=512';
 
 const natural = (a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: 'base' });
 

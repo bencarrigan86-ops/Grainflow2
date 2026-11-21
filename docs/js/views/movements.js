@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=511';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=511';
-import { commodityClass } from '../commoditycolor.js?v=511';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=511';
-import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=511';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=511';
-import { withholdingClash } from '../fumigation.js?v=511';
-import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=511';
-import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=511';
-import { cleanStrokes } from '../signature.js?v=511';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=511';
-import { compressAndStampImage } from '../img.js?v=511';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=511';
-import { specText, extraSpecKey } from '../outload.js?v=511';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=511';
-import { pickableSilos } from '../silopick.js?v=511';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=511';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=511';
-import { activeSales } from '../paidsales.js?v=511';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=511';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=511';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=511';
-import { nowTime } from '../loadreport.js?v=511';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=511';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=511';
-import { openGinRunSheet } from './ginrun.js?v=511';
-import { openModuleMoveSheet } from './modulemove.js?v=511';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=511';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=511';
+import { db } from '../storage.js?v=512';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=512';
+import { commodityClass } from '../commoditycolor.js?v=512';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=512';
+import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=512';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=512';
+import { withholdingClash } from '../fumigation.js?v=512';
+import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=512';
+import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=512';
+import { cleanStrokes } from '../signature.js?v=512';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=512';
+import { compressAndStampImage } from '../img.js?v=512';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=512';
+import { specText, extraSpecKey } from '../outload.js?v=512';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=512';
+import { pickableSilos } from '../silopick.js?v=512';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=512';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=512';
+import { activeSales } from '../paidsales.js?v=512';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=512';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=512';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=512';
+import { nowTime } from '../loadreport.js?v=512';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=512';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=512';
+import { openGinRunSheet } from './ginrun.js?v=512';
+import { openModuleMoveSheet } from './modulemove.js?v=512';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=512';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=512';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -81,7 +81,7 @@ function paint(root) {
     <div class="topbar">
       <div>
         <h1>Loads</h1>
-        <div class="sub">Truck tickets: field/silo &rarr; silo/contract</div>
+        <div class="sub">From a field or storage to storage or a contract</div>
       </div>
     </div>
     <div class="view">
@@ -89,7 +89,7 @@ function paint(root) {
 
       <div class="filterbar">
         <div class="mv-searchrow">
-          ${movements.length > 0 ? `<input type="search" id="mv-q" placeholder="Search tickets" value="${esc(listFilter.q)}" aria-label="Search tickets by date, truck, driver, buyer, contract or grade" />` : '<span class="mv-spacer"></span>'}
+          ${movements.length > 0 ? `<input type="search" id="mv-q" placeholder="Search loads" value="${esc(listFilter.q)}" aria-label="Search loads by date, truck, driver, buyer, contract or grade" />` : '<span class="mv-spacer"></span>'}
           <button type="button" class="btn secondary small mv-more-btn" id="mv-tools-btn" aria-haspopup="true" aria-expanded="false">More &#9662;</button>
         </div>
         <div class="mv-menu" id="mv-tools" hidden>
@@ -104,7 +104,7 @@ function paint(root) {
       </div>
 
       <div class="card input">
-        <h2><span class="dot input"></span>Tickets</h2>
+        <h2><span class="dot input"></span>Loads</h2>
         <div id="ticket-list"></div>
       </div>
     </div>
@@ -118,7 +118,12 @@ function paint(root) {
   const toolsMenu = root.querySelector('#mv-tools');
   const toolsBtn = root.querySelector('#mv-tools-btn');
   const setMenu = (open) => { toolsMenu.hidden = !open; toolsBtn.setAttribute('aria-expanded', String(open)); };
-  toolsBtn.addEventListener('click', () => setMenu(toolsMenu.hidden));
+  // One tool needs no menu: the button is the tool. None, and there is nothing to show.
+  const toolButtons = toolsMenu.querySelectorAll('button');
+  const only = toolButtons.length === 1 ? toolButtons[0] : null;
+  if (toolButtons.length === 0) toolsBtn.hidden = true;
+  if (only) { toolsBtn.innerHTML = only.innerHTML; toolsBtn.removeAttribute('aria-haspopup'); toolsBtn.removeAttribute('aria-expanded'); }
+  toolsBtn.addEventListener('click', () => (only ? only.click() : setMenu(toolsMenu.hidden)));
   toolsMenu.addEventListener('click', () => setMenu(false));
   root.onclick = (ev) => { if (!toolsMenu.hidden && !ev.target.closest('#mv-tools, #mv-tools-btn')) setMenu(false); };
   root.querySelector('#log-ginning')?.addEventListener('click', () => openGinRunSheet(null));

@@ -4,21 +4,21 @@
 // spray marked. What is on the form and where is decided in spray.js; the PDF is drawn in spraypdf.js. The job is saved
 // as it is filled in, so a request can be started in the paddock and finished at the desk.
 
-import { db } from '../storage.js?v=511';
-import { farmSwitch, canChangeArea } from '../nav.js?v=511';
-import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=511';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=511';
-import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=511';
+import { db } from '../storage.js?v=512';
+import { farmSwitch, canChangeArea } from '../nav.js?v=512';
+import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=512';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=512';
+import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=512';
 import {
   FORMS, RATE_UNITS, MAX_CHEMICALS, CHECKLIST, sprayDefaults, sprayProblems, sprayTotals, sprayTitle, usedChemicals, plain,
-} from '../spray.js?v=511';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=511';
-import { viewPdf } from '../pdfview.js?v=511';
-import { loadMySignature } from '../mysignature.js?v=511';
-import { signerNamesFor } from './signtoggle.js?v=511';
-import { signatureSvg } from './signaturepad.js?v=511';
-import { openMapSheet } from './farmmap.js?v=511';
-import { buildSprayPdf } from '../spraypdf.js?v=511';
+} from '../spray.js?v=512';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=512';
+import { viewPdf } from '../pdfview.js?v=512';
+import { loadMySignature } from '../mysignature.js?v=512';
+import { signerNamesFor } from './signtoggle.js?v=512';
+import { signatureSvg } from './signaturepad.js?v=512';
+import { openMapSheet } from './farmmap.js?v=512';
+import { buildSprayPdf } from '../spraypdf.js?v=512';
 
 // A farm worker can write spray requests on a farm that has switched it on (see farmswitches.js); sending one on is for an owner or manager.
 export const canSpray = (role) => canChangeArea(role, 'sprays', ['owner', 'manager'].includes(role) || (role === 'farm_worker' && farmSwitch('workersRaiseSprays')));
@@ -183,9 +183,13 @@ export async function openSprayFormSheet(existing, start = {}) {
     }
 
     function checklistCard() {
+      // a long list of yes/no answers: folded, with what has been answered said on the header
+      const answered = CHECKLIST.filter((q) => d.checklist?.[q.key]).length;
+      const told = (d.neighbours || []).filter((x) => x?.name).length;
+      const sub = [answered ? `${answered} of ${CHECKLIST.length} answered` : 'Not answered yet', told ? `${told} neighbour${told === 1 ? '' : 's'} told` : ''].filter(Boolean).join(' · ');
       return `
-        <div class="card">
-          <h2>Contractor's questions</h2>
+        <details class="fold feature" id="sp-q-fold" ${answered || told || d.signedBy ? 'open' : ''}>
+          <summary><div class="feature-head"><h2>Contractor's questions</h2><div class="sub">${esc(sub)}</div></div></summary>
           <div class="hint" style="margin-bottom:6px">Answer what you know. Anything left blank is left blank on the form.</div>
           ${CHECKLIST.map((q, n) => `
             <div class="sp-block${n % 2 ? ' alt' : ''}" style="padding-bottom:10px">
@@ -207,7 +211,7 @@ export async function openSprayFormSheet(existing, start = {}) {
           ${d.form === 'aircair' ? (mySig ? `
             <label class="row" style="cursor:pointer;margin-top:4px"><span class="label"><input type="checkbox" id="sp-usesig" ${d.useSignature ? 'checked' : ''} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />Sign with my saved signature</span><span class="value"></span></label>
             <div style="margin:8px 0">${signatureSvg(mySig.strokes, 180)}</div>` : '<div class="hint">Save a signature under your profile to sign the form here. Until then, print and sign it.</div>') : ''}
-        </div>`;
+        </details>`;
     }
 
     function aircairCard() {
