@@ -477,7 +477,7 @@ details.fold.fold-band.fold-alt {
 
 .year-pill {
   position: fixed;
-  top: calc(8px + var(--safe-top));
+  top: calc(8px + var(--safe-top) + var(--banner-h, 0px));
   right: 52px;
   z-index: 25;
   background: var(--accent-summary);
@@ -495,7 +495,7 @@ details.fold.fold-band.fold-alt {
    bar buys every remaining tab meaningful width on a phone. */
 .settings-btn {
   position: fixed;
-  top: calc(6px + var(--safe-top));
+  top: calc(6px + var(--safe-top) + var(--banner-h, 0px));
   right: 10px;
   z-index: 25;
   width: 32px;

@@ -14,7 +14,7 @@
 //
 // Pure functions over plain records. Nothing here touches the farm.
 
-import { shrinkIntoSilo } from './shrink.js?v=498';
+import { shrinkIntoSilo } from './shrink.js?v=499';
 
 const num = (v) => Number(v) || 0;
 const EPS = 1e-9;

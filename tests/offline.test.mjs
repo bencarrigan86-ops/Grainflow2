@@ -2,8 +2,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { APP_VERSION } from '../docs/js/version.js?v=498';
-import { hasStoredLogin, decideOfflineSession } from '../docs/js/offlinestart.js?v=498';
+import { APP_VERSION } from '../docs/js/version.js?v=499';
+import { hasStoredLogin, decideOfflineSession } from '../docs/js/offlinestart.js?v=499';
 import { buildPrecache, listFiles } from '../tools/make-precache.mjs';
 
 const docs = new URL('../docs/', import.meta.url);
@@ -143,6 +143,17 @@ t('there is one listener that sends what is owed on reconnect, however many time
 });
 t('with no signal a push does not try', () => {
   assert.ok(read('js/sync.js').includes('navigator.onLine === false) return { skipped: true, offline: true }'));
+});
+
+t('a bar across the top (test copy, support view, a save problem) does not hide the season pill and the gear', () => {
+  const css = read('css/styles.css');
+  const rule = (sel) => { const i = css.indexOf(`${sel} {`); return css.slice(i, css.indexOf('}', i)); };
+  const pill = rule('.year-pill').includes('var(--banner-h, 0px)');
+  const gear = rule('.settings-btn').includes('var(--banner-h, 0px)');
+  assert.ok(pill && gear, 'the pill and gear do not move down by the bar height');
+  const m = read('js/main.js');
+  assert.ok(m.includes("t.id = 'test-banner'") && m.includes("['test-banner', 'support-banner', 'save-banner']"));
+  assert.ok((m.match(/updateBannerSpace()/g) || []).length >= 4);
 });
 
 console.log(`${n} passed`);

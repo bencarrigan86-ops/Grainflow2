@@ -1,38 +1,38 @@
-import { db } from './storage.js?v=498';
-import { supabase, ENV } from './supabase.js?v=498';
-import { installErrorLog } from './supportinfo.js?v=498';
-import { loadMySeries, rememberedSeries } from './outloadseries.js?v=498';
-import { initTheme } from './theme.js?v=498';
+import { db } from './storage.js?v=499';
+import { supabase, ENV } from './supabase.js?v=499';
+import { installErrorLog } from './supportinfo.js?v=499';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=499';
+import { initTheme } from './theme.js?v=499';
 initTheme();
-import { renderPosition } from './views/position.js?v=498';
-import { renderProduction } from './views/production.js?v=498';
-import { renderReports } from './views/reports.js?v=498';
-import { renderSales } from './views/sales.js?v=498';
-import { renderMovements } from './views/movements.js?v=498';
-import { renderStorage } from './views/storage.js?v=498';
-import { renderSettings } from './views/settings.js?v=498';
-import { renderLogin } from './views/login.js?v=498';
-import { renderNewPassword } from './views/newpassword.js?v=498';
-import { isRecovering, endRecovery, takeResetExpired, noteRecoveryLink } from './recovery.js?v=498';
-import { RESET_EXPIRED } from './recovery.js?v=498';
-import { renderAccount } from './views/account.js?v=498';
-import { renderHelp } from './views/help.js?v=498';
+import { renderPosition } from './views/position.js?v=499';
+import { renderProduction } from './views/production.js?v=499';
+import { renderReports } from './views/reports.js?v=499';
+import { renderSales } from './views/sales.js?v=499';
+import { renderMovements } from './views/movements.js?v=499';
+import { renderStorage } from './views/storage.js?v=499';
+import { renderSettings } from './views/settings.js?v=499';
+import { renderLogin } from './views/login.js?v=499';
+import { renderNewPassword } from './views/newpassword.js?v=499';
+import { isRecovering, endRecovery, takeResetExpired, noteRecoveryLink } from './recovery.js?v=499';
+import { RESET_EXPIRED } from './recovery.js?v=499';
+import { renderAccount } from './views/account.js?v=499';
+import { renderHelp } from './views/help.js?v=499';
 import {
   getSession, getMembership, sessionStillValid, onAuthChange, acceptInvitation, signOut, listMyInvitations, offlineSession,
-} from './auth.js?v=498';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=498';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=498';
-import { esc, todayLocal } from './fmt.js?v=498';
-import { isSheetOpen, notify, toast } from './ui.js?v=498';
-import { describeMerges } from './ticketmerge.js?v=498';
-import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=498';
-import { addDays } from './fumigation.js?v=498';
-import { watchLists } from './band.js?v=498';
-import { APP_VERSION } from './version.js?v=498';
-import { startUpdateCheck } from './updatecheck.js?v=498';
-import { emailFromTrialHash } from './trialtext.js?v=498';
-import { installWatch, requestPersistence } from './pwa.js?v=498';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=498';
+} from './auth.js?v=499';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=499';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=499';
+import { esc, todayLocal } from './fmt.js?v=499';
+import { isSheetOpen, notify, toast } from './ui.js?v=499';
+import { describeMerges } from './ticketmerge.js?v=499';
+import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=499';
+import { addDays } from './fumigation.js?v=499';
+import { watchLists } from './band.js?v=499';
+import { APP_VERSION } from './version.js?v=499';
+import { startUpdateCheck } from './updatecheck.js?v=499';
+import { emailFromTrialHash } from './trialtext.js?v=499';
+import { installWatch, requestPersistence } from './pwa.js?v=499';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=499';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -211,7 +211,7 @@ window.addEventListener('online', async () => {
 // This phone could not write to its own storage: the last change is only in memory, and closing the app loses it.
 function setSaveBanner(show) {
   let bar = document.getElementById('save-banner');
-  if (!show) { bar?.remove(); return; }
+  if (!show) { bar?.remove(); updateBannerSpace(); return; }
   if (bar) return;
   bar = document.createElement('div');
   bar.id = 'save-banner';
@@ -225,6 +225,7 @@ function setSaveBanner(show) {
   retry.addEventListener('click', () => { db.retrySave().catch(() => toast('Still could not save')); });
   bar.appendChild(retry);
   document.body.prepend(bar);
+  updateBannerSpace();
 }
 window.addEventListener('grainflow:save-failed', () => setSaveBanner(true));
 window.addEventListener('grainflow:save-ok', () => { setSaveBanner(false); toast('Saved on this phone'); });
@@ -571,6 +572,7 @@ function noteSupportOpen(farmId, farmName = '') {
   bar.setAttribute('role', 'status');
   bar.style.cssText = 'position:sticky;top:0;z-index:50;padding:6px 12px;text-align:center;font-size:12px;font-weight:700;background:var(--warn);color:#14171a';
   bar.textContent = `Support view${farmName ? ` of ${farmName}` : ''}: read only. Nothing you change here is sent. `;
+  queueMicrotask(updateBannerSpace);
   // the support login moves between its trial farms from Settings
   const sw = document.createElement('a');
   sw.href = '#/settings';
@@ -589,15 +591,27 @@ function noteAdvisorView(farmName = '') {
   bar.style.cssText = 'position:sticky;top:0;z-index:50;padding:6px 12px;text-align:center;font-size:12px;font-weight:700;background:var(--warn);color:#14171a';
   bar.textContent = `Advisor view${farmName ? ` of ${farmName}` : ''}: read only. Nothing you change here is sent.`;
   document.body.prepend(bar);
+  updateBannerSpace();
 }
+
+// The season pill and the gear are fixed to the top of the screen, so a bar across the top (test copy, support view, a save
+// problem) would sit over them. Their height is handed to the stylesheet, which moves the pill and gear down by it.
+function updateBannerSpace() {
+  let h = 0;
+  for (const id of ['test-banner', 'support-banner', 'save-banner']) h += document.getElementById(id)?.offsetHeight || 0;
+  document.documentElement.style.setProperty('--banner-h', `${h}px`);
+}
+window.addEventListener('resize', updateBannerSpace);
 
 // A test copy says so on every screen, so it is never mistaken for the farm's real records.
 if (ENV.name === 'test') {
   const t = document.createElement('div');
+  t.id = 'test-banner';
   t.setAttribute('role', 'status');
   t.style.cssText = 'position:sticky;top:0;z-index:60;padding:4px 12px;text-align:center;font-size:12px;font-weight:800;background:#b3261e;color:#fff';
   t.textContent = ENV.configured ? 'TEST COPY. Nothing here is real.' : 'TEST COPY, not set up yet. See STAGING.md.';
   document.body.prepend(t);
+  updateBannerSpace();
 }
 
 installErrorLog();

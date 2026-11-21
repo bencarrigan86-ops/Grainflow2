@@ -13,7 +13,7 @@
 // Pure: it works out what to offer and what the copy looks like. The screen asks the
 // person which contracts to bring, and storage.js writes them.
 
-import { saleEconomics } from './derived.js?v=498';
+import { saleEconomics } from './derived.js?v=499';
 
 export const CARRY_MARK = 'Carried from';
 
