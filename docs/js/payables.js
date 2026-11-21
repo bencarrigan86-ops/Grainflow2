@@ -11,7 +11,7 @@
 //
 // Bills count at their amount ex GST: the GST on a bill is claimed back, so it is owed but is not a cost.
 
-import { saleEconomics } from './derived.js?v=501';
+import { saleEconomics } from './derived.js?v=505';
 
 export const KINDS = [
   { key: 'brokerage', label: 'Brokerage' },
@@ -113,8 +113,12 @@ export function payablesCost(sales, movements, payables) {
   }
   let storage = 0;
   let other = 0;
+  // A bill made from a ginning run is the run's own ginning cost, which the cotton figures (seed, less ginning) already count:
+  // counting the bill here too would take the ginning off profit twice.
+  const ginBills = new Set((movements || []).filter((m) => m?.gin && typeof m.gin === 'object' && m.gin.payableId).map((m) => m.gin.payableId));
   for (const p of payables || []) {
     if (paidByBuyer(p)) continue;   // the ginning is already taken off the contract's payment: counting the bill too would count it twice
+    if (ginBills.has(p.id)) continue;
     const amount = num(p.amount);
     const onAContract = linked.has(p.saleId);
     if (p.kind === 'brokerage' && !onAContract) brokerage += amount;

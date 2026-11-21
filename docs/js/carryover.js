@@ -13,7 +13,7 @@
 // Pure: it works out what to offer and what the copy looks like. The screen asks the
 // person which contracts to bring, and storage.js writes them.
 
-import { saleEconomics } from './derived.js?v=501';
+import { saleEconomics } from './derived.js?v=505';
 
 export const CARRY_MARK = 'Carried from';
 
@@ -89,8 +89,15 @@ export function buildCarriedSale(sale, { commodityId, tons, prevLabel }) {
     if (k === 'id' || k === 'documents' || k.startsWith('__')) continue;
     copy[k] = v && typeof v === 'object' ? JSON.parse(JSON.stringify(v)) : v;
   }
+  // ginning is a flat dollar amount for the whole contract; the part carried over takes its share of it, not all of it again
+  const originalTons = Number(sale.tons) || 0;
+  const flatGinning = Number(sale.ginning) || 0;
+  const ginning = flatGinning && originalTons > 0 && Number(tons) !== originalTons
+    ? Math.round(flatGinning * (Math.max(0, Number(tons) || 0) / originalTons) * 100) / 100
+    : flatGinning;
   return {
     ...copy,
+    ...(flatGinning ? { ginning } : {}),
     commodityId,
     tons: round3(tons),
     tonsDelivered: 0,

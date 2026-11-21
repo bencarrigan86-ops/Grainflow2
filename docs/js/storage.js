@@ -18,39 +18,39 @@
 // and falls back to IndexedDB when there is not, so the app opens with real
 // data in a paddock as readily as at a desk.
 
-import { hydrate } from './hydrate.js?v=501';
-import { setBrandLogo } from './brand.js?v=501';
+import { hydrate } from './hydrate.js?v=505';
+import { setBrandLogo } from './brand.js?v=505';
 import {
   saveState, loadState, markDeleted, markDirty, outboxItems, clearLegacyDirty,
   loadFarmStamp, setAsideState, clearOutbox, clearState, loadOwner, saveOwner,
-} from './local.js?v=501';
-import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=501';
-import { isLegacyDirty } from './dirty.js?v=501';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=501';
-import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=501';
-import { hasDeductions } from './deductions.js?v=501';
-import { hasGin, hasCotton, hasModules } from './ginning.js?v=501';
-import { hasHay, hasHayLoad } from './hay.js?v=501';
-import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=501';
-import { todayLocal } from './fmt.js?v=501';
-import { signLoad } from './driversign.js?v=501';
-import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=501';
-import { settleLegs, dedupeLegs } from './legs.js?v=501';
-import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=501';
-import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=501';
-import { isOffFarm, carryOffFarm } from './offfarm.js?v=501';
-import { setCommodityOrder } from './commodityorder.js?v=501';
-import { setShrinkSource } from './shrink.js?v=501';
-import { storageLedgerStock } from './derived.js?v=501';
-import { setFarmSwitches, setFarmLevels } from './nav.js?v=501';
-import { readSwitches, readLevels } from './farmswitches.js?v=501';
-import { seasonYY, nextOutloadNo, isPlainNumber, renumberPlan, outloadParts } from './outloadno.js?v=501';
-import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=501';
-import { reconcileImport, adoptServerIds } from './reconcile.js?v=501';
-import { schedulePush, pushOnReconnect } from './sync.js?v=501';
-import { hasParts as hasAddressParts } from './address.js?v=501';
-import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=501';
-import { linePayableId } from './ginoffset.js?v=501';
+} from './local.js?v=505';
+import { chooseBootState, resolveLegacy, canOpenFromDevice } from './boot.js?v=505';
+import { isLegacyDirty } from './dirty.js?v=505';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=505';
+import { lineupGroups, lineupSeason, groupsForSeason, copyOutlines } from './lineup.js?v=505';
+import { hasDeductions } from './deductions.js?v=505';
+import { hasGin, hasCotton, hasModules } from './ginning.js?v=505';
+import { hasHay, hasHayLoad } from './hay.js?v=505';
+import { hasHistory, recordPrice, latestSpreads, weekStart } from './pricehistory.js?v=505';
+import { todayLocal } from './fmt.js?v=505';
+import { signLoad } from './driversign.js?v=505';
+import { hasStorageQuality, hasStorageNote, hasLoadQuality, hasGradeBands, hasFumigations } from './mapping.js?v=505';
+import { settleLegs, dedupeLegs } from './legs.js?v=505';
+import { isTransit, transitFor, transitName, TRANSIT_LABEL } from './transit.js?v=505';
+import { nextNoteNo, applyAdjustment, withoutAdjustment, isAdjustment } from './adjustment.js?v=505';
+import { isOffFarm, carryOffFarm } from './offfarm.js?v=505';
+import { setCommodityOrder } from './commodityorder.js?v=505';
+import { setShrinkSource } from './shrink.js?v=505';
+import { storageLedgerStock } from './derived.js?v=505';
+import { setFarmSwitches, setFarmLevels } from './nav.js?v=505';
+import { readSwitches, readLevels } from './farmswitches.js?v=505';
+import { seasonYY, nextOutloadNo, isPlainNumber, renumberPlan, outloadParts } from './outloadno.js?v=505';
+import { buildCarriedSale, carriedIntoNote, appendNote } from './carryover.js?v=505';
+import { reconcileImport, adoptServerIds } from './reconcile.js?v=505';
+import { schedulePush, pushOnReconnect } from './sync.js?v=505';
+import { hasParts as hasAddressParts } from './address.js?v=505';
+import { prepareImport, DEFAULT_OVERHEADS, DEFAULT_BUSINESS_DETAILS } from './import.js?v=505';
+import { linePayableId } from './ginoffset.js?v=505';
 
 /**
  * A gin bill the lint buyer pays is settled once lint invoices have taken all of it off: the farm owes the gin nothing, the buyer settles
@@ -708,6 +708,15 @@ export const db = {
         ...(Number(c.shrinkPct) > 0 ? { shrinkPct: c.shrinkPct, __hasShrink: true } : {}),
         nPerTonne: c.nPerTonne, mtmPrice: 0, openingStock: 0, retainedSeed: 0,
         grossMarginCost: 0,
+        // how it is counted (tonnes, bales) and its settings are the commodity's own, not a result of the season: without them
+        // cotton goes back to tonnes, and the seed price, ginning rate and hay bale weights are lost
+        unit: c.unit || 't',
+        ...(Number(c.balesPerRoundBale) > 0 ? { balesPerRoundBale: c.balesPerRoundBale } : {}),
+        ...(Number(c.defaultYieldTHa) > 0 ? { defaultYieldTHa: c.defaultYieldTHa } : {}),
+        ...(Number(c.targetYieldTHa) > 0 ? { targetYieldTHa: c.targetYieldTHa } : {}),
+        ...(c.notes ? { notes: c.notes } : {}),
+        ...(hasCotton(c.cotton) ? { cotton: { ...c.cotton }, __hasCotton: true } : {}),
+        ...(hasHay(c.hay) ? { hay: { ...c.hay }, __hasHay: true } : {}),
         // the farm's own grades carry into the new season with the commodity
         ...(c.customGrades?.length ? { customGrades: [...c.customGrades], __hasCustomGrades: true } : {}),
         ...(c.harvestSeason ? { harvestSeason: c.harvestSeason, __hasHarvestSeason: true } : {}),
@@ -731,6 +740,10 @@ export const db = {
       capacityTons: s.capacityTons, angleOfRepose: s.angleOfRepose,
       ...(Number(s.volumeM3) > 0 ? { volumeM3: s.volumeM3, __hasVolume: true } : {}),
       testWeight: s.testWeight, tarpOverhangM: s.tarpOverhangM,
+      // what it is counted in (tonnes, bales, modules), the site it sits on, and which end it empties from are the store's own
+      unitLabel: s.unitLabel || 't',
+      ...(s.property ? { property: s.property, __hasProperty: true } : {}),
+      ...(s.outloadEnd === 'first' || s.outloadEnd === 'last' ? { outloadEnd: s.outloadEnd, __hasOutloadEnd: true } : {}),
       ...(Number(s.wallHeight) > 0 ? { wallHeight: s.wallHeight, __hasWallHeight: true } : {}),
       // a silo or bunker still holding grain carries it over: what the books say it holds now is what it opens with (off-farm stores do it below)
       currentHeight: 0, length: 0, fillState: 'peak', openingStock: isOffFarm(s) ? 0 : carriedStock(s, src.movements),
@@ -1105,6 +1118,7 @@ export const db = {
       if (idx >= 0) {
         const merged = { ...c.sales[idx], ...sale };
         if (Number(merged.brokerageRate)) merged.__hasBrokerageRate = true;   // keeps clearing it reaching the server
+        if (merged.levyFreight !== undefined && merged.levyFreight !== null && merged.levyFreight !== '') merged.__hasLevyFreight = true;   // so clearing it reaches the server
         if (merged.freightPaidBy === 'buyer') merged.__hasFreightPaidBy = true;   // and a switch back to 'we' too
         if (merged.ourRef) merged.__hasOurRef = true;   // so clearing it reaches the server
         if (merged.paid) merged.__hasPaid = true;       // and so does marking it unpaid again
@@ -1119,7 +1133,7 @@ export const db = {
       touch('sale', sale.id);
     } else {
       const id = uid();
-      c.sales.push({ ...sale, id, ...(sale.lateDiscounts?.length ? { __hasLate: true } : {}), ...(Number(sale.brokerageRate) ? { __hasBrokerageRate: true } : {}), ...(sale.freightPaidBy === 'buyer' ? { __hasFreightPaidBy: true } : {}), ...(sale.ourRef ? { __hasOurRef: true } : {}), ...(sale.paid ? { __hasPaid: true } : {}), ...(sale.deliveryPattern ? { __hasDeliveryPattern: true } : {}), ...(sale.invoicing ? { __hasInvoicing: true } : {}), ...(sale.cottonKind ? { __hasCottonKind: true } : {}), ...(sale.cottonTerms ? { __hasCottonTerms: true } : {}), ...(hasAddressParts(sale.buyerAddressParts) ? { __hasBuyerAddressParts: true } : {}) });
+      c.sales.push({ ...sale, id, ...(sale.lateDiscounts?.length ? { __hasLate: true } : {}), ...(Number(sale.brokerageRate) ? { __hasBrokerageRate: true } : {}), ...(sale.levyFreight !== undefined && sale.levyFreight !== null && sale.levyFreight !== '' ? { __hasLevyFreight: true } : {}), ...(sale.freightPaidBy === 'buyer' ? { __hasFreightPaidBy: true } : {}), ...(sale.ourRef ? { __hasOurRef: true } : {}), ...(sale.paid ? { __hasPaid: true } : {}), ...(sale.deliveryPattern ? { __hasDeliveryPattern: true } : {}), ...(sale.invoicing ? { __hasInvoicing: true } : {}), ...(sale.cottonKind ? { __hasCottonKind: true } : {}), ...(sale.cottonTerms ? { __hasCottonTerms: true } : {}), ...(hasAddressParts(sale.buyerAddressParts) ? { __hasBuyerAddressParts: true } : {}) });
       touch('sale', id);
     }
     persist();

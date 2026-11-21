@@ -175,6 +175,17 @@ export function isLegacyDirty(item) {
 }
 
 /**
+ * The kinds of outbox entry whose rows live in `table` (a paddock's agronomy travels with the paddock, a load's legs and photos
+ * with the load). Used to keep exactly those entries owed when the server refuses the table to this account.
+ */
+export function kindsForTable(table) {
+  const own = Object.entries(OWN_TABLE).filter(([, t]) => t === table).map(([k]) => k);
+  const parent = CHILD_OF[table]?.[1];
+  const viaParent = parent ? Object.entries(OWN_TABLE).filter(([, t]) => t === parent).map(([k]) => k) : [];
+  return [...new Set([...own, ...viaParent])];
+}
+
+/**
  * What a role sends for a table. A farm worker's copy of the stock has the prices blanked, so a delivery in it is not
  * theirs to send: they send only use and count entries.
  */

@@ -3211,3 +3211,9 @@ begin
 end $$;
 
 notify pgrst, 'reload schema';
+
+-- 20261226000000_levy_freight.sql
+alter table sale_terms
+  add column if not exists levy_freight numeric;
+
+notify pgrst, 'reload schema';

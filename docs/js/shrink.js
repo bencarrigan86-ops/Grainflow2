@@ -18,6 +18,17 @@ let source = () => ({ commodities: [], fields: [], storages: [] });
 /** Where the farm's records come from. storage.js sets this once; tests set their own (a bare list is the commodities). */
 export function setShrinkSource(fn) { source = typeof fn === 'function' ? fn : () => ({ commodities: [], fields: [], storages: [] }); }
 
+/**
+ * Run `fn` with the records of another season as the source, then put the farm's own back. A season has its own paddock and silo
+ * ids, so a load with no commodity set can only be matched to its paddock's or silo's commodity in the records of its own season.
+ * (Synchronous on purpose: nothing else can run between the swap and the restore.)
+ */
+export function withShrinkSource(records, fn) {
+  const before = source;
+  source = () => ({ commodities: records?.commodities || [], fields: records?.fields || [], storages: records?.storages || [] });
+  try { return fn(); } finally { source = before; }
+}
+
 /** The records as {commodities, fields, storages}, whatever the source gave. */
 function context() {
   const s = source();

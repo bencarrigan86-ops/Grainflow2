@@ -1,16 +1,16 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=501';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=501';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=501';
-import { carryAdjustment, carryRateFor } from './carry.js?v=501';
-import { lateAdjustment, lateDiscountFor } from './cottonlate.js?v=501';
-import { isGinContract } from './cottonkinds.js?v=501';
-import { ginTakenOff } from './ginoffset.js?v=501';
-import { cottonComponents, cottonRunTotals, lotsForSale } from './ginning.js?v=501';
-import { commoditySort } from './commodityorder.js?v=501';
-import { shrinkInSilo, shrinkForCommodity } from './shrink.js?v=501';
-import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=501';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=505';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=505';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=505';
+import { carryAdjustment, carryRateFor } from './carry.js?v=505';
+import { lateAdjustment, lateDiscountFor } from './cottonlate.js?v=505';
+import { isGinContract } from './cottonkinds.js?v=505';
+import { ginTakenOff } from './ginoffset.js?v=505';
+import { cottonComponents, cottonRunTotals, lotsForSale, STD_BALE_KG } from './ginning.js?v=505';
+import { commoditySort } from './commodityorder.js?v=505';
+import { shrinkInSilo, shrinkForCommodity, withShrinkSource } from './shrink.js?v=505';
+import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=505';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;
@@ -91,6 +91,17 @@ export function storageLedgerStock(storage, movements) {
   return (Number(storage.openingStock) || 0) + movementNetForStorage(storage.id, movements);
 }
 
+/**
+ * The freight taken off the price to get the farm-gate value that levies are charged on ($/t). Sold ex farm there is none; sold
+ * delivered, the buyer works it out, and it is not always the real freight rate (a higher figure means lower levies). A figure
+ * typed on the contract is used as it is; left blank it is the contract's freight.
+ */
+export function levyFreightOf(sale) {
+  const raw = sale?.levyFreight;
+  if (raw === null || raw === undefined || raw === '' || !Number.isFinite(Number(raw))) return Number(sale?.freight) || 0;
+  return Math.max(0, Number(raw));
+}
+
 export function saleEconomics(sale, movements = [], invoices = []) {
   const price = Number(sale.price) || 0;
   const freight = Number(sale.freight) || 0;
@@ -103,7 +114,8 @@ export function saleEconomics(sale, movements = [], invoices = []) {
   const tonsDelivered = manualDelivered + movementDelivered;
 
   const netOfFreight = price - freight;
-  const levies = -netOfFreight * leviesPct;
+  // levies are on the farm-gate value: the price less the freight taken off for levies (the contract's freight unless it says otherwise)
+  const levies = -Math.max(0, price - levyFreightOf(sale)) * leviesPct;
   const priceExFarm = netOfFreight + levies + premium;
   // Ginning is a total-dollar deduction (not a rate — the grower reads it
   // straight off the gin's settlement statement), so it's subtracted once
@@ -206,7 +218,8 @@ export function invoiceTotals(sale, lines) {
   const ginTotal = Math.round(lines.filter((l) => l.isGinPrepaid).reduce((s, l) => s + (Number(l.amount) || 0), 0) * 100) / 100;
   const subtotalExGST = lines.filter((l) => !l.isGinPrepaid).reduce((s, l) => s + l.subtotal, 0);
   const leviesPct = Number(sale.leviesPct) || 0;
-  const levies = subtotalExGST * leviesPct;
+  // the same farm-gate value as on the contract: the grain and its items less the freight taken off for levies on every tonne
+  const levies = Math.max(0, subtotalExGST - levyFreightOf(sale) * totalTons) * leviesPct;
   // each load carries its own freight rate; a line without one (an older invoice, a manual line) takes the contract's
   const freightTotal = lines.reduce((s, l) => s + (l.freight != null ? Number(l.freight) || 0 : freight * (Number(l.tons) || 0)), 0);
   const gst = subtotalExGST * GST_RATE;
@@ -578,7 +591,9 @@ export function position(commodities, fields, sales, movements = []) {
 export function closingStock(yearData, commodityName) {
   if (!yearData) return null;
   const key = String(commodityName ?? '').trim().toLowerCase();
-  const row = position(yearData.commodities || [], yearData.fields || [], yearData.sales || [], yearData.movements || [])
+  // worked out on that season's own paddocks and silos, so the shrink on its loads with no commodity set is found
+  const row = withShrinkSource({ commodities: yearData.commodities, fields: yearData.fields, storages: yearData.storages },
+    () => position(yearData.commodities || [], yearData.fields || [], yearData.sales || [], yearData.movements || []))
     .find((r) => String(r.commodity.name ?? '').trim().toLowerCase() === key);
   if (!row) return null;
   return { tons: row.unsoldTons, mtm: row.mtmPrice, value: row.unsoldTons * row.mtmPrice };
@@ -655,19 +670,22 @@ export function paddockAtYield(f, movements, mtmPrice, adjustPct = 0) {
 }
 
 export function positionTotals(rows) {
+  // Cotton is counted in standard bales (227 kg of lint each); in the farm's tonnes it counts as the lint's weight.
+  const tonnes = (r, v) => (r.commodity?.unit === 'bale' ? ((Number(v) || 0) * STD_BALE_KG) / 1000 : Number(v) || 0);
   return rows.reduce((acc, r) => ({
     area: acc.area + r.area,
-    productionTons: acc.productionTons + r.productionTons,
-    soldTons: acc.soldTons + r.soldTons,
+    productionTons: acc.productionTons + tonnes(r, r.productionTons),
+    productionBales: acc.productionBales + (r.commodity?.unit === 'bale' ? Number(r.productionTons) || 0 : 0),
+    soldTons: acc.soldTons + tonnes(r, r.soldTons),
     soldValue: acc.soldValue + r.soldValue,
-    unsoldTons: acc.unsoldTons + r.unsoldTons,
+    unsoldTons: acc.unsoldTons + tonnes(r, r.unsoldTons),
     unsoldValue: acc.unsoldValue + r.unsoldValue,
-    openingTons: acc.openingTons + (r.opening || 0),
+    openingTons: acc.openingTons + tonnes(r, r.opening),
     openingValue: acc.openingValue + (r.openingValue || 0),
     totalValue: acc.totalValue + r.totalValue,
     grossMarginCost: acc.grossMarginCost + r.grossMarginCost,
     grossMargin: acc.grossMargin + r.grossMargin,
-  }), { area: 0, productionTons: 0, soldTons: 0, soldValue: 0, unsoldTons: 0, unsoldValue: 0, openingTons: 0, openingValue: 0, totalValue: 0, grossMarginCost: 0, grossMargin: 0 });
+  }), { area: 0, productionTons: 0, productionBales: 0, soldTons: 0, soldValue: 0, unsoldTons: 0, unsoldValue: 0, openingTons: 0, openingValue: 0, totalValue: 0, grossMarginCost: 0, grossMargin: 0 });
 }
 
 /** Sum of the farm-wide overhead categories. */

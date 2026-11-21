@@ -27,18 +27,18 @@ const uid = () => crypto.randomUUID();
 // Rather than rename the concept across four view files and the derived-stock
 // calculation, the boundary translates. The database stays correct, the app
 // keeps its habits, and this is exactly what a mapping layer is for.
-import { cleanGradeOptions } from './gradeprice.js?v=501';
-import { cleanDeductions, hasDeductions } from './deductions.js?v=501';
-import { cleanCottonTerms } from './cottonkinds.js?v=501';
-import { cleanLate } from './cottonlate.js?v=501';
-import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=501';
-import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=501';
-import { cleanPicked } from './modulespicked.js?v=501';
-import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=501';
-import { cleanHistory, hasHistory } from './pricehistory.js?v=501';
-import { cleanOffFarm } from './offfarm.js?v=501';
-import { cleanParts, hasParts, joinAddress } from './address.js?v=501';
-import { cleanDriverSignature } from './driversign.js?v=501';
+import { cleanGradeOptions } from './gradeprice.js?v=505';
+import { cleanDeductions, hasDeductions } from './deductions.js?v=505';
+import { cleanCottonTerms } from './cottonkinds.js?v=505';
+import { cleanLate } from './cottonlate.js?v=505';
+import { cleanOrderDetail, cleanFreightDetail } from './orderdetail.js?v=505';
+import { cleanGin, hasGin, cleanCotton, hasCotton, cleanModules, hasModules } from './ginning.js?v=505';
+import { cleanPicked } from './modulespicked.js?v=505';
+import { cleanHay, hasHay, cleanBaled, cleanHayLoad, hasHayLoad } from './hay.js?v=505';
+import { cleanHistory, hasHistory } from './pricehistory.js?v=505';
+import { cleanOffFarm } from './offfarm.js?v=505';
+import { cleanParts, hasParts, joinAddress } from './address.js?v=505';
+import { cleanDriverSignature } from './driversign.js?v=505';
 
 /** The address parts to send: the parts once there are any (kept after that, so clearing them reaches the server). */
 const partsOut = (p, had) => ((hasParts(p) || had) ? { v: hasParts(p) ? cleanParts(p) : null } : null);
@@ -519,6 +519,8 @@ export function stateToRows(state, farmId) {
         ...((sale.lateDiscounts?.length || sale.__hasLate) ? { late_discounts: sale.lateDiscounts?.length ? cleanLate(sale.lateDiscounts) : null } : {}),
         // Who pays the freight: 'we' (a bill in Payables) or 'buyer' (taken off the invoice). Sent once it is 'buyer', or
         // has been stored, so a contract that is never changed from the default never needs the column.
+        // The freight taken off the price for levies, when it is not the contract's freight. Optional like the other later columns: blank is null.
+        ...(((sale.levyFreight !== undefined && sale.levyFreight !== null && sale.levyFreight !== '') || sale.__hasLevyFreight) ? { levy_freight: sale.levyFreight === undefined || sale.levyFreight === null || sale.levyFreight === '' ? null : n(sale.levyFreight) } : {}),
         ...((sale.freightPaidBy === 'buyer' || sale.__hasFreightPaidBy) ? { freight_paid_by: sale.freightPaidBy === 'buyer' ? 'buyer' : 'we' } : {}),
         ...((sale.gradeOptions?.length || sale.__hasGradeOptions) ? { grade_options: cleanGradeOptions(sale.gradeOptions) } : {}),
         // Canola priced for oil: the base oil and the % of price per 1% of oil. Optional in the same way.
@@ -919,6 +921,7 @@ export function rowsToState(rows) {
           tradeRules: t.trade_rules ?? '',
           ...(t.brokerage_rate != null ? { brokerageRate: n(t.brokerage_rate), __hasBrokerageRate: true } : {}),
           ...(Array.isArray(t.late_discounts) ? { lateDiscounts: cleanLate(t.late_discounts), __hasLate: true } : {}),
+          ...(t.levy_freight != null ? { levyFreight: n(t.levy_freight), __hasLevyFreight: true } : {}),
           ...(t.freight_paid_by != null ? { freightPaidBy: t.freight_paid_by === 'buyer' ? 'buyer' : 'we', __hasFreightPaidBy: true } : {}),
           ...(Array.isArray(t.grade_options) ? { gradeOptions: cleanGradeOptions(t.grade_options), __hasGradeOptions: true } : {}),
           ...(t.oil_adjust_pct != null ? { oilBasePct: n(t.oil_base_pct), oilAdjustPct: n(t.oil_adjust_pct), __hasOilTerms: true } : {}),

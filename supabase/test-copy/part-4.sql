@@ -1,4 +1,4 @@
--- Test database, part 4 of 4: 20261210000000_farm_switches_two.sql to 20261225000000_created_by_default.sql.
+-- Test database, part 4 of 4: 20261210000000_farm_switches_two.sql to 20261226000000_levy_freight.sql.
 -- Paste ALL of this into the Supabase SQL editor of the TEST project and press Run. Run the parts in order.
 
 -- ---------------------------------------------------------------------------
@@ -981,6 +981,18 @@ begin
     execute format('alter table public.%I alter column created_by set default auth.uid()', t.table_name);
   end loop;
 end $$;
+
+notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------------
+-- 20261226000000_levy_freight.sql
+-- ---------------------------------------------------------------------------
+-- The freight taken off a contract's price to get the farm-gate value that levies are charged on ($ per tonne).
+-- Sold ex farm there is none; sold delivered, the buyer works it out, and it is not always the real freight rate.
+-- Optional: left empty, the contract's own freight is used. Lives in sale_terms with the other money terms,
+-- which a field device never receives.
+alter table sale_terms
+  add column if not exists levy_freight numeric;
 
 notify pgrst, 'reload schema';
 

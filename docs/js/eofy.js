@@ -9,12 +9,13 @@
 // after it counts as still owed. The result is plain data; eofyPdf() lays it out as the file to keep, which is the frozen
 // copy: the figures on screen move on as the books do, the file does not.
 
-import { Pdf } from './pdf.js?v=501';
-import { drawBrandLogo } from './brand.js?v=501';
-import { positionRows, saleEconomics } from './derived.js?v=501';
-import { uninvoiced, receivables } from './outstanding.js?v=501';
-import { dmy } from './fmt.js?v=501';
-import { refLabel } from './adjustment.js?v=501';
+import { Pdf } from './pdf.js?v=505';
+import { drawBrandLogo } from './brand.js?v=505';
+import { positionRows, saleEconomics } from './derived.js?v=505';
+import { uninvoiced, receivables } from './outstanding.js?v=505';
+import { STD_BALE_KG } from './ginning.js?v=505';
+import { dmy } from './fmt.js?v=505';
+import { refLabel } from './adjustment.js?v=505';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -30,6 +31,9 @@ export function financialYearEnd(today) {
  * The snapshot.
  * @param {{asAt: string, commodities: object[], fields: object[], sales: object[], movements: object[], invoices: object[]}} data
  */
+/** Cotton is counted in bales; in a total of tonnes it counts as the weight of the lint (227 kg a standard bale). */
+const asTonnes = (commodity, v) => (commodity?.unit === 'bale' ? ((Number(v) || 0) * STD_BALE_KG) / 1000 : Number(v) || 0);
+
 export function eofySnapshot({ asAt, commodities = [], fields = [], sales = [], movements = [], invoices = [] }) {
   const contracts = sales.filter((s) => !s.date || s.date <= asAt);
   const loads = movements.filter((m) => !m.date || m.date <= asAt);
@@ -59,9 +63,10 @@ export function eofySnapshot({ asAt, commodities = [], fields = [], sales = [], 
   const sum = (list, key) => round2(list.reduce((s, r) => s + num(r[key]), 0));
   const position = {
     rows: grain,
-    soldTons: round3(grain.reduce((s, r) => s + r.soldTons, 0)),
+    // cotton is counted in bales: in the farm's tonnes it counts as the lint's weight
+    soldTons: round3(grain.reduce((s, r) => s + asTonnes(r.commodity, r.soldTons), 0)),
     soldValue: sum(grain, 'soldValue'),
-    unsoldTons: round3(grain.reduce((s, r) => s + r.unsoldTons, 0)),
+    unsoldTons: round3(grain.reduce((s, r) => s + asTonnes(r.commodity, r.unsoldTons), 0)),
     unsoldValue: sum(grain, 'unsoldValue'),
   };
   position.total = round2(position.soldValue + position.unsoldValue);
@@ -74,11 +79,12 @@ export function eofySnapshot({ asAt, commodities = [], fields = [], sales = [], 
     if (econ.isFull || econ.tonsDue <= 0.005) continue;
     owed.push({ sale, tons: round3(econ.tonsDue), price: round2(econ.priceExFarm), value: round2(econ.tonsDue * econ.priceExFarm) });
   }
-  const notDelivered = { rows: owed, tons: round3(owed.reduce((s, r) => s + r.tons, 0)), value: sum(owed, 'value') };
+  const saleTonnes = (sale, v) => asTonnes(commodities.find((c) => c.id === sale.commodityId), v);
+  const notDelivered = { rows: owed, tons: round3(owed.reduce((s, r) => s + saleTonnes(r.sale, r.tons), 0)), value: sum(owed, 'value') };
 
   // delivered, not invoiced
   const un = uninvoiced(contracts, loads, issued, asAt);
-  const notInvoiced = { rows: un.rows, tons: round3(un.rows.reduce((s, r) => s + r.tons, 0)), value: round2(un.rows.reduce((s, r) => s + r.value, 0)) };
+  const notInvoiced = { rows: un.rows, tons: round3(un.rows.reduce((s, r) => s + saleTonnes(r.sale, r.tons), 0)), value: round2(un.rows.reduce((s, r) => s + r.value, 0)) };
 
   // invoiced, not paid
   const rec = receivables(issued, contracts, asAt);

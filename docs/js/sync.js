@@ -15,15 +15,16 @@
 // Still not handled: two devices editing the very same row. The later push
 // wins. Doing better needs a version on every row, and that is Phase 3.
 
-import { supabase } from './supabase.js?v=501';
-import { stateToRows } from './mapping.js?v=501';
-import { markDirty, markDeleted, outboxItems, clearOutboxItems, setSending } from './local.js?v=501';
-import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches } from './dirty.js?v=501';
-import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=501';
-import { reconcileTickets, plainOf } from './ticketmerge.js?v=501';
-import { readAllIn } from './pages.js?v=501';
-import { farmSwitch, farmLevel } from './nav.js?v=501';
-import { LEVEL_TABLES } from './farmswitches.js?v=501';
+import { supabase } from './supabase.js?v=505';
+import { stateToRows } from './mapping.js?v=505';
+import { markDirty, markDeleted, outboxItems, clearOutboxItems, setSending } from './local.js?v=505';
+import { selectDirtyRows, isLegacyDirty, pushRowsFor, seasonBatches, kindsForTable } from './dirty.js?v=505';
+import { isDenial } from './denial.js?v=505';
+import { flushPendingPhotos, pendingPhotoIds } from './photos.js?v=505';
+import { reconcileTickets, plainOf } from './ticketmerge.js?v=505';
+import { readAllIn } from './pages.js?v=505';
+import { farmSwitch, farmLevel } from './nav.js?v=505';
+import { LEVEL_TABLES } from './farmswitches.js?v=505';
 
 // Parents first — a movement_leg pointing at an absent movement is a foreign
 // key violation, and Supabase will reject the whole batch rather than half of it.
@@ -232,6 +233,8 @@ export async function push(state, farmId, role = 'owner') {
     // soft_delete_row function — which applies the same ownership rule as the
     // definer — does it instead. See 20261111150000_soft_delete_function.sql.
     const stuck = new Set();
+    const held = new Set();         // entries for a table the server refuses this account: kept owed, never sent again as a jam
+    const heldTables = new Set();
     // Many at once first: a cleared sample farm or a deleted season is hundreds of deletes, and one request each, two a time, took a
     // phone on a weak signal minutes. soft_delete_rows applies the same rules to a list; a list it refuses (or a server that does not
     // have it yet) is simply done one at a time below, which names the one that is stuck.
@@ -290,6 +293,19 @@ export async function push(state, farmId, role = 'owner') {
             }
           }
         }
+        if (error && role !== 'owner' && isDenial(error) && !(error.code === 'PGRST205' || error.code === '42P01')) {
+          // The server will not take this table from this account (a worker without the production right sending a paddock).
+          // That is not a fault the next attempt will cure, and stopping here held back every load and photo behind it. So the
+          // table is held: its entries stay owed and are named, and everything else carries on.
+          const kinds = new Set(kindsForTable(table));
+          for (const i of dirty) if (kinds.has(i.kind)) held.add(i.seq);
+          result.errors.push({
+            table, message: error.message, details: error.details, hint: error.hint, code: error.code, held: true,
+            refused: part.slice(0, 10).map((r) => ({ id: r.id, name: r.name ?? r.ticket_no ?? r.invoice_no ?? '', hidden: null, message: error.message })),
+          });
+          heldTables.add(table);
+          break;
+        }
         if (error) {
           // Stop at the first failure and leave the outbox intact. A partial
           // push that reports success is how you end up with a farm that is
@@ -312,10 +328,11 @@ export async function push(state, farmId, role = 'owner') {
           return result;
         }
       }
+      if (heldTables.has(table)) continue;
       result.tables[table] = list.length;
     }
 
-    await clearOutboxItems(sentSeqs.filter((q) => !stuck.has(q)));
+    await clearOutboxItems(sentSeqs.filter((q) => !stuck.has(q) && !held.has(q)));
     // A photo that could not go up is still only on this device. Its ticket stays owed, so the next push
     // tries again and a refresh from the server cannot swap the photo away. (After the clear above, because
     // an entry for the ticket still sitting in the outbox would stop it being added again.)
@@ -324,7 +341,7 @@ export async function push(state, farmId, role = 'owner') {
       await markDirty(waiting.map((id) => ({ kind: 'movement', id }))).catch((e) => console.warn('Could not keep the photo owed', e));
       result.photosWaiting = waiting.length;
     }
-    if (stuck.size) return result;
+    if (stuck.size || held.size) return result;
     result.ok = true;
     lastClean = !result.photosWaiting;
     return result;
