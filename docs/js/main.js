@@ -1,38 +1,38 @@
-import { db } from './storage.js?v=500';
-import { supabase, ENV } from './supabase.js?v=500';
-import { installErrorLog } from './supportinfo.js?v=500';
-import { loadMySeries, rememberedSeries } from './outloadseries.js?v=500';
-import { initTheme } from './theme.js?v=500';
+import { db } from './storage.js?v=501';
+import { supabase, ENV } from './supabase.js?v=501';
+import { installErrorLog } from './supportinfo.js?v=501';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=501';
+import { initTheme } from './theme.js?v=501';
 initTheme();
-import { renderPosition } from './views/position.js?v=500';
-import { renderProduction } from './views/production.js?v=500';
-import { renderReports } from './views/reports.js?v=500';
-import { renderSales } from './views/sales.js?v=500';
-import { renderMovements } from './views/movements.js?v=500';
-import { renderStorage } from './views/storage.js?v=500';
-import { renderSettings } from './views/settings.js?v=500';
-import { renderLogin } from './views/login.js?v=500';
-import { renderNewPassword } from './views/newpassword.js?v=500';
-import { isRecovering, endRecovery, takeResetExpired, noteRecoveryLink } from './recovery.js?v=500';
-import { RESET_EXPIRED } from './recovery.js?v=500';
-import { renderAccount } from './views/account.js?v=500';
-import { renderHelp } from './views/help.js?v=500';
+import { renderPosition } from './views/position.js?v=501';
+import { renderProduction } from './views/production.js?v=501';
+import { renderReports } from './views/reports.js?v=501';
+import { renderSales } from './views/sales.js?v=501';
+import { renderMovements } from './views/movements.js?v=501';
+import { renderStorage } from './views/storage.js?v=501';
+import { renderSettings } from './views/settings.js?v=501';
+import { renderLogin } from './views/login.js?v=501';
+import { renderNewPassword } from './views/newpassword.js?v=501';
+import { isRecovering, endRecovery, takeResetExpired, noteRecoveryLink } from './recovery.js?v=501';
+import { RESET_EXPIRED } from './recovery.js?v=501';
+import { renderAccount } from './views/account.js?v=501';
+import { renderHelp } from './views/help.js?v=501';
 import {
   getSession, getMembership, sessionStillValid, onAuthChange, acceptInvitation, signOut, listMyInvitations, offlineSession,
-} from './auth.js?v=500';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=500';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=500';
-import { esc, todayLocal } from './fmt.js?v=500';
-import { isSheetOpen, notify, toast } from './ui.js?v=500';
-import { describeMerges } from './ticketmerge.js?v=500';
-import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=500';
-import { addDays } from './fumigation.js?v=500';
-import { watchLists } from './band.js?v=500';
-import { APP_VERSION } from './version.js?v=500';
-import { startUpdateCheck } from './updatecheck.js?v=500';
-import { emailFromTrialHash } from './trialtext.js?v=500';
-import { installWatch, requestPersistence } from './pwa.js?v=500';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=500';
+} from './auth.js?v=501';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=501';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=501';
+import { esc, todayLocal } from './fmt.js?v=501';
+import { isSheetOpen, notify, toast } from './ui.js?v=501';
+import { describeMerges } from './ticketmerge.js?v=501';
+import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=501';
+import { addDays } from './fumigation.js?v=501';
+import { watchLists } from './band.js?v=501';
+import { APP_VERSION } from './version.js?v=501';
+import { startUpdateCheck } from './updatecheck.js?v=501';
+import { emailFromTrialHash } from './trialtext.js?v=501';
+import { installWatch, requestPersistence } from './pwa.js?v=501';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=501';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -600,6 +600,7 @@ function updateBannerSpace() {
   let h = 0;
   for (const id of ['test-banner', 'support-banner', 'save-banner']) h += document.getElementById(id)?.offsetHeight || 0;
   document.documentElement.style.setProperty('--banner-h', `${h}px`);
+  document.documentElement.classList.toggle('has-banner', h > 0);
 }
 window.addEventListener('resize', updateBannerSpace);
 

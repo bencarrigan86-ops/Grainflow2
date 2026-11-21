@@ -95,6 +95,14 @@ html, body {
   justify-content: space-between;
 }
 
+/* A bar across the top (test copy, support or advisor view, a save problem). On a phone the app draws under the clock, so the
+   top bar reaches up behind it: its text starts below the clock, and the page below no longer needs its own clock gap. */
+body > #test-banner:first-child,
+body > #support-banner:first-child,
+body > #save-banner:first-child { padding-top: calc(var(--safe-top) + 6px) !important; }
+html.has-banner #app { padding-top: 0; }
+html.has-banner .topbar { top: var(--banner-h, 0px); margin-top: 0; padding-top: 10px; }
+
 .topbar h1 {
   font-size: 22px;
   font-weight: 700;
@@ -477,7 +485,7 @@ details.fold.fold-band.fold-alt {
 
 .year-pill {
   position: fixed;
-  top: calc(8px + var(--safe-top) + var(--banner-h, 0px));
+  top: calc(8px + max(var(--safe-top), var(--banner-h, 0px)));
   right: 52px;
   z-index: 25;
   background: var(--accent-summary);
@@ -495,7 +503,7 @@ details.fold.fold-band.fold-alt {
    bar buys every remaining tab meaningful width on a phone. */
 .settings-btn {
   position: fixed;
-  top: calc(6px + var(--safe-top) + var(--banner-h, 0px));
+  top: calc(6px + max(var(--safe-top), var(--banner-h, 0px)));
   right: 10px;
   z-index: 25;
   width: 32px;

@@ -1,12 +1,12 @@
 // The load report sheet: pick the dates, tick what to narrow the loads by (any number of commodities, contracts, paddocks, silos,
 // grades, trucks or drivers), then send the list of loads on as a PDF.
 
-import { db } from '../storage.js?v=500';
-import { num, todayLocal, dmy, esc } from '../fmt.js?v=500';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=500';
-import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=500';
-import { viewPdf } from '../pdfview.js?v=500';
-import { loadReportRows, loadReportTotals, loadFilterChoices, filterText, datePresets, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=500';
+import { db } from '../storage.js?v=501';
+import { num, todayLocal, dmy, esc } from '../fmt.js?v=501';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=501';
+import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=501';
+import { viewPdf } from '../pdfview.js?v=501';
+import { loadReportRows, loadReportTotals, loadFilterChoices, filterText, datePresets, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=501';
 
 // what was chosen last time, remembered on this device
 const KEY = 'grainflow.loadreport';

@@ -4,11 +4,11 @@
 // the storages of that commodity. It saves nothing. To take the feature out, delete this file, ../optimiser.js and
 // tests/optimiser.test.mjs, and remove the one chip and its import in storage.js.
 
-import { db } from '../storage.js?v=500';
-import { openSheet, field, getVal, getNum, notify } from '../ui.js?v=500';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=500';
-import { SPECS, extraSpecKey } from '../outload.js?v=500';
-import { sourcesFor, optimise, limitsOf } from '../optimiser.js?v=500';
+import { db } from '../storage.js?v=501';
+import { openSheet, field, getVal, getNum, notify } from '../ui.js?v=501';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=501';
+import { SPECS, extraSpecKey } from '../outload.js?v=501';
+import { sourcesFor, optimise, limitsOf } from '../optimiser.js?v=501';
 
 // what was asked last time, kept while the app is open
 let last = { commodityId: '', tons: '', truck: 36, mode: 'every-truck', grades: [], min: {}, max: {} };

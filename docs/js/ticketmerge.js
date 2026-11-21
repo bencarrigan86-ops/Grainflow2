@@ -20,7 +20,7 @@
 //
 // Pure, except `reconcileTickets`, which is handed the means of asking the server.
 
-import { movementFromRow } from './mapping.js?v=500';
+import { movementFromRow } from './mapping.js?v=501';
 
 /** The parts of a ticket that people edit, with the words used for them. */
 export const TICKET_FIELDS = [

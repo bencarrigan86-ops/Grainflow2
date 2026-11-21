@@ -2,8 +2,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { APP_VERSION } from '../docs/js/version.js?v=500';
-import { hasStoredLogin, decideOfflineSession } from '../docs/js/offlinestart.js?v=500';
+import { APP_VERSION } from '../docs/js/version.js?v=501';
+import { hasStoredLogin, decideOfflineSession } from '../docs/js/offlinestart.js?v=501';
 import { buildPrecache, listFiles } from '../tools/make-precache.mjs';
 
 const docs = new URL('../docs/', import.meta.url);
@@ -154,6 +154,10 @@ t('a bar across the top (test copy, support view, a save problem) does not hide 
   const m = read('js/main.js');
   assert.ok(m.includes("t.id = 'test-banner'") && m.includes("['test-banner', 'support-banner', 'save-banner']"));
   assert.ok((m.match(/updateBannerSpace()/g) || []).length >= 4);
+  // On a phone the app draws under the clock: the top bar reaches up behind it and its text starts below, so it is readable.
+  assert.ok(/body > #test-banner:first-child[\s\S]{0,120}padding-top: calc\(var\(--safe-top\) \+ 6px\) !important/.test(css), 'the top bar text sits under the phone clock');
+  assert.ok(css.includes('html.has-banner #app { padding-top: 0; }') && css.includes("classList.toggle('has-banner'") === false);
+  assert.ok(m.includes("classList.toggle('has-banner', h > 0)"));
 });
 
 console.log(`${n} passed`);
