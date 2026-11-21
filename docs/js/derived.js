@@ -1,16 +1,16 @@
 // Roll-up / position calculations shared across views.
 
-import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=505';
-import { oilAdjustment, oilRateFor } from './oilprice.js?v=505';
-import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=505';
-import { carryAdjustment, carryRateFor } from './carry.js?v=505';
-import { lateAdjustment, lateDiscountFor } from './cottonlate.js?v=505';
-import { isGinContract } from './cottonkinds.js?v=505';
-import { ginTakenOff } from './ginoffset.js?v=505';
-import { cottonComponents, cottonRunTotals, lotsForSale, STD_BALE_KG } from './ginning.js?v=505';
-import { commoditySort } from './commodityorder.js?v=505';
-import { shrinkInSilo, shrinkForCommodity, withShrinkSource } from './shrink.js?v=505';
-import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=505';
+import { gradeAdjustment, gradeRateFor } from './gradeprice.js?v=506';
+import { oilAdjustment, oilRateFor } from './oilprice.js?v=506';
+import { deductionAdjustment, deductionRateFor, cleanDeductions } from './deductions.js?v=506';
+import { carryAdjustment, carryRateFor } from './carry.js?v=506';
+import { lateAdjustment, lateDiscountFor } from './cottonlate.js?v=506';
+import { isGinContract } from './cottonkinds.js?v=506';
+import { ginTakenOff } from './ginoffset.js?v=506';
+import { cottonComponents, cottonRunTotals, lotsForSale, STD_BALE_KG } from './ginning.js?v=506';
+import { commoditySort } from './commodityorder.js?v=506';
+import { shrinkInSilo, shrinkForCommodity, withShrinkSource } from './shrink.js?v=506';
+import { secondaryHay, usedOnFarmTons, hasHayLoad, isUsedOnFarm } from './hay.js?v=506';
 
 export const DEFAULT_TOLERANCE_PCT = 5;
 export const DEFAULT_TOLERANCE_CAP_TONS = 20;

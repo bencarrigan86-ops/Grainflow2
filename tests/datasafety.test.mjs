@@ -2,9 +2,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { touchesToQueue } from '../docs/js/dirty.js?v=505';
-import { isDenial } from '../docs/js/denial.js?v=505';
-import { addDaysTo } from '../docs/js/fmt.js?v=505';
+import { touchesToQueue } from '../docs/js/dirty.js?v=506';
+import { isDenial } from '../docs/js/denial.js?v=506';
+import { addDaysTo } from '../docs/js/fmt.js?v=506';
 
 const read = (p) => readFileSync(new URL(`../docs/${p}`, import.meta.url), 'utf8');
 let n = 0;
@@ -47,7 +47,7 @@ t('push marks the rows as taken and looks again afterwards', () => {
 });
 
 t('esc() escapes quote marks, so a name cannot close an attribute', async () => {
-  const { esc } = await import('../docs/js/fmt.js?v=505');
+  const { esc } = await import('../docs/js/fmt.js?v=506');
   assert.equal(esc(`x" onfocus="alert(1)`), 'x&quot; onfocus=&quot;alert(1)');
   assert.equal(esc(`it's <b>&`), 'it&#39;s &lt;b&gt;&amp;');
   assert.equal(esc(null), '');

@@ -168,7 +168,7 @@ console.log('\n=== cotton bales on the totals card ===');
 check('the farm totals count the bales apart from the tonnes, and the card shows them', () => {
   const totals = positionTotals(positionRows([wheat, cotton], fields, [], []));
   assert.equal(totals.productionBales, 1000);
-  assert.ok(read('docs/js/views/position.js').includes('bales</span></div>'));
+  assert.ok(read('docs/js/views/position.js').includes('and ${num(totals.productionBales, 0)} b</span>'), 'Total produced reads "7,068 t and 2,824 b"');
 });
 
 if (failures) { console.log(`\n${failures} failed`); process.exit(1); }

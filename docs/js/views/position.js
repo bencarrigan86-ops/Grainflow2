@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=505';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=505';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=505';
-import { payablesCost } from '../payables.js?v=505';
-import { commodityClass } from '../commoditycolor.js?v=505';
-import { hasCommodityOrder } from '../commodityorder.js?v=505';
-import { startProgress, missingLine } from '../helpcontent.js?v=505';
-import { openSetupWalk } from './setupwalk.js?v=505';
-import { attentionItems } from '../attention.js?v=505';
-import { lastBackup } from '../backup.js?v=505';
-import { supportWaitingCount } from './support.js?v=505';
-import { todayLocal, dmy } from '../fmt.js?v=505';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=505';
-import { openSheet, closeSheet } from '../ui.js?v=505';
-import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=505';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=505';
-import { viewPdf } from '../pdfview.js?v=505';
+import { db } from '../storage.js?v=506';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=506';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=506';
+import { payablesCost } from '../payables.js?v=506';
+import { commodityClass } from '../commoditycolor.js?v=506';
+import { hasCommodityOrder } from '../commodityorder.js?v=506';
+import { startProgress, missingLine } from '../helpcontent.js?v=506';
+import { openSetupWalk } from './setupwalk.js?v=506';
+import { attentionItems } from '../attention.js?v=506';
+import { lastBackup } from '../backup.js?v=506';
+import { supportWaitingCount } from './support.js?v=506';
+import { todayLocal, dmy } from '../fmt.js?v=506';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=506';
+import { openSheet, closeSheet } from '../ui.js?v=506';
+import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=506';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=506';
+import { viewPdf } from '../pdfview.js?v=506';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -190,7 +190,8 @@ function dashTop(totals) {
   const soldShare = total > 0 ? totals.soldValue / total : 0;
   const opening = totals.openingValue || 0;
   const openingTons = totals.openingTons || 0;
-  const bales = totals.productionBales || 0;   // cotton is counted in bales, so it is not in the tonnes above
+  // cotton is in the tonnes as the weight of its lint, and its bales are still shown: "7,068 t and 2,824 b"
+  const andBales = totals.productionBales > 0 ? `<span class="s" style="display:block">and ${num(totals.productionBales, 0)} b</span>` : '';
   return `<div class="pos-dash">
       ${opening ? `<div class="card dash-tile dash-sum">
         <div class="r"><span>Total value</span><span>${money(totals.totalValue + opening, 0)}</span></div>
@@ -199,8 +200,7 @@ function dashTop(totals) {
       ${openingTons > 0 ? `<div class="card dash-tile dash-sum">
         <div class="r"><span>Total volume</span><span>${tons(openingTons + totals.productionTons, 0)}</span></div>
         <div class="r"><span>Open stock</span><span>(${tons(openingTons, 0)})</span></div>
-        ${bales ? `<div class="r"><span>Cotton in that</span><span>${num(bales, 0)} bales</span></div>` : ""}
-        <div class="r end"><span>Total produced</span><span class="n">${tons(totals.productionTons, 0)}</span></div></div>` : `<div class="card dash-tile"><div class="l">Produced</div><div class="n">${tons(totals.productionTons, 0)}</div>
+        <div class="r end"><span>Total produced</span><span class="n">${tons(totals.productionTons, 0)}${andBales}</span></div></div>` : `<div class="card dash-tile"><div class="l">Produced</div><div class="n">${tons(totals.productionTons, 0)}${andBales}</div>
         ${totals.area > 0 ? `<div class="s">Income ${money(totals.totalValue / totals.area, 0)}/ha</div>` : ''}</div>`}
       <div class="card dash-tile dash-ringtile com-green">${ring(soldShare, 52, 8)}<div class="dash-ringtext"><div class="n">${pct(soldShare)} <span class="s">sold</span></div><div class="s">Sold ${money(totals.soldValue, 0)}</div><div class="s">Unsold ${money(totals.unsoldValue, 0)}</div></div></div>
       <div class="card dash-tile"><div class="l">Gross margin</div><div class="n">${money(totals.grossMargin, 0)}</div>
