@@ -1,44 +1,44 @@
-import { db } from '../storage.js?v=509';
-import { tileIcon } from '../tileicon.js?v=509';
-import { getTheme, setTheme } from '../theme.js?v=509';
-import { num, money, esc } from '../fmt.js?v=509';
+import { db } from '../storage.js?v=511';
+import { tileIcon } from '../tileicon.js?v=511';
+import { getTheme, setTheme } from '../theme.js?v=511';
+import { num, money, esc } from '../fmt.js?v=511';
 import {
   openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, notify, askConfirm, toast,
-} from '../ui.js?v=509';
-import { planYieldUpdate } from '../yieldupdate.js?v=509';
-import { openLoadImportSheet } from './importloads.js?v=509';
-import { openDeliveryImportSheet } from './importdeliveries.js?v=509';
-import { openPastSeasonsSheet } from './pastseasons.js?v=509';
-import { openPastSalesSheet } from './pastsales.js?v=509';
-import { openLineupSheet } from './lineup.js?v=509';
-import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=509';
-import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=509';
-import { openDangerSheet } from './dangerconfirm.js?v=509';
+} from '../ui.js?v=511';
+import { planYieldUpdate } from '../yieldupdate.js?v=511';
+import { openLoadImportSheet } from './importloads.js?v=511';
+import { openDeliveryImportSheet } from './importdeliveries.js?v=511';
+import { openPastSeasonsSheet } from './pastseasons.js?v=511';
+import { openPastSalesSheet } from './pastsales.js?v=511';
+import { openLineupSheet } from './lineup.js?v=511';
+import { addressFields, readAddress, joinAddress, partsOf } from '../address.js?v=511';
+import { downloadBackup, lastBackup, backupAgeText } from '../backup.js?v=511';
+import { openDangerSheet } from './dangerconfirm.js?v=511';
 import {
   sampleHistoryFrom, sampleHistoryOffered, sampleOrdersFrom, sampleOrdersOffered, sampleCottonHayFrom, sampleCottonHayOffered, sampleRefreshOffered, sampleStateFor,
-} from '../demo.js?v=509';
-import { seasonContents, contentsText } from '../seasondelete.js?v=509';
-import { openDeletedSheet } from './deleted.js?v=509';
-import { openAuditSheet } from './audit.js?v=509';
-import { canSeeAudit } from '../audit.js?v=509';
-import { canSeeOverheads } from '../nav.js?v=509';
-import { APP_VERSION } from '../version.js?v=509';
-import { checkNow } from '../updatecheck.js?v=509';
-import { logoFromFile } from '../logo.js?v=509';
+} from '../demo.js?v=511';
+import { seasonContents, contentsText } from '../seasondelete.js?v=511';
+import { openDeletedSheet } from './deleted.js?v=511';
+import { openAuditSheet } from './audit.js?v=511';
+import { canSeeAudit } from '../audit.js?v=511';
+import { canSeeOverheads } from '../nav.js?v=511';
+import { APP_VERSION } from '../version.js?v=511';
+import { checkNow } from '../updatecheck.js?v=511';
+import { logoFromFile } from '../logo.js?v=511';
 
-import { closingStock, position } from '../derived.js?v=509';
-import { cleanCotton } from '../ginning.js?v=509';
-import { cleanHay, hasHay, BALE_TYPES } from '../hay.js?v=509';
-import { orderedNames, moveName } from '../commodityorder.js?v=509';
-import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=509';
-import { autoSeasonText } from '../harvestseason.js?v=509';
-import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=509';
-import { openMySignatureSheet } from './signaturepad.js?v=509';
-import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=509';
-import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=509';
-import { paintPeople } from './settingspeople.js?v=509';
-import { paintSyncCard } from './settingssync.js?v=509';
-import { openExportCsvSheet } from './settingsexport.js?v=509';
+import { closingStock, position } from '../derived.js?v=511';
+import { cleanCotton } from '../ginning.js?v=511';
+import { cleanHay, hasHay, BALE_TYPES } from '../hay.js?v=511';
+import { orderedNames, moveName } from '../commodityorder.js?v=511';
+import { openGradeStandardsSheet, openMyGradesSheet } from './gradestandards.js?v=511';
+import { autoSeasonText } from '../harvestseason.js?v=511';
+import { totalFromPerHa, perHaFromTotal, commodityAreaHa } from '../gmcost.js?v=511';
+import { openMySignatureSheet } from './signaturepad.js?v=511';
+import { supportCardHtml, wireSupportCard, openReportProblemSheet } from './support.js?v=511';
+import { trialFarmsSlotHtml, wireTrialFarms, trialOwnSlotHtml, wireTrialOwner } from './trialfarms.js?v=511';
+import { paintPeople } from './settingspeople.js?v=511';
+import { paintSyncCard } from './settingssync.js?v=511';
+import { openExportCsvSheet } from './settingsexport.js?v=511';
 
 let unsub = null;
 
@@ -57,7 +57,7 @@ function openImportSheet() {
       <button type="button" class="btn secondary" id="import-deliveries" style="margin-bottom:8px">Site deliveries (CSV)&hellip;</button>
       <button type="button" class="btn secondary" id="import-past" style="margin-bottom:8px">Past seasons (CSV)&hellip;</button>
       <button type="button" class="btn secondary" id="import-past-sales" style="margin-bottom:8px">Past sales (CSV)&hellip;</button>
-      <button type="button" class="btn secondary" id="line-up">Line up paddock names (CSV)&hellip;</button>`;
+      <button type="button" class="btn secondary" id="line-up">Line up field names (CSV)&hellip;</button>`;
     root.querySelector('#import-loads').addEventListener('click', () => openOver(() => openLoadImportSheet()));
     root.querySelector('#import-deliveries').addEventListener('click', () => openOver(() => openDeliveryImportSheet()));
     root.querySelector('#import-past').addEventListener('click', () => openOver(() => openPastSeasonsSheet()));
@@ -144,13 +144,13 @@ function paint(root) {
         ${field({ label: 'Viewing', id: 'year-select', type: 'select', value: currentYear, options: years.map((y) => ({ value: y, label: y })) })}
         <div class="swipe-actions">
           <button class="btn secondary small" id="rename-year">Rename "${esc(currentYear)}"&hellip;</button>
-          <button class="btn secondary small" id="new-year">Start new year&hellip;</button>
+          <button class="btn secondary small" id="new-year">Start new season&hellip;</button>
         </div>
         ${sampleHistoryOffered(years, currentYear, db.getRole()) ?`<div class="hint" style="margin-top:8px">This is the sample farm, set up before it had earlier seasons. Add two, with rotated crops and contracts, so the history screens have something to show. Nothing else changes.</div>
         <button class="btn secondary small" id="add-sample-history" style="margin-top:6px">Add the sample history (2024 and 2025)</button>` : ''}
         ${sampleOrdersOffered(db.get().sales, db.getOrders(), db.getFreightOrders(), currentYear, db.getRole()) ? `<div class="hint" style="margin-top:8px">This sample farm has no grain orders or freight orders. Add one of each, against the Riverina Grain Traders wheat contract, to see how they look.</div>
         <button class="btn secondary small" id="add-sample-orders" style="margin-top:6px">Add a sample grain order and freight order</button>` : ''}
-        ${sampleCottonHayOffered(db.get().sales, db.get().fields, currentYear, db.getRole()) ? `<div class="hint" style="margin-top:8px">This sample farm has no sample cotton or hay. Add two cotton paddocks, modules to a gin yard and a ginning run, lucerne and straw with their bales, sheds, contracts and invoices, so those screens have something to show.</div>
+        ${sampleCottonHayOffered(db.get().sales, db.get().fields, currentYear, db.getRole()) ? `<div class="hint" style="margin-top:8px">This sample farm has no sample cotton or hay. Add two cotton fields, modules to a gin yard and a ginning run, lucerne and straw with their bales, sheds, contracts and invoices, so those screens have something to show.</div>
         <button class="btn secondary small" id="add-sample-cotton-hay" style="margin-top:6px">Add sample cotton and hay</button>` : ''}
         ${sampleRefreshOffered(currentYear, db.getRole()) ? `<div class="hint" style="margin-top:8px">Sample farm: replace everything on it with the latest sample (new contracts, silos and bills). Anything you added here goes. A backup is kept first.</div>
         <button class="btn danger small" id="refresh-sample" style="margin-top:6px">Refresh the sample&hellip;</button>` : ''}
@@ -432,7 +432,7 @@ ${canSeeOverheads(db.getRole()) ? `      <div class="card">
       const pack = sampleCottonHayFrom(await res.json(), { commodities: db.get().commodities, fields: db.get().fields, payables: db.getPayables(), inputStock: db.getInputMoves(), sprayJobs: db.getSprayJobs() });
       const made = pack && db.addSampleCottonHay(pack);
       if (!made) throw new Error('This farm already has cotton or hay.');
-      toast(`Added cotton and hay: ${made.paddocks} paddocks, ${made.loads} loads, ${made.invoices} invoices`);
+      toast(`Added cotton and hay: ${made.paddocks} fields, ${made.loads} loads, ${made.invoices} invoices`);
       btn.hidden = true;
     } catch (err) { notify(err.message || 'The sample cotton and hay could not be added.'); btn.disabled = false; }
   });
@@ -518,7 +518,7 @@ ${err.message}`); }
       // Restoring replaces what the farm holds for the seasons in the file, and is sent to the server. Say what will be
       // removed first, and keep a copy of the farm as it is now, so a backup of the wrong month is not the end of anything.
       const { willRetire } = db.previewImport(text);
-      const NAMES = { movements: 'load', sales: 'contract', invoices: 'invoice', fields: 'paddock', storages: 'storage', commodities: 'commodity' };
+      const NAMES = { movements: 'load', sales: 'contract', invoices: 'invoice', fields: 'field', storages: 'storage', commodities: 'commodity' };
       const gone = Object.entries(willRetire).filter(([, n]) => n > 0)
         .map(([t, n]) => `${n} ${NAMES[t] || t}${n === 1 ? '' : 's'}`);
       const ok = await askConfirm(
@@ -532,7 +532,7 @@ ${err.message}`); }
       const { remapped, filled, stats } = db.importJSON(text);
       notify(
         `Imported.\n\n` +
-        `${stats.seasons} season(s), ${stats.paddocks} paddock(s), ` +
+        `${stats.seasons} season(s), ${stats.paddocks} field(s), ` +
         `${stats.storages} storage(s), ${stats.movements} movement(s), ` +
         `${stats.sales} sale(s).\n` +
         (remapped ? `\n${remapped} id(s) were reissued for the new database.` : '') +
@@ -608,14 +608,14 @@ function openRenameYearSheet(currentYear) {
 
 function openNewYearSheet(currentYear) {
   const guess = /^\d+$/.test(currentYear) ? String(Number(currentYear) + 1) : '';
-  openSheet('Start new year', (root) => {
+  openSheet('Start new season', (root) => {
     root.innerHTML = `
       <div class="field hint" style="margin-bottom:12px">
         Carries over: field names/areas, silo/bunker names &amp; geometry, and commodities (angle of repose, test weight, N required) — with their commodity assignments kept.<br/><br/>
         Resets to empty: yield, urea, seed data on fields; grain level, opening stock on silos/bunkers; MTM price, opening stock, retained seed, gross margin cost on commodities; overheads.<br/><br/>
-        Cleared entirely: sales contracts and truck movements.
+        Cleared entirely: sales contracts and truck loads.
       </div>
-      ${field({ label: 'New year label', id: 'year', value: guess, placeholder: 'e.g. 2027' })}
+      ${field({ label: 'New season label', id: 'year', value: guess, placeholder: 'e.g. 2027' })}
       <button class="btn" id="create">Create &amp; switch</button>
     `;
     root.querySelector('#create').addEventListener('click', () => {
@@ -685,7 +685,7 @@ function openCommoditySheet(existing) {
         ${field({ label: 'Baled hay', id: 'isHay', type: 'select', value: hasHay(existing?.hay) ? 'yes' : 'no', options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes, count the bales as well' }], hint: 'Sold in tonnes, with the bales counted too.' })}
         <div id="hay-fields" style="display:none" class="grid-2">
           ${field({ label: 'Bale type', id: 'baleType', type: 'select', value: existing?.hay?.baleType || 'round', options: BALE_TYPES.map((b) => ({ value: b.value, label: b.label })) })}
-          ${field({ label: 'Bale weight (kg)', id: 'baleKg', type: 'number', step: '1', value: existing?.hay?.baleKg || '', placeholder: '500', hint: 'Average, for every paddock' })}
+          ${field({ label: 'Bale weight (kg)', id: 'baleKg', type: 'number', step: '1', value: existing?.hay?.baleKg || '', placeholder: '500', hint: 'Average, for every field' })}
         </div>
       </div>
       <div id="bales-per-round-wrap" style="display:none">
@@ -701,7 +701,7 @@ function openCommoditySheet(existing) {
         </div>
         <div class="grid-2">
           ${field({ label: 'Turnout (%)', id: 'ginTurnout', type: 'number', step: '0.1', value: existing?.cotton?.turnout || '', placeholder: '40', hint: 'Lint from picked cotton' })}
-          ${field({ label: 'Module weight (kg)', id: 'ginModuleKg', type: 'number', step: '1', value: existing?.cotton?.moduleKg || '', placeholder: '12000', hint: 'Average, for every paddock' })}
+          ${field({ label: 'Module weight (kg)', id: 'ginModuleKg', type: 'number', step: '1', value: existing?.cotton?.moduleKg || '', placeholder: '12000', hint: 'Average, for every field' })}
         </div>
       </div>
       <div class="grid-2">
@@ -713,7 +713,7 @@ function openCommoditySheet(existing) {
         ${field({ label: 'Harvested in', id: 'harvestSeason', type: 'select', value: existing?.harvestSeason ?? '',
           options: [{ value: '', label: 'Automatic' }, { value: 'winter', label: 'Winter crop' }, { value: 'summer', label: 'Summer crop' }] })}
       </div>
-      <div class="hint" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">Shrink comes off grain going from a paddock into a silo, normally 0.7%. Harvested in: winter is wheat, barley, canola; summer is sorghum, cotton, maize. Automatic goes by the name.</div>
+      <div class="hint" style="margin:-6px 0 10px;font-size:11.5px;color:var(--text-dim)">Shrink comes off grain going from a field into a silo, normally 0.7%. Harvested in: winter is wheat, barley, canola; summer is sorghum, cotton, maize. Automatic goes by the name.</div>
       <div class="grid-2">
         ${field({ label: 'Opening stock (t)', id: 'opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0 })}
         ${field({ label: 'Retained seed (t)', id: 'seed', type: 'number', step: '0.01', value: existing?.retainedSeed ?? 0 })}
@@ -753,21 +753,21 @@ function openCommoditySheet(existing) {
       const plan = planYieldUpdate(db.get().fields, existing.id, typed);
       const waiting = plan.count + plan.same;
       if (waiting === 0 || !(typed > 0)) {
-        applyBox.innerHTML = waiting === 0 ? '<div style="margin:0 0 10px;font-size:11.5px;color:var(--text-dim)">No paddocks of this commodity are on an estimate.</div>' : '';
+        applyBox.innerHTML = waiting === 0 ? '<div style="margin:0 0 10px;font-size:11.5px;color:var(--text-dim)">No fields of this commodity are on an estimate.</div>' : '';
         return;
       }
       applyBox.innerHTML = plan.count === 0
-        ? `<div class="field hint">${plan.same === 1 ? 'The paddock still on an estimate is' : `All ${plan.same} paddocks still on an estimate are`} already at ${num(typed, 2)} t/ha.</div>`
-        : `<div class="field hint" style="margin-bottom:6px">${plan.count} paddock${plan.count === 1 ? '' : 's'} still on an estimate (${num(plan.areaHa, 1)} ha): ${num(plan.tonsBefore, 0)} t now, ${num(plan.tonsAfter, 0)} t at ${num(typed, 2)} t/ha.${plan.finished ? ` ${plan.finished} with a real yield or a finished harvest ${plan.finished === 1 ? 'is' : 'are'} left alone.` : ''}</div>
-           <button type="button" class="btn secondary" id="apply-yield">Set ${plan.count === 1 ? 'that paddock' : `those ${plan.count} paddocks`} to ${num(typed, 2)} t/ha</button>`;
+        ? `<div class="field hint">${plan.same === 1 ? 'The field still on an estimate is' : `All ${plan.same} fields still on an estimate are`} already at ${num(typed, 2)} t/ha.</div>`
+        : `<div class="field hint" style="margin-bottom:6px">${plan.count} field${plan.count === 1 ? '' : 's'} still on an estimate (${num(plan.areaHa, 1)} ha): ${num(plan.tonsBefore, 0)} t now, ${num(plan.tonsAfter, 0)} t at ${num(typed, 2)} t/ha.${plan.finished ? ` ${plan.finished} with a real yield or a finished harvest ${plan.finished === 1 ? 'is' : 'are'} left alone.` : ''}</div>
+           <button type="button" class="btn secondary" id="apply-yield">Set ${plan.count === 1 ? 'that field' : `those ${plan.count} fields`} to ${num(typed, 2)} t/ha</button>`;
       applyBox.querySelector('#apply-yield')?.addEventListener('click', async () => {
         const now = planYieldUpdate(db.get().fields, existing.id, getNum(root, 'defaultYield'));
         if (!now.count) return;
-        const ok = await askConfirm(`Set ${now.count} paddock${now.count === 1 ? '' : 's'} of ${existing.name} to ${num(getNum(root, 'defaultYield'), 2)} t/ha? Paddocks with an actual or recorded yield, and finished harvests, are not changed. This also saves it as the default.`, { confirmLabel: 'Update' });
+        const ok = await askConfirm(`Set ${now.count} field${now.count === 1 ? '' : 's'} of ${existing.name} to ${num(getNum(root, 'defaultYield'), 2)} t/ha? Fields with an actual or recorded yield, and finished harvests, are not changed. This also saves it as the default.`, { confirmLabel: 'Update' });
         if (!ok) return;
         now.changes.forEach((c) => db.upsertField({ id: c.id, yieldTHa: c.to }));
         db.upsertCommodity({ id: existing.id, defaultYieldTHa: getNum(root, 'defaultYield') });
-        toast(`${now.count} paddock${now.count === 1 ? '' : 's'} updated`);
+        toast(`${now.count} field${now.count === 1 ? '' : 's'} updated`);
         paintYieldApply();
       });
     };

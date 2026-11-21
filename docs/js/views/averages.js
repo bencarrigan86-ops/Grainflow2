@@ -2,15 +2,15 @@
 // underneath. Built from the seasons the farm already holds; nothing is entered here. Owner, manager and bookkeeper only
 // (it is yields and prices, the same line as Position).
 
-import { db } from '../storage.js?v=509';
-import { num, esc, money, todayLocal, dmy } from '../fmt.js?v=509';
-import { openSheet, toast } from '../ui.js?v=509';
-import { canSeeYield } from '../nav.js?v=509';
-import { exportRowsAsCSV } from '../csv.js?v=509';
-import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=509';
-import { viewPdf } from '../pdfview.js?v=509';
-import { averagesPdf } from '../averagespdf.js?v=509';
-import { seasonAverages, finishedSeasons, averagesRows, AVERAGES_COLUMNS } from '../seasonaverages.js?v=509';
+import { db } from '../storage.js?v=511';
+import { num, esc, money, todayLocal, dmy } from '../fmt.js?v=511';
+import { openSheet, toast } from '../ui.js?v=511';
+import { canSeeYield } from '../nav.js?v=511';
+import { exportRowsAsCSV } from '../csv.js?v=511';
+import { safeFileName, sharePdf, downloadFile, canShareFiles } from '../sharefile.js?v=511';
+import { viewPdf } from '../pdfview.js?v=511';
+import { averagesPdf } from '../averagespdf.js?v=511';
+import { seasonAverages, finishedSeasons, averagesRows, AVERAGES_COLUMNS } from '../seasonaverages.js?v=511';
 
 const KEY = 'grainflow.averages.seasons';
 const readPicked = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return Array.isArray(v) ? v : null; } catch { return null; } };
@@ -40,7 +40,7 @@ export function openAveragesSheet() {
         : !result.commodities.length ? '<div class="empty">Nothing grown or sold in the seasons ticked.</div>'
           : `${result.commodities.map((c) => card(c, chosen)).join('')}
             ${noEstimate ? '' : '<div class="hint">&ldquo;est&rdquo; means at least one season in that average is a forecast yield, not a recorded one.</div>'}
-            <div class="hint">Yield is total tonnes over total hectares, so bigger paddocks count for more. Seasons with no tonnes are left out. <strong>Double</strong> is the yield of paddocks ticked as a double crop; <strong>fallow</strong> is every other paddock of that crop. Price is weighted by tonnes sold: <strong>contract</strong> is the price on the contract, <strong>net</strong> is what is left per tonne after freight and levies.</div>`;
+            <div class="hint">Yield is total tonnes over total hectares, so bigger fields count for more. Seasons with no tonnes are left out. <strong>Double</strong> is the yield of fields ticked as a double crop; <strong>fallow</strong> is every other field of that crop. Price is weighted by tonnes sold: <strong>contract</strong> is the price on the contract, <strong>net</strong> is what is left per tonne after freight and levies.</div>`;
       root.querySelector('#av-sub').textContent = chosen.length ? `${chosen.length} season${chosen.length === 1 ? '' : 's'}: ${chosen[0]}${chosen.length > 1 ? ` to ${chosen[chosen.length - 1]}` : ''}` : 'No seasons';
     };
 
@@ -55,9 +55,9 @@ export function openAveragesSheet() {
         <div class="row"><span class="label">Average yield</span><span class="value"><strong>${t.yieldTHa ? `${num(t.yieldTHa, 2)} t/ha${t.est ? ' est' : ''}` : 'none yet'}</strong></span></div>
         <div class="meta" style="margin-bottom:6px">${t.seasonsGrown} season${t.seasonsGrown === 1 ? '' : 's'} grown &middot; ${num(t.ha, 0)} ha &middot; ${num(t.tons, 0)} t</div>
         ${c.hasDouble ? `<div class="row"><span class="label">Double crop yield</span><span class="value">${t.double.yieldTHa ? `${num(t.double.yieldTHa, 2)} t/ha${t.double.est ? ' est' : ''}` : 'none yet'}</span></div>
-        <div class="meta" style="margin-bottom:6px">${t.double.paddocks} paddock${t.double.paddocks === 1 ? '' : 's'} &middot; ${num(t.double.ha, 0)} ha &middot; ${num(t.double.tons, 0)} t</div>
+        <div class="meta" style="margin-bottom:6px">${t.double.paddocks} field${t.double.paddocks === 1 ? '' : 's'} &middot; ${num(t.double.ha, 0)} ha &middot; ${num(t.double.tons, 0)} t</div>
         <div class="row"><span class="label">After fallow yield</span><span class="value">${t.normal.yieldTHa ? `${num(t.normal.yieldTHa, 2)} t/ha${t.normal.est ? ' est' : ''}` : 'none yet'}</span></div>
-        <div class="meta" style="margin-bottom:6px">${t.normal.paddocks} paddock${t.normal.paddocks === 1 ? '' : 's'} &middot; ${num(t.normal.ha, 0)} ha &middot; ${num(t.normal.tons, 0)} t</div>` : ''}
+        <div class="meta" style="margin-bottom:6px">${t.normal.paddocks} field${t.normal.paddocks === 1 ? '' : 's'} &middot; ${num(t.normal.ha, 0)} ha &middot; ${num(t.normal.tons, 0)} t</div>` : ''}
         <div class="row"><span class="label">Average price</span><span class="value"><strong>${t.soldTons ? `${money(t.contractPrice)}/t` : 'no sales'}</strong></span></div>
         ${t.soldTons ? `<div class="meta" style="margin-bottom:6px">net ${money(t.netPrice)}/t after freight and levies &middot; ${num(t.soldTons, 0)} t sold &middot; ${money(t.soldValue)}</div>` : ''}
         <div class="table-scroll"><table><thead><tr><th style="text-align:left">Season</th><th>Ha</th><th>t/ha</th>${c.hasDouble ? '<th>Double</th><th>Fallow</th>' : ''}<th>Sold t</th><th>Net $/t</th></tr></thead><tbody>${rows}</tbody></table></div>

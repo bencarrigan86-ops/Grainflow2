@@ -4,16 +4,16 @@
 // .shp and .dbf together, or the zip they came in. Paddocks are matched to yours by name, and the area worked out from
 // the outline replaces the area typed in, as it is the more accurate. The reading and drawing are in farmmap.js.
 
-import { db } from '../storage.js?v=509';
-import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=509';
-import { esc, num, todayLocal, dmy } from '../fmt.js?v=509';
-import { sharePdf, safeFileName } from '../sharefile.js?v=509';
-import { viewPdf } from '../pdfview.js?v=509';
-import { APP_VERSION } from '../version.js?v=509';
-import { buildFarmMapPdf } from '../spraypdf.js?v=509';
+import { db } from '../storage.js?v=511';
+import { openSheet, closeSheet, toast, notify, askConfirm } from '../ui.js?v=511';
+import { esc, num, todayLocal, dmy } from '../fmt.js?v=511';
+import { sharePdf, safeFileName } from '../sharefile.js?v=511';
+import { viewPdf } from '../pdfview.js?v=511';
+import { APP_VERSION } from '../version.js?v=511';
+import { buildFarmMapPdf } from '../spraypdf.js?v=511';
 import {
   readBoundaries, unzipFiles, simplifyRings, ringsAreaHa, matchBoundaries, mapLayout, PALETTE, NO_CROP, NO_FARM, farmGroups, visibleBox, labelFontPx, farmLabelPx, commonLabelPx,
-} from '../farmmap.js?v=509';
+} from '../farmmap.js?v=511';
 
 const MAX_ZOOM = 40;
 const MIN_LABEL_PX = 6.5;    // the smallest writing a paddock's name is shown in, on screen
@@ -44,7 +44,7 @@ const saveShow = (show) => { try { localStorage.setItem(SHOW_KEY, JSON.stringify
 export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
   const chosen = new Set(pick?.ids || []);
   const RED = '#d8362b';
-  openSheet(pick ? 'Pick paddocks' : 'Farm map', (root) => {
+  openSheet(pick ? 'Pick fields' : 'Farm map', (root) => {
     const draw = () => {
       const { fields, commodities } = db.get();
       const mapped = fields.filter((f) => f.boundary?.length);
@@ -64,13 +64,13 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
       const haOf = (id) => Number(mapped.find((f) => f.id === id)?.areaHa) || 0;
       const pickedText = () => {
         const ids = [...chosen].filter((id) => mapped.some((f) => f.id === id));
-        return ids.length ? `${ids.length} paddock${ids.length === 1 ? '' : 's'} picked, ${num(ids.reduce((s, id) => s + haOf(id), 0), 1)} ha` : 'Tap the paddocks to spray';
+        return ids.length ? `${ids.length} field${ids.length === 1 ? '' : 's'} picked, ${num(ids.reduce((s, id) => s + haOf(id), 0), 1)} ha` : 'Tap the fields to spray';
       };
       root.innerHTML = `
         ${pick ? `<div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px"><strong id="fm-picked">${pickedText()}</strong><button type="button" class="btn small" id="fm-pickdone" style="width:auto">Done</button></div>` : ''}
-        <div class="hint" style="margin-bottom:8px">${mapped.length} paddock${mapped.length === 1 ? '' : 's'} mapped${hasFarms ? ` on ${groups.filter((g) => g.name !== NO_FARM).length} farm${groups.filter((g) => g.name !== NO_FARM).length === 1 ? '' : 's'}` : ''}, ${num(mappedHa, 0)} ha. ${pick ? 'Tap a paddock to pick it, and again to take it off.' : 'Tap one to open it.'} Pinch or use the buttons to zoom.</div>
+        <div class="hint" style="margin-bottom:8px">${mapped.length} field${mapped.length === 1 ? '' : 's'} mapped${hasFarms ? ` on ${groups.filter((g) => g.name !== NO_FARM).length} farm${groups.filter((g) => g.name !== NO_FARM).length === 1 ? '' : 's'}` : ''}, ${num(mappedHa, 0)} ha. ${pick ? 'Tap a field to pick it, and again to take it off.' : 'Tap one to open it.'} Pinch or use the buttons to zoom.</div>
         <div id="fm-wrap" style="position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg);touch-action:none">
-          <svg id="fm-svg" viewBox="0 0 ${vb.w} ${vb.h}" style="display:block;width:100%;height:auto;max-height:68vh" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of the paddocks">
+          <svg id="fm-svg" viewBox="0 0 ${vb.w} ${vb.h}" style="display:block;width:100%;height:auto;max-height:68vh" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of the fields">
             ${layout.items.map((i) => `<path data-id="${esc(i.id)}" data-farm="${esc(i.farm || NO_FARM)}" d="${i.d}" fill="${chosen.has(i.id) ? RED : i.color}" fill-opacity="${chosen.has(i.id) ? 0.85 : pick ? 0.3 : 0.55}" fill-rule="evenodd" stroke="var(--text)" stroke-opacity="0.55" stroke-width="1" vector-effect="non-scaling-stroke" style="cursor:pointer"><title>${esc(i.name)}</title></path>`).join('')}
             ${layout.items.map((i) => `<text data-label="${esc(i.id)}" data-farm="${esc(i.farm || NO_FARM)}" data-area="${Math.round(i.areaHa * 10000)}" data-w="${Math.round(i.bbox[2] - i.bbox[0])}" data-h="${Math.round(i.bbox[3] - i.bbox[1])}" x="${Math.round(i.cx)}" y="${Math.round(i.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="3" paint-order="stroke" pointer-events="none" style="font-weight:600"><tspan class="fm-n" x="${Math.round(i.cx)}">${esc(i.name)}</tspan><tspan class="fm-a" x="${Math.round(i.cx)}" dy="1.15em" style="font-weight:500">${num(Number(mapped.find((f) => f.id === i.id)?.areaHa) || i.areaHa, 1)} ha</tspan></text>`).join('')}
             ${hasFarms ? groups.filter((g) => g.name !== NO_FARM).map((g) => `<text data-farm-label="${esc(g.name)}" data-w="${Math.round(g.bbox[2] - g.bbox[0])}" x="${Math.round(g.cx)}" y="${Math.round(g.cy)}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" stroke="var(--bg)" stroke-width="4" paint-order="stroke" pointer-events="none" style="font-weight:800;letter-spacing:.05em;text-transform:uppercase">${esc(g.name)}</text>`).join('') : ''}
@@ -99,8 +99,8 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
         ${unmapped.length ? `<div class="hint" style="margin-bottom:8px">Not on the map: ${unmapped.map((f) => esc(f.name)).join(', ')}.</div>` : ''}
         ${pick ? '<button type="button" class="btn secondary" id="fm-pickcancel" style="margin-top:6px">Cancel</button>' : `
         ${onSpray ? '<button type="button" class="btn" id="fm-spray" style="margin-top:6px">Spray request from this map</button>' : ''}
-        <div class="pv-actions" style="margin-top:8px"><button type="button" class="btn secondary" id="fm-view">View</button><button type="button" class="btn secondary" id="fm-pdf">Send this view as a PDF</button></div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px"><input type="checkbox" id="fm-pdftotals" style="width:18px;height:18px" /> Paddock and hectare totals on the PDF</label>
+        <div class="pv-actions" style="margin-top:8px"><button type="button" class="btn secondary" id="fm-view">View PDF</button><button type="button" class="btn secondary" id="fm-pdf">Send PDF</button></div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px"><input type="checkbox" id="fm-pdftotals" style="width:18px;height:18px" /> Field and hectare totals on the PDF</label>
         <div class="hint" style="margin-top:4px">The PDF shows what is on the map now: zoom to the area you want, switch off the farms you do not, and the Names, Areas and Farm names ticks above decide what is written on it.</div>
         <button type="button" class="btn secondary" id="fm-update" style="margin-top:8px">Update from a file</button>
         <button type="button" class="btn ghost-danger" id="fm-clear" style="margin-top:8px">Remove the map</button>`}`;
@@ -134,7 +134,7 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
             title: 'Farm map', date: todayLocal(), legend, hiddenFarms: readHidden(), view: mapApi.getView(),
             subtitle: [business.entityName || business.farmName, db.getCurrentYear()].filter(Boolean).join('  ·  '),
           });
-          return { bytes, fileName: safeFileName(`Farm map ${dmy(todayLocal())}`), text: `Farm map: ${mapped.length} paddocks, ${num(mappedHa, 0)} ha.` };
+          return { bytes, fileName: safeFileName(`Farm map ${dmy(todayLocal())}`), text: `Farm map: ${mapped.length} fields, ${num(mappedHa, 0)} ha.` };
       };
       const withMapPdf = (use) => async (e) => {
         const btn = e.currentTarget; btn.disabled = true;
@@ -147,7 +147,7 @@ export function openMapSheet({ onOpenField, onSpray, pick } = {}) {
       }));
       root.querySelector('#fm-update')?.addEventListener('click', () => importView(root, draw, true));
       root.querySelector('#fm-clear')?.addEventListener('click', async () => {
-        if (!(await askConfirm('Remove the outlines from every paddock? The paddocks and their areas stay. You can import the file again.', { confirmLabel: 'Remove', danger: true }))) return;
+        if (!(await askConfirm('Remove the outlines from every field? The fields and their areas stay. You can import the file again.', { confirmLabel: 'Remove', danger: true }))) return;
         db.clearFieldBoundaries();
         toast('Map removed');
         draw();
@@ -293,11 +293,11 @@ function importView(root, done, haveMap = false) {
   const { fields } = db.get();
   root.innerHTML = `
     ${!haveMap && /^sample/i.test(db.getCurrentYear() || '') ? `<div class="card input" style="margin-bottom:12px"><h2><span class="dot input"></span>This is the sample farm</h2>
-      <div class="hint">It was set up before the sample had a map. Add the sample map to its paddocks: nothing else changes.</div>
+      <div class="hint">It was set up before the sample had a map. Add the sample map to its fields: nothing else changes.</div>
       <button type="button" class="btn" id="fm-sample">Add the sample map</button></div>` : ''}
-    <div class="hint" style="margin-bottom:10px">${haveMap ? 'Choose the file again to update the outlines.' : 'Draw your paddocks on a map.'}
+    <div class="hint" style="margin-bottom:10px">${haveMap ? 'Choose the file again to update the outlines.' : 'Draw your fields on a map.'}
       Export your boundaries as a shapefile from any mapping software, then choose the <strong>.shp</strong> and <strong>.dbf</strong> files together
-      (select both at once), or the <strong>.zip</strong> they came in. Paddocks are matched to yours by name.</div>
+      (select both at once), or the <strong>.zip</strong> they came in. Fields are matched to yours by name.</div>
     <label class="btn" style="display:block;text-align:center;cursor:pointer">Choose the files&hellip;
       <input type="file" id="fm-files" multiple style="display:none" />
     </label>
@@ -316,9 +316,9 @@ function importView(root, done, haveMap = false) {
       const sample = seed.years?.[seed.currentYear]?.fields || [];
       const features = sample.filter((f) => f.boundary?.length).map((f) => ({ name: f.name, farm: f.property || '', rings: f.boundary }));
       const { matched } = matchBoundaries(features, db.get().fields);
-      if (!matched.length) { notify('None of these paddocks has a name from the sample farm, so there is no sample map to put on them.'); btn.disabled = false; return; }
+      if (!matched.length) { notify('None of these fields has a name from the sample farm, so there is no sample map to put on them.'); btn.disabled = false; return; }
       db.applyFieldBoundaries({ matched: matched.map((m) => ({ id: m.field.id, boundary: m.feature.rings, property: m.feature.farm, areaHa: 0 })) });
-      toast(`Sample map added: ${matched.length} paddock${matched.length === 1 ? '' : 's'}`);
+      toast(`Sample map added: ${matched.length} field${matched.length === 1 ? '' : 's'}`);
       done();
     } catch (err) { notify(err.message || 'The sample map could not be added.'); btn.disabled = false; }
   });
@@ -342,9 +342,9 @@ function importView(root, done, haveMap = false) {
         else if (name.endsWith('.dbf')) dbf = new Uint8Array(await f.arrayBuffer());
       }
       if (!shp) throw new Error('Choose the .shp file as well (or the zip).');
-      if (!dbf) throw new Error('Choose the .dbf file as well: it holds the paddock names.');
+      if (!dbf) throw new Error('Choose the .dbf file as well: it holds the field names.');
       const { features } = readBoundaries(shp, dbf);
-      if (!features.length) throw new Error('That file has no paddock outlines in it.');
+      if (!features.length) throw new Error('That file has no field outlines in it.');
       preview(features, fields);
     } catch (err) {
       problem(err.message || 'That file could not be read.');
@@ -363,20 +363,20 @@ function importView(root, done, haveMap = false) {
     box.innerHTML = `
       <div class="card" style="margin-top:10px">
         <h2>${features.length} outlines found</h2>
-        ${farmNames.length ? `<div class="row"><span class="label">Farms in the file</span><span class="value">${farmNames.length}</span></div><div class="hint" style="margin:0 0 8px">${farmNames.map(esc).join(', ')}. Each paddock keeps its farm name, so the map can label the farms and show or hide them.</div>` : ''}
-        <div class="row"><span class="label">Matched to your paddocks</span><span class="value">${items.length}</span></div>
+        ${farmNames.length ? `<div class="row"><span class="label">Farms in the file</span><span class="value">${farmNames.length}</span></div><div class="hint" style="margin:0 0 8px">${farmNames.map(esc).join(', ')}. Each field keeps its farm name, so the map can label the farms and show or hide them.</div>` : ''}
+        <div class="row"><span class="label">Matched to your fields</span><span class="value">${items.length}</span></div>
         <div class="row"><span class="label">Their area now</span><span class="value">${num(was, 1)} ha</span></div>
         <div class="row"><span class="label">Their area after saving</span><span class="value" id="fm-after"><strong>${num(now, 1)} ha</strong></span></div>
-        ${items.length ? `<details class="fold" style="margin-top:6px"><summary><div><h2>Each paddock</h2><div class="sub">Tick to take the area from the map, untick to keep the one you typed</div></div></summary>
-          <label class="row" style="cursor:pointer"><span class="label"><input type="checkbox" id="fm-all" checked style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />All paddocks</span><span class="value"></span></label>
+        ${items.length ? `<details class="fold" style="margin-top:6px"><summary><div><h2>Each field</h2><div class="sub">Tick to take the area from the map, untick to keep the one you typed</div></div></summary>
+          <label class="row" style="cursor:pointer"><span class="label"><input type="checkbox" id="fm-all" checked style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />All fields</span><span class="value"></span></label>
           ${items.map((i, n) => `<label class="row" style="cursor:pointer"><span class="label"><input type="checkbox" class="fm-use" data-n="${n}" checked style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />${esc(i.name)}</span><span class="value">${num(i.was, 1)} &rarr; ${num(i.areaHa, 1)} ha</span></label>`).join('')}</details>` : ''}
         ${extra.length ? `
-        <div class="row" style="margin-top:8px"><span class="label">On the map, no paddock of that name</span><span class="value">${extra.length}</span></div>
+        <div class="row" style="margin-top:8px"><span class="label">On the map, no field of that name</span><span class="value">${extra.length}</span></div>
         <div class="hint" style="margin:4px 0 8px">${extra.map((f) => esc(f.name)).join(', ')}</div>
         <label class="list-item" style="cursor:pointer"><div style="display:flex;align-items:center;gap:10px">
           <input type="checkbox" id="fm-add" ${items.length ? '' : 'checked'} style="width:18px;height:18px" />
-          <div><div class="main">Add these as new paddocks</div><div class="meta">With the area from the map. Set their crop afterwards.</div></div></div></label>` : ''}
-        <div class="hint" style="margin-top:8px">Ticked paddocks take the area measured from the outline; unticked ones keep the area you typed.</div>
+          <div><div class="main">Add these as new fields</div><div class="meta">With the area from the map. Set their crop afterwards.</div></div></div></label>` : ''}
+        <div class="hint" style="margin-top:8px">Ticked fields take the area measured from the outline; unticked ones keep the area you typed.</div>
         <button type="button" class="btn" id="fm-save" style="margin-top:8px" ${items.length || extra.length ? '' : 'disabled'}>Save the map</button>
       </div>`;
     const useBoxes = [...box.querySelectorAll('.fm-use')];
@@ -392,10 +392,10 @@ function importView(root, done, haveMap = false) {
     useBoxes.forEach((b) => b.addEventListener('change', syncTotals));
     box.querySelector('#fm-save').addEventListener('click', () => {
       const add = !!box.querySelector('#fm-add')?.checked;
-      if (!items.length && !(add && extra.length)) { notify('Nothing matched your paddocks. Tick Add these as new paddocks, or check the names.'); return; }
+      if (!items.length && !(add && extra.length)) { notify('Nothing matched your fields. Tick Add these as new fields, or check the names.'); return; }
       // an unticked paddock keeps its outline but not the new area (0 = leave the typed area alone)
       db.applyFieldBoundaries({ matched: items.map((i, n) => ({ id: i.id, boundary: i.boundary, property: i.property, areaHa: useBoxes[n]?.checked === false ? 0 : i.areaHa })), added: add ? extra : [] });
-      toast(`Map saved: ${items.length} paddock${items.length === 1 ? '' : 's'}${add && extra.length ? `, ${extra.length} added` : ''}`);
+      toast(`Map saved: ${items.length} field${items.length === 1 ? '' : 's'}${add && extra.length ? `, ${extra.length} added` : ''}`);
       done();
     });
   };

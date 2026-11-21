@@ -86,7 +86,7 @@ check('every row is kept, including the unusable ones, with a reason', () => {
   assert.equal(loads.length, 8, 'the wholly blank line is not a load, but the stub is');
   const stub = loads.find((l) => l.ref === 'M08');
   assert.ok(stub.problems.length >= 3, 'the blank stub row should be refused for several reasons');
-  assert.ok(loads.find((l) => l.ref === 'M07').problems.some((p) => /paddock/.test(p)));
+  assert.ok(loads.find((l) => l.ref === 'M07').problems.some((p) => /field/.test(p)));
 });
 
 console.log('\n=== matching names ===');
@@ -219,7 +219,7 @@ check('unusable and cancelled rows are skipped, each with its reason', () => {
   assert.ok(by.M03.includes('delivered weight'), 'M03 has no delivered weight');
   assert.ok(by.M05.includes('Cancelled'));
   assert.ok(by.M06.includes('weight'));
-  assert.ok(by.M07.includes('paddock'));
+  assert.ok(by.M07.includes('field'));
   assert.ok(by.M08);
 });
 check('a movement goes from the paddock to the silo with the delivered weight on both legs', () => {

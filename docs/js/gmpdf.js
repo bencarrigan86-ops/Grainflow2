@@ -2,7 +2,7 @@
 // per hectare, with a total, and the whole farm at the end. The figures come from grossmargin.js (gmReport), the same ones the
 // screen uses; a paddock with a cost of its own is marked with a star. Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=509';
+import { createReport, fixed } from './reportpdf.js?v=511';
 
 const money = (v) => `${v < 0 ? '-' : ''}$${fixed(Math.abs(v), 0)}`;
 
@@ -25,9 +25,9 @@ export const GM_COLUMNS = [
 export function gmPdf({ groups = [], total = {} } = {}, { business = '', season = '', today = '' } = {}) {
   const report = createReport({
     title: 'Gross margin', business, season, today,
-    footerNote: 'Price is the crop\'s blended price (sold and unsold). Cost is the crop\'s gross margin cost over its area; * a cost entered for that paddock.',
+    footerNote: 'Price is the crop\'s blended price (sold and unsold). Cost is the crop\'s gross margin cost over its area; * a cost entered for that field.',
   });
-  if (!groups.length) { report.message('Nothing to report yet: add a paddock in Production.'); return report.bytes(); }
+  if (!groups.length) { report.message('Nothing to report yet: add a field in Production.'); return report.bytes(); }
 
   groups.forEach((g) => {
     report.heading(`${g.name}   ${money(g.total.gm)} gross margin`);

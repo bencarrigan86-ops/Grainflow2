@@ -43,7 +43,7 @@ export function parseShp(buf) {
   const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
   if (b.length < 100 || dv.getInt32(0, false) !== 9994) throw new Error('That is not a shapefile (.shp).');
   const type = dv.getInt32(32, true);
-  if (![5, 15, 25].includes(type)) throw new Error('That shapefile holds lines or points, not paddock outlines.');
+  if (![5, 15, 25].includes(type)) throw new Error('That shapefile holds lines or points, not field outlines.');
   const out = [];
   let off = 100;
   while (off + 12 <= b.length) {

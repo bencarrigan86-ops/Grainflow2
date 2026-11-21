@@ -16,8 +16,8 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-import { environmentFor } from './env.js?v=509';
-import { noteRecoveryLink } from './recovery.js?v=509';
+import { environmentFor } from './env.js?v=511';
+import { noteRecoveryLink } from './recovery.js?v=511';
 
 // A password reset link arrives as "#access_token=…&type=recovery", which the library below reads and then removes from the address bar.
 // What it said is noted first, for the tab, so the app can ask for the new password (see main.js).

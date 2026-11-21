@@ -5,7 +5,7 @@
 // open it, and that the SQL keeps it write-protected.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { auditTitle, changeLines, changeSummary, columnLabel, valueText, whoText, dayHeading, filterAudit, groupByDay, canSeeAudit, AUDIT_KINDS } from '../docs/js/audit.js';
+import { auditTitle, changeLines, changeSummary, columnLabel, valueText, whoText, dayHeading, filterAudit, groupByDay, canSeeAudit, auditSearchTerm, AUDIT_KINDS } from '../docs/js/audit.js';
 
 let failures = 0;
 const check = (name, fn) => {
@@ -101,6 +101,14 @@ check('the SQL: written by a trigger, readable by owner, manager and bookkeeper,
 check('the screen reads the log, pages it, and says so when it is not switched on or there is no signal', () => {
   const v = read('docs/js/views/audit.js');
   for (const t of ["from('audit_log')", '.range(', "order('at', { ascending: false })", 'navigator.onLine', 'is not switched on', 'Show older changes']) assert.ok(v.includes(t), t);
+});
+
+check('the search term is made safe for the server filter and the screen searches the whole history', () => {
+  assert.equal(auditSearchTerm('  Ticket #1058  '), 'Ticket #1058');
+  assert.equal(auditSearchTerm('a,b)(c%d*e_f'), 'a b c d e f');
+  assert.equal(auditSearchTerm(null), '');
+  const v = read('docs/js/views/audit.js');
+  assert.ok(v.includes('label.ilike.') && v.includes('user_email.ilike.') && v.includes('id="aud-q"') && v.includes('if (mine !== seq) return;'));
 });
 
 if (failures) { console.log(`\n${failures} FAILURES`); process.exit(1); }

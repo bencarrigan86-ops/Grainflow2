@@ -4,11 +4,11 @@
 // each crop's yield by season), so what is exported is what is shown. A role that is not shown yields is not given them
 // here either: `showYield` false leaves out every tonnage and yield and the crop table. Pure: it builds text and bytes.
 
-import { toCSV } from './csv.js?v=509';
-import { Pdf, wrapText, textWidth } from './pdf.js?v=509';
-import { drawBrandLogo } from './brand.js?v=509';
-import { PALETTE } from './farmmap.js?v=509';
-import { cropYields } from './fieldhistory.js?v=509';
+import { toCSV } from './csv.js?v=511';
+import { Pdf, wrapText, textWidth } from './pdf.js?v=511';
+import { drawBrandLogo } from './brand.js?v=511';
+import { PALETTE } from './farmmap.js?v=511';
+import { cropYields } from './fieldhistory.js?v=511';
 
 const round = (n, dp = 2) => { const f = 10 ** dp; return Math.round((Number(n) || 0) * f) / f; };
 
@@ -31,7 +31,7 @@ export function rotationCsv(grid, { showYield = true } = {}) {
   const seasons = grid.seasons;
   const columns = [
     { label: 'Farm', get: (r) => r.property || '' },
-    { label: 'Paddock', get: (r) => r.name },
+    { label: 'Field', get: (r) => r.name },
   ];
   for (const s of seasons) {
     columns.push({ label: `${s} crop`, get: (r) => r.cells[s]?.crop || (r.cells[s] ? 'No crop' : '') });
@@ -114,7 +114,7 @@ export function rotationPdf(grid, { orientation = 'landscape', showYield = true,
   const groups = seasonGroups(grid.seasons, seasonsPerPage(o));
   const BOTTOM = PAGE.height - 40;
   const hasFarms = grid.rows.some((r) => r.property);
-  const summary = `${grid.rows.length} paddock${grid.rows.length === 1 ? '' : 's'}, ${grid.seasons.length} season${grid.seasons.length === 1 ? '' : 's'}`;
+  const summary = `${grid.rows.length} field${grid.rows.length === 1 ? '' : 's'}, ${grid.seasons.length} season${grid.seasons.length === 1 ? '' : 's'}`;
   const who = [business, ngr ? `NGR ${ngr}` : '', today ? `Printed ${today}` : ''].filter(Boolean).join('   ·   ');
 
   let page = 0;
@@ -153,13 +153,13 @@ export function rotationPdf(grid, { orientation = 'landscape', showYield = true,
       seasons.forEach((s, i) => pdf.text(M + NAME_W + i * SEASON_W + SEASON_W / 2, yy + 5, s, { size: 8.5, bold: true, align: 'center' }));
       return yy + BAND_H;
     };
-    y = band(y, 'Paddock');
+    y = band(y, 'Field');
 
     let lastFarm = null;
     let n = 0;
     for (const r of grid.rows) {
       const needFarm = hasFarms && r.property !== lastFarm;
-      if (y + ROW_H + (needFarm ? 16 : 0) > BOTTOM) { y = band(nextPage(note), 'Paddock'); n = 0; }
+      if (y + ROW_H + (needFarm ? 16 : 0) > BOTTOM) { y = band(nextPage(note), 'Field'); n = 0; }
       if (needFarm) {
         pdf.text(M + 4, y + 5, r.property || 'No farm name', { size: 8, bold: true, gray: 0.3 });
         y += 16; n = 0;
@@ -209,7 +209,7 @@ export function rotationPdf(grid, { orientation = 'landscape', showYield = true,
     }
 
     // how to read it
-    const readMe = `${showYield ? 'Yield is tonnes per hectare: actual loads once a paddock is on actual, otherwise the estimate (est). ' : ''}Hectares are the paddock areas added up by crop. An orange outline is the same crop as the season before.`;
+    const readMe = `${showYield ? 'Yield is tonnes per hectare: actual loads once a field is on actual, otherwise the estimate (est). ' : ''}Hectares are the field areas added up by crop. An orange outline is the same crop as the season before.`;
     pdf.paragraph(M, Math.min(y + 4, PAGE.height - 56), readMe, PAGE.width - M * 2, { size: 8, gray: 0.4, lineHeight: 10 });
   });
   footer();

@@ -20,11 +20,11 @@
 //
 // Pure, except `reconcileTickets`, which is handed the means of asking the server.
 
-import { movementFromRow } from './mapping.js?v=509';
+import { movementFromRow } from './mapping.js?v=511';
 
 /** The parts of a ticket that people edit, with the words used for them. */
 export const TICKET_FIELDS = [
-  ['date', 'Date'], ['commodityId', 'Commodity'], ['truckRego', 'Truck'], ['truckCompany', 'Transport company'], ['driver', 'Driver'], ['driverPhone', 'Driver phone'],
+  ['date', 'Date'], ['commodityId', 'Commodity'], ['truckRego', 'Truck'], ['truckCompany', 'Carrier'], ['driver', 'Driver'], ['driverPhone', 'Driver phone'],
   ['grossWeight', 'Gross weight'], ['tareWeight', 'Tare weight'], ['tons', 'Net load'],
   ['weightStatus', 'Weight status'], ['notes', 'Notes'], ['externalTicketNo', 'Delivery number'], ['manualDocketNo', 'Manual docket number'], ['loadTime', 'Time'], ['destination', 'Destination'],
   ['grade', 'Grade'], ['proteinPct', 'Protein'], ['moisturePct', 'Moisture'], ['screeningsPct', 'Screenings'],
@@ -35,7 +35,7 @@ export const TICKET_FIELDS = [
 const KEYS = TICKET_FIELDS.map(([k]) => k);
 const LABEL = Object.fromEntries(TICKET_FIELDS);
 // what to call each part in a sentence ("the destination", not "the where it went")
-const NOUN = { ...Object.fromEntries(TICKET_FIELDS.map(([k, l]) => [k, l.toLowerCase()])), froms: 'paddock', tos: 'destination' };
+const NOUN = { ...Object.fromEntries(TICKET_FIELDS.map(([k, l]) => [k, l.toLowerCase()])), froms: 'field', tos: 'destination' };
 const isLegs = (k) => k === 'froms' || k === 'tos';
 
 const clone = (v) => (v === undefined ? v : JSON.parse(JSON.stringify(v)));
@@ -165,7 +165,7 @@ export function valueText(key, v, ctx = {}) {
   const nameOf = (list, id, fallback) => (list || []).find((x) => x.id === id)?.name ?? fallback;
   if (isLegs(key)) {
     const parts = (v || []).map((l) => {
-      const where = l.type === 'field' ? nameOf(ctx.fields, l.id, 'a paddock')
+      const where = l.type === 'field' ? nameOf(ctx.fields, l.id, 'a field')
         : l.type === 'sale' ? ((ctx.sales || []).find((s) => s.id === l.id)?.buyer || 'a contract')
           : nameOf(ctx.storages, l.id, 'a silo');
       return `${where} ${Math.round((Number(l.tons) || 0) * 10) / 10} t`;

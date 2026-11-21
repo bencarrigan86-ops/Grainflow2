@@ -7,11 +7,11 @@
 // One move is one truck load. The driver gives the number of modules and the weight is estimated from what was picked on the
 // paddock (its kilograms a module); when the load is weighed at the gin the weighbridge weight is typed over it and the load is final.
 
-import { db } from '../storage.js?v=509';
-import { num, esc, todayLocal } from '../fmt.js?v=509';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=509';
-import { cleanModules, moduleLegs, shareLoad, estimateBales, describeModules, DEFAULT_TURNOUT } from '../ginning.js?v=509';
-import { pickedTotals, moduleEstimate, describeEstimate, avgModuleKg } from '../modulespicked.js?v=509';
+import { db } from '../storage.js?v=511';
+import { num, esc, todayLocal } from '../fmt.js?v=511';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=511';
+import { cleanModules, moduleLegs, shareLoad, estimateBales, describeModules, DEFAULT_TURNOUT } from '../ginning.js?v=511';
+import { pickedTotals, moduleEstimate, describeEstimate, avgModuleKg } from '../modulespicked.js?v=511';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -48,21 +48,21 @@ export function openModuleMoveSheet(existing = null) {
 
   openSheet(existing ? `Edit module move${existing.ticketNo ? ` #${existing.ticketNo}` : ''}` : 'Move modules', (root) => {
     if (!yards.length || !paddocks.length) {
-      if (!yards.length) { offerGinYard(root, 'The modules are counted in a gin yard between the paddock and the gin. Name it after the gin, or add a Tally storage in Storage.', () => openModuleMoveSheet(existing)); return; }
-      root.innerHTML = `<div class="empty">Add the cotton paddocks first.</div>`;
+      if (!yards.length) { offerGinYard(root, 'The modules are counted in a gin yard between the field and the gin. Name it after the gin, or add a Tally storage in Storage.', () => openModuleMoveSheet(existing)); return; }
+      root.innerHTML = `<div class="empty">Add the cotton fields first.</div>`;
       return;
     }
     const rowHtml = (r) => `<div class="mm-row" style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px">
-        <div class="field" style="flex:2;margin-bottom:0"><label>From paddock</label>
+        <div class="field" style="flex:2;margin-bottom:0"><label>From field</label>
           <select class="mm-f"><option value="">Select…</option>${paddocks.map((f) => `<option value="${esc(f.id)}" ${f.id === r.id ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}</select></div>
         <div class="field" style="flex:1;margin-bottom:0"><label>Modules</label>
           <input type="number" step="1" inputmode="numeric" class="mm-n" value="${r.count || ''}" /></div>
-        <button type="button" class="btn ghost-danger small mm-x" style="width:auto;margin:0;padding:8px 12px" aria-label="Remove this paddock">&times;</button>
+        <button type="button" class="btn ghost-danger small mm-x" style="width:auto;margin:0;padding:8px 12px" aria-label="Remove this field">&times;</button>
       </div>`;
     root.innerHTML = `
       ${field({ label: 'Date', id: 'mm-date', type: 'date', value: existing?.date || todayLocal() })}
       <div id="mm-rows">${startRows.map(rowHtml).join('')}</div>
-      <button type="button" class="btn secondary small" id="mm-add">+ Add another paddock</button>
+      <button type="button" class="btn secondary small" id="mm-add">+ Add another field</button>
       <div class="field"><div class="hint" id="mm-field-note"></div></div>
       ${field({ label: 'To gin yard', id: 'mm-to', type: 'select', value: toLeg?.id || (yards.length === 1 ? yards[0].id : ''), options: [{ value: '', label: 'Select…' }, ...yards.map((s) => ({ value: s.id, label: s.name })), { value: '__new', label: '+ Add another gin yard…' }] })}
       <div class="grid-2">
@@ -117,9 +117,9 @@ export function openModuleMoveSheet(existing = null) {
       const loadAvg = loadModules > 0 && loadKg > 0 ? loadKg / loadModules : 0;
       const firstAvg = rows.length ? avgKgFor(rows[0].id) : 0;
       root.querySelector('#mm-wstat').textContent = kgTyped
-        ? `Weighed: this is the weighbridge weight.${loadAvg > 0 ? ` Average ${num(loadAvg, 0)} kg a module${!several && firstAvg > 0 ? ` (the paddock averages ${num(firstAvg, 0)} kg)` : ''}. ${several ? 'It is shared between the paddocks by their module weights.' : ''}` : ''}`
-        : (estKg > 0 ? `Estimated from ${several ? 'each paddock\'s' : `${num(firstAvg, 0)} kg a`} module weight. Type the weighbridge weight over it when the load is weighed.`
-          : 'Type the weighbridge weight when the load is weighed. Log the modules picked on the paddock to have it estimated.');
+        ? `Weighed: this is the weighbridge weight.${loadAvg > 0 ? ` Average ${num(loadAvg, 0)} kg a module${!several && firstAvg > 0 ? ` (the field averages ${num(firstAvg, 0)} kg)` : ''}. ${several ? 'It is shared between the fields by their module weights.' : ''}` : ''}`
+        : (estKg > 0 ? `Estimated from ${several ? 'each field\'s' : `${num(firstAvg, 0)} kg a`} module weight. Type the weighbridge weight over it when the load is weighed.`
+          : 'Type the weighbridge weight when the load is weighed. Log the modules picked on the field to have it estimated.');
       if (!turnoutTyped) root.querySelector('#mm-turnout').value = rows.length ? turnoutFor(rows[0].id) : '';
       if (!balesTyped || source === 'kg' || source === 'turnout' || source === 'count' || source === 'from') {
         const b = estimateBales(getNum(root, 'mm-kg'), getNum(root, 'mm-turnout'));

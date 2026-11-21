@@ -52,7 +52,7 @@ check('the commodity screen offers it: the count, the tonnes, a confirmation, an
   const s = read('docs/js/views/settings.js');
   assert.ok(s.includes('id="yield-apply"') && s.includes('id="apply-yield"'));
   assert.ok(s.includes('planYieldUpdate(db.get().fields, existing.id'));
-  assert.ok(s.includes('askConfirm(`Set ${now.count} paddock'), 'asks before changing anything');
+  assert.ok(s.includes('askConfirm(`Set ${now.count} field'), 'asks before changing anything');
   assert.ok(s.includes('db.upsertField({ id: c.id, yieldTHa: c.to })'));
   assert.ok(s.includes("db.upsertCommodity({ id: existing.id, defaultYieldTHa"), 'the default is saved with it, so the two agree');
   assert.ok(s.includes("root.querySelector('#defaultYield').addEventListener('input', paintYieldApply)"), 'follows what is typed');

@@ -16,14 +16,14 @@ const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 check('the contents are counted, one by one, and only what is there', () => {
   const year = { fields: [{}, {}, {}], sales: [{}], movements: [{}, {}], invoices: [], storages: undefined };
   assert.deepEqual(seasonContents(year), [
-    { label: 'paddocks', count: 3 }, { label: 'contract', count: 1 }, { label: 'loads', count: 2 },
+    { label: 'fields', count: 3 }, { label: 'contract', count: 1 }, { label: 'loads', count: 2 },
   ]);
   assert.deepEqual(seasonContents(null), []);
 });
 
 check('the contents read as a sentence', () => {
-  assert.equal(contentsText(seasonContents({ fields: [{}, {}], sales: [{}], movements: [{}, {}, {}] })), '2 paddocks, 1 contract and 3 loads');
-  assert.equal(contentsText(seasonContents({ fields: [{}] })), '1 paddock');
+  assert.equal(contentsText(seasonContents({ fields: [{}, {}], sales: [{}], movements: [{}, {}, {}] })), '2 fields, 1 contract and 3 loads');
+  assert.equal(contentsText(seasonContents({ fields: [{}] })), '1 field');
   assert.equal(contentsText([]), 'nothing in it');
 });
 

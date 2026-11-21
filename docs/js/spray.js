@@ -10,9 +10,9 @@
 // it works out what goes where, as plain data, and spraypdf.js draws it. That keeps the layout testable without a
 // PDF library or a browser.
 
-import { textWidth, wrapText } from './pdf.js?v=509';
-import { dmy } from './fmt.js?v=509';
-import { labelFontPx } from './farmmap.js?v=509';
+import { textWidth, wrapText } from './pdf.js?v=511';
+import { dmy } from './fmt.js?v=511';
+import { labelFontPx } from './farmmap.js?v=511';
 
 export const FORMS = [
   { key: 'standard', label: 'Our own form' },
@@ -165,7 +165,7 @@ export function sprayTotals(job) {
 /** What is missing before it can go. */
 export function sprayProblems(job) {
   const out = [];
-  if (!(job.paddocks || []).length) out.push('Tick the paddocks to be sprayed.');
+  if (!(job.paddocks || []).length) out.push('Tick the fields to be sprayed.');
   if (!usedChemicals(job).length) out.push('Name the product to go on.');
   for (const c of usedChemicals(job)) if ((job.paddocks || []).some((p) => !(rateOn(job, p.id, c) > 0))) out.push(`Give the rate per hectare for ${c.name}.`);
   if (!clean(job.dateRequired)) out.push('Say when you need it done.');
@@ -469,6 +469,6 @@ export function mapPageText(job) {
       [job.property && `Property: ${job.property}`, job.crop && `Crop: ${job.crop}`].filter(clean).join('   '),
       [...usedChemicals(job).map((c) => `${c.name} ${rateSummary(job, c)}/ha`), Number(job.waterRate) > 0 && `water ${plain(job.waterRate, 1)} L/ha`].filter(Boolean).join('   +   '),
     ].filter(clean),
-    total: `${tot.paddocks} paddock${tot.paddocks === 1 ? '' : 's'}, ${plain(tot.ha, 1)} ha`,
+    total: `${tot.paddocks} field${tot.paddocks === 1 ? '' : 's'}, ${plain(tot.ha, 1)} ha`,
   };
 }

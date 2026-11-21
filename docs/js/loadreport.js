@@ -3,13 +3,13 @@
 // Date, time, truck, driver, the contract (or silo) it is going to, the weight, the ticket number and, if wanted,
 // where it came from. Pure: it picks the loads and lays out the PDF, and touches nothing else.
 
-import { Pdf, textWidth, wrapText } from './pdf.js?v=509';
-import { gradeSorter } from './grades.js?v=509';
-import { drawBrandLogo } from './brand.js?v=509';
-import { dmy } from './fmt.js?v=509';
-import { SPECS, specOf } from './outload.js?v=509';
-import { ASPECT, strokesInBox } from './signature.js?v=509';
-import { SIGN_WORDS, cleanDriverSignature, signState, signedWhen } from './driversign.js?v=509';
+import { Pdf, textWidth, wrapText } from './pdf.js?v=511';
+import { gradeSorter } from './grades.js?v=511';
+import { drawBrandLogo } from './brand.js?v=511';
+import { dmy } from './fmt.js?v=511';
+import { SPECS, specOf } from './outload.js?v=511';
+import { ASPECT, strokesInBox } from './signature.js?v=511';
+import { SIGN_WORDS, cleanDriverSignature, signState, signedWhen } from './driversign.js?v=511';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 
@@ -46,7 +46,7 @@ export function testedOn(m) {
 /** What a paddock, silo or contract is called on the report. */
 export function endName(leg, { fields = [], storages = [], sales = [] } = {}) {
   if (!leg) return '';
-  if (leg.type === 'field') return fields.find((f) => f.id === leg.id)?.name || 'Unknown paddock';
+  if (leg.type === 'field') return fields.find((f) => f.id === leg.id)?.name || 'Unknown field';
   if (leg.type === 'silo') {
     if (leg.id === '__transit__') return 'In transit';
     return storages.find((s) => s.id === leg.id)?.name || 'Unknown silo';
@@ -212,7 +212,7 @@ export function filterText(opts = {}, ctx = {}) {
   return [
     part('Commodity', names(asList(opts.commodityIds, opts.commodityId), (id) => (ctx.commodities || []).find((x) => x.id === id)?.name)),
     part('Contract', names(asList(opts.saleIds, opts.saleId), (id) => { const s = (ctx.sales || []).find((x) => x.id === id); return s ? [s.buyer, s.contractNo ? `#${s.contractNo}` : ''].filter(Boolean).join(' ') || 'Contract' : ''; })),
-    part('Paddock', names(asList(opts.fieldIds, opts.fieldId), (id) => (ctx.fields || []).find((x) => x.id === id)?.name)),
+    part('Field', names(asList(opts.fieldIds, opts.fieldId), (id) => (ctx.fields || []).find((x) => x.id === id)?.name)),
     storageText(opts, ctx),
     part('Grade', asList(opts.grades, opts.grade).join(', ')),
     part('Truck', asList(opts.trucks, opts.truck).join(', ')),
@@ -291,7 +291,7 @@ export function reportColumns({ showOrigin = true, showCommodity = true, showDes
     { key: 'time', head: 'Time', w: 34 },
     { key: 'ticketNo', head: 'Ticket', w: 50 },
     { key: 'truck', head: 'Truck', w: 58 },
-    ...(showCompany ? [{ key: 'company', head: 'Transport company', w: 72 }] : []),
+    ...(showCompany ? [{ key: 'company', head: 'Carrier', w: 72 }] : []),
     { key: 'driver', head: 'Driver', w: 66 },
     ...(showCommodity ? [{ key: 'commodity', head: 'Commodity', w: 52 }] : []),
     ...(showGrade ? [{ key: 'grade', head: 'Grade', w: 36 }] : []),
@@ -417,7 +417,7 @@ export function buildLoadReportPdf(rows, { title = 'Load report', business = '',
       if (wc && value) pdf.text(wc.x + wc.w - 4, y + 6, plain(value), { size: 9.5, bold: true, align: 'right' });
     }
   }
-  if (rows.some((r) => r.part)) pdf.text(MARGIN, PAGE.height - 32, 'A load shared with other paddocks, silos or contracts shows only the tonnes that belong to the one chosen.', { size: 7.5, gray: 0.4 });
+  if (rows.some((r) => r.part)) pdf.text(MARGIN, PAGE.height - 32, 'A load shared with other fields, silos or contracts shows only the tonnes that belong to the one chosen.', { size: 7.5, gray: 0.4 });
   pdf.text(MARGIN, PAGE.height - 22, `Made in Commodity Mate${madeAt ? ` ${madeAt}` : ''}`, { size: 7.5, gray: 0.5 });
   return pdf.bytes();
 }

@@ -8,18 +8,18 @@
 // The reading and the rules live in loadimport.js, where they are tested. This
 // file is the screen: it holds the person's choices and hands them over.
 
-import { db } from '../storage.js?v=509';
-import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=509';
-import { esc, num, shortDate } from '../fmt.js?v=509';
-import { commodityFills } from '../commodityfill.js?v=509';
-import { isTransit } from '../transit.js?v=509';
-import { reconcileLoads } from '../loadcheck.js?v=509';
+import { db } from '../storage.js?v=511';
+import { openSheet, closeSheet, notify, askConfirm, toast, field } from '../ui.js?v=511';
+import { esc, num, shortDate } from '../fmt.js?v=511';
+import { commodityFills } from '../commodityfill.js?v=511';
+import { isTransit } from '../transit.js?v=511';
+import { reconcileLoads } from '../loadcheck.js?v=511';
 import {
   FIELD_SPECS, REQUIRED_KEYS, chooseSetup, recallSetups, rememberSetup, setupProblems, peekFile, distinctOf, likelyFinished,
-} from '../loadmap.js?v=509';
+} from '../loadmap.js?v=511';
 import {
   readFreightExport, planNames, distinctNames, matchCommodity, matchSiloByNumber, suggestCutoff, buildMovements, COMPLETED,
-} from '../loadimport.js?v=509';
+} from '../loadimport.js?v=511';
 
 const MEMORY_KEY = 'grainflow.loadImportChoices';
 const NEW = '__new';
@@ -52,7 +52,7 @@ export function openLoadImportSheet() {
   openSheet('Import truck loads', (root) => {
     root.innerHTML = `
       <div class="field hint" style="margin-bottom:10px">Choose the truck loads CSV exported from your
-        weighbridge. You will see what it holds and match its paddocks and silos to yours before
+        weighbridge. You will see what it holds and match its fields and silos to yours before
         anything is saved.</div>
       <input type="file" id="li-file" accept=".csv,text/csv" />
       <div id="li-body" style="margin-top:14px"></div>
@@ -87,7 +87,7 @@ function renumberBlock(box, { includeInvoiced = false, restart = true } = {}) {
       ${mine ? `<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:10px 0 0"><input type="checkbox" id="li-renum-restart" ${restart ? 'checked' : ''} style="width:20px;height:20px;margin-top:1px;flex:none" /><span>Start from the first of the season<span class="meta" style="display:block">Put the ${mine} load${mine === 1 ? '' : 's'} already numbered in your series in date order with these.</span></span></label>` : ''}
       ${invoiced ? `<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:10px 0 0"><input type="checkbox" id="li-renum-inv" ${includeInvoiced ? 'checked' : ''} style="width:20px;height:20px;margin-top:1px;flex:none" /><span>Include the ${invoiced} already on an invoice<span class="meta" style="display:block">The invoice keeps the number it was made with.</span></span></label>` : ''}
       ${plan.length ? `<div class="meta" style="margin-top:8px"><strong>${plan.length} to number, oldest first:</strong> ${lines}</div>
-      <button type="button" class="btn" id="li-renum-go" style="margin-top:10px">Give them movement numbers</button>` : `<div class="meta" style="margin-top:8px">${invoiced ? 'The rest are on an invoice, so they are left as they are.' : 'Nothing to number.'}</div>`}`}
+      <button type="button" class="btn" id="li-renum-go" style="margin-top:10px">Give them ticket numbers</button>` : `<div class="meta" style="margin-top:8px">${invoiced ? 'The rest are on an invoice, so they are left as they are.' : 'Nothing to number.'}</div>`}`}
     </div>`;
   box.querySelector('#li-renum-inv')?.addEventListener('change', (e) => renumberBlock(box, { includeInvoiced: e.target.checked, restart }));
   box.querySelector('#li-renum-restart')?.addEventListener('change', (e) => renumberBlock(box, { includeInvoiced, restart: e.target.checked }));
@@ -348,7 +348,7 @@ function review(body, text, setup, source, headers, rows) {
     const cur = choices[kind][p.name];
     const existing = kind === 'commodity'
       ? `<optgroup label="Your commodities">${options[kind].map((o) => `<option value="${esc(o.id)}" ${cur === o.id ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</optgroup>`
-      : optionsByFarm(options[kind], cur, kind === 'field' ? 'Your paddocks' : 'Your storages');
+      : optionsByFarm(options[kind], cur, kind === 'field' ? 'Your fields' : 'Your storages');
     const sug = p.suggestions.length && !p.match
       ? `<optgroup label="Suggested">${p.suggestions.map((o) => `<option value="${esc(o.id)}">${esc(o.name)}</option>`).join('')}</optgroup>` : '';
     const extra = kind === 'commodity'
@@ -357,12 +357,12 @@ function review(body, text, setup, source, headers, rows) {
     return `<select data-kind="${kind}" data-name="${esc(p.name)}">
       <option value="" ${cur === '' ? 'selected' : ''}>Choose…</option>
       ${sug}${existing}
-      <option value="${NEW}" ${cur === NEW ? 'selected' : ''}>+ Add as new ${kind === 'field' ? 'paddock' : kind === 'silo' ? storageKindFor(p.name) : 'commodity'}</option>
-      ${kind === 'field' ? `<option value="${SPLIT}" ${cur === SPLIT ? 'selected' : ''}>Split between two paddocks by date…</option>` : ''}
+      <option value="${NEW}" ${cur === NEW ? 'selected' : ''}>+ Add as new ${kind === 'field' ? 'field' : kind === 'silo' ? storageKindFor(p.name) : 'commodity'}</option>
+      ${kind === 'field' ? `<option value="${SPLIT}" ${cur === SPLIT ? 'selected' : ''}>Split between two fields by date…</option>` : ''}
       ${extra}</select>${kind === 'field' ? splitPanel(p, cur === SPLIT) : ''}`;
   };
   const fieldSelect = (cls, name, selected) => `<select ${cls}="${esc(name)}">
-    <option value="">Choose…</option>${optionsByFarm(fieldOpts, selected, 'Your paddocks')}</select>`;
+    <option value="">Choose…</option>${optionsByFarm(fieldOpts, selected, 'Your fields')}</select>`;
   const splitPanel = (p, shown) => {
     const x = splits[p.name] || { cutoff: '', before: '', from: '' };
     return `<div class="card" data-split-panel="${esc(p.name)}" style="margin:8px 0 0;${shown ? '' : 'display:none'}">
@@ -406,13 +406,13 @@ function review(body, text, setup, source, headers, rows) {
         at the delivered weight.</div>
       ${heldCandidates.map(heldRow).join('')}
     </div>` : ''}
-    ${mapCard('field', 'Paddocks', 'The "Pickup Storage" column. Matched where the name is the same apart from case, spaces and leading zeros (A07 is A7).')}
+    ${mapCard('field', 'Fields', 'The "Pickup Storage" column. Matched where the name is the same apart from case, spaces and leading zeros (A07 is A7).')}
     ${mapCard('silo', 'Silos and storages', 'The "Delivery Storage" column. New bunkers and sheds are added with no dimensions, and count tonnes from the loads.')}
     ${mapCard('commodity', 'Commodities', 'The "Commodity" column.')}
     <div class="card" id="li-compare-card">
       <h2>Compare with what is in the app</h2>
       <div class="field hint" style="margin-bottom:6px">Matches each load in this file to the load in the app by its movement number,
-        and shows, paddock by paddock, what the file says against what the app holds. Changes nothing.</div>
+        and shows, field by field, what the file says against what the app holds. Changes nothing.</div>
       <button class="btn secondary small" id="li-compare" type="button">Compare</button>
       <div id="li-compare-out"></div>
     </div>
@@ -427,7 +427,7 @@ function review(body, text, setup, source, headers, rows) {
   body.querySelector('#li-compare').addEventListener('click', () => {
     const { fields: appFields, storages: appStorages, movements } = db.get();
     const r = reconcileLoads(loads, movements, resolved());
-    const fname = (id) => appFields.find((f) => f.id === id)?.name ?? '(unknown paddock)';
+    const fname = (id) => appFields.find((f) => f.id === id)?.name ?? '(unknown field)';
     const sname = (id) => appStorages.find((x) => x.id === id)?.name ?? '(unknown silo)';
     const t = (v) => num(v, 1);
     const list = (items, line, more = 8) => items.length
@@ -443,12 +443,12 @@ function review(body, text, setup, source, headers, rows) {
       <div class="row"><span class="label">Found in the app</span><span class="value">${r.matched}</span></div>
       ${issue('Not in the app', r.missing, (x) => `${esc(x.ref)} · ${esc(shortDate(x.date))} · ${esc(x.field)} · ${t(x.deliveryTons)} t`)}
       ${issue('In the app more than once', r.copies, (x) => `${esc(x.load.ref)} · ${x.count} copies`)}
-      ${issue('In a different paddock from the file', r.wrongField, (x) => `${esc(x.load.ref)} · file says ${esc(x.load.field)} (${esc(fname(x.expected))}), app has ${x.actual.length ? x.actual.map((a) => `${esc(fname(a.id))} ${t(a.tons)} t`).join(' + ') : 'no paddock'}`)}
+      ${issue('In a different field from the file', r.wrongField, (x) => `${esc(x.load.ref)} · file says ${esc(x.load.field)} (${esc(fname(x.expected))}), app has ${x.actual.length ? x.actual.map((a) => `${esc(fname(a.id))} ${t(a.tons)} t`).join(' + ') : 'no field'}`)}
       ${issue('In a different silo from the file', r.wrongSilo, (x) => `${esc(x.load.ref)} · file says ${esc(x.load.silo)} (${esc(sname(x.expected))}), app has ${x.actual.length ? x.actual.map((a) => `${esc(sname(a.id))} ${t(a.tons)} t`).join(' + ') : 'no silo'}`)}
-      ${issue('Weight differs from the file', r.tonsDiffer, (x) => `${esc(x.load.ref)} · file ${t(x.load.deliveryTons)} t, app load ${t(x.loadTons)} t, paddock leg ${t(x.legTons)} t`)}
-      <div class="subhead" style="margin-top:8px">Paddocks that differ &mdash; file against app</div>
-      <div class="field hint">The file totals ${t(fileTotal)} t; the app holds ${t(appTotal)} t from paddocks. &ldquo;Other&rdquo; is tonnes in the app that are not loads from this file.</div>
-      ${rows.length ? rows.map((f) => `<div class="row"><span class="label">${esc(fname(f.id))}<div class="meta">file ${t(f.fileTons)} · app ${t(f.appTons)}${f.otherTons > 0.05 ? ` · other ${t(f.otherTons)}` : ''}</div></span><span class="value">${f.appTons - f.fileTons > 0 ? '+' : ''}${t(f.appTons - f.fileTons)} t</span></div>`).join('') : '<div class="field hint">Every paddock agrees with the file.</div>'}`;
+      ${issue('Weight differs from the file', r.tonsDiffer, (x) => `${esc(x.load.ref)} · file ${t(x.load.deliveryTons)} t, app load ${t(x.loadTons)} t, field leg ${t(x.legTons)} t`)}
+      <div class="subhead" style="margin-top:8px">Fields that differ &mdash; file against app</div>
+      <div class="field hint">The file totals ${t(fileTotal)} t; the app holds ${t(appTotal)} t from fields. &ldquo;Other&rdquo; is tonnes in the app that are not loads from this file.</div>
+      ${rows.length ? rows.map((f) => `<div class="row"><span class="label">${esc(fname(f.id))}<div class="meta">file ${t(f.fileTons)} · app ${t(f.appTons)}${f.otherTons > 0.05 ? ` · other ${t(f.otherTons)}` : ''}</div></span><span class="value">${f.appTons - f.fileTons > 0 ? '+' : ''}${t(f.appTons - f.fileTons)} t</span></div>`).join('') : '<div class="field hint">Every field agrees with the file.</div>'}`;
   });
 
   const refresh = () => {
@@ -506,7 +506,7 @@ function review(body, text, setup, source, headers, rows) {
     const preflight = buildMovements(loads, resolved(), { existing: db.get().movements, include });
     const made = [];
     for (const kind of ['commodity', 'field', 'silo']) {
-      for (const [name, v] of Object.entries(choices[kind])) if (v === NEW) made.push(`${kind === 'field' ? 'paddock' : kind === 'silo' ? storageKindFor(name) : 'commodity'} “${name}”`);
+      for (const [name, v] of Object.entries(choices[kind])) if (v === NEW) made.push(`${kind === 'field' ? 'field' : kind === 'silo' ? storageKindFor(name) : 'commodity'} “${name}”`);
     }
     const tons = preflight.movements.reduce((a, m) => a + m.tons, 0);
     const ok = await askConfirm(

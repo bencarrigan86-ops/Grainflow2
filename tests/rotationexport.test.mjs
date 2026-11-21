@@ -35,7 +35,7 @@ console.log('\n=== the CSV ===');
 check('a row per paddock, a crop and area per season, and the seasons it repeated a crop', () => {
   const csv = rotationCsv(grid, { showYield: true });
   const lines = csv.split('\r\n');
-  assert.match(lines[0], /^Farm,Paddock,2024 crop,2024 area \(ha\),2024 tonnes,2024 yield \(t\/ha\),2025 crop/);
+  assert.match(lines[0], /^Farm,Field,2024 crop,2024 area \(ha\),2024 tonnes,2024 yield \(t\/ha\),2025 crop/);
   assert.match(lines[0], /Same crop as the season before$/);
   const east = lines.find((l) => l.startsWith('Home,East'));
   assert.ok(east.includes('Wheat,100'), east);
@@ -114,7 +114,7 @@ check('it is a landscape A4 PDF with the title, the crops and the paddocks', () 
   const t = text(b);
   assert.ok(t.startsWith('%PDF'));
   assert.match(t, /\/MediaBox \[0 0 841\.89 595\.28\]/);
-  for (const w of ['ROTATION AND YIELD HISTORY', 'Carrigan Farms', 'NGR 12345', 'Made in Commodity Mate 16-11-2026 09:30', '2 paddocks, 3 seasons', 'East', 'Wheat', 'Canola', 'Area and yield by crop across the farm', 'All crops', '150 ha']) assert.ok(t.includes(w), w);
+  for (const w of ['ROTATION AND YIELD HISTORY', 'Carrigan Farms', 'NGR 12345', 'Made in Commodity Mate 16-11-2026 09:30', '2 fields, 3 seasons', 'East', 'Wheat', 'Canola', 'Area and yield by crop across the farm', 'All crops', '150 ha']) assert.ok(t.includes(w), w);
 });
 check('a role that does not see yields gets a PDF with no yields in it', () => {
   const t = text(rotationPdf(grid, { showYield: false }));
@@ -134,7 +134,7 @@ check('many seasons split across pages, and many paddocks run onto more pages', 
 });
 check('an empty farm still makes a file', () => {
   assert.ok(text(rotationPdf(rotationGrid({}), {})).startsWith('%PDF'));
-  assert.equal(rotationCsv(rotationGrid({}), {}).split('\r\n')[0], 'Farm,Paddock,Same crop as the season before');
+  assert.equal(rotationCsv(rotationGrid({}), {}).split('\r\n')[0], 'Farm,Field,Same crop as the season before');
 });
 check('a crop colour becomes a light tint', () => {
   const [r, g, b] = tintOf('#2e7d32');

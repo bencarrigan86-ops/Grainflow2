@@ -13,7 +13,7 @@
 // Paddocks are married to the paddocks the farm has now, by name, so a paddock lines up across the years under its
 // current name. A name with no match is kept as written (a paddock that has since been sold or renamed). Pure.
 
-import { parseCsv, detectDelimiter, nameKey } from './loadimport.js?v=509';
+import { parseCsv, detectDelimiter, nameKey } from './loadimport.js?v=511';
 
 const ALIASES = {
   season: ['season', 'year', 'crop year'],
@@ -52,7 +52,7 @@ export function parsePastSeasons(text) {
   for (const [key, names] of Object.entries(ALIASES)) col[key] = head.findIndex((h) => names.includes(h));
   const missing = ['season', 'paddock', 'commodity', 'ha'].filter((k) => col[k] < 0);
   if (missing.length) {
-    const label = { season: 'Season', paddock: 'Paddock', commodity: 'Commodity', ha: 'Ha' };
+    const label = { season: 'Season', paddock: 'Field', commodity: 'Commodity', ha: 'Ha' };
     return { rows: [], errors: [`The first row needs these headings: ${missing.map((k) => label[k]).join(', ')}.`] };
   }
   if (col.yieldTHa < 0 && col.tons < 0) return { rows: [], errors: ['The first row needs a Yield (t/ha) or a Tonnes heading.'] };
@@ -65,7 +65,7 @@ export function parsePastSeasons(text) {
     const paddock = collapse(get('paddock'));
     const commodity = collapse(get('commodity'));
     if (!season && !paddock && !commodity) return;
-    if (!season || !paddock || !commodity) { errors.push(`Row ${line}: needs a season, a paddock and a commodity.`); return; }
+    if (!season || !paddock || !commodity) { errors.push(`Row ${line}: needs a season, a field and a commodity.`); return; }
     if (season.length > 20) { errors.push(`Row ${line}: "${season}" is not a season name.`); return; }
     const ha = numberOrNull(get('ha'));
     if (ha === null || Number.isNaN(ha) || ha < 0) { errors.push(`Row ${line}: ${paddock} needs an area in hectares.`); return; }

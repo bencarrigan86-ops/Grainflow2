@@ -347,7 +347,7 @@ export function readFreightExport(text, setup = PLATFORM_SETUP) {
       problems: [],
     };
     if (!date) load.problems.push('no usable date');
-    if (!load.field) load.problems.push('no paddock (where it came from)');
+    if (!load.field) load.problems.push('no field (where it came from)');
     if (!load.silo) load.problems.push('no silo or storage (where it went)');
     if (!load.commodity) load.problems.push('no commodity');
     if (!(deliveryTons > 0)) load.problems.push('no delivered weight');
@@ -508,7 +508,7 @@ export function buildMovements(loads, maps, { existing = [], include = new Set()
     if (have.has(load.ref) || seen.has(load.ref)) { duplicates += 1; continue; }
     const fieldId = targetOf(maps.fields?.[load.field], load.date);
     const siloId = targetOf(maps.silos?.[load.silo], load.date);
-    if (!fieldId) { skipped.push({ load, why: `paddock "${load.field}" was set to be skipped` }); continue; }
+    if (!fieldId) { skipped.push({ load, why: `field "${load.field}" was set to be skipped` }); continue; }
     if (!siloId) { skipped.push({ load, why: `storage "${load.silo}" was set to be skipped` }); continue; }
 
     const check = load.check ?? weightCheck(load);

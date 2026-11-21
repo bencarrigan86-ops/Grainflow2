@@ -745,7 +745,7 @@ check('modules leave the yard in the order they arrived, paddock by paddock, fro
 });
 check('the move sheet takes more than one paddock, as grain does, and saves each paddock\'s share', () => {
   const s = read('docs/js/views/modulemove.js');
-  assert.ok(s.includes('id="mm-add"') && s.includes('+ Add another paddock') && s.includes('shareLoad(rows, totalKg, estBales, avgKgFor)'));
+  assert.ok(s.includes('id="mm-add"') && s.includes('+ Add another field') && s.includes('shareLoad(rows, totalKg, estBales, avgKgFor)'));
   assert.ok(s.includes('fields: legs.map((l) => ({ id: l.id, count: l.count, kg: l.kg, bales: l.bales }))'));
 });
 

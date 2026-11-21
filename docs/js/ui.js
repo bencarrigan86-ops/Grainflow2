@@ -70,7 +70,7 @@ export function freezeSheet(root, line = 'You can look at this but not change it
 }
 
 // The windows that are reports (tables, a map): on a wide screen they open large. Forms stay narrow. A window can also ask with { wide: true }.
-const WIDE_REPORTS = new Set(['Farm map', 'Pick paddocks', 'Averages by commodity', 'End of year snapshot', 'Sales timeline', 'Invoices', 'MTM', 'Prices', 'Rotation and yield history', 'Silo blending', 'Traceability', 'Stock by location']);
+const WIDE_REPORTS = new Set(['Farm map', 'Pick fields', 'Averages by commodity', 'End of year snapshot', 'Sales timeline', 'Invoices', 'MTM', 'Prices', 'Rotation and yield history', 'Silo blending', 'Traceability', 'Stock by location']);
 
 export function openSheet(title, buildBody, { askBeforeClose = true, wide = false } = {}) {
   removeTop();

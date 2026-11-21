@@ -113,7 +113,7 @@ check('biggest first, with the farm name, and names for the rest', () => {
 console.log('\n=== the export ===');
 check('the movements CSV has the column, and the silo replay is the one outload.js uses', () => {
   const v = read('docs/js/views/settingsexport.js');
-  assert.ok(v.includes('traceLoads(data.storages, movements)') && v.includes("'Paddocks it came from (t)'") && v.includes('traceText(traced.get(m.id), data)'));
+  assert.ok(v.includes('traceLoads(data.storages, movements)') && v.includes("'Fields it came from (t)'") && v.includes('traceText(traced.get(m.id), data)'));
   assert.ok(read('docs/js/trace.js').includes("inOrder, outloadEndOf } from './outload.js"));
 });
 

@@ -1,38 +1,38 @@
-import { db } from '../storage.js?v=509';
-import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=509';
-import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT, areaShare, productionSummary } from '../derived.js?v=509';
-import { fertPdf } from '../fertpdf.js?v=509';
-import { seedPdf } from '../seedpdf.js?v=509';
-import { yieldPdf } from '../yieldpdf.js?v=509';
-import { harvestPdf } from '../harvestpdf.js?v=509';
-import { modulesPdf } from '../modulespdf.js?v=509';
-import { modulesReport } from '../modulesreport.js?v=509';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=509';
-import { viewPdf } from '../pdfview.js?v=509';
-import { num, tons, esc, money, todayLocal, dmy } from '../fmt.js?v=509';
-import { field, getVal, getNum } from '../ui.js?v=509';
-import { canSeeYield, canOpen, canSeePrices } from '../nav.js?v=509';
-import { gmReport } from '../grossmargin.js?v=509';
-import { gmPdf } from '../gmpdf.js?v=509';
-import { levelFor } from '../helpcontent.js?v=509';
-import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=509';
-import { openMoneySheet, openMtmSheet, openDeliveriesSheet } from './outstanding.js?v=509';
-import { openOptimiserSheet } from './optimiser.js?v=509';
-import { openCalculatorSheet } from './calculator.js?v=509';
-import { openEofySheet } from './eofy.js?v=509';
-import { openPricesSheet } from './prices.js?v=509';
-import { openRotationSheet } from './rotation.js?v=509';
-import { openAveragesSheet } from './averages.js?v=509';
-import { openLoadReportSheet } from './loadreport.js?v=509';
-import { openStockByLocationSheet } from './stocklocation.js?v=509';
-import { openTraceSheet } from './tracereport.js?v=509';
-import { openXeroSheet } from './xero.js?v=509';
-import { openMapSheet } from './farmmap.js?v=509';
-import { openExportCsvSheet } from './settingsexport.js?v=509';
-import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=509';
-import { harvestReport, siloSpace, roomSplit, roomSummary, pctText } from '../harvest.js?v=509';
-import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=509';
-import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=509';
+import { db } from '../storage.js?v=511';
+import { ureaFigures, starterFigures, seedFigures, yieldFigures, ureaSummary, starterSummary, seedSummary } from '../fertfigures.js?v=511';
+import { groupFieldsByCommodity, fieldUrea, ureaAppliedKgHaFor, fieldUreaForTarget, nitrogenCalc, fieldTons, SEED_BUFFER_PCT, maxYieldFromUrea, UREA_N_PCT, areaShare, productionSummary } from '../derived.js?v=511';
+import { fertPdf } from '../fertpdf.js?v=511';
+import { seedPdf } from '../seedpdf.js?v=511';
+import { yieldPdf } from '../yieldpdf.js?v=511';
+import { harvestPdf } from '../harvestpdf.js?v=511';
+import { modulesPdf } from '../modulespdf.js?v=511';
+import { modulesReport } from '../modulesreport.js?v=511';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=511';
+import { viewPdf } from '../pdfview.js?v=511';
+import { num, tons, esc, money, todayLocal, dmy } from '../fmt.js?v=511';
+import { field, getVal, getNum } from '../ui.js?v=511';
+import { canSeeYield, canOpen, canSeePrices } from '../nav.js?v=511';
+import { gmReport } from '../grossmargin.js?v=511';
+import { gmPdf } from '../gmpdf.js?v=511';
+import { levelFor } from '../helpcontent.js?v=511';
+import { hubGroups, readMode, saveMode, readFavs, saveFavs, toggledFavs, reportTitle, TILE_ICONS } from '../reportshub.js?v=511';
+import { openMoneySheet, openMtmSheet, openDeliveriesSheet } from './outstanding.js?v=511';
+import { openOptimiserSheet } from './optimiser.js?v=511';
+import { openCalculatorSheet } from './calculator.js?v=511';
+import { openEofySheet } from './eofy.js?v=511';
+import { openPricesSheet } from './prices.js?v=511';
+import { openRotationSheet } from './rotation.js?v=511';
+import { openAveragesSheet } from './averages.js?v=511';
+import { openLoadReportSheet } from './loadreport.js?v=511';
+import { openStockByLocationSheet } from './stocklocation.js?v=511';
+import { openTraceSheet } from './tracereport.js?v=511';
+import { openXeroSheet } from './xero.js?v=511';
+import { openMapSheet } from './farmmap.js?v=511';
+import { openExportCsvSheet } from './settingsexport.js?v=511';
+import { sensitivityCard, bindSensitivity } from './sensitivity.js?v=511';
+import { harvestReport, siloSpace, roomSplit, roomSummary, pctText } from '../harvest.js?v=511';
+import { assumedCommodity, assumableCommodities } from '../storagecapacity.js?v=511';
+import { loadSpaceAs, saveSpaceAs, loadHarvestView, saveHarvestView, loadShowDone, saveShowDone } from '../spacefor.js?v=511';
 
 let unsub = null;
 let view = null;   // null is the screen of tiles; otherwise the report that is open
@@ -203,7 +203,7 @@ function paintModules(root) {
   const s = report.summary;
   const body = root.querySelector('#reports-body');
   if (!report.rows.length) {
-    body.innerHTML = `<div class="card report"><h2><span class="dot report"></span>Modules</h2><div class="empty">Nothing yet. Open a cotton paddock in Production and tap + Log modules picked.</div></div>`;
+    body.innerHTML = `<div class="card report"><h2><span class="dot report"></span>Modules</h2><div class="empty">Nothing yet. Open a cotton field in Production and tap + Log modules picked.</div></div>`;
     return;
   }
   body.innerHTML = `
@@ -232,7 +232,7 @@ function paintModules(root) {
           <tfoot><tr><td>Total</td><td>${num(report.growerTotals.ha, 0)}</td><td>${num(report.growerTotals.picked, 0)}</td><td>${num(report.growerTotals.inField, 0)}</td><td>${num(report.growerTotals.moved, 0)}</td><td>${num(report.growerTotals.inYard, 0)}</td><td>${num(report.growerTotals.avgKg, 0)}</td><td>${num(report.growerTotals.ginnedModules, 0)}</td><td>${report.growerTotals.bales > 0 ? num(report.growerTotals.bales, 1) : '-'}</td><td>${report.growerTotals.turnoutPct > 0 ? num(report.growerTotals.turnoutPct, 1) : '-'}</td><td>${report.growerTotals.yieldBalesHa > 0 ? num(report.growerTotals.yieldBalesHa, 1) : '-'}</td></tr></tfoot>
         </table>
       </div>
-      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Laid out as the gin's grower position summary, to check against it. Yield is ginned standard bales a hectare, so it grows as the ginning does. Modules come out of the yard in the order they arrived, so a run that mixed paddocks is shared between them by module weight. Slide the table sideways to see every column.</div>
+      <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Laid out as the gin's grower position summary, to check against it. Yield is ginned standard bales a hectare, so it grows as the ginning does. Modules come out of the yard in the order they arrived, so a run that mixed fields is shared between them by module weight. Slide the table sideways to see every column.</div>
     </div>
     ${report.pending.loads ? `<div class="card report">
       <div class="row" id="modules-pending" style="cursor:pointer"><span class="label">Loads waiting for the weighbridge weight</span><span class="value"><span class="badge warn">${report.pending.loads} · ${num(report.pending.modules, 0)} modules</span></span></div>
@@ -717,7 +717,7 @@ function paintHarvest(root, showYield = true) {
         <div class="stat"><div class="n">${pctText(farm.pct)}</div><div class="l">Done</div></div>
         <div class="stat"><div class="n">${t1(farm.toGoHa)} ha</div><div class="l">Left to harvest</div></div>
       </div>
-      <div class="row" style="margin-top:8px"><span class="label">Paddocks finished</span><span class="value">${farm.doneFields} of ${farm.fields} · ${t1(farm.doneHa)} of ${t1(farm.areaHa)} ha</span></div>
+      <div class="row" style="margin-top:8px"><span class="label">Fields finished</span><span class="value">${farm.doneFields} of ${farm.fields} · ${t1(farm.doneHa)} of ${t1(farm.areaHa)} ha</span></div>
       ${seasonBlock(scope ? [] : seasons, { t1, byHa: false })}
     </div>
 
@@ -863,7 +863,7 @@ function doneToggle(g, showDone) {
   const n = g.rows.filter((r) => r.done).length;
   if (!n) return '';
   const shown = showDone.has(g.id || 'none');
-  return `<button type="button" class="btn secondary small" data-show-done="${esc(g.id || 'none')}" style="margin-top:6px">${shown ? 'Hide' : 'Show'} ${n} finished paddock${n === 1 ? '' : 's'}</button>`;
+  return `<button type="button" class="btn secondary small" data-show-done="${esc(g.id || 'none')}" style="margin-top:6px">${shown ? 'Hide' : 'Show'} ${n} finished field${n === 1 ? '' : 's'}</button>`;
 }
 
 /** The box that leaves out silos with little room left, at the top of the room section. */
@@ -973,7 +973,7 @@ function harvestNoYieldHtml({ groups, farm, seasons, split, space, minRoom, t1, 
         <div class="stat"><div class="n">${t1(farm.doneHa)} ha</div><div class="l">Cut</div></div>
         <div class="stat"><div class="n">${t1(farm.toGoHa)} ha</div><div class="l">Left to harvest</div></div>
         <div class="stat"><div class="n">${haPct(farm.doneHa, farm.areaHa)}</div><div class="l">Of the area done</div></div>
-        <div class="stat"><div class="n">${farm.doneFields} of ${farm.fields}</div><div class="l">Paddocks finished</div></div>
+        <div class="stat"><div class="n">${farm.doneFields} of ${farm.fields}</div><div class="l">Fields finished</div></div>
       </div>
       ${seasonBlock(seasons, { t1, byHa: true })}
     </div>
@@ -1029,7 +1029,7 @@ function paintGm(root) {
     : d0(r.costHa);
   body.innerHTML = groups.length === 0 ? '<div class="card report"><div class="empty">Add fields in the Production tab.</div></div>' : `
     <button type="button" class="btn secondary" id="gm-pdf" style="margin-bottom:12px">${canShareFiles() ? 'Share as PDF' : 'Download PDF'}</button>
-    <div class="hint" style="margin-bottom:8px">Price is the crop's blended price (sold and unsold). Cost is the crop's gross margin cost over its area${canEditCost ? '; type a figure in a paddock to use your own, clear it to go back' : ''}.</div>
+    <div class="hint" style="margin-bottom:8px">Price is the crop's blended price (sold and unsold). Cost is the crop's gross margin cost over its area${canEditCost ? '; type a figure in a field to use your own, clear it to go back' : ''}.</div>
     ${groups.map((g) => `<div class="card report">
       <h2><span class="dot report"></span>${esc(g.name)}</h2>
       <div class="table-scroll">

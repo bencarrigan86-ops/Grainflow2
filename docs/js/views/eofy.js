@@ -2,12 +2,12 @@
 // one day (30 June by default). The sheet shows it; Download PDF keeps a frozen copy to hand to the accountant. The
 // arithmetic and the PDF are in eofy.js.
 
-import { db } from '../storage.js?v=509';
-import { openSheet, field, getVal } from '../ui.js?v=509';
-import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=509';
-import { eofySnapshot, eofyPdf, financialYearEnd } from '../eofy.js?v=509';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=509';
-import { viewPdf } from '../pdfview.js?v=509';
+import { db } from '../storage.js?v=511';
+import { openSheet, field, getVal } from '../ui.js?v=511';
+import { num, money, esc, dmy, todayLocal } from '../fmt.js?v=511';
+import { eofySnapshot, eofyPdf, financialYearEnd } from '../eofy.js?v=511';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=511';
+import { viewPdf } from '../pdfview.js?v=511';
 
 const contractText = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -68,7 +68,7 @@ export function openEofySheet() {
           ${snap.unpaid.count === 0 ? '<div class="empty">Nothing owed by buyers.</div>' : row(`${snap.unpaid.count} invoice${snap.unpaid.count === 1 ? '' : 's'}`, `<strong>${money(snap.unpaid.total, 0)}</strong>`, 'GST included')}
         </div>
 
-        <div class="pv-actions"><button class="btn secondary" id="eofy-view">View</button><button class="btn" id="eofy-pdf">${canShareFiles() ? 'Share PDF' : 'Download PDF'}</button></div>
+        <div class="pv-actions"><button class="btn secondary" id="eofy-view">View PDF</button><button class="btn" id="eofy-pdf">${canShareFiles() ? 'Share PDF' : 'Download PDF'}</button></div>
         <div class="hint" style="margin-top:8px">The PDF is the frozen copy: these figures move on as the books do, the file does not.</div>`;
 
       root.querySelector('#eofy-date').addEventListener('change', () => {

@@ -1,17 +1,17 @@
 // Rotation and yield history: every paddock against every season, with the crop and its yield in each cell, and the
 // farm's yield for each crop by season underneath. Built from the seasons the farm already holds; nothing is entered here.
 
-import { db } from '../storage.js?v=509';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=509';
-import { openSheet, toast } from '../ui.js?v=509';
-import { canSeeYield } from '../nav.js?v=509';
-import { PALETTE } from '../farmmap.js?v=509';
-import { rotationGrid, rotationFarms, withoutFarms, withoutSeasons } from '../fieldhistory.js?v=509';
-import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=509';
-import { nowTime } from '../loadreport.js?v=509';
-import { downloadCSV } from '../csv.js?v=509';
-import { sharePdf, safeFileName } from '../sharefile.js?v=509';
-import { viewPdf } from '../pdfview.js?v=509';
+import { db } from '../storage.js?v=511';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=511';
+import { openSheet, toast } from '../ui.js?v=511';
+import { canSeeYield } from '../nav.js?v=511';
+import { PALETTE } from '../farmmap.js?v=511';
+import { rotationGrid, rotationFarms, withoutFarms, withoutSeasons } from '../fieldhistory.js?v=511';
+import { rotationCsv, rotationPdf, areaSummary, ORIENTATIONS, orientationOf } from '../rotationexport.js?v=511';
+import { nowTime } from '../loadreport.js?v=511';
+import { downloadCSV } from '../csv.js?v=511';
+import { sharePdf, safeFileName } from '../sharefile.js?v=511';
+import { viewPdf } from '../pdfview.js?v=511';
 
 const ORIENT_KEY = 'grainflow.rotation.orientation';
 const lastOrientation = () => { try { return orientationOf(localStorage.getItem(ORIENT_KEY)); } catch { return 'landscape'; } };
@@ -64,14 +64,14 @@ export function openRotationSheet() {
   const repeatIn = (row, season) => row.repeats.some(([, b]) => b === season);
 
   openSheet('Rotation and yield history', (root) => {
-    if (!fullGrid.rows.length) { root.innerHTML = '<div class="empty">No paddocks yet.</div>'; return; }
+    if (!fullGrid.rows.length) { root.innerHTML = '<div class="empty">No fields yet.</div>'; return; }
     const paintBody = () => {
     const yields = areaSummary(grid);
     let lastProperty = null;
     const hasFarms = grid.rows.some((x) => x.property);
     // one column per season, so the header and body rows are built here rather than written out in the template
     const seasonHeads = grid.seasons.map((s) => `<th>${esc(s)}</th>`).join('');
-    const gridHead = `<tr><th style="text-align:left">Paddock</th>${seasonHeads}</tr>`;
+    const gridHead = `<tr><th style="text-align:left">Field</th>${seasonHeads}</tr>`;
     const gridBody = grid.rows.map((r) => {
       const head = hasFarms && r.property !== lastProperty ? `<tr><td colspan="${grid.seasons.length + 1}" class="meta" style="text-align:left;font-weight:700;padding-top:8px">${esc(r.property || 'No farm name')}</td></tr>` : '';
       lastProperty = r.property;
@@ -87,7 +87,7 @@ export function openRotationSheet() {
     if (!grid.seasons.length) { root.querySelector('#rot-body').innerHTML = '<div class="empty">No seasons switched on. Tick a season above.</div>'; return; }
     if (!grid.rows.length) { root.querySelector('#rot-body').innerHTML = '<div class="empty">No farms switched on. Tick a farm above.</div>'; return; }
     root.querySelector('#rot-body').innerHTML = `
-      <div class="hint" style="margin-bottom:8px">Each paddock in each season, found by its name. Colours are crops. ${showYield ? 'Yield is tonnes per hectare: the actual loads once a paddock is on actual, otherwise the estimate. ' : ''}An outlined cell is the same crop as the season before.</div>
+      <div class="hint" style="margin-bottom:8px">Each field in each season, found by its name. Colours are crops. ${showYield ? 'Yield is tonnes per hectare: the actual loads once a field is on actual, otherwise the estimate. ' : ''}An outlined cell is the same crop as the season before.</div>
       <div class="table-scroll rot-scroll"><table>
         <thead>${gridHead}</thead>
         <tbody>${gridBody}</tbody>
@@ -100,7 +100,7 @@ export function openRotationSheet() {
         <tbody>${yieldBody}</tbody>
       </table></div>` : ''}`;
     };
-    const farmRow = (f) => `<label class="row" style="cursor:pointer"><span class="label"><input type="checkbox" class="rot-farm" data-farm="${esc(f.name)}" ${hidden.has(f.name) ? '' : 'checked'} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />${esc(f.name || 'No farm name')}</span><span class="value">${f.paddocks} paddock${f.paddocks === 1 ? '' : 's'}</span></label>`;
+    const farmRow = (f) => `<label class="row" style="cursor:pointer"><span class="label"><input type="checkbox" class="rot-farm" data-farm="${esc(f.name)}" ${hidden.has(f.name) ? '' : 'checked'} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />${esc(f.name || 'No farm name')}</span><span class="value">${f.paddocks} field${f.paddocks === 1 ? '' : 's'}</span></label>`;
     const farmsSub = () => `${farms.length} farms, ${hidden.size ? `${farms.length - hidden.size} showing` : 'all showing'}`;
     const seasonsSub = () => (hiddenSeasons.size ? `${fullGrid.seasons.length - hiddenSeasons.size} of ${fullGrid.seasons.length} showing` : 'all showing');
     root.innerHTML = `

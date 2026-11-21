@@ -6,11 +6,11 @@
 
 import {
   AIRCAIR_LAYOUT, CHECKLIST, aircairOps, standardOps, sprayMapPlan, mapPageText, sprayRows, sprayTotals, plain, fitText, A4,
-} from './spray.js?v=509';
-import { wrapText } from './pdf.js?v=509';
-import { ASPECT, strokesInBox } from './signature.js?v=509';
-import { NO_FARM, farmGroups } from './farmmap.js?v=509';
-import { dmy } from './fmt.js?v=509';
+} from './spray.js?v=511';
+import { wrapText } from './pdf.js?v=511';
+import { ASPECT, strokesInBox } from './signature.js?v=511';
+import { NO_FARM, farmGroups } from './farmmap.js?v=511';
+import { dmy } from './fmt.js?v=511';
 
 const PDF_LIB = 'https://esm.sh/pdf-lib@1.17.1';
 const AIRCAIR_URL = './forms/aircair-spray-request.pdf';
@@ -131,7 +131,7 @@ async function checklistPage(doc, job, text) {
 /** When there are more rows than Aircair's table holds: the whole list, on one more page. */
 function addRowsPage(doc, job, text, rgb) {
   const page = doc.addPage([A4.w, A4.h]);
-  text(page, 40, 56, `${job.jobNo || 'Spray request'}: paddocks and rates`, { size: 14, isBold: true });
+  text(page, 40, 56, `${job.jobNo || 'Spray request'}: fields and rates`, { size: 14, isBold: true });
   let y = 84;
   const cols = [[40, 'Field'], [190, 'Ha'], [235, 'Chemical'], [380, 'Rate/ha'], [450, 'Amount'], [510, 'Spray vol']];
   cols.forEach(([x, l]) => text(page, x, y, l, { size: 9, isBold: true }));
@@ -170,7 +170,7 @@ async function addMapPage(doc, lib, job, layout, text) {
 
   // the list under the map: paddock, area, and the date
   let ty = box.y + box.h + 22;
-  text(page, 40, ty, 'Paddocks to spray', { size: 9, isBold: true, color: black });
+  text(page, 40, ty, 'Fields to spray', { size: 9, isBold: true, color: black });
   ty += 13;
   const paddocks = job.paddocks || [];
   const perCol = 8; const colW = (A4.w - 80) / 3;
@@ -267,7 +267,7 @@ export async function buildFarmMapPdf(layout, { title = 'Farm map', subtitle = '
   const shown = items.filter(inside).length ? items.filter(inside) : (items.length ? items : layout.items);
   const ha = shown.reduce((s, i) => s + i.areaHa, 0);
   text(page, 40, 50, title.toUpperCase(), { size: 18, isBold: true });
-  if (showTotals) text(page, A4.w - 40, 50, `${shown.length} paddock${shown.length === 1 ? '' : 's'}, ${plain(ha, 0)} ha`, { size: 11, isBold: true, align: 'right' });
+  if (showTotals) text(page, A4.w - 40, 50, `${shown.length} field${shown.length === 1 ? '' : 's'}, ${plain(ha, 0)} ha`, { size: 11, isBold: true, align: 'right' });
   if (subtitle) text(page, 40, 66, fitText(subtitle, A4.w - 80, 9.5).text, { size: 9.5, color: rgb(0.2, 0.2, 0.2) });
 
   const box = { x: 40, y: 80, w: A4.w - 80, h: 640 };

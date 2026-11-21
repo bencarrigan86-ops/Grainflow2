@@ -10,7 +10,7 @@
 // done through a `store` with getItem/setItem (localStorage in the app, a plain
 // object in the tests).
 
-import { PLATFORM_SETUP, parseCsv, detectDelimiter } from './loadimport.js?v=509';
+import { PLATFORM_SETUP, parseCsv, detectDelimiter } from './loadimport.js?v=511';
 
 /**
  * What the importer can use from a file. `key` is the name the importer reads by;
@@ -20,7 +20,7 @@ import { PLATFORM_SETUP, parseCsv, detectDelimiter } from './loadimport.js?v=509
 export const FIELD_SPECS = [
   { key: 'date', label: 'Date of the load', required: true,
     synonyms: ['date', 'loaddate', 'pickupdate', 'deliverydate', 'movementdate', 'ticketdate', 'dateout', 'harvestdate', 'cartdate'] },
-  { key: 'field', label: 'Paddock (where it came from)', required: true,
+  { key: 'field', label: 'Field (where it came from)', required: true,
     synonyms: ['paddock', 'field', 'fieldname', 'paddockname', 'pickupstorage', 'from', 'source', 'origin', 'pickuplocation', 'fromlocation', 'block'] },
   { key: 'silo', label: 'Silo or storage (where it went)', required: true,
     synonyms: ['silo', 'storage', 'siloname', 'deliverystorage', 'to', 'destination', 'deliverylocation', 'tolocation', 'bin', 'delivertostorage'] },
@@ -32,7 +32,7 @@ export const FIELD_SPECS = [
     synonyms: ['movementno', 'movementnumber', 'loadno', 'loadnumber', 'reference', 'ref', 'id', 'consignment', 'consignmentno'] },
   { key: 'siteTicket', label: "Site's ticket number (goes in Delivery no.)", required: false,
     synonyms: ['ticketno', 'ticketnumber', 'ticket', 'docket', 'docketno', 'docketnumber', 'siteticket', 'siteticketno', 'theirticket', 'deliveryticket', 'weighbridgeticket'] },
-  { key: 'pickupTons', label: 'Weight out of the paddock (for the weight check)', required: false,
+  { key: 'pickupTons', label: 'Weight out of the field (for the weight check)', required: false,
     synonyms: ['pickupnetweight', 'outweight', 'outloadweight', 'weightout', 'grossweight', 'pickupweight', 'fieldweight', 'outnet'] },
   { key: 'rego', label: 'Truck', required: false,
     synonyms: ['rego', 'truck', 'registration', 'truckrego', 'pickuprego', 'vehicle', 'plate', 'trucknumber'] },

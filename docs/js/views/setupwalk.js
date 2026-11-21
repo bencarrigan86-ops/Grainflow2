@@ -1,22 +1,22 @@
 // The setup walk-through: a sheet that asks one thing at a time, in the order a farm gets set up, and saves as it goes.
 // Skip for now is always there; Continue setup on Position comes back to the first step not done.
 
-import { db } from '../storage.js?v=509';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, toast, notify } from '../ui.js?v=509';
-import { esc, todayLocal } from '../fmt.js?v=509';
-import { walkSteps, seasonLabel, businessPatch, commodityRecord, fieldRecord, storageRecord, saleRecord, loadRecord, invoiceable } from '../setupwalk.js?v=509';
-import { openInvoiceListSheet } from './invoice.js?v=509';
-import { openMapSheet } from './farmmap.js?v=509';
-import { openLoadImportSheet } from './importloads.js?v=509';
+import { db } from '../storage.js?v=511';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, toast, notify } from '../ui.js?v=511';
+import { esc, todayLocal } from '../fmt.js?v=511';
+import { walkSteps, seasonLabel, businessPatch, commodityRecord, fieldRecord, storageRecord, saleRecord, loadRecord, invoiceable } from '../setupwalk.js?v=511';
+import { openInvoiceListSheet } from './invoice.js?v=511';
+import { openMapSheet } from './farmmap.js?v=511';
+import { openLoadImportSheet } from './importloads.js?v=511';
 
 const QUESTIONS = {
   business: { q: 'What is the business called?', hint: 'These go on invoices, tickets and contracts.' },
   season: { q: 'Which season is this?', hint: 'Everything you add now goes into this season. A short label, such as 2026. Cotton farms often use 2026/27.' },
   commodities: { q: 'What do you grow?', hint: 'Wheat, barley, canola and the usual crops are already here. Add any that are missing.' },
-  paddocks: { q: 'Add your paddocks', hint: 'A name, the hectares and this season’s crop. Yields come later.' },
+  paddocks: { q: 'Add your fields', hint: 'A name, the hectares and this season’s crop. Yields come later.' },
   storage: { q: 'Add your silos and bunkers', hint: 'And what is in each now. Leave it empty if it is.' },
   contract: { q: 'Enter a contract', hint: 'Who is buying, how much and the price. The rest can be filled in later.' },
-  load: { q: 'Record a load', hint: 'Grain going from a paddock or silo to a silo or a contract.' },
+  load: { q: 'Record a load', hint: 'Grain going from a field or silo to a silo or a contract.' },
   invoice: { q: 'Make an invoice', hint: 'From a contract that has loads delivered.' },
 };
 
@@ -77,7 +77,7 @@ function paintFinish(root, ids, setIdx) {
       <h3 class="sw-q">You’re set up</h3>
       <div class="sw-hint">Anything you skipped is still on the Getting started card on Position. The How-to guide, in Settings, has a short guide for each job and brings this walk-through back any time.</div>
       <div class="sw-note"><b>Seasons</b><span>The season shows at the top right. Tap it to switch to an earlier season, or to start a new one.</span></div>
-      ${setsUp ? `<div class="sw-note"><b>When you’re ready</b><span>Import your farm map to outline the paddocks, or bring in past loads from a spreadsheet.</span>
+      ${setsUp ? `<div class="sw-note"><b>When you’re ready</b><span>Import your farm map to outline the fields, or bring in past loads from a spreadsheet.</span>
         <div class="sw-links"><button type="button" class="btn secondary small" id="sw-map">Import farm map</button><button type="button" class="btn secondary small" id="sw-import">Import loads</button></div></div>` : ''}
       <div class="sw-actions sw-actions-col">
         <button type="button" class="btn" id="sw-position">Go to Position</button>
@@ -111,7 +111,7 @@ const BODIES = {
   },
 
   season: () => ({
-    html: field({ label: 'Season', id: 'sw-season', value: db.getCurrentYear(), placeholder: 'e.g. 2026', hint: 'You can start a new season later: tap the season at the top right, then Start new year.' }),
+    html: field({ label: 'Season', id: 'sw-season', value: db.getCurrentYear(), placeholder: 'e.g. 2026', hint: 'You can start a new season later: tap the season at the top right, then Start new season.' }),
     save: (root) => {
       const label = seasonLabel(getVal(root, 'sw-season'), db.getCurrentYear());
       if (!label) return true;
@@ -142,14 +142,14 @@ const BODIES = {
   paddocks: (data) => ({
     html: `<div class="sw-chips">${names(data.fields) || '<span class="sw-none">None yet</span>'}</div>
       <div class="grid-2">
-        ${field({ label: 'Paddock name', id: 'sw-fname' })}
+        ${field({ label: 'Field name', id: 'sw-fname' })}
         ${field({ label: 'Farm', id: 'sw-fprop', placeholder: 'Optional' })}
       </div>
       <div class="grid-2">
         ${field({ label: 'Hectares', id: 'sw-farea', type: 'number', step: '0.1' })}
         ${field({ label: 'Crop', id: 'sw-fcom', type: 'select', value: '', options: options(data.commodities, 'Not sown / not decided') })}
       </div>
-      <button type="button" class="btn secondary" id="sw-add">Add paddock</button>`,
+      <button type="button" class="btn secondary" id="sw-add">Add field</button>`,
     wire: (root, again) => root.querySelector('#sw-add').addEventListener('click', () => {
       const rec = fieldRecord({ name: getVal(root, 'sw-fname'), areaHa: getVal(root, 'sw-farea'), commodityId: getVal(root, 'sw-fcom'), property: getVal(root, 'sw-fprop') });
       if (!rec) { root.querySelector('#sw-fname').focus(); return; }
@@ -212,9 +212,9 @@ const BODIES = {
   },
 
   load: (data) => {
-    const froms = [...data.fields.map((f) => ({ value: `field:${f.id}`, label: `${f.name} (paddock)` })), ...data.storages.map((s) => ({ value: `silo:${s.id}`, label: s.name }))];
+    const froms = [...data.fields.map((f) => ({ value: `field:${f.id}`, label: `${f.name} (field)` })), ...data.storages.map((s) => ({ value: `silo:${s.id}`, label: s.name }))];
     const tos = [...data.storages.map((s) => ({ value: `silo:${s.id}`, label: s.name })), ...data.sales.map((s) => ({ value: `sale:${s.id}`, label: `${s.buyer || 'Contract'} (contract)` }))];
-    if (!froms.length || !tos.length) return { html: '<div class="sw-none">A load needs somewhere to come from and somewhere to go. Add a paddock or silo, and a silo or contract, then come back.</div>', save: () => {} };
+    if (!froms.length || !tos.length) return { html: '<div class="sw-none">A load needs somewhere to come from and somewhere to go. Add a field or silo, and a silo or contract, then come back.</div>', save: () => {} };
     const end = (v) => { const [type, id] = String(v).split(':'); return { type, id }; };
     return {
       html: `<div class="grid-2">

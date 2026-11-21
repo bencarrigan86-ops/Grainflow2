@@ -5,9 +5,9 @@
 
 const TYPE = {
   commodities: 'Commodity',
-  fields: 'Paddock',
+  fields: 'Field',
   storages: 'Silo or bunker',
-  movements: 'Movement',
+  movements: 'Load',
   orders: 'Order',
   sales: 'Contract',
   invoices: 'Invoice',

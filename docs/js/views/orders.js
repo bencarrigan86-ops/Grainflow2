@@ -4,19 +4,19 @@
 // carting it and the buyer's own order number. Everything else about the sale is the contract's and is shown from it.
 // Loads are matched to an order on the movement. The arithmetic is in orders.js.
 
-import { db } from '../storage.js?v=509';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=509';
-import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=509';
-import { movementTonsToSale } from '../derived.js?v=509';
-import { activeSales } from '../paidsales.js?v=509';
-import { movementRow, openMovementSheet } from './movements.js?v=509';
-import { openVendorDecSheet } from './vendordec.js?v=509';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=509';
-import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=509';
-import { freightTitle, freightState, rateText } from '../freight.js?v=509';
-import { addressFields, readAddress } from '../address.js?v=509';
-import { cleanOrderDetail, contractMismatch, orderDefaults } from '../orderdetail.js?v=509';
-import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=509';
+import { db } from '../storage.js?v=511';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=511';
+import { num, esc, shortDate, tightDate, todayLocal } from '../fmt.js?v=511';
+import { movementTonsToSale } from '../derived.js?v=511';
+import { activeSales } from '../paidsales.js?v=511';
+import { movementRow, openMovementSheet } from './movements.js?v=511';
+import { openVendorDecSheet } from './vendordec.js?v=511';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=511';
+import { openFreightOrdersSheet, openFreightOrderSheet } from './freightorders.js?v=511';
+import { freightTitle, freightState, rateText } from '../freight.js?v=511';
+import { addressFields, readAddress } from '../address.js?v=511';
+import { cleanOrderDetail, contractMismatch, orderDefaults } from '../orderdetail.js?v=511';
+import { orderState, summarise, windowText, orderTitle, STATE_LABEL } from '../orders.js?v=511';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'open';   // open | filled | closed | all
@@ -137,7 +137,7 @@ export function openOrderSheet(existing, defaults = {}) {
         ${field({ label: 'Deliver from', id: 'o-from', type: 'date', value: src.deliverFrom })}
         ${field({ label: 'Deliver by', id: 'o-by', type: 'date', value: src.deliverBy })}
       </div>
-      ${field({ label: 'Freight company', id: 'o-freight', value: src.freightCompany, placeholder: 'Who is carting it', list: 'dl-freightcos' })}
+      ${field({ label: 'Carrier', id: 'o-freight', value: src.freightCompany, placeholder: 'Who is carting it', list: 'dl-freightcos' })}
       <details class="fold feature" id="o-detail" ${src.detail ? 'open' : ''}>
         <summary><div class="feature-head"><h2>Buyer's order details</h2>
           <div class="sub">Who issued it, destination, booking and site rules</div></div></summary>
@@ -252,9 +252,9 @@ export function openOrderSheet(existing, defaults = {}) {
       const { fields, storages } = db.get();
       const against = movements.filter((m) => m.orderId === existing.id).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
       const loadsEl = root.querySelector('#o-loads');
-      loadsEl.innerHTML = `<h2>Related movements</h2>${against.length
+      loadsEl.innerHTML = `<h2>Related loads</h2>${against.length
         ? against.map((m) => movementRow(m, { fields, storages, sales, commodities, orders })).join('')
-        : '<div class="empty">No loads against it yet. On a movement going to this contract, choose it under "Fills order".</div>'}`;
+        : '<div class="empty">No loads against it yet. On a load going to this contract, choose it under "Fills order".</div>'}`;
       loadsEl.querySelectorAll('[data-edit-movement]').forEach((el) => el.addEventListener('click', () => openOver(() => openMovementSheet(against.find((m) => m.id === el.dataset.editMovement)))));
       // the freight orders made from it, with a way to make another
       const fosEl = root.querySelector('#o-fos');

@@ -13,7 +13,7 @@ export const AUDIT_KINDS = [
 
 /** The word that goes before the record's name when the name alone would not say what it is. */
 const PREFIX = {
-  sales: 'Contract', payables: 'Bill', commodities: 'Commodity', fields: 'Paddock', storages: 'Storage',
+  sales: 'Contract', payables: 'Bill', commodities: 'Commodity', fields: 'Field', storages: 'Storage',
   input_stock: 'Stock', record_documents: 'Document',
 };
 
@@ -30,7 +30,7 @@ export function auditTitle(row) {
 const LABEL = {
   price: 'Price', mtm_price: 'MTM price', tonnes: 'Tonnes', tons: 'Tonnes', buyer: 'Buyer', contract_no: 'Contract no.', grade: 'Grade',
   status: 'Status', amount: 'Amount', gst: 'GST', due_date: 'Due date', paid_date: 'Paid date', move_date: 'Date', sale_date: 'Sale date',
-  invoice_date: 'Invoice date', truck_rego: 'Truck', truck_company: 'Transport company', driver_signature: 'Driver signature', driver_name: 'Driver', driver_phone: 'Driver phone', name: 'Name', notes: 'Notes', supplier: 'Supplier',
+  invoice_date: 'Invoice date', truck_rego: 'Truck', truck_company: 'Carrier', driver_signature: 'Driver signature', driver_name: 'Driver', driver_phone: 'Driver phone', name: 'Name', notes: 'Notes', supplier: 'Supplier',
   payment_terms_days: 'Payment terms (days)', contract_value: 'Contract value', delivery_period: 'Delivery period', kind: 'Type',
   weight_status: 'Weight', gross_weight: 'Gross weight', tare_weight: 'Tare weight', area_ha: 'Hectares', opening_stock: 'Opening stock',
   invoice_no: 'Invoice no.', ticket_no: 'Ticket no.', order_no: 'Order no.', freight_no: 'Freight no.', reference: 'Reference',
@@ -104,6 +104,14 @@ export function dayHeading(iso, now = new Date()) {
   if (diff === 0) return 'Today';
   if (diff === 1) return 'Yesterday';
   return `${d.toLocaleDateString('en-AU', { weekday: 'short' })} ${dmy(d)}`;
+}
+
+/**
+ * What is typed in the search box, made safe to put in the server's filter: the characters that mean something in it (commas,
+ * brackets, wildcards, backslashes) become spaces. '' when there is nothing to look for.
+ */
+export function auditSearchTerm(text) {
+  return String(text ?? '').replace(/[%*_,()\\"']/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
 }
 
 /** The entries of one kind (or all), newest first. */

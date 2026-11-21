@@ -1,38 +1,38 @@
-import { db } from './storage.js?v=509';
-import { supabase, ENV } from './supabase.js?v=509';
-import { installErrorLog } from './supportinfo.js?v=509';
-import { loadMySeries, rememberedSeries } from './outloadseries.js?v=509';
-import { initTheme } from './theme.js?v=509';
+import { db } from './storage.js?v=511';
+import { supabase, ENV } from './supabase.js?v=511';
+import { installErrorLog } from './supportinfo.js?v=511';
+import { loadMySeries, rememberedSeries } from './outloadseries.js?v=511';
+import { initTheme } from './theme.js?v=511';
 initTheme();
-import { renderPosition } from './views/position.js?v=509';
-import { renderProduction } from './views/production.js?v=509';
-import { renderReports } from './views/reports.js?v=509';
-import { renderSales } from './views/sales.js?v=509';
-import { renderMovements } from './views/movements.js?v=509';
-import { renderStorage } from './views/storage.js?v=509';
-import { renderSettings } from './views/settings.js?v=509';
-import { renderLogin } from './views/login.js?v=509';
-import { renderNewPassword } from './views/newpassword.js?v=509';
-import { isRecovering, endRecovery, takeResetExpired, noteRecoveryLink } from './recovery.js?v=509';
-import { RESET_EXPIRED } from './recovery.js?v=509';
-import { renderAccount } from './views/account.js?v=509';
-import { renderHelp } from './views/help.js?v=509';
+import { renderPosition } from './views/position.js?v=511';
+import { renderProduction } from './views/production.js?v=511';
+import { renderReports } from './views/reports.js?v=511';
+import { renderSales } from './views/sales.js?v=511';
+import { renderMovements } from './views/movements.js?v=511';
+import { renderStorage } from './views/storage.js?v=511';
+import { renderSettings } from './views/settings.js?v=511';
+import { renderLogin } from './views/login.js?v=511';
+import { renderNewPassword } from './views/newpassword.js?v=511';
+import { isRecovering, endRecovery, takeResetExpired, noteRecoveryLink } from './recovery.js?v=511';
+import { RESET_EXPIRED } from './recovery.js?v=511';
+import { renderAccount } from './views/account.js?v=511';
+import { renderHelp } from './views/help.js?v=511';
 import {
   getSession, getMembership, sessionStillValid, onAuthChange, acceptInvitation, signOut, listMyInvitations, offlineSession,
-} from './auth.js?v=509';
-import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=509';
-import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=509';
-import { esc, todayLocal } from './fmt.js?v=509';
-import { isSheetOpen, notify, toast } from './ui.js?v=509';
-import { describeMerges } from './ticketmerge.js?v=509';
-import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=509';
-import { addDays } from './fumigation.js?v=509';
-import { watchLists } from './band.js?v=509';
-import { APP_VERSION } from './version.js?v=509';
-import { startUpdateCheck } from './updatecheck.js?v=509';
-import { emailFromTrialHash } from './trialtext.js?v=509';
-import { installWatch, requestPersistence } from './pwa.js?v=509';
-import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=509';
+} from './auth.js?v=511';
+import { tabsForRole, landingTabFor, canOpen, gearTargetFor } from './nav.js?v=511';
+import { tokenFromHash, roleLabel, expiryText } from './invites.js?v=511';
+import { esc, todayLocal } from './fmt.js?v=511';
+import { isSheetOpen, notify, toast } from './ui.js?v=511';
+import { describeMerges } from './ticketmerge.js?v=511';
+import { toFinishOlderThan, TAB_GRACE_DAYS } from './transit.js?v=511';
+import { addDays } from './fumigation.js?v=511';
+import { watchLists } from './band.js?v=511';
+import { APP_VERSION } from './version.js?v=511';
+import { startUpdateCheck } from './updatecheck.js?v=511';
+import { emailFromTrialHash } from './trialtext.js?v=511';
+import { installWatch, requestPersistence } from './pwa.js?v=511';
+import { takeSampleDataRequest, fetchSampleFarm } from './demo.js?v=511';
 
 // Tab icons are hand-drawn rather than emoji: emoji render differently on
 // every platform, and there is no silo (or barn) emoji at all, so the set
@@ -66,7 +66,7 @@ const TABS = [
   { id: 'position', label: 'Position', icon: POSITION_ICON, render: renderPosition },
   { id: 'production', label: 'Production', icon: PRODUCTION_ICON, render: renderProduction },
   { id: 'sales', label: 'Sales', icon: SALES_ICON, render: renderSales },
-  { id: 'movement', label: 'Movement', icon: MOVEMENT_ICON, render: renderMovements },
+  { id: 'movement', label: 'Loads', icon: MOVEMENT_ICON, render: renderMovements },
   { id: 'storage', label: 'Storage', icon: SILO_ICON, render: renderStorage },
   { id: 'reports', label: 'Reports', icon: REPORTS_ICON, render: renderReports },
 ];
@@ -133,7 +133,7 @@ function paintTabCounts() {
   if (n === 0) { dot?.remove(); btn.removeAttribute('aria-label'); return; }
   if (!dot) { dot = document.createElement('span'); dot.className = 'tab-count'; btn.querySelector('.icon').appendChild(dot); }
   dot.textContent = n > 99 ? '99+' : String(n);
-  btn.setAttribute('aria-label', `Movement, ${n} load${n === 1 ? '' : 's'} to finish`);
+  btn.setAttribute('aria-label', `Loads, ${n} to finish`);
 }
 db.subscribe(paintTabCounts);
 

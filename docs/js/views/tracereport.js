@@ -1,14 +1,14 @@
 // The traceability sheet: choose the loads (all going to contracts, one contract, or every load; dates and commodity if wanted),
 // see which paddocks made them up (load by load, or sale by sale), and send or download it as a PDF.
 
-import { db } from '../storage.js?v=509';
-import { num, todayLocal, dmy, esc } from '../fmt.js?v=509';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=509';
-import { exportRowsAsCSV } from '../csv.js?v=509';
-import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=509';
-import { viewPdf } from '../pdfview.js?v=509';
-import { nowTime, rangeText } from '../loadreport.js?v=509';
-import { traceReportRows, traceTotals, traceSummary, traceBySale, sourceText, traceCsvRows, TRACE_CSV_COLUMNS, buildTraceReportPdf } from '../tracereport.js?v=509';
+import { db } from '../storage.js?v=511';
+import { num, todayLocal, dmy, esc } from '../fmt.js?v=511';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=511';
+import { exportRowsAsCSV } from '../csv.js?v=511';
+import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=511';
+import { viewPdf } from '../pdfview.js?v=511';
+import { nowTime, rangeText } from '../loadreport.js?v=511';
+import { traceReportRows, traceTotals, traceSummary, traceBySale, sourceText, traceCsvRows, TRACE_CSV_COLUMNS, buildTraceReportPdf } from '../tracereport.js?v=511';
 
 const SHOWN = 40;   // loads listed on screen; the PDF has them all
 const KEY = 'grainflow.tracereport.by';
@@ -33,7 +33,7 @@ export function openTraceSheet() {
 
   openSheet('Traceability', (root) => {
     root.innerHTML = `
-      <div class="hint" style="margin:0 0 10px">Which paddocks the grain came from, worked out through the silos it passed through.</div>
+      <div class="hint" style="margin:0 0 10px">Which fields the grain came from, worked out through the silos it passed through.</div>
       <div class="rep-mode" id="tr-by" role="group" aria-label="Show">
         <button type="button" data-by="load" class="${by === 'load' ? 'active' : ''}">By load</button>
         <button type="button" data-by="sale" class="${by === 'sale' ? 'active' : ''}">By sale</button>
@@ -45,12 +45,12 @@ export function openTraceSheet() {
         ${field({ label: 'From', id: 'tr-from', type: 'date', value: '' })}
         ${field({ label: 'To', id: 'tr-to', type: 'date', value: '' })}
       </div>
-      <label class="tr-tick"><input type="checkbox" id="tr-store" ${store ? 'checked' : ''} /> Show the silo it came from <span>A silo holding several paddocks shows as a blend.</span></label>
+      <label class="tr-tick"><input type="checkbox" id="tr-store" ${store ? 'checked' : ''} /> Show the silo it came from <span>A silo holding several fields shows as a blend.</span></label>
       <div id="tr-result"></div>
       ${field({ label: 'Send to (email, optional)', id: 'tr-email', value: '', placeholder: 'name@example.com' })}
       <button class="btn" id="tr-csv" type="button" style="margin-top:6px">Download for Excel (CSV)</button>
       <button class="btn secondary" id="tr-view" type="button" style="margin-top:8px">View PDF</button>
-      <button class="btn secondary" id="tr-send" type="button" style="margin-top:8px">Send as PDF</button>
+      <button class="btn secondary" id="tr-send" type="button" style="margin-top:8px">Send PDF</button>
       <button class="btn secondary" id="tr-download" type="button" style="margin-top:8px">Download PDF</button>`;
 
     const pick = () => ({ scope: getVal(root, 'tr-scope') || 'contracts', commodityId: getVal(root, 'tr-commodity') || '', from: getVal(root, 'tr-from') || '', to: getVal(root, 'tr-to') || '' });
@@ -98,7 +98,7 @@ export function openTraceSheet() {
         if (!andSend) { downloadFile(bytes, fileName); toast('Downloaded'); return; }
         const t = traceTotals(r);
         const subject = `Traceability ${scopeLabel}${name ? ` - ${name}` : ''}`;
-        const body = `Hi,\n\nPlease find the traceability report attached: ${t.loads} load${t.loads === 1 ? '' : 's'}, ${num(t.tons, 1)} t, with the paddocks each came from.\n\nThanks`;
+        const body = `Hi,\n\nPlease find the traceability report attached: ${t.loads} load${t.loads === 1 ? '' : 's'}, ${num(t.tons, 1)} t, with the fields each came from.\n\nThanks`;
         const result = await sharePdf(bytes, fileName, { title: subject, text: body, mail: { to: email, subject, body } });
         if (result !== 'cancelled') toast(result === 'shared' ? 'Sent' : 'Downloaded. Attach it to the email that opened.');
       } catch (e) {

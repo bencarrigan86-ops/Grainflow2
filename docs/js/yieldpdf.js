@@ -2,7 +2,7 @@
 // tonnes, with a total, and the whole farm at the end. The figures come from fertfigures.js (yieldFigures), the same ones the
 // screen uses. Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=509';
+import { createReport, fixed } from './reportpdf.js?v=511';
 
 /** The yield table's columns: heading, share of the width, how a paddock's cell is written, and whether it is left-aligned. */
 export const YIELD_COLUMNS = [
@@ -21,9 +21,9 @@ export const YIELD_COLUMNS = [
 export function yieldPdf(figures = [], { business = '', season = '', today = '' } = {}) {
   const report = createReport({
     title: 'Yield', business, season, today,
-    footerNote: 'Yield is the tonnes over the area; Actual is from the load tickets, Recorded from a figure entered, Estimate from the paddock\'s estimated yield.',
+    footerNote: 'Yield is the tonnes over the area; Actual is from the load tickets, Recorded from a figure entered, Estimate from the field\'s estimated yield.',
   });
-  if (!figures.length) { report.message('Nothing to report yet: add a paddock in Production.'); return report.bytes(); }
+  if (!figures.length) { report.message('Nothing to report yet: add a field in Production.'); return report.bytes(); }
 
   figures.forEach((fig) => {
     report.heading(`${fig.name}   ${fixed(fig.total.tons, 1)} t`);

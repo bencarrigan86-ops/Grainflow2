@@ -4,26 +4,26 @@
 // window first. Money owed lists what buyers owe the farm (unpaid invoices) and what the farm owes (unpaid bills),
 // each with due dates, what is overdue and the money by age. The arithmetic is in outstanding.js.
 
-import { canSeeBills, canSeeOrders } from '../nav.js?v=509';
-import { db } from '../storage.js?v=509';
-import { openSheet, openOver, closeSheet } from '../ui.js?v=509';
-import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=509';
-import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=509';
-import { windowText } from '../orders.js?v=509';
-import { openOrderSheet } from './orders.js?v=509';
-import { openInvoiceListSheet } from './invoice.js?v=509';
-import { renderPayables, returnToAfterBill } from './payables.js?v=509';
-import { openXeroSheet } from './xero.js?v=509';
-import { cashflow } from '../cashflow.js?v=509';
-import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=509';
-import { buyerStatements, statementPdf } from '../statement.js?v=509';
-import { buyerExposure } from '../exposure.js?v=509';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=509';
-import { viewPdf } from '../pdfview.js?v=509';
-import { exposurePdf, EXPOSURE_COLUMNS, DEFAULT_EXPOSURE_COLUMNS, EXPOSURE_PRESETS } from '../exposurepdf.js?v=509';
-import { emailIn } from '../vendordec.js?v=509';
-import { invoiceLabel } from '../adjustment.js?v=509';
-import { matchesAll, amountText } from '../listsearch.js?v=509';
+import { canSeeBills, canSeeOrders } from '../nav.js?v=511';
+import { db } from '../storage.js?v=511';
+import { openSheet, openOver, closeSheet } from '../ui.js?v=511';
+import { num, money, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=511';
+import { deliveries, timeline, uninvoiced, moneyPosition, AGE_BUCKETS, endText, dueText, gather } from '../outstanding.js?v=511';
+import { windowText } from '../orders.js?v=511';
+import { openOrderSheet } from './orders.js?v=511';
+import { openInvoiceListSheet } from './invoice.js?v=511';
+import { renderPayables, returnToAfterBill } from './payables.js?v=511';
+import { openXeroSheet } from './xero.js?v=511';
+import { cashflow } from '../cashflow.js?v=511';
+import { deliveryPlan, expectedReceipts } from '../deliveryplan.js?v=511';
+import { buyerStatements, statementPdf } from '../statement.js?v=511';
+import { buyerExposure } from '../exposure.js?v=511';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=511';
+import { viewPdf } from '../pdfview.js?v=511';
+import { exposurePdf, EXPOSURE_COLUMNS, DEFAULT_EXPOSURE_COLUMNS, EXPOSURE_PRESETS } from '../exposurepdf.js?v=511';
+import { emailIn } from '../vendordec.js?v=511';
+import { invoiceLabel } from '../adjustment.js?v=511';
+import { matchesAll, amountText } from '../listsearch.js?v=511';
 
 const contractLabel = (s, commodities) => {
   const c = commodities.find((cc) => cc.id === s.commodityId);
@@ -380,7 +380,7 @@ function openExposurePdfSheet(exposure, today) {
       <div class="subhead" style="margin-top:14px">Also in the PDF</div>
       ${tick('ex-lines', d.lines, '<strong>Contracts under each buyer</strong><span class="meta" style="display:block">A line under the buyer for every contract</span>')}
       ${tick('ex-weeks', d.weeks, '<strong>Invoices due, by week</strong><span class="meta" style="display:block">The table under the buyers</span>')}
-      <div class="pv-actions"><button type="button" class="btn secondary" id="ex-view">View</button><button type="button" class="btn" id="ex-go">${canShareFiles() ? 'Share PDF' : 'Download PDF'}</button></div>`;
+      <div class="pv-actions"><button type="button" class="btn secondary" id="ex-view">View PDF</button><button type="button" class="btn" id="ex-go">${canShareFiles() ? 'Share PDF' : 'Download PDF'}</button></div>`;
     const lines = root.querySelector('#ex-lines');
     const setCols = (keys) => root.querySelectorAll('[data-col]').forEach((el) => { el.checked = el.dataset.col === 'buyer' || keys.includes(el.dataset.col); });
     root.querySelectorAll('[data-preset]').forEach((el) => el.addEventListener('click', () => {

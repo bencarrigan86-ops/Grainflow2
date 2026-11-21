@@ -1,20 +1,20 @@
-import { db } from '../storage.js?v=509';
-import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=509';
-import { num, tons, money, pct, esc, ha } from '../fmt.js?v=509';
-import { payablesCost } from '../payables.js?v=509';
-import { commodityClass } from '../commoditycolor.js?v=509';
-import { hasCommodityOrder } from '../commodityorder.js?v=509';
-import { startProgress, missingLine } from '../helpcontent.js?v=509';
-import { openSetupWalk } from './setupwalk.js?v=509';
-import { attentionItems } from '../attention.js?v=509';
-import { lastBackup } from '../backup.js?v=509';
-import { supportWaitingCount } from './support.js?v=509';
-import { todayLocal, dmy } from '../fmt.js?v=509';
-import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=509';
-import { openSheet, closeSheet } from '../ui.js?v=509';
-import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=509';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=509';
-import { viewPdf } from '../pdfview.js?v=509';
+import { db } from '../storage.js?v=511';
+import { positionRows, positionTotals, farmProfitLoss } from '../derived.js?v=511';
+import { num, tons, money, pct, esc, ha } from '../fmt.js?v=511';
+import { payablesCost } from '../payables.js?v=511';
+import { commodityClass } from '../commoditycolor.js?v=511';
+import { hasCommodityOrder } from '../commodityorder.js?v=511';
+import { startProgress, missingLine } from '../helpcontent.js?v=511';
+import { openSetupWalk } from './setupwalk.js?v=511';
+import { attentionItems } from '../attention.js?v=511';
+import { lastBackup } from '../backup.js?v=511';
+import { supportWaitingCount } from './support.js?v=511';
+import { todayLocal, dmy } from '../fmt.js?v=511';
+import { openMoneySheet, openDeliveriesSheet } from './outstanding.js?v=511';
+import { openSheet, closeSheet } from '../ui.js?v=511';
+import { positionPdf, POSITION_COLUMNS, DEFAULT_COLUMNS, COLUMN_PRESETS } from '../positionpdf.js?v=511';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=511';
+import { viewPdf } from '../pdfview.js?v=511';
 
 const TONE = { bad: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent-input)' };
 
@@ -94,7 +94,7 @@ function paint(root) {
       ${startCard()}
       ${rows.length ? `<div class="pos-by"><span class="pos-season">${esc(db.getCurrentYear())} season</span><span class="pos-actions"><button type="button" class="pos-display" id="tile-figures" aria-label="Display: choose the figures on the crop tiles" title="Display"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></button><button type="button" class="btn secondary small pos-pdf" id="position-pdf"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>${canShareFiles() ? 'Share PDF' : 'PDF'}</button></span></div>` : ''}
       ${rows.length ? dashTop(totals) : ''}
-      ${rows.length === 0 ? `<div class="empty">Nothing to report yet.<br/>Add a paddock in Production, or a contract in Sales, and your position appears here.</div>` : ''}
+      ${rows.length === 0 ? `<div class="empty">Nothing to report yet.<br/>Add a field in Production, or a contract in Sales, and your position appears here.</div>` : ''}
       ${rows.length ? `<div class="pos-by"><span>${hasCommodityOrder() ? 'In your order' : 'Biggest first'} &middot; tap a crop for the detail</span></div><div class="pos-tiles">${cropTiles(rows)}</div>` : ''}
 
       ${rows.length > 0 ? farmSummaryCard(totals, overheads, pl, cost) : ''}
@@ -144,7 +144,7 @@ function openPdfSheet(data) {
       <div class="subhead" style="margin-top:14px">Under the table</div>
       ${tick('pp-result', d.result, '<strong>Whole farm result</strong><span class="meta" style="display:block">Gross margin, overheads and the profit or loss</span>')}
       ${tick('pp-over', d.overheads, '<strong>Overheads and bills</strong><span class="meta" style="display:block">Each overhead, and the bills taken off profit</span>')}
-      <div class="pv-actions"><button type="button" class="btn secondary" id="pp-view">View</button><button type="button" class="btn" id="pp-go">${canShareFiles() ? 'Share PDF' : 'Download PDF'}</button></div>`;
+      <div class="pv-actions"><button type="button" class="btn secondary" id="pp-view">View PDF</button><button type="button" class="btn" id="pp-go">${canShareFiles() ? 'Share PDF' : 'Download PDF'}</button></div>`;
     const setCols = (keys) => root.querySelectorAll('[data-col]').forEach((el) => { el.checked = el.dataset.col === 'commodity' || keys.includes(el.dataset.col); });
     root.querySelectorAll('[data-preset]').forEach((el) => el.addEventListener('click', () => setCols(COLUMN_PRESETS.find((p) => p.id === el.dataset.preset).keys)));
     const chosenShow = () => {
@@ -360,8 +360,8 @@ function cropDetail(r) {
         <div class="kv sm"><div class="l">Avg sold</div><div class="v">${money(r.avgSoldPrice, 0)}/${per}</div></div>
         <div class="kv sm"><div class="l">MTM</div><div class="v">${money(r.mtmPrice, 0)}/${per}</div></div>
       </div>
-      ${r.split ? `<div class="row"><span class="label">Double crop yield<span style="display:block;font-size:11.5px;color:var(--text-dim);font-weight:400">${r.split.double.count} paddock${r.split.double.count === 1 ? '' : 's'} · ${num(r.split.double.area, 0)} ha</span></span><span class="value">${r.split.double.yieldTHa > 0 ? `${num(r.split.double.yieldTHa, 2)} ${bales ? 'bales' : 't'}/ha` : '&ndash;'}</span></div>
-      <div class="row"><span class="label">After fallow yield<span style="display:block;font-size:11.5px;color:var(--text-dim);font-weight:400">${r.split.normal.count} paddock${r.split.normal.count === 1 ? '' : 's'} · ${num(r.split.normal.area, 0)} ha</span></span><span class="value">${r.split.normal.yieldTHa > 0 ? `${num(r.split.normal.yieldTHa, 2)} ${bales ? 'bales' : 't'}/ha` : '&ndash;'}</span></div>` : ''}
+      ${r.split ? `<div class="row"><span class="label">Double crop yield<span style="display:block;font-size:11.5px;color:var(--text-dim);font-weight:400">${r.split.double.count} field${r.split.double.count === 1 ? '' : 's'} · ${num(r.split.double.area, 0)} ha</span></span><span class="value">${r.split.double.yieldTHa > 0 ? `${num(r.split.double.yieldTHa, 2)} ${bales ? 'bales' : 't'}/ha` : '&ndash;'}</span></div>
+      <div class="row"><span class="label">After fallow yield<span style="display:block;font-size:11.5px;color:var(--text-dim);font-weight:400">${r.split.normal.count} field${r.split.normal.count === 1 ? '' : 's'} · ${num(r.split.normal.area, 0)} ha</span></span><span class="value">${r.split.normal.yieldTHa > 0 ? `${num(r.split.normal.yieldTHa, 2)} ${bales ? 'bales' : 't'}/ha` : '&ndash;'}</span></div>` : ''}
       <div class="gauge" role="img" aria-label="${Math.round(sold * 100)} percent sold"><i style="width:${sold * 100}%"></i></div>
       ${cottonLines(r)}
       ${r.openingValue ? `
@@ -376,9 +376,9 @@ function cropDetail(r) {
       <div class="row"><span class="label">Gross margin per ha</span><span class="value">${money(r.grossMargin / r.area, 0)}/ha</span></div>` : ''}
       <details class="fold" open>
         <summary><div><h2>Full breakdown</h2><div class="sub">Values, stock and costs</div></div></summary>
-        ${r.shrinkTons > 0 ? `<div class="row"><span class="label">Shrink in silos<span class="sub">${num(r.commodity.shrinkPct, 2)}% lost going in from the paddock</span></span><span class="value">${qty(r.shrinkTons)}</span></div>` : ''}
+        ${r.shrinkTons > 0 ? `<div class="row"><span class="label">Shrink in silos<span class="sub">${num(r.commodity.shrinkPct, 2)}% lost going in from the field</span></span><span class="value">${qty(r.shrinkTons)}</span></div>` : ''}
         ${r.usedTons > 0 ? `<div class="row"><span class="label">Used on the farm<span class="sub">Out of the stock, not sold</span></span><span class="value">${qty(r.usedTons)}</span></div>` : ''}
-        ${r.strawTons > 0 ? `<div class="row"><span class="label">Baled off crop paddocks<span class="sub">On ${ha(r.strawArea, 0)} ha, already counted in the crop's area</span></span><span class="value">${qty(r.strawTons)}</span></div>` : ''}
+        ${r.strawTons > 0 ? `<div class="row"><span class="label">Baled off crop fields<span class="sub">On ${ha(r.strawArea, 0)} ha, already counted in the crop's area</span></span><span class="value">${qty(r.strawTons)}</span></div>` : ''}
         <div class="row"><span class="label">Avg sold price</span><span class="value">${money(r.avgSoldPrice, 2)}/${per}</span></div>
         <div class="row"><span class="label">Sold value</span><span class="value">${money(r.soldValue, 0)}</span></div>
         ${r.opening || r.retainedSeed ? `

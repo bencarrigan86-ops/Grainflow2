@@ -3,22 +3,27 @@
 // The log is written by the database (see audit.js and supabase/migrations/20261207000000_audit_log.sql); this reads it. It needs
 // signal, as the log lives on the server. Owners, managers and bookkeepers can open it.
 
-import { db } from '../storage.js?v=509';
-import { supabase } from '../supabase.js?v=509';
-import { openSheet, openOver } from '../ui.js?v=509';
-import { esc } from '../fmt.js?v=509';
-import { AUDIT_KINDS, auditTitle, changeLines, changeSummary, whoText, timeText, filterAudit, groupByDay, whenFull } from '../audit.js?v=509';
+import { db } from '../storage.js?v=511';
+import { supabase } from '../supabase.js?v=511';
+import { openSheet, openOver } from '../ui.js?v=511';
+import { esc } from '../fmt.js?v=511';
+import { AUDIT_KINDS, auditSearchTerm, auditTitle, changeLines, changeSummary, whoText, timeText, filterAudit, groupByDay, whenFull } from '../audit.js?v=511';
 
 const PAGE = 50;
 let filterKind = '';   // kept while the app is open
+let searchText = '';   // the same: the search box starts as it was left
 
 export function openAuditSheet() {
-  openSheet('Audit history', (root) => {
+  openSheet('Audit history', (shell) => {
+    // The search box is drawn once, outside what is redrawn, so typing in it is not interrupted
+    shell.innerHTML = `<input type="search" id="aud-q" placeholder="Search a ticket, buyer, bill or person" value="${esc(searchText)}" autocomplete="off" style="width:100%;margin-bottom:8px" /><div id="aud-body"></div>`;
+    const root = shell.querySelector('#aud-body');
     let rows = [];
     let more = false;       // true when the server has older entries than the ones loaded
     let loaded = false;
     let loading = false;
     let problem = '';
+    let seq = 0;            // the latest look: a slower, older answer is ignored
 
     const draw = () => {
       if (problem) {
@@ -35,7 +40,7 @@ export function openAuditSheet() {
           <button type="button" class="chip ${filterKind ? '' : 'active'}" data-kind="">All</button>
           ${AUDIT_KINDS.map((k) => `<button type="button" class="chip ${filterKind === k.id ? 'active' : ''}" data-kind="${k.id}">${esc(k.label)}</button>`).join('')}
         </div>
-        ${shown.length === 0 ? `<div class="empty" style="padding:10px 0">${rows.length ? 'Nothing of that kind yet.' : 'Nothing has been recorded yet. Changes made from now on are listed here.'}</div>` : days.map((d) => `
+        ${shown.length === 0 ? `<div class="empty" style="padding:10px 0">${rows.length ? 'Nothing of that kind yet.' : auditSearchTerm(searchText) ? 'Nothing found for that search.' : 'Nothing has been recorded yet. Changes made from now on are listed here.'}</div>` : days.map((d) => `
           <div class="day-label"><span>${esc(d.heading)}</span></div>
           ${d.rows.map((r) => entryHtml(r)).join('')}`).join('')}
         ${more ? `<button type="button" class="btn secondary more-row" id="aud-more">${loading ? 'Looking&hellip;' : 'Show older changes'}</button>` : ''}`;
@@ -48,18 +53,22 @@ export function openAuditSheet() {
     };
 
     async function load(fresh) {
-      if (loading) return;
+      if (loading && !fresh) return;
       loading = true;
+      const mine = ++seq;
       problem = '';
       if (fresh) { rows = []; loaded = false; }
       draw();
       if (!navigator.onLine) { problem = 'You need signal to see the audit history. Try again when you have some.'; loading = false; draw(); return; }
       const from = rows.length;
-      const { data, error } = await supabase.from('audit_log')
+      // a search looks through the whole history on the server, not just the entries already loaded
+      let q = supabase.from('audit_log')
         .select('id, at, user_email, user_role, table_name, row_id, action, label, changes')
-        .eq('farm_id', db.getFarmId())
-        .order('at', { ascending: false })
-        .range(from, from + PAGE - 1);
+        .eq('farm_id', db.getFarmId());
+      const term = auditSearchTerm(searchText);
+      if (term) q = q.or(`label.ilike.%${term}%,user_email.ilike.%${term}%`);
+      const { data, error } = await q.order('at', { ascending: false }).range(from, from + PAGE - 1);
+      if (mine !== seq) return;
       loading = false;
       if (error) {
         problem = /does not exist|schema cache|relation/i.test(error.message || '')
@@ -73,6 +82,12 @@ export function openAuditSheet() {
       draw();
     }
 
+    let typing = null;
+    shell.querySelector('#aud-q').addEventListener('input', (e) => {
+      searchText = e.target.value;
+      clearTimeout(typing);
+      typing = setTimeout(() => load(true), 350);
+    });
     load(true);
   });
 }

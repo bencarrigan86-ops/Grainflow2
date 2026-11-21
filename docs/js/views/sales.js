@@ -1,35 +1,35 @@
-import { db } from '../storage.js?v=509';
-import { canDelete, canSeeBills, canSeeOrders, canSeeFreight, canAddContracts, canChangeArea } from '../nav.js?v=509';
-import { tileIcon } from '../tileicon.js?v=509';
+import { db } from '../storage.js?v=511';
+import { canDelete, canSeeBills, canSeeOrders, canSeeFreight, canAddContracts, canChangeArea } from '../nav.js?v=511';
+import { tileIcon } from '../tileicon.js?v=511';
 import {
   DOCUMENT_KINDS, kindLabel, uploadSaleDocument, signedUrlFor, removeSaleDocument, checkFile,
-} from '../documents.js?v=509';
-import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=509';
-import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=509';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify, freezeSheet, bandFolds } from '../ui.js?v=509';
-import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=509';
-import { patternsFor } from '../deliveryplan.js?v=509';
-import { INVOICING } from '../invoicing.js?v=509';
-import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=509';
-import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=509';
-import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=509';
-import { renderRelatedMovements } from './movements.js?v=509';
-import { openInvoiceListSheet } from './invoice.js?v=509';
-import { openContractDocSheet } from './contract.js?v=509';
-import { wireJumps } from '../jump.js?v=509';
-import { openOrdersSheet, renderContractOrders } from './orders.js?v=509';
-import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=509';
-import { freightState } from '../freight.js?v=509';
-import { activeSales, paidSales } from '../paidsales.js?v=509';
-import { openVendorDecSheet } from './vendordec.js?v=509';
-import { summarise as summariseOrders } from '../orders.js?v=509';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=509';
-import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=509';
-import { parseLate, lateText } from '../cottonlate.js?v=509';
-import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=509';
-import { standardFor } from '../grades.js?v=509';
-import { commodityClass } from '../commoditycolor.js?v=509';
-import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort, searchSales } from '../salesort.js?v=509';
+} from '../documents.js?v=511';
+import { salesByCommodity, bigFirst, saleEconomics, contractTolerance, movementTonsToSale, DEFAULT_TOLERANCE_PCT, DEFAULT_TOLERANCE_CAP_TONS, COTTON_TOLERANCE_PCT, COTTON_TOLERANCE_CAP_BALES } from '../derived.js?v=511';
+import { num, tons, money, moneyMillions, esc, shortDate, todayLocal } from '../fmt.js?v=511';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, askConfirm, notify, freezeSheet, bandFolds } from '../ui.js?v=511';
+import { COTTON_KINDS, cottonKind, isGinContract, cleanCottonTerms, netPerBale, ginCostPerBale, ginCostFor, kindSummary } from '../cottonkinds.js?v=511';
+import { patternsFor } from '../deliveryplan.js?v=511';
+import { INVOICING } from '../invoicing.js?v=511';
+import { splitContact, joinContact, buyerProfile } from '../buyercontact.js?v=511';
+import { addressFields, readAddress, joinAddress, partsOf, PART_KEYS } from '../address.js?v=511';
+import { previousYear, carryCandidates, openingEffect, openingChange } from '../carryover.js?v=511';
+import { renderRelatedMovements } from './movements.js?v=511';
+import { openInvoiceListSheet } from './invoice.js?v=511';
+import { openContractDocSheet } from './contract.js?v=511';
+import { wireJumps } from '../jump.js?v=511';
+import { openOrdersSheet, renderContractOrders } from './orders.js?v=511';
+import { renderContractFreight, openFreightOrdersSheet } from './freightorders.js?v=511';
+import { freightState } from '../freight.js?v=511';
+import { activeSales, paidSales } from '../paidsales.js?v=511';
+import { openVendorDecSheet } from './vendordec.js?v=511';
+import { summarise as summariseOrders } from '../orders.js?v=511';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=511';
+import { cleanGradeOptions, gradeAdjustment } from '../gradeprice.js?v=511';
+import { parseLate, lateText } from '../cottonlate.js?v=511';
+import { oilAdjustment, oilPricingOn, AOF_OIL_BASE_PCT, AOF_OIL_ADJUST_PCT } from '../oilprice.js?v=511';
+import { standardFor } from '../grades.js?v=511';
+import { commodityClass } from '../commoditycolor.js?v=511';
+import { SALE_SORTS, sortSales, readSaleSort, saveSaleSort, isSaleSort, searchSales } from '../salesort.js?v=511';
 
 let unsub = null;
 let saleSearch = '';   // what is typed in the contracts search box (kept while the screen repaints)
@@ -484,8 +484,8 @@ function openSaleSheet(existing) {
       <div class="subhead">Delivery</div>
       ${field({ label: 'Location', id: 'location', value: existing?.location, placeholder: 'Delivery site, or where it is priced, e.g. Goondiwindi - 45km S/W', list: 'dl-locations' })}
       <div class="grid-2">
-        ${field({ label: 'Delivery start', id: 'deliveryStart', type: 'date', value: existing?.deliveryStart })}
-        ${field({ label: 'Delivery finish', id: 'deliveryEnd', type: 'date', value: existing?.deliveryEnd })}
+        ${field({ label: 'Deliver from', id: 'deliveryStart', type: 'date', value: existing?.deliveryStart })}
+        ${field({ label: 'Deliver by', id: 'deliveryEnd', type: 'date', value: existing?.deliveryEnd })}
       </div>
       <div class="grid-2">
         ${field({ label: 'Weights & quality', id: 'weightsToGovern', type: 'select', value: existing?.weightsToGovern ?? '', options: [
@@ -534,7 +534,7 @@ function openSaleSheet(existing) {
       </div>
       <div id="late-wrap" hidden>
         ${field({ label: 'Late delivery discount ($/bale, by month)', id: 'lateDiscounts', value: lateText(existing?.lateDiscounts), placeholder: 'e.g. 10, 25, 40' })}
-        <div class="hint" style="margin:-6px 14px 10px;font-size:11.5px;color:var(--text-dim)">Taken off the price of bales delivered after the delivery finish: the first figure for the first month late, the second for the second month, and so on. They do not add up, and the last one keeps applying.</div>
+        <div class="hint" style="margin:-6px 14px 10px;font-size:11.5px;color:var(--text-dim)">Taken off the price of bales delivered after the Deliver by date: the first figure for the first month late, the second for the second month, and so on. They do not add up, and the last one keeps applying.</div>
       </div>
       <div class="grid-2">
         ${field({ label: 'Broker', id: 'broker', value: existing?.broker, placeholder: 'e.g. Knight Commodities', list: 'dl-brokers' })}
@@ -596,7 +596,7 @@ function openSaleSheet(existing) {
       <details class="fold" ${openOther ? 'open' : ''}>
         <summary><div><h2>Other</h2>
           <div class="sub">Tonnes delivered by hand</div></div></summary>
-        ${field({ label: 'Tonnes delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a Movement' })}
+        ${field({ label: 'Tonnes delivered (manual)', id: 'tonsDelivered', type: 'number', step: '0.01', value: existing?.tonsDelivered ?? 0, hint: 'For deliveries not tracked as a load' })}
         ${movementDelivered > 0 ? `<div class="row"><span class="label">+ Delivered via movements</span><span class="value" id="movement-delivered-value">${num(movementDelivered, 1)} t</span></div>` : ''}
       </details>
       </div>

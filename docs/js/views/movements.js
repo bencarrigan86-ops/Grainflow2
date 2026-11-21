@@ -1,32 +1,32 @@
-import { db } from '../storage.js?v=509';
-import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=509';
-import { commodityClass } from '../commoditycolor.js?v=509';
-import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=509';
-import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=509';
-import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=509';
-import { withholdingClash } from '../fumigation.js?v=509';
-import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=509';
-import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=509';
-import { cleanStrokes } from '../signature.js?v=509';
-import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=509';
-import { compressAndStampImage } from '../img.js?v=509';
-import { displayUrlFor, photoLookupError } from '../photos.js?v=509';
-import { specText, extraSpecKey } from '../outload.js?v=509';
-import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=509';
-import { pickableSilos } from '../silopick.js?v=509';
-import { heldOf, holdsCommodity } from '../offfarm.js?v=509';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=509';
-import { activeSales } from '../paidsales.js?v=509';
-import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=509';
-import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=509';
-import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=509';
-import { nowTime } from '../loadreport.js?v=509';
-import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=509';
-import { pageOfRows, PAGE_SIZE } from '../paging.js?v=509';
-import { openGinRunSheet } from './ginrun.js?v=509';
-import { openModuleMoveSheet } from './modulemove.js?v=509';
-import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=509';
-import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=509';
+import { db } from '../storage.js?v=511';
+import { canEditLoads, canDelete, canMarkFinal } from '../nav.js?v=511';
+import { commodityClass } from '../commoditycolor.js?v=511';
+import { cleanDeductions, deductionNotes, amountOnTicket, perTonFromTicket } from '../deductions.js?v=511';
+import { movementsForEndpoint, bigFirst, tonsAtEndpoint } from '../derived.js?v=511';
+import { num, tons, esc, shortDate, tightDate, todayLocal, dmy } from '../fmt.js?v=511';
+import { withholdingClash } from '../fumigation.js?v=511';
+import { SIGN_WORDS, cleanDriverSignature, signLoad, signState, signedWhen } from '../driversign.js?v=511';
+import { signatureSvg, wireDrawing, padBoxHtml } from './signaturepad.js?v=511';
+import { cleanStrokes } from '../signature.js?v=511';
+import { openSheet, closeSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=511';
+import { compressAndStampImage } from '../img.js?v=511';
+import { displayUrlFor, photoLookupError } from '../photos.js?v=511';
+import { specText, extraSpecKey } from '../outload.js?v=511';
+import { isTransit, stageOf, STAGES, toFinish } from '../transit.js?v=511';
+import { pickableSilos } from '../silopick.js?v=511';
+import { heldOf, holdsCommodity } from '../offfarm.js?v=511';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=511';
+import { activeSales } from '../paidsales.js?v=511';
+import { ordersForLoad, orderState, windowText, orderTitle } from '../orders.js?v=511';
+import { freightOrdersForLoad, freightState, freightTitle, freightDestination } from '../freight.js?v=511';
+import { openLoadReportSheet, sendLoadTicket, readOrigin, saveOrigin, readDestination, saveDestination, readComments, saveComments, readQuality, saveQuality, readSplit, saveSplit } from './loadreport.js?v=511';
+import { nowTime } from '../loadreport.js?v=511';
+import { normaliseOutloadNo, duplicateOutloads } from '../outloadno.js?v=511';
+import { pageOfRows, PAGE_SIZE } from '../paging.js?v=511';
+import { openGinRunSheet } from './ginrun.js?v=511';
+import { openModuleMoveSheet } from './modulemove.js?v=511';
+import { isHay, hasHayLoad, isUsedOnFarm, avgBaleKg, cleanHayLoad, secondaryTypes, describeBales } from '../hay.js?v=511';
+import { hasGin, describeGin, stdBales, hasModules, describeModules, padOffBy, cleanGin } from '../ginning.js?v=511';
 
 const DEST_HINT = 'e.g. Newcastle terminal';
 let unsub = null;
@@ -80,7 +80,7 @@ function paint(root) {
   root.innerHTML = `
     <div class="topbar">
       <div>
-        <h1>Movement</h1>
+        <h1>Loads</h1>
         <div class="sub">Truck tickets: field/silo &rarr; silo/contract</div>
       </div>
     </div>
@@ -247,7 +247,7 @@ export function endpointLabel(type, id, { fields, storages, sales, commodities }
 }
 
 /**
- * Renders a "Related movements" card into `container` for a field, silo, or
+ * Renders a "Related loads" card into `container` for a field, silo, or
  * sale — the same movement rows shown in the Movement tab, filtered to the
  * ones touching this endpoint. Tapping one opens it for editing.
  */
@@ -261,14 +261,14 @@ export function renderRelatedMovements(container, type, id, { collapsed = false 
   const startTemplate = type === 'field' ? { froms: [{ type: 'field', id, tons: '' }], tos: [] } : type === 'sale' ? { froms: [], tos: [{ type: 'sale', id, tons: '' }] } : null;
   const body = `
     ${related.length === 0 ? `<div class="empty">No movements linked to this yet.</div>` : related.map((m) => movementRow(m, ctx)).join('')}
-    ${startTemplate ? `<button type="button" class="btn secondary small" data-new-movement style="margin-top:8px">+ Add a movement${type === 'field' ? ' from this paddock' : ' to this contract'}</button>` : ''}`;
+    ${startTemplate ? `<button type="button" class="btn secondary small" data-new-movement style="margin-top:8px">+ Add a load${type === 'field' ? ' from this field' : ' to this contract'}</button>` : ''}`;
   const sum = related.reduce((a, m) => a + tonsAtEndpoint(m, type, id), 0);   // only what belongs to this paddock, silo or contract
   container.innerHTML = collapsed
     ? `<details class="fold" id="related-fold">
-        <summary><div><h2>Related movements</h2>
+        <summary><div><h2>Related loads</h2>
           <div class="sub">${related.length ? `${related.length} load${related.length === 1 ? '' : 's'} · ${num(sum, 1)} t` : 'None yet'}</div></div></summary>${body}
       </details>`
-    : `<h2>Related movements</h2>${body}`;
+    : `<h2>Related loads</h2>${body}`;
   // a load opened from here opens over the sheet this list is in (the contract, silo or paddock), which comes back, with this list up to date, when the load is saved or closed
   const back = () => {
     const open = !!container.querySelector('#related-fold')?.open;
@@ -359,7 +359,7 @@ function addFromRow(container, ctx, onChange, existingFrom) {
   row.innerHTML = `
     <div class="segmented from-kind" style="margin-bottom:6px">
       <button type="button" data-kind="field" class="${kind === 'field' ? 'active' : ''}">Field</button>
-      <button type="button" data-kind="silo" class="${kind === 'silo' ? 'active' : ''}">Silo</button>
+      <button type="button" data-kind="silo" class="${kind === 'silo' ? 'active' : ''}">Storage</button>
     </div>
     <div style="display:flex;gap:8px;align-items:flex-end">
       <div class="field" style="flex:2;margin-bottom:0">
@@ -426,7 +426,7 @@ function addToRow(container, ctx, onChange, existingTo) {
   row.style.cssText = 'display:flex;gap:8px;align-items:flex-end;margin-bottom:10px';
   row.innerHTML = `
     <div class="field" style="flex:2;margin-bottom:0">
-      <label>Silo</label>
+      <label>Storage</label>
       <select class="to-select"></select>
     </div>
     <div class="field tons-field" style="flex:1;margin-bottom:0">
@@ -535,7 +535,7 @@ export function openMovementSheet(existing, template) {
     .filter((o) => saleOfOrder(o) && (o.id === existing?.orderId || orderState(o, movements, todayLocal()).active))
     .sort((a, b) => String(a.deliverBy || '9999').localeCompare(String(b.deliverBy || '9999')));
 
-  openSheet(existing ? `Edit movement #${existing.ticketNo ?? ''}` : `Add movement #${db.nextTicketNo()}`, (root) => {
+  openSheet(existing ? `Edit load #${existing.ticketNo ?? ''}` : `Add load #${db.nextTicketNo()}`, (root) => {
     root.innerHTML = `
       <datalist id="dl-regos">${distinctOf(movements, 'truckRego').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
       <datalist id="dl-drivers">${distinctOf(movements, 'driver').map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
@@ -586,7 +586,7 @@ export function openMovementSheet(existing, template) {
             <button data-status="final" class="${src?.weightStatus === 'final' ? 'active' : ''}"${canMarkFinal(db.getRole()) ? '' : ' disabled title="An owner or manager marks a weight final"'}>Final</button>
           </div>
         </div>
-        ${existing?.sourceRef ? `<div class="hint" style="margin-bottom:8px">Movement number from the freight platform: <strong>${esc(existing.sourceRef)}</strong></div>` : ''}
+        ${existing?.sourceRef ? `<div class="hint" style="margin-bottom:8px">Load number from the freight platform: <strong>${esc(existing.sourceRef)}</strong></div>` : ''}
       </section>
 
       <section class="form-section">
@@ -600,7 +600,7 @@ export function openMovementSheet(existing, template) {
         <div class="field">
           <label>To</label>
           <div class="segmented" id="to-kind">
-            <button type="button" data-kind="silo" class="${!existingSaleTo && !existingUse ? 'active' : ''}">Silo</button>
+            <button type="button" data-kind="silo" class="${!existingSaleTo && !existingUse ? 'active' : ''}">Storage</button>
             <button type="button" data-kind="sale" class="${existingSaleTo ? 'active' : ''}">Contract</button>
             <button type="button" data-tokind="use" id="to-use-btn" class="${existingUse ? 'active' : ''}" ${isHay(commodities.find((c) => c.id === ctx.commodityId)) || existingUse ? '' : 'hidden'}>Used on farm</button>
           </div>
@@ -616,7 +616,7 @@ export function openMovementSheet(existing, template) {
         <div class="subhead">Truck and tickets</div>
         <div class="grid-2">
           ${field({ label: 'Truck rego', id: 'truckRego', value: src?.truckRego, list: 'dl-regos' })}
-          ${field({ label: 'Transport company', id: 'truckCompany', value: src?.truckCompany, list: 'dl-companies', placeholder: 'Who carted it' })}
+          ${field({ label: 'Carrier', id: 'truckCompany', value: src?.truckCompany, list: 'dl-companies', placeholder: 'Who carted it' })}
         </div>
         <div class="grid-2">
           ${field({ label: 'Driver', id: 'driver', value: src?.driver, list: 'dl-drivers' })}
@@ -677,18 +677,18 @@ export function openMovementSheet(existing, template) {
         </div>
       </details>
       ${existing ? `<details class="fold" id="tk-fold">
-        <summary><div class="feature-head"><h2>Send as a PDF</h2><div class="sub">Choose what shows on the load ticket, then send it</div></div></summary>
+        <summary><div class="feature-head"><h2>Send PDF</h2><div class="sub">Choose what shows on the load ticket, then send it</div></div></summary>
         <div style="padding-top:6px">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:6px 0 10px"><input type="checkbox" id="tk-origin" ${readOrigin() ? 'checked' : ''} style="width:18px;height:18px" /> Show where it came from (storage or paddock)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:6px 0 10px"><input type="checkbox" id="tk-origin" ${readOrigin() ? 'checked' : ''} style="width:18px;height:18px" /> Show where it came from (storage or field)</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-split" ${readSplit() ? 'checked' : ''} style="width:18px;height:18px" /> Tonnes from each, when it came from more than one</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-dest" ${readDestination() ? 'checked' : ''} style="width:18px;height:18px" /> Show the destination</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-comments" ${readComments() ? 'checked' : ''} style="width:18px;height:18px" /> Comments box (this load's notes, and room to write)</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="tk-quality" ${readQuality() ? 'checked' : ''} style="width:18px;height:18px" /> Quality results (if the load was tested)</label>
-        <button class="btn secondary" id="tk-view" type="button" style="margin-bottom:8px">View the PDF</button>
-        <button class="btn secondary" id="tk-send" type="button">Send this load as a PDF</button>
+        <button class="btn secondary" id="tk-view" type="button" style="margin-bottom:8px">View PDF</button>
+        <button class="btn secondary" id="tk-send" type="button">Send PDF</button>
         <div class="meta" style="margin-top:6px;font-size:12px">Sends the load as it is on the screen now. Save the ticket to keep any changes.</div></div></details>` : ''}
       </div>
-${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete movement</button>` : ''}
+${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="del" style="margin-top:12px">Delete load</button>` : ''}
       <div class="save-bar"><div class="total"><div class="l">Net load</div><div class="v" id="load-preview">—</div></div><button class="btn" id="save">Save</button></div>
     `;
 
@@ -719,7 +719,7 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
         const toRowsBox = root.querySelector('#to-rows');
         if (toRowsBox) {
           const toSum = sum(readToRows(toRowsBox));
-          if (Math.abs(toSum - net) > 0.005) lines.push(`The silos add up to ${tons(toSum)}; the load is ${tons(net)}.`);
+          if (Math.abs(toSum - net) > 0.005) lines.push(`The storage adds up to ${tons(toSum)}; the load is ${tons(net)}.`);
         }
       }
       el.hidden = lines.length === 0;
@@ -1326,7 +1326,7 @@ ${existing && canDelete(db.getRole()) ? `<button class="btn ghost-danger" id="de
     const del = root.querySelector('#del');
     if (del) {
       del.addEventListener('click', () => {
-        confirmDelete('Delete this movement? An owner or manager can bring it back from Settings, Recently deleted.', () => {
+        confirmDelete('Delete this load? An owner or manager can bring it back from Settings, Recently deleted.', () => {
           db.deleteMovement(existing.id);
           closeSheet();
           toast('Deleted');

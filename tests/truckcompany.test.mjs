@@ -47,9 +47,9 @@ check('the load report row carries the company, and the table has a column for i
   assert.ok(!reportColumns({}).some((c) => c.key === 'company'));
   const w = reportColumns({ showCompany: true }).reduce((a, c) => a + c.w, 0);
   assert.ok(w <= 842 - 2 * 24 + 1, 'the columns still fit the page');
-  assert.ok(text(buildLoadReportPdf(rows, {})).includes('Transport company'));
+  assert.ok(text(buildLoadReportPdf(rows, {})).includes('Carrier'));
   const none = loadReportRows([load({ id: 'b' })], ctx);
-  assert.ok(!text(buildLoadReportPdf(none, {})).includes('Transport company'));
+  assert.ok(!text(buildLoadReportPdf(none, {})).includes('Carrier'));
 });
 
 check('the load ticket shows the company beside the truck and the driver, and is as it was with none', () => {
@@ -71,9 +71,9 @@ check('the form has the field, with the companies used before and the freight ca
 });
 
 check('it is merged with the rest of a ticket, labelled in the audit trail, and in the export', () => {
-  assert.ok(TICKET_FIELDS.some(([k, l]) => k === 'truckCompany' && l === 'Transport company'));
-  assert.ok(read('docs/js/audit.js').includes("truck_company: 'Transport company'"));
-  assert.ok(read('docs/js/views/settingsexport.js').includes("label: 'Transport company', get: (m) => m.truckCompany ?? ''"));
+  assert.ok(TICKET_FIELDS.some(([k, l]) => k === 'truckCompany' && l === 'Carrier'));
+  assert.ok(read('docs/js/audit.js').includes("truck_company: 'Carrier'"));
+  assert.ok(read('docs/js/views/settingsexport.js').includes("label: 'Carrier', get: (m) => m.truckCompany ?? ''"));
 });
 
 check('a carrier column in a loads file is recognised and goes on the load', () => {

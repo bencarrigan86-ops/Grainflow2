@@ -63,7 +63,7 @@ check('totals add up the loads and tonnes', () => {
 check('names: a contract with no number, in transit, unknown things', () => {
   assert.equal(endName({ type: 'sale', id: 'k2' }, ctx), 'Louis Dreyfus');
   assert.equal(endName({ type: 'silo', id: '__transit__' }, ctx), 'In transit');
-  assert.equal(endName({ type: 'field', id: 'nope' }, ctx), 'Unknown paddock');
+  assert.equal(endName({ type: 'field', id: 'nope' }, ctx), 'Unknown field');
 });
 check('times are kept to 24 hour text, and rubbish is dropped', () => {
   assert.equal(cleanTime('7:05'), '07:05'); assert.equal(cleanTime('14:30:10'), '14:30');
@@ -290,9 +290,9 @@ check('the choices are what is on the loads, each once', () => {
 });
 check('the narrowing is written under the heading of the PDF', () => {
   assert.equal(filterText({}, ctx), '');
-  assert.equal(filterText({ fieldId: 'f1', truck: 'ABC123' }, ctx), 'Paddock River Block · Truck ABC123');
+  assert.equal(filterText({ fieldId: 'f1', truck: 'ABC123' }, ctx), 'Field River Block · Truck ABC123');
   const pdf = text(buildLoadReportPdf(loadReportRows(all, ctx, { fieldId: 'f1' }), { filters: filterText({ fieldId: 'f1' }, ctx) }));
-  assert.ok(pdf.includes('Paddock River Block'));
+  assert.ok(pdf.includes('Field River Block'));
 });
 check('the quick date ranges: today, yesterday, weeks from Monday, months, and all dates', () => {
   const by = (today) => Object.fromEntries(datePresets(today).map((p) => [p.key, [p.from, p.to]]));
@@ -321,7 +321,7 @@ check('a load into a silo is a load too: the report is not only for contracts', 
 });
 check('the words for several ticks', () => {
   assert.equal(filterText({ saleIds: ['k1', 'k2'], trucks: ['ABC123', 'XYZ 9'] }, ctx), 'Contract Graincorp #C-77, Louis Dreyfus · Truck ABC123, XYZ 9');
-  assert.equal(filterText({ commodityIds: ['w'], fieldIds: ['f1'], storageIds: ['s1'] }, ctx), 'Commodity Wheat · Paddock River Block · Storage Silo 3');
+  assert.equal(filterText({ commodityIds: ['w'], fieldIds: ['f1'], storageIds: ['s1'] }, ctx), 'Commodity Wheat · Field River Block · Storage Silo 3');
 });
 check('storage in, out or both: in is loads into a silo, out is loads out of one, with or without a silo picked', () => {
   const ids = (o) => loadReportRows(all, ctx, o).map((r) => r.id).sort();

@@ -2,8 +2,8 @@
 // figures under it. Same numbers as the screen (seasonAverages() is passed in), laid out portrait, one block per crop in the
 // same green as the Position page. Pure: it builds bytes and touches nothing else.
 
-import { Pdf } from './pdf.js?v=509';
-import { drawBrandLogo } from './brand.js?v=509';
+import { Pdf } from './pdf.js?v=511';
+import { drawBrandLogo } from './brand.js?v=511';
 
 const PAGE = { width: 595.28, height: 841.89 };
 const M = 36;
@@ -144,10 +144,10 @@ export function averagesPdf(result = { labels: [], commodities: [] }, { business
 
   // what the figures mean, once, at the end
   const notes = [
-    'Yield is total tonnes over total hectares, so bigger paddocks count for more. Seasons with no tonnes are left out.',
+    'Yield is total tonnes over total hectares, so bigger fields count for more. Seasons with no tonnes are left out.',
     'Price is weighted by tonnes sold. Contract is the price on the contract; net is what is left per tonne after freight and levies.',
   ];
-  if (commodities.some((c) => c.hasDouble)) notes.push('Double is the yield of paddocks ticked as a double crop (grown straight after another crop); fallow is every other paddock of that crop.');
+  if (commodities.some((c) => c.hasDouble)) notes.push('Double is the yield of fields ticked as a double crop (grown straight after another crop); fallow is every other field of that crop.');
   if (anyEstimate) notes.unshift('"est" means at least one season in that average is a forecast yield, not a recorded one.');
   ensure(notes.length * 13 + 4);
   notes.forEach((n) => { pdf.text(M, y, n, { size: 8, gray: GREY }); y += 13; });

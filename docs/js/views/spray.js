@@ -4,21 +4,21 @@
 // spray marked. What is on the form and where is decided in spray.js; the PDF is drawn in spraypdf.js. The job is saved
 // as it is filled in, so a request can be started in the paddock and finished at the desk.
 
-import { db } from '../storage.js?v=509';
-import { farmSwitch, canChangeArea } from '../nav.js?v=509';
-import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=509';
-import { num, esc, todayLocal, dmy } from '../fmt.js?v=509';
-import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=509';
+import { db } from '../storage.js?v=511';
+import { farmSwitch, canChangeArea } from '../nav.js?v=511';
+import { openSheet, field, getVal, confirmDelete, toast, notify } from '../ui.js?v=511';
+import { num, esc, todayLocal, dmy } from '../fmt.js?v=511';
+import { mapLayout, PALETTE, NO_CROP, NO_FARM } from '../farmmap.js?v=511';
 import {
   FORMS, RATE_UNITS, MAX_CHEMICALS, CHECKLIST, sprayDefaults, sprayProblems, sprayTotals, sprayTitle, usedChemicals, plain,
-} from '../spray.js?v=509';
-import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=509';
-import { viewPdf } from '../pdfview.js?v=509';
-import { loadMySignature } from '../mysignature.js?v=509';
-import { signerNamesFor } from './signtoggle.js?v=509';
-import { signatureSvg } from './signaturepad.js?v=509';
-import { openMapSheet } from './farmmap.js?v=509';
-import { buildSprayPdf } from '../spraypdf.js?v=509';
+} from '../spray.js?v=511';
+import { sharePdf, downloadFile, safeFileName, canShareFiles } from '../sharefile.js?v=511';
+import { viewPdf } from '../pdfview.js?v=511';
+import { loadMySignature } from '../mysignature.js?v=511';
+import { signerNamesFor } from './signtoggle.js?v=511';
+import { signatureSvg } from './signaturepad.js?v=511';
+import { openMapSheet } from './farmmap.js?v=511';
+import { buildSprayPdf } from '../spraypdf.js?v=511';
 
 // A farm worker can write spray requests on a farm that has switched it on (see farmswitches.js); sending one on is for an owner or manager.
 export const canSpray = (role) => canChangeArea(role, 'sprays', ['owner', 'manager'].includes(role) || (role === 'farm_worker' && farmSwitch('workersRaiseSprays')));
@@ -32,13 +32,13 @@ export function openSprayJobsSheet() {
     const draw = () => {
       const jobs = db.getSprayJobs().slice().sort((a, b) => String(b.dateRequired || '9999').localeCompare(String(a.dateRequired || '9999')) || String(b.jobNo).localeCompare(String(a.jobNo)));
       root.innerHTML = `
-        ${jobs.length === 0 ? '<div class="empty" style="padding:10px 0">No spray requests yet. Make one, tick the paddocks, and send it to the contractor.</div>' : jobs.map((j, n) => {
+        ${jobs.length === 0 ? '<div class="empty" style="padding:10px 0">No spray requests yet. Make one, tick the fields, and send it to the contractor.</div>' : jobs.map((j, n) => {
           const t = sprayTotals(j); const [label, cls] = STATUS[j.status] || STATUS.draft;
           return `
           <div class="list-item stack band${n % 2 ? ' alt' : ''}" data-job="${esc(j.id)}">
             <div class="li-top"><div class="main">${esc(sprayTitle(j))}</div><div class="main">${num(t.ha, 0)} ha</div></div>
             <div class="meta">${esc([usedChemicals(j).map((c) => c.name).join(' + '), j.dateRequired && `needed ${dmy(j.dateRequired)}`].filter(Boolean).join(' · ')) || 'No product yet'}</div>
-            <div class="li-foot"><span class="meta">${t.paddocks} paddock${t.paddocks === 1 ? '' : 's'}</span><span class="badges"><span class="badge ${cls}">${label}</span></span></div>
+            <div class="li-foot"><span class="meta">${t.paddocks} field${t.paddocks === 1 ? '' : 's'}</span><span class="badges"><span class="badge ${cls}">${label}</span></span></div>
           </div>`;
         }).join('')}
         <button type="button" class="btn" id="sp-new" style="margin-top:10px">+ New spray request</button>`;
@@ -146,8 +146,8 @@ export async function openSprayFormSheet(existing, start = {}) {
       const showHeads = named.length > 0;
       return `
         <div class="card">
-          <h2>Paddocks to spray</h2>
-          ${fields.length === 0 ? '<div class="empty">Add your paddocks in Production first.</div>' : order.map((farm) => {
+          <h2>Fields to spray</h2>
+          ${fields.length === 0 ? '<div class="empty">Add your fields in Production first.</div>' : order.map((farm) => {
             const list = groups.get(farm);
             const all = list.every((f) => ticked.has(f.id));
             const rows = list.map((f, n) => `<label class="row sp-band${n % 2 ? ' alt' : ''}" style="cursor:pointer"><span class="label"><input type="checkbox" class="sp-pad" data-id="${esc(f.id)}" ${ticked.has(f.id) ? 'checked' : ''} style="width:18px;height:18px;vertical-align:middle;margin-right:8px" />${esc(f.name)}</span><span class="value">${num(Number(f.areaHa) || 0, 1)} ha</span></label>`).join('');
@@ -250,7 +250,7 @@ export async function openSprayFormSheet(existing, start = {}) {
         <div class="card">
           <h2>The job</h2>
           <div class="grid-2">
-            ${field({ label: 'Property', id: 'sp-property', value: d.property })}
+            ${field({ label: 'Farm', id: 'sp-property', value: d.property })}
             ${field({ label: 'Crop', id: 'sp-crop', value: d.crop })}
           </div>
           <div class="grid-2">
@@ -265,7 +265,7 @@ export async function openSprayFormSheet(existing, start = {}) {
         <div id="sp-problems" class="hint" style="color:var(--danger);margin:8px 0"></div>
         <button class="btn secondary" id="sp-view" style="margin-bottom:8px">View PDF</button>
         ${canSendSpray(db.getRole()) ? `<button class="btn" id="sp-send">${share ? 'Save and send' : 'Save, download and email'}</button>
-        <button class="btn secondary" id="sp-download" style="margin-top:8px">Save and download the PDF</button>` : '<div class="hint">A manager checks it and sends it to the contractor.</div>'}
+        <button class="btn secondary" id="sp-download" style="margin-top:8px">Save and download PDF</button>` : '<div class="hint">A manager checks it and sends it to the contractor.</div>'}
         <button class="btn${canSendSpray(db.getRole()) ? ' secondary' : ''}" id="sp-save" style="margin-top:8px">Save as a draft</button>
         ${savedId && canSendSpray(db.getRole()) ? `<button class="btn secondary" id="sp-done" style="margin-top:8px">${d.status === 'done' ? 'Mark as not done' : 'Mark as done'}</button><button class="btn ghost-danger" id="sp-delete" style="margin-top:8px">Delete this request</button>` : ''}`;
       wire(); overrides(); totals();
@@ -284,7 +284,7 @@ export async function openSprayFormSheet(existing, start = {}) {
       const any = pads.some((p) => Object.keys(set[p.id] || {}).length);
       box.innerHTML = `
         <details class="sp-ovr" ${any ? 'open' : ''} style="margin:4px 0 10px">
-          <summary style="cursor:pointer;font-weight:600;padding:6px 0">Different rate on some paddocks${any ? '' : ' (optional)'}</summary>
+          <summary style="cursor:pointer;font-weight:600;padding:6px 0">Different rate on some fields${any ? '' : ' (optional)'}</summary>
           <div class="hint" style="margin-bottom:6px">Leave a box empty to use the rate above.</div>
           ${pads.map((p, n) => `
             <div class="sp-block${n % 2 ? ' alt' : ''}">
@@ -311,13 +311,13 @@ export async function openSprayFormSheet(existing, start = {}) {
       collect();
       const t = sprayTotals(d);
       const pad = root.querySelector('#sp-padtotal');
-      if (pad) pad.textContent = t.paddocks ? `${t.paddocks} paddock${t.paddocks === 1 ? '' : 's'}, ${plain(t.ha, 1)} ha` : 'None ticked yet.';
+      if (pad) pad.textContent = t.paddocks ? `${t.paddocks} field${t.paddocks === 1 ? '' : 's'}, ${plain(t.ha, 1)} ha` : 'None ticked yet.';
       const box = root.querySelector('#sp-totals');
       if (box) {
         // a product at two rates is shown as each rate and what it takes
         const bits = t.chemicals.filter((c) => c.text).map((c) => (c.groups.length > 1 ? `${c.name}: ${c.groups.map((g) => `${g.amount} at ${g.rateText}`).join(', ')}` : `${c.name}: ${c.text}`));
         if (t.waterL) bits.push(`water: ${num(t.waterL, 0)} L`);
-        box.textContent = t.ha && bits.length ? `For ${plain(t.ha, 1)} ha: ${bits.join(' · ')}` : 'Tick the paddocks and give a rate to see what to mix.';
+        box.textContent = t.ha && bits.length ? `For ${plain(t.ha, 1)} ha: ${bits.join(' · ')}` : 'Tick the fields and give a rate to see what to mix.';
       }
     }
 
@@ -408,7 +408,7 @@ export async function openSprayFormSheet(existing, start = {}) {
         const fileName = safeFileName(`Spray request ${d.jobNo} ${d.contractor} ${dmy(d.dateRequired)}`);
         const subject = `Spray request ${d.jobNo}${d.property ? ` - ${d.property}` : ''}`;
         const t = sprayTotals(d);
-        const body = `Hi,\n\nPlease find spray request ${d.jobNo} attached: ${t.paddocks} paddock${t.paddocks === 1 ? '' : 's'}, ${plain(t.ha, 1)} ha, needed ${dmy(d.dateRequired)}. The map showing the paddocks is on the last page.\n\nPlease call to confirm a date.\n\nRegards,\n${business.contactName || business.entityName || ''}`;
+        const body = `Hi,\n\nPlease find spray request ${d.jobNo} attached: ${t.paddocks} field${t.paddocks === 1 ? '' : 's'}, ${plain(t.ha, 1)} ha, needed ${dmy(d.dateRequired)}. The map showing the fields is on the last page.\n\nPlease call to confirm a date.\n\nRegards,\n${business.contactName || business.entityName || ''}`;
         // on a computer there is no share sheet: sharePdf saves the file and opens an email to attach it to
         if (downloadOnly) { downloadFile(bytes, fileName); toast('Saved and downloaded'); markSent(); return; }
         const result = await sharePdf(bytes, fileName, { title: subject, text: body, mail: { to: d.contractorEmail, subject, body } });

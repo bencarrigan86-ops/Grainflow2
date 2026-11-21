@@ -157,7 +157,7 @@ check('the map card says why there is nothing to copy', () => {
   const bare = mapCopyReport(seasons, '2026', [fld('x', 'North', 1)]);
   assert.deepEqual([bare.withOutline, bare.copyable], [0, 0]);
   const v = read('docs/js/views/lineup.js');
-  assert.ok(v.includes('mapCopyReport(') && v.includes('has no paddock outlines'));
+  assert.ok(v.includes('mapCopyReport(') && v.includes('has no field outlines'));
 });
 
 check('Settings offers it, and the db sends what it changed', () => {

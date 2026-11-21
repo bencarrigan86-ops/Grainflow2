@@ -105,11 +105,11 @@ check('when a heading the setup relied on has gone, it asks again and keeps what
   assert.equal(c.confirm, true);
   assert.equal(c.setup.columns.silo, 'Silo', 'what still fits is kept');
   assert.equal(c.setup.columns.field, 'Field', 'and the renamed one is found');
-  assert.ok(c.problems.some((p) => /Paddock/.test(p)));
+  assert.ok(c.problems.some((p) => /Field/.test(p)));
 });
 check('a needed column that was never matched is a problem', () => {
   const p = setupProblems({ columns: { date: 'Date' } }, ['Date']);
-  assert.ok(p.some((x) => /Paddock/.test(x)));
+  assert.ok(p.some((x) => /Field/.test(x)));
   assert.ok(p.some((x) => /Silo/.test(x)));
 });
 check('the choices survive being saved and read back', () => {

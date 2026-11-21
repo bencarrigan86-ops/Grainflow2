@@ -35,15 +35,15 @@ export const INVITABLE_ROLES = [
   { value: 'owner',       label: 'Owner',
     blurb: 'Full access, including bank details, contract pricing, and inviting or removing anyone else — including you.' },
   { value: 'manager',     label: 'Farm manager',
-    blurb: 'Runs paddocks, silos and loads, and handles orders, invoices and bills. Cannot see contract prices, overheads or the bank details in Settings, and cannot change the business details.' },
+    blurb: 'Runs fields, silos and loads, and handles orders, invoices and bills. Cannot see contract prices, overheads or the bank details in Settings, and cannot change the business details.' },
   { value: 'bookkeeper',  label: 'Bookkeeper',
-    blurb: 'Contracts and prices, invoicing and bills. The financial side. Sees paddocks, loads and reports, but not Position, Storage, overheads or grain orders, and changes no paddocks, stock or loads.' },
+    blurb: 'Contracts and prices, invoicing and bills. The financial side. Sees fields, loads and reports, but not Position, Storage, overheads or grain orders, and changes no fields, stock or loads.' },
   { value: 'farm_worker', label: 'Farm worker',
-    blurb: 'Paddocks, storage and movements. No contract pricing, no position.' },
+    blurb: 'Fields, storage and loads. No contract pricing, no position.' },
   { value: 'driver',      label: 'Driver',
-    blurb: 'Movements only — the loads they cart and nothing else.' },
+    blurb: 'Loads only — the ones they cart and nothing else.' },
   { value: 'advisor',     label: 'Advisor',
-    blurb: 'Looks and changes nothing: an agronomist, accountant or bank. Sees paddocks, production, inputs and sprays. Loads, prices and overheads only if you switch them on in Settings.' },
+    blurb: 'Looks and changes nothing: an agronomist, accountant or bank. Sees fields, production, inputs and sprays. Loads, prices and overheads only if you switch them on in Settings.' },
 ];
 
 export const DEFAULT_EXPIRY_DAYS = 14;

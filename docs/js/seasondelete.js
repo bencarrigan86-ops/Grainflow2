@@ -10,7 +10,7 @@ const HOUR = 60 * 60 * 1000;
 export const BACKUP_FRESH_MS = HOUR;
 
 const LISTS = [
-  ['fields', 'paddock', 'paddocks'],
+  ['fields', 'field', 'fields'],
   ['storages', 'silo or bunker', 'silos and bunkers'],
   ['sales', 'contract', 'contracts'],
   ['movements', 'load', 'loads'],

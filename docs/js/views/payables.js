@@ -4,17 +4,17 @@
 // what is unpaid and overdue, and the brokerage that has run up on contracts but has not been billed yet. Each
 // bill is recorded in a form of its own. The arithmetic is in payables.js.
 
-import { db } from '../storage.js?v=509';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=509';
-import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=509';
+import { db } from '../storage.js?v=511';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast } from '../ui.js?v=511';
+import { num, money, esc, shortDate, todayLocal } from '../fmt.js?v=511';
 import {
   KINDS, kindLabel, billTotal, gstOn, isOverdue, summarise, brokerageOwed, paidByBuyer,
-} from '../payables.js?v=509';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=509';
-import { activeSales } from '../paidsales.js?v=509';
-import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=509';
-import { ginOffsetOptions, ginBillTotal, ginBillTakenOff } from '../ginoffset.js?v=509';
-import { matchesAll, amountText } from '../listsearch.js?v=509';
+} from '../payables.js?v=511';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=511';
+import { activeSales } from '../paidsales.js?v=511';
+import { freightOwed, freightTitle, perTonne, rateText } from '../freight.js?v=511';
+import { ginOffsetOptions, ginBillTotal, ginBillTakenOff } from '../ginoffset.js?v=511';
+import { matchesAll, amountText } from '../listsearch.js?v=511';
 
 // what the list shows, kept while the app is open
 let filterStatus = 'unpaid';   // unpaid | paid | all
@@ -195,7 +195,7 @@ export function openBillSheet(existing, defaults = {}) {
         ${field({ label: 'Type', id: 'b-kind', type: 'select', value: src.kind || 'other', options: KINDS.map((k) => ({ value: k.key, label: k.label })) })}
         ${field({ label: 'Due date', id: 'b-due', type: 'date', value: src.dueDate })}
       </div>
-      ${field({ label: 'From', id: 'b-supplier', value: src.supplier, placeholder: 'e.g. the broker, the carrier, GrainCorp', list: 'dl-suppliers' })}
+      ${field({ label: 'Supplier', id: 'b-supplier', value: src.supplier, placeholder: 'e.g. the broker, the carrier, GrainCorp', list: 'dl-suppliers' })}
       <div class="grid-2">
         ${field({ label: 'Their invoice no.', id: 'b-ref', value: src.reference })}
         ${field({ label: 'Invoice date', id: 'b-date', type: 'date', value: src.invoiceDate ?? (existing ? '' : today) })}

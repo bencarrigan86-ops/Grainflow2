@@ -1,6 +1,6 @@
 // The words and small checks for trial farms, kept apart from the server calls so they can be tested without a connection.
 
-import { APP_ADDRESS } from './env.js?v=509';
+import { APP_ADDRESS } from './env.js?v=511';
 
 export const asText = (v) => String(v ?? '').trim();
 
@@ -61,7 +61,7 @@ export function ownSeasonGuess(now = new Date()) {
 
 /** The confirm text before the sample is cleared. */
 export function startOwnWarning() {
-  return 'This clears the sample farm (the invented paddocks, silos, contracts and loads) and gives you a blank season to start your own. Nothing real is lost. It cannot be brought back.';
+  return 'This clears the sample farm (the invented fields, silos, contracts and loads) and gives you a blank season to start your own. Nothing real is lost. It cannot be brought back.';
 }
 
 /** One line in the support login's list: who has started their own, and when. */

@@ -2,9 +2,9 @@
 // style with the Position page. Nitrogen columns are amber and urea-equivalent columns green, as on the screen.
 // The figures come from fertfigures.js (ureaFigures, starterFigures), the same ones the screen uses. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=509';
-import { drawBrandLogo } from './brand.js?v=509';
-import { ureaSummary, starterSummary } from './fertfigures.js?v=509';
+import { Pdf, wrapText } from './pdf.js?v=511';
+import { drawBrandLogo } from './brand.js?v=511';
+import { ureaSummary, starterSummary } from './fertfigures.js?v=511';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;
@@ -84,7 +84,7 @@ export function fertPdf({ urea = [], starter = [], summary = false } = {}, { bus
   y = header();
 
   if (!urea.length && !starter.length) {
-    pdf.text(M, y, 'Nothing to report yet: add a paddock with a fertiliser rate in Production.', { size: 10, gray: GREY });
+    pdf.text(M, y, 'Nothing to report yet: add a field with a fertiliser rate in Production.', { size: 10, gray: GREY });
     footer();
     return pdf.bytes();
   }

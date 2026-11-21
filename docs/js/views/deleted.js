@@ -5,11 +5,11 @@
 // contract, paddock or load brings back what was deleted along with it. Only owners and managers can open this, and
 // only owners see contracts, invoices and bills.
 
-import { db } from '../storage.js?v=509';
-import { supabase } from '../supabase.js?v=509';
-import { openSheet, toast, notify } from '../ui.js?v=509';
-import { esc } from '../fmt.js?v=509';
-import { typeLabel, TYPES, whenText, restoreMessage, visibleDeleted } from '../deleted.js?v=509';
+import { db } from '../storage.js?v=511';
+import { supabase } from '../supabase.js?v=511';
+import { openSheet, toast, notify } from '../ui.js?v=511';
+import { esc } from '../fmt.js?v=511';
+import { typeLabel, TYPES, whenText, restoreMessage, visibleDeleted } from '../deleted.js?v=511';
 
 const DAYS = 60;
 let filterKind = '';   // kept while the app is open
@@ -29,7 +29,7 @@ export function openDeletedSheet() {
       const kinds = TYPES.filter((t) => rows.some((r) => r.tbl === t));
       const shown = visibleDeleted(rows, filterKind);
       root.innerHTML = `
-        <div class="field hint" style="margin-bottom:8px">Everything deleted in the last ${DAYS} days. Restoring brings back what was deleted with it: a contract's terms and orders, a paddock's agronomy, a load's photo.</div>
+        <div class="field hint" style="margin-bottom:8px">Everything deleted in the last ${DAYS} days. Restoring brings back what was deleted with it: a contract's terms and orders, a field's agronomy, a load's photo.</div>
         ${kinds.length > 1 ? `<div class="chips" style="margin-bottom:10px">
           <button type="button" class="chip ${filterKind ? '' : 'active'}" data-kind="">All</button>
           ${kinds.map((k) => `<button type="button" class="chip ${filterKind === k ? 'active' : ''}" data-kind="${k}">${esc(typeLabel(k))}</button>`).join('')}

@@ -1,29 +1,29 @@
-import { db } from '../storage.js?v=509';
-import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=509';
-import { isHay, balesInStorage, describeBales } from '../hay.js?v=509';
-import { modulesReport } from '../modulesreport.js?v=509';
-import { shrinkInSilo, shrinkFraction } from '../shrink.js?v=509';
-import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=509';
-import { isTransit } from '../transit.js?v=509';
-import { isOffFarm } from '../offfarm.js?v=509';
-import { paintOffFarmCard, openOffFarmSheet } from './offfarm.js?v=509';
-import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=509';
-import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=509';
-import { hasStorageQuality } from '../mapping.js?v=509';
-import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=509';
-import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=509';
-import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=509';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=509';
-import { renderRelatedMovements } from './movements.js?v=509';
-import { openSiloSetupSheet } from './silosetup.js?v=509';
-import { openCalculatorSheet } from './calculator.js?v=509';
-import { commodityFills } from '../commodityfill.js?v=509';
-import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=509';
-import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=509';
-import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=509';
+import { db } from '../storage.js?v=511';
+import { siloResult, bunkerResult, bunkerTarpRequirement } from '../calc.js?v=511';
+import { isHay, balesInStorage, describeBales } from '../hay.js?v=511';
+import { modulesReport } from '../modulesreport.js?v=511';
+import { shrinkInSilo, shrinkFraction } from '../shrink.js?v=511';
+import { storageLedgerStock, movementNetForStorage, movementsForEndpoint, bigFirst } from '../derived.js?v=511';
+import { isTransit } from '../transit.js?v=511';
+import { isOffFarm } from '../offfarm.js?v=511';
+import { paintOffFarmCard, openOffFarmSheet } from './offfarm.js?v=511';
+import { gradesFor, allGradeCodes, OTHER_GRADE } from '../grades.js?v=511';
+import { gradeFieldHtml, wireGradeField } from '../gradepick.js?v=511';
+import { hasStorageQuality } from '../mapping.js?v=511';
+import { fumigationLog, fumigationState, fumigationLine, withholdingEnd, clearOn } from '../fumigation.js?v=511';
+import { searchStorages, commodityTabs, filterByTab, naturalByName, NO_COMMODITY, sortStorages, sortGroupLabel, SORTS } from '../storagefilter.js?v=511';
+import { num, tons, esc, shortDate, todayLocal, dmy } from '../fmt.js?v=511';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, askConfirm, notify } from '../ui.js?v=511';
+import { renderRelatedMovements } from './movements.js?v=511';
+import { openSiloSetupSheet } from './silosetup.js?v=511';
+import { openCalculatorSheet } from './calculator.js?v=511';
+import { commodityFills } from '../commodityfill.js?v=511';
+import { capacityInfo, capacityLine, assumedCommodity, wantsCommodity } from '../storagecapacity.js?v=511';
+import { loadSpaceAs, saveSpaceAs } from '../spacefor.js?v=511';
+import { layersForStorage, predictPlan, predictOutload, specText, SPECS, outloadEndOf, looksLikeBunker, extraSpecKey } from '../outload.js?v=511';
 import {
   gradeMix, visibleMix, dominantGrade, hasGrades, mixText, storageSvg, cleanBands, layersTotal, gradeKey, NO_GRADE,
-} from '../silolayers.js?v=509';
+} from '../silolayers.js?v=511';
 
 let unsub = null;
 // 'commodity': grouped by commodity, in the order of Sort by. 'name': one flat list, A to Z (and no Sort by to choose).
@@ -305,7 +305,7 @@ function cottonOnHandCard() {
     ${h.inYard > 0 ? line('In the gin yard', `${num(h.inYard, 0)} modules &middot; ${num(h.yardBales, 0)} bales`) : ''}
     ${h.inShed > 0 ? line('In the bale shed', `${num(h.inShed, 0)} bales`) : ''}
     ${line('<strong>Expected bales on hand</strong>', `<strong>${num(h.total, 0)}</strong>`)}
-    <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Modules in the field are listed by paddock, so you can see where they are. Moving them to the gin yard takes them off the paddock.</div>`}
+    <div class="hint" style="margin-top:6px;font-size:12px;color:var(--text-dim)">Modules in the field are listed by field, so you can see where they are. Moving them to the gin yard takes them off the field.</div>`}
   </div>`;
 }
 
@@ -996,7 +996,7 @@ function buildContents(root, existing, kind = existing?.kind) {
     const grade = input.value.trim();
     if (!grade) { input.focus(); return; }
     const ids = [...ungradedIds];
-    const ok = await askConfirm(`Set the grade of ${ids.length} load${ids.length === 1 ? '' : 's'} to ${grade}?\n\nThis changes the loads themselves (on the Movement tab), not just this silo.`, { confirmLabel: 'Set grade' });
+    const ok = await askConfirm(`Set the grade of ${ids.length} load${ids.length === 1 ? '' : 's'} to ${grade}?\n\nThis changes the loads themselves (on the Loads tab), not just this silo.`, { confirmLabel: 'Set grade' });
     if (!ok) return;
     for (const id of ids) db.upsertMovement({ id, grade });
     toast(`${ids.length} load${ids.length === 1 ? '' : 's'} set to ${grade}`);
@@ -1054,7 +1054,7 @@ function predictorFold(existing) {
       <summary><div><h2>Plan an outload</h2>
         <div class="sub">Loads in the order they will come out, and what each truck will carry</div></div></summary>
       <div class="field hint" style="margin-bottom:8px">Last in, first out: the most recent load comes out first. Add
-        the grade, protein and moisture to each load on the Movement tab and this shows what every truck will take.</div>
+        the grade, protein and moisture to each load on the Loads tab and this shows what every truck will take.</div>
       <div class="subhead" style="margin-top:4px">In the storage now, top first</div>
       <div id="op-stack"></div>
       <div class="subhead">Plan an outload</div>
@@ -1239,9 +1239,9 @@ export function openStorageSheet(existing) {
           ${field({ label: 'Commodity stored', id: 's-commodity', type: 'select', value: existing?.commodityId, options: commodityOptions(commodities) })}
           ${field({ label: 'Opening stock (t)', id: 's-opening', type: 'number', step: '0.01', value: existing?.openingStock ?? 0 })}
         </div>
-        ${pairHint('Opening stock is a stocktake baseline of what is in it now. Movements adjust from there.')}
+        ${pairHint('Opening stock is a stocktake baseline of what is in it now. Loads adjust from there.')}
         <div class="row"><span class="label"><strong>Tracked stock</strong></span><span class="value" id="s-ledger-preview" style="font-size:20px">—</span></div>
-        ${(() => { const sh = existing ? shrinkInSilo(existing.id, movements) : 0; const f = shrinkFraction(commodities.find((c) => c.id === existing?.commodityId)); return sh > 0 ? `<div class="row"><span class="label">Shrink so far<span class="sub">${num(f * 100, 2)}% off grain put in from paddocks</span></span><span class="value">${num(sh, 1)} t</span></div>` : ''; })()}
+        ${(() => { const sh = existing ? shrinkInSilo(existing.id, movements) : 0; const f = shrinkFraction(commodities.find((c) => c.id === existing?.commodityId)); return sh > 0 ? `<div class="row"><span class="label">Shrink so far<span class="sub">${num(f * 100, 2)}% off grain put in from fields</span></span><span class="value">${num(sh, 1)} t</span></div>` : ''; })()}
         <div class="fold-bands">
         ${qualityFold(existing, commodities.find((c) => c.id === existing?.commodityId))}
         ${contentsFold(existing, gradesInUse, kind)}
@@ -1285,7 +1285,7 @@ export function openStorageSheet(existing) {
           </div>
         </div>` : ''}
         <div class="row"><span class="label"><strong>Estimated total (measured)</strong></span><span class="value" id="s-total-preview" style="font-size:20px">—</span></div>
-        <div class="field hint">Set the level above after physically dipping the ${kind}. Tracked stock is separate: it's your opening/current stock figure plus movements in/out, and doesn't need to match the measured estimate exactly.</div>
+        <div class="field hint">Set the level above after physically dipping the ${kind}. Tracked stock is separate: it's your opening/current stock figure plus loads in/out, and doesn't need to match the measured estimate exactly.</div>
         ${kind === 'bunker' ? `
         <hr class="sep" />
         ${field({ label: 'Tarp overhang per side (m)', id: 's-overhang', type: 'number', step: '0.1', value: existing?.tarpOverhangM ?? 1.5 })}

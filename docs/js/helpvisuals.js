@@ -3,7 +3,7 @@
 // Pure: each function returns an <svg> string. The figures are illustrations of how a part of the app works, with made-up
 // numbers, not live data. The wording they carry is checked by tests/help.test.mjs along with the rest of the guide.
 
-import { TABS_BY_ROLE } from './nav.js?v=509';
+import { TABS_BY_ROLE } from './nav.js?v=511';
 
 const W = 340;
 const C = {
@@ -11,7 +11,7 @@ const C = {
   ink: 'var(--text)', dim: 'var(--text-dim)', line: 'var(--border)', card: 'var(--surface)', bg: 'var(--bg)',
   red: '#d8362b', purple: '#8e44ad', teal: '#16807a',
 };
-const TAB_LABEL = { position: 'Position', production: 'Production', sales: 'Sales', movement: 'Movement', storage: 'Storage', reports: 'Reports' };
+const TAB_LABEL = { position: 'Position', production: 'Production', sales: 'Sales', movement: 'Loads', storage: 'Storage', reports: 'Reports' };
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const f1 = (n) => Math.round(n * 10) / 10;
@@ -77,7 +77,7 @@ export function tabsSvg(role) {
 
 /** A truck between where the grain came from and where it went, with its weights. */
 function loadSvg() {
-  let b = rect(4, 18, 82, 56, { stroke: C.green, sw: 1.5 }) + text(45, 40, 'From', { size: 9.5, fill: C.dim }) + text(45, 58, 'Paddock or silo', { size: 10.5, bold: true });
+  let b = rect(4, 18, 82, 56, { stroke: C.green, sw: 1.5 }) + text(45, 40, 'From', { size: 9.5, fill: C.dim }) + text(45, 58, 'Field or silo', { size: 10.5, bold: true });
   b += rect(254, 18, 82, 56, { stroke: C.green, sw: 1.5 }) + text(295, 40, 'Going to', { size: 9.5, fill: C.dim }) + text(295, 58, 'Silo or contract', { size: 10.5, bold: true });
   // the truck
   b += rect(112, 28, 58, 28, { fill: C.green, stroke: C.green, r: 3 });
@@ -87,7 +87,7 @@ function loadSvg() {
   // the weights
   const col = (x, name, val, fill) => rect(x, 88, 98, 36, { fill: fill || C.card, stroke: fill ? C.green : C.line }) + text(x + 49, 102, name, { size: 8.5, fill: fill ? '#fff' : C.dim, bold: true }) + text(x + 49, 118, val, { size: 12, bold: true, fill: fill ? '#fff' : C.ink });
   b += col(4, 'GROSS', '45.0 t') + col(121, 'TARE', '15.0 t') + col(238, 'NET', '30.0 t', C.green);
-  return svg(132, 'A load: from a paddock or silo, by truck, to a silo or contract, with its gross, tare and net weights', b);
+  return svg(132, 'A load: from a field or silo, by truck, to a silo or contract, with its gross, tare and net weights', b);
 }
 
 /** A load ticket as it comes out as a PDF. */
@@ -116,7 +116,7 @@ function paddockSvg() {
   const b = box(4, 92, '210', 'hectares') + text(110, 44, '×', { size: 18, fill: C.dim })
     + box(126, 92, '4.1', 'tonnes per ha') + text(232, 44, '=', { size: 18, fill: C.dim })
     + box(246, 90, '861 t', 'produced', C.green);
-  return svg(76, 'A paddock\'s area times its yield per hectare is the tonnes it produced', b);
+  return svg(76, 'A field\'s area times its yield per hectare is the tonnes it produced', b);
 }
 
 /** Paddocks on the farm map, coloured by crop. */
@@ -125,13 +125,13 @@ function mapSvg() {
   let b = P('6,8 108,6 112,70 4,72', C.green, 'Boundary', 58, 44);
   b += P('120,6 214,8 216,70 118,70', C.amber, 'River Block', 168, 44);
   b += P('6,82 90,80 92,140 4,142', C.purple, 'Homestead', 48, 114);
-  b += P('100,80 214,82 216,142 100,140', C.green, 'Long Paddock', 158, 114);
+  b += P('100,80 214,82 216,142 100,140', C.green, 'Long Field', 158, 114);
   b += `<text x="226" y="22" font-size="9.5" font-weight="700" fill="${C.ink}">Home Farm</text>`;
   [[C.green, 'Wheat'], [C.amber, 'Barley'], [C.purple, 'Canola']].forEach(([c, l], i) => {
     b += rect(226, 36 + i * 20, 11, 11, { fill: c, stroke: 'none', r: 3 }) + text(243, 45 + i * 20, l, { size: 10, anchor: 'start' });
   });
   b += text(226, 112, 'Outlines come from', { size: 8.5, anchor: 'start', fill: C.dim }) + text(226, 124, 'a shapefile', { size: 8.5, anchor: 'start', fill: C.dim });
-  return svg(150, 'The farm map: paddock outlines coloured by their crop', b);
+  return svg(150, 'The farm map: field outlines coloured by their crop', b);
 }
 
 /** A silo with grain in it. */
@@ -173,11 +173,11 @@ function invoiceSvg() {
 /** A new season: what goes across and what starts empty. */
 function seasonSvg() {
   const col = (x, title, lines, accent) => rect(x, 6, 140, 104, { stroke: accent, sw: 1.5 }) + text(x + 70, 26, title, { size: 12, bold: true }) + lines.map((l, i) => text(x + 70, 48 + i * 17, l, { size: 9.5, fill: C.dim })).join('');
-  let b = col(4, '2026', ['Paddocks and outlines', 'Silos and bunkers', 'Commodities', 'Contracts and loads'], C.dim);
-  b += col(196, '2027', ['Paddocks and outlines', 'Silos and bunkers', 'Commodities', 'Contracts and loads'], C.green);
+  let b = col(4, '2026', ['Fields and outlines', 'Silos and bunkers', 'Commodities', 'Contracts and loads'], C.dim);
+  b += col(196, '2027', ['Fields and outlines', 'Silos and bunkers', 'Commodities', 'Contracts and loads'], C.green);
   b += arrow(150, 58, 190) + text(170, 50, 'carries', { size: 8.5, fill: C.dim });
   b += `<rect x="204" y="86" width="124" height="16" rx="4" fill="${C.bg}"/>` + text(266, 98, 'start empty', { size: 8.5, fill: C.dim });
-  return svg(118, 'Starting a new season: paddocks, silos and commodities carry over, and contracts and loads start empty', b);
+  return svg(118, 'Starting a new season: fields, silos and commodities carry over, and contracts and loads start empty', b);
 }
 
 /** Working without signal. */
@@ -207,7 +207,7 @@ function cottonSvg() {
   const down = (xx, y1, y2, stroke = C.green) => `${line(xx, y1, xx, y2 - 3, { stroke, sw: 2 })}<path d="M${f1(xx - 5)} ${f1(y2 - 8)} L${f1(xx)} ${f1(y2)} L${f1(xx + 5)} ${f1(y2 - 8)}" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
   let b = '';
   // field to gin
-  [['Modules picked', 'paddock sheet'], ['Gin yard', 'Move modules'], ['Ginning run', 'Log ginning']].forEach(([t, sub], i) => {
+  [['Modules picked', 'field sheet'], ['Gin yard', 'Move modules'], ['Ginning run', 'Log ginning']].forEach(([t, sub], i) => {
     b += box(i, 8, 52, t, sub, C.green);
     if (i < 2) b += arrow(x(i) + bw + 3, 34, x(i) + bw + gap - 2, { stroke: C.green });
   });
@@ -228,7 +228,7 @@ function cottonSvg() {
 }
 
 const FIGURES = {
-  start: () => flowSvg([['Paddock', 'Production'], ['Silo', 'Storage'], ['Contract', 'Sales'], ['Invoice', 'Sales'], ['Paid', 'money in']], { arrows: ['load', 'load', '', ''], label: 'How it fits together: grain goes from a paddock to a silo to a contract, then is invoiced and paid' }),
+  start: () => flowSvg([['Field', 'Production'], ['Silo', 'Storage'], ['Contract', 'Sales'], ['Invoice', 'Sales'], ['Paid', 'money in']], { arrows: ['load', 'load', '', ''], label: 'How it fits together: grain goes from a field to a silo to a contract, then is invoiced and paid' }),
   cotton: cottonSvg,
   cottonsell: () => flowSvg([['Ginning run', 'lint buyer pays'], ['Lint invoice', 'take the gin bill off'], ['Gin paid', 'you get the net']], { arrows: ['', ''], label: 'How a gin invoice the lint buyer pays is settled' }),
   load: loadSvg,
@@ -239,7 +239,7 @@ const FIGURES = {
   contracts: contractSvg,
   invoices: invoiceSvg,
   orders: () => flowSvg([['Order', 'from the buyer'], ['Delivery', 'loads to go'], ['Invoice', 'then paid']], { arrows: ['', ''], accent: C.blue, label: 'An order becomes deliveries, then an invoice' }),
-  spray: () => flowSvg([['Tick paddocks', 'on the map'], ['Fill the form', 'product, rate'], ['Send the PDF', 'with the map']], { arrows: ['', ''], accent: C.green, label: 'Spray request: tick the paddocks, fill the form, send the PDF' }),
+  spray: () => flowSvg([['Tick fields', 'on the map'], ['Fill the form', 'product, rate'], ['Send the PDF', 'with the map']], { arrows: ['', ''], accent: C.green, label: 'Spray request: tick the fields, fill the form, send the PDF' }),
   inputs: () => flowSvg([['Buy', 'adds stock'], ['Use', 'takes it off'], ['Count', 'corrects it']], { arrows: ['', ''], accent: C.amber, label: 'Stock goes up with purchases, down with use, and a count corrects it' }),
   signing: () => flowSvg([['Draw it once', 'My signature'], ['Tick sign', 'on the document'], ['Print or send', 'signed']], { arrows: ['', ''], accent: C.green, label: 'Draw your signature once, tick sign on a document, print or send it' }),
   safety: () => flowSvg([['Export backup', 'a file'], ['Keep it', 'off the phone'], ['Import', 'if needed']], { arrows: ['', ''], accent: C.blue, label: 'Export a backup, keep it somewhere else, import it if needed' }),

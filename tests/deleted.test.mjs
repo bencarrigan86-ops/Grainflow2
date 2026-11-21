@@ -18,7 +18,7 @@ console.log('\n=== the words ===');
 check('every kind that can be restored has a name', () => {
   assert.equal(typeLabel('sales'), 'Contract');
   assert.equal(typeLabel('payables'), 'Bill');
-  assert.equal(typeLabel('fields'), 'Paddock');
+  assert.equal(typeLabel('fields'), 'Field');
   for (const t of TYPES) assert.notEqual(typeLabel(t), 'Record', t);
   assert.equal(typeLabel('mystery'), 'Record');
 });

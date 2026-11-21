@@ -1,19 +1,19 @@
-import { db } from '../storage.js?v=509';
-import { num, esc, todayLocal } from '../fmt.js?v=509';
-import { openSheet } from '../ui.js?v=509';
-import { cleanDriverSignature, signedWhen } from '../driversign.js?v=509';
-import { exportRowsAsCSV } from '../csv.js?v=509';
-import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=509';
-import { endpointLabel } from './movements.js?v=509';
-import { layersForStorage } from '../outload.js?v=509';
-import { traceLoads, traceText } from '../trace.js?v=509';
-import { holdings, totalHeld } from '../offfarm.js?v=509';
-import { kindLabel, billTotal } from '../payables.js?v=509';
-import { orderState, STATE_LABEL } from '../orders.js?v=509';
-import { fieldHarvest } from '../harvest.js?v=509';
-import { capacityFor } from '../storagecapacity.js?v=509';
-import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=509';
-import { isAdjustment, noteLabel } from '../adjustment.js?v=509';
+import { db } from '../storage.js?v=511';
+import { num, esc, todayLocal } from '../fmt.js?v=511';
+import { openSheet } from '../ui.js?v=511';
+import { cleanDriverSignature, signedWhen } from '../driversign.js?v=511';
+import { exportRowsAsCSV } from '../csv.js?v=511';
+import { fieldTons, fieldUrea, ureaAppliedKgHaFor, fieldSeed, storageLedgerStock, saleEconomics } from '../derived.js?v=511';
+import { endpointLabel } from './movements.js?v=511';
+import { layersForStorage } from '../outload.js?v=511';
+import { traceLoads, traceText } from '../trace.js?v=511';
+import { holdings, totalHeld } from '../offfarm.js?v=511';
+import { kindLabel, billTotal } from '../payables.js?v=511';
+import { orderState, STATE_LABEL } from '../orders.js?v=511';
+import { fieldHarvest } from '../harvest.js?v=511';
+import { capacityFor } from '../storagecapacity.js?v=511';
+import { qualityColumns, loadQuality, averageQuality, fieldQuality } from '../exportquality.js?v=511';
+import { isAdjustment, noteLabel } from '../adjustment.js?v=511';
 
 function commodityName(commodities, id) {
   return commodities.find((c) => c.id === id)?.name || '';
@@ -34,7 +34,7 @@ export function openExportCsvSheet() {
       <div class="field hint" style="margin-bottom:12px">Each downloads as a .csv file for the "${esc(year)}" season — opens straight into Excel, Numbers or Google Sheets.</div>
       <button class="btn secondary" id="exp-fields" style="margin-bottom:8px">Fields (Production)</button>
       <button class="btn secondary" id="exp-sales" style="margin-bottom:8px">Sales</button>
-      <button class="btn secondary" id="exp-movements" style="margin-bottom:8px">Movements</button>
+      <button class="btn secondary" id="exp-movements" style="margin-bottom:8px">Loads</button>
       <button class="btn secondary" id="exp-storage" style="margin-bottom:8px">Storage (silos &amp; bunkers)</button>
       <button class="btn secondary" id="exp-invoices" style="margin-bottom:8px">Invoices</button>
       <button class="btn secondary" id="exp-payables" style="margin-bottom:8px">Payables (bills owed)</button>
@@ -87,8 +87,8 @@ function exportSalesCSV(year, stamp) {
     { label: 'Buyer', get: (s) => s.buyer ?? '' },
     { label: 'Contract No', get: (s) => s.contractNo ?? '' },
     { label: 'Location', get: (s) => s.location ?? '' },
-    { label: 'Delivery start', get: (s) => s.deliveryStart ?? '' },
-    { label: 'Delivery end', get: (s) => s.deliveryEnd ?? '' },
+    { label: 'Deliver from', get: (s) => s.deliveryStart ?? '' },
+    { label: 'Deliver by', get: (s) => s.deliveryEnd ?? '' },
     { label: 'Tonnes contracted', get: (s) => s.tons ?? '' },
     { label: 'Tonnes delivered', get: (s) => num(saleEconomics(s, movements).tonsDelivered, 2) },
     { label: 'Tonnes due', get: (s) => num(saleEconomics(s, movements).tonsDue, 2) },
@@ -140,7 +140,7 @@ function exportMovementsCSV(year, stamp) {
     { label: 'To', get: (m) => endpointsLabel(m.tos, data) },
     { label: 'Tonnes', get: (m) => m.tons ?? '' },
     { label: 'Truck rego', get: (m) => m.truckRego ?? '' },
-    { label: 'Transport company', get: (m) => m.truckCompany ?? '' },
+    { label: 'Carrier', get: (m) => m.truckCompany ?? '' },
     { label: 'Driver signed', get: (m) => signedWhen(cleanDriverSignature(m.driverSignature)) },
     { label: 'Driver', get: (m) => m.driver ?? '' },
     { label: 'Driver phone', get: (m) => m.driverPhone ?? '' },
@@ -150,7 +150,7 @@ function exportMovementsCSV(year, stamp) {
     // Load by load: this ticket's own grade and measurements
     ...qualityColumns(loadQuality),
     // Which paddocks the grain on this load came from, worked back through the silos it passed through (a silo emptied last in, first out or the other way)
-    { label: 'Paddocks it came from (t)', get: (m) => traceText(traced.get(m.id), data) },
+    { label: 'Fields it came from (t)', get: (m) => traceText(traced.get(m.id), data) },
     { label: 'Comments', get: (m) => m.notes ?? '' },
   ]);
 }
@@ -185,7 +185,7 @@ function exportPayablesCSV(year, stamp) {
   const contract = (id) => { const s = sales.find((x) => x.id === id); return s ? [commodityName(commodities, s.commodityId), s.buyer, s.contractNo ? `#${s.contractNo}` : null].filter(Boolean).join(' · ') : ''; };
   exportRowsAsCSV(`grainflow-payables-${year}-${stamp}.csv`, db.getPayables(), [
     { label: 'Type', get: (p) => kindLabel(p.kind) },
-    { label: 'From', get: (p) => p.supplier ?? '' },
+    { label: 'Supplier', get: (p) => p.supplier ?? '' },
     { label: 'Their invoice no.', get: (p) => p.reference ?? '' },
     { label: 'Invoice date', get: (p) => p.invoiceDate ?? '' },
     { label: 'Due date', get: (p) => p.dueDate ?? '' },
@@ -216,7 +216,7 @@ function exportOrdersCSV(year, stamp) {
     { label: 'Tonnes ordered', get: (o) => num(o.tons, 2) },
     { label: 'Tonnes delivered', get: (o) => num(orderState(o, movements, today).delivered, 2) },
     { label: 'Tonnes left', get: (o) => num(orderState(o, movements, today).left, 2) },
-    { label: 'Freight company', get: (o) => o.freightCompany ?? '' },
+    { label: 'Carrier', get: (o) => o.freightCompany ?? '' },
     { label: 'Status', get: (o) => STATE_LABEL[orderState(o, movements, today).state] },
     { label: 'Comments', get: (o) => o.notes ?? '' },
   ]);

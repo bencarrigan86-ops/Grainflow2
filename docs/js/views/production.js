@@ -1,22 +1,22 @@
-import { db } from '../storage.js?v=509';
-import { tileIcon } from '../tileicon.js?v=509';
-import { cropCostPerHa } from '../grossmargin.js?v=509';
-import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=509';
-import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=509';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=509';
-import { describeMerge } from '../merge.js?v=509';
-import { renderRelatedMovements } from './movements.js?v=509';
-import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=509';
-import { wireJumps } from '../jump.js?v=509';
-import { openMapSheet } from './farmmap.js?v=509';
-import { openInputsSheet } from './inputs.js?v=509';
-import { openSprayFormSheet, canSpray } from './spray.js?v=509';
-import { stockLevels } from '../inputs.js?v=509';
-import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=509';
-import { openModulesPickedSheet } from './modulespicked.js?v=509';
-import { openBalesBaledSheet } from './balesbaled.js?v=509';
-import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=509';
-import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=509';
+import { db } from '../storage.js?v=511';
+import { tileIcon } from '../tileicon.js?v=511';
+import { cropCostPerHa } from '../grossmargin.js?v=511';
+import { productionByCommodity, fieldTons, estimateFieldTons, movementTonsFromField, fieldUrea, ureaAppliedKgHaFor, fieldStarter, fieldSeed, soilNUreaEquivalent, fieldUreaForTarget, groupFieldsByCommodity, maxYieldFromUrea, checkNPerTonne, bigFirst, areaShare, productionSummary } from '../derived.js?v=511';
+import { num, tons, ha, esc, todayLocal, shortDate } from '../fmt.js?v=511';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm, freezeSheet } from '../ui.js?v=511';
+import { describeMerge } from '../merge.js?v=511';
+import { renderRelatedMovements } from './movements.js?v=511';
+import { canSeeYield, canChangeProduction, canSeeArea } from '../nav.js?v=511';
+import { wireJumps } from '../jump.js?v=511';
+import { openMapSheet } from './farmmap.js?v=511';
+import { openInputsSheet } from './inputs.js?v=511';
+import { openSprayFormSheet, canSpray } from './spray.js?v=511';
+import { stockLevels } from '../inputs.js?v=511';
+import { fieldHistory, rotationLine, repeatCrops } from '../fieldhistory.js?v=511';
+import { openModulesPickedSheet } from './modulespicked.js?v=511';
+import { openBalesBaledSheet } from './balesbaled.js?v=511';
+import { isHay, baledTotals, cleanBaled, describeBales, secondaryTypes } from '../hay.js?v=511';
+import { pickedTotals, cleanPicked, moduleEstimate, describeEstimate } from '../modulespicked.js?v=511';
 
 let unsub = null;
 
@@ -160,7 +160,7 @@ export function openFieldSheet(existing) {
       </div>`
     : existing && (hayTypes.length || strawIds.length) ? `
       <div class="field">
-        <label>Straw and hay baled off this paddock</label>
+        <label>Straw and hay baled off this field</label>
         ${strawIds.map((id) => { const t = baledTotals(existing, movements, id); return `<div class="row"><span class="label">${esc(nameOfType(id))}<small style="display:block;font-size:11.5px;color:var(--text-dim)">Baled · moved · in the field</small></span><span class="value">${num(t.baled, 0)} · ${num(t.moved, 0)} · ${num(t.inField, 0)}</span></div>`; }).join('')}
         ${cleanBaled(existing.balesBaled).filter((b) => b.commodityId && b.commodityId !== existing.commodityId).map((b) => baledRow(b, true)).join('')}
         <div class="hint">Straw is its own commodity, on the same ground as the crop. The area is not counted twice.</div>
@@ -189,7 +189,7 @@ export function openFieldSheet(existing) {
         <label>Drive tons from</label>
         <div class="segmented" id="f-mode">
           <button data-mode="estimate" class="${(existing?.yieldMode || 'estimate') !== 'actual' ? 'active' : ''}">Estimate</button>
-          <button data-mode="actual" class="${existing?.yieldMode === 'actual' ? 'active' : ''}">Actual (movements)</button>
+          <button data-mode="actual" class="${existing?.yieldMode === 'actual' ? 'active' : ''}">Actual (loads)</button>
         </div>
         <div class="actual-callout" id="actual-hint"></div>
       </div>
@@ -202,7 +202,7 @@ export function openFieldSheet(existing) {
         ${field({ label: 'Hectares left', id: 'harvestHaLeft', type: 'number', step: '0.01', value: existing?.harvestHaLeft ?? '', placeholder: 'Blank: not part cut' })}
         <div class="yield-only" ${showYield ? '' : 'hidden'}>${field({ label: 'Yield for those (t/ha)', id: 'harvestLeftYield', type: 'number', step: '0.01', value: existing?.harvestLeftYield ?? '', placeholder: 'Blank: as above' })}</div>
       </div>
-      <div class="hint" style="margin:-4px 0 4px;font-size:12px;color:var(--text-dim)">For a part-harvested paddock: the harvest report counts these hectares at their own yield (or the estimate if blank), on top of the tonnes already in. Blank hectares: the whole paddock's estimate less the tickets.</div>
+      <div class="hint" style="margin:-4px 0 4px;font-size:12px;color:var(--text-dim)">For a part-harvested field: the harvest report counts these hectares at their own yield (or the estimate if blank), on top of the tonnes already in. Blank hectares: the whole field's estimate less the tickets.</div>
       <div class="hint" id="cut-so-far" style="margin:0 0 10px;font-size:12px;color:var(--text-dim)"></div>
       </details>
       ${modulesBlock}${balesBlock}
@@ -263,14 +263,14 @@ export function openFieldSheet(existing) {
       </div>
       </details>
       ${canSetCost ? `<details class="fold feature" ${existing?.gmCostHa != null && existing.gmCostHa !== '' ? 'open' : ''}>
-        <summary><div class="feature-head"><h2>Gross margin cost</h2><div class="sub">Cost per hectare for this paddock</div></div></summary>
-      <div class="gm-cost-field" style="margin-top:10px">${field({ label: 'Gross margin cost ($/ha)', id: 'gmCostHa', type: 'number', step: '1', value: existing?.gmCostHa ?? '', placeholder: String(Math.round(cropCostPerHa(initialCommodity, db.get().fields))), hint: 'Blank uses the crop\'s cost from Settings, shown faintly. Type a figure to use your own for this paddock (Gross margin report).' })}</div>
+        <summary><div class="feature-head"><h2>Gross margin cost</h2><div class="sub">Cost per hectare for this field</div></div></summary>
+      <div class="gm-cost-field" style="margin-top:10px">${field({ label: 'Gross margin cost ($/ha)', id: 'gmCostHa', type: 'number', step: '1', value: existing?.gmCostHa ?? '', placeholder: String(Math.round(cropCostPerHa(initialCommodity, db.get().fields))), hint: 'Blank uses the crop\'s cost from Settings, shown faintly. Type a figure to use your own for this field (Gross margin report).' })}</div>
       </details>` : ''}
       <div style="height:12px"></div>
       ${field({ label: 'Notes', id: 'notes', type: 'textarea', value: existing?.notes })}
       ${existing ? historyHtml(existing, showYield) : ''}
       ${existing ? `<div id="related-movements" style="margin:12px 0"></div>` : ''}
-      ${existing && ['owner', 'manager'].includes(db.getRole()) && db.get().fields.length > 1 ? `<button class="btn secondary" id="merge-field" style="margin-top:12px">Merge another paddock into this one&hellip;</button>` : ''}
+      ${existing && ['owner', 'manager'].includes(db.getRole()) && db.get().fields.length > 1 ? `<button class="btn secondary" id="merge-field" style="margin-top:12px">Merge another field into this one&hellip;</button>` : ''}
       ${existing ? `<button class="btn ghost-danger" id="del" style="margin-top:8px">Delete field</button>` : ''}
       <div class="save-bar"><div class="total" ${showYield ? '' : 'hidden'}><div class="l">Total tonnes</div><div class="v" id="tons-bar">—</div></div><button class="btn" id="save">Save</button></div>
     `;
@@ -352,13 +352,13 @@ export function openFieldSheet(existing) {
         if (actualSoFarEl) actualSoFarEl.textContent = actualTons > 0 && a > 0 ? `${num(actualRate, 2)} ${unitPerHa}` : '–';
         if (yieldMode === 'actual') {
           actualHintEl.className = 'actual-callout using';
-          actualHintEl.innerHTML = `<strong>Using the Movement tickets.</strong> ${found ? `${found} off this field so far.` : 'None recorded yet.'}`;
+          actualHintEl.innerHTML = `<strong>Using the load tickets.</strong> ${found ? `${found} off this field so far.` : 'None recorded yet.'}`;
         } else if (actualTons > 0) {
           actualHintEl.className = 'actual-callout switch';
-          actualHintEl.innerHTML = `<strong>Harvest tickets are in: ${found}.</strong> After harvest, switch to <em>Actual (movements)</em> so reports use the real yield.`;
+          actualHintEl.innerHTML = `<strong>Harvest tickets are in: ${found}.</strong> After harvest, switch to <em>Actual (loads)</em> so reports use the real yield.`;
         } else {
           actualHintEl.className = 'actual-callout';
-          actualHintEl.innerHTML = `After harvest, switch to <strong>Actual (movements)</strong> to use the tickets carted off this field. None recorded yet.`;
+          actualHintEl.innerHTML = `After harvest, switch to <strong>Actual (loads)</strong> to use the tickets carted off this field. None recorded yet.`;
         }
       }
 
@@ -588,11 +588,11 @@ function openMergeSheet(keep) {
     .sort((a, b) => (b.commodityId === keep.commodityId) - (a.commodityId === keep.commodityId) || String(a.name).localeCompare(String(b.name)));
   openSheet(`Merge into ${keep.name}`, (root) => {
     root.innerHTML = `
-      <div class="field hint" style="margin-bottom:10px">Use this when two paddocks are really one — the weighbridge
-        calls them W3/4 and the app has W3 and W4. The paddock you pick is merged into <strong>${esc(keep.name)}</strong>
+      <div class="field hint" style="margin-bottom:10px">Use this when two fields are really one — the weighbridge
+        calls them W3/4 and the app has W3 and W4. The field you pick is merged into <strong>${esc(keep.name)}</strong>
         and then deleted.</div>
-      ${field({ label: 'Paddock to merge in', id: 'mg-other', type: 'select', value: '', options: [{ value: '', label: 'Choose…' }, ...others.map((f) => ({ value: f.id, label: `${f.name} (${num(f.areaHa, 1)} ha)` }))] })}
-      ${field({ label: 'Name for the combined paddock', id: 'mg-name', value: keep.name })}
+      ${field({ label: 'Field to merge in', id: 'mg-other', type: 'select', value: '', options: [{ value: '', label: 'Choose…' }, ...others.map((f) => ({ value: f.id, label: `${f.name} (${num(f.areaHa, 1)} ha)` }))] })}
+      ${field({ label: 'Name for the combined field', id: 'mg-name', value: keep.name })}
       <div id="mg-preview"></div>
       <div class="save-bar solo"><button class="btn" id="mg-go" disabled>Merge</button></div>`;
     const preview = root.querySelector('#mg-preview');
@@ -604,7 +604,7 @@ function openMergeSheet(keep) {
       preview.innerHTML = `<div class="card">
         <div class="row"><span class="label">Combined area</span><span class="value">${num(d.areaHa, 1)} ha</span></div>
         <div class="row"><span class="label">Loads moved across from ${esc(d.droppedName)}</span><span class="value">${d.loadsMoved}</span></div>
-        <div class="row"><span class="label">Paddock deleted</span><span class="value">${esc(d.droppedName)}</span></div>
+        <div class="row"><span class="label">Field deleted</span><span class="value">${esc(d.droppedName)}</span></div>
         ${d.losing.length ? `<div class="field hint" style="margin-top:6px;color:var(--danger)">${esc(d.droppedName)}'s ${d.losing.map(esc).join(', ')} will not carry across; ${esc(keep.name)}'s are kept.</div>` : ''}
       </div>`;
       go.disabled = false;
@@ -622,7 +622,7 @@ function openMergeSheet(keep) {
       const r = db.mergeFields(keep.id, chosen.drop.id, getVal(root, 'mg-name'));
       closeSheet();
       if (r) toast(`Merged — ${r.loadsMoved} load${r.loadsMoved === 1 ? '' : 's'} moved`);
-      else notify('Those paddocks could not be merged.');
+      else notify('Those fields could not be merged.');
     });
   });
 }

@@ -6,18 +6,18 @@
 // contract or a storage, which should add up to the bales pressed. The gin's invoice is saved as a bill when we pay it
 // (see ginning.js).
 
-import { db } from '../storage.js?v=509';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=509';
-import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=509';
-import { activeSales } from '../paidsales.js?v=509';
-import { isGinContract, cottonKind, ginContracts, cleanCottonTerms, kindSummary } from '../cottonkinds.js?v=509';
-import { storageLedgerStock, movementTonsToSale } from '../derived.js?v=509';
-import { offerGinYard } from './modulemove.js?v=509';
-import { attachmentsHtml, wireAttachments } from './attachments.js?v=509';
+import { db } from '../storage.js?v=511';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=511';
+import { openSheet, closeSheet, field, getVal, getNum, confirmDelete, toast, notify, askConfirm } from '../ui.js?v=511';
+import { activeSales } from '../paidsales.js?v=511';
+import { isGinContract, cottonKind, ginContracts, cleanCottonTerms, kindSummary } from '../cottonkinds.js?v=511';
+import { storageLedgerStock, movementTonsToSale } from '../derived.js?v=511';
+import { offerGinYard } from './modulemove.js?v=511';
+import { attachmentsHtml, wireAttachments } from './attachments.js?v=511';
 import {
   STD_BALE_KG, cleanGin, stdBales, turnoutPct, seedTonnes, seedKgPerBale, ginInvoice,
   baleRangeCount, allocateLint, allocationProblems, padOffBy,
-} from '../ginning.js?v=509';
+} from '../ginning.js?v=511';
 
 const round3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -90,7 +90,7 @@ export function openGinRunSheet(existing = null) {
 
   openSheet(existing ? 'Edit ginning run' : 'Log ginning', (root) => {
     if (!tally.length) {
-      offerGinYard(root, 'The modules are moved to a gin yard from the paddock, then ginned from it. Name it after the gin, or add a Tally storage in Storage.', () => openGinRunSheet(existing));
+      offerGinYard(root, 'The modules are moved to a gin yard from the field, then ginned from it. Name it after the gin, or add a Tally storage in Storage.', () => openGinRunSheet(existing));
       return;
     }
     root.innerHTML = `

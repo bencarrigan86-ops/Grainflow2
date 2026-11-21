@@ -4,8 +4,8 @@
 // nav.js and the database policies in supabase/migrations (tests/help.test.mjs reads both). If a role's access changes,
 // that test fails until this page says so too.
 
-import { ROLES, canOpen } from './nav.js?v=509';
-import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=509';
+import { ROLES, canOpen } from './nav.js?v=511';
+import { LEVEL_ROLES, levelNow, pricesShown, readSwitches, readLevels, SCREEN_NEEDS } from './farmswitches.js?v=511';
 
 // --- who can do what -------------------------------------------------------------------------------------------
 
@@ -27,27 +27,27 @@ export const ROLE_INFO = [
   },
   {
     role: 'manager', label: 'Farm manager',
-    summary: 'Runs the paddocks, silos and loads, sends spray requests, and handles orders, invoices and bills. Sees contracts and tonnes, but not contract prices, overheads or the bank details in Settings.',
+    summary: 'Runs the fields, silos and loads, sends spray requests, and handles orders, invoices and bills. Sees contracts and tonnes, but not contract prices, overheads or the bank details in Settings.',
     only: 'Can remove anyone\'s loads and records, bring in last season\'s contracts and start a new season.',
   },
   {
     role: 'bookkeeper', label: 'Bookkeeper',
-    summary: 'The financial side: contracts and prices, invoices and bills. Can see paddocks, loads and reports, but not Position, Storage, overheads or grain orders, and does not record loads or change paddocks and stock.',
+    summary: 'The financial side: contracts and prices, invoices and bills. Can see fields, loads and reports, but not Position, Storage, overheads or grain orders, and does not record loads or change fields and stock.',
     only: 'Enters contracts and invoices alongside the owner.',
   },
   {
     role: 'farm_worker', label: 'Farm worker',
-    summary: 'Paddocks, silos and loads, and the stock of seed, fertiliser, fuel and chemical with no prices. No contract prices, no invoices, no Position tab and no yields.',
-    only: 'Can add loads and change loads that are still open. An owner can also let a worker record production (urea, seed and paddock details) when they are added under People.',
+    summary: 'Fields, silos and loads, and the stock of seed, fertiliser, fuel and chemical with no prices. No contract prices, no invoices, no Position tab and no yields.',
+    only: 'Can add loads and change loads that are still open. An owner can also let a worker record production (urea, seed and field details) when they are added under People.',
   },
   {
     role: 'driver', label: 'Driver',
-    summary: 'Loads only: the loads they cart. They can pick the paddock, silo or contract a load comes from or goes to, but see nothing else.',
+    summary: 'Loads only: the loads they cart. They can pick the field, silo or contract a load comes from or goes to, but see nothing else.',
     only: 'Can add loads and change loads that are still open. Can remove only loads they made themselves.',
   },
   {
     role: 'advisor', label: 'Advisor',
-    summary: 'Looks and changes nothing: an agronomist, accountant or bank. Sees paddocks, production, inputs used, storage and spray requests. Loads, contracts, prices and overheads only if the owner switches them on.',
+    summary: 'Looks and changes nothing: an agronomist, accountant or bank. Sees fields, production, inputs used, storage and spray requests. Loads, contracts, prices and overheads only if the owner switches them on.',
     only: 'Read only. Invited by an owner, and the owner chooses what they can see under Who sees what in Settings.',
   },
 ];
@@ -59,10 +59,10 @@ export const ROLE_INFO = [
 export const ACCESS = [
   { key: 'position', area: 'Position', hint: 'Tonnes, unsold grain and profit', tab: 'position',
     owner: 'view', manager: 'view', bookkeeper: 'none', farm_worker: 'none', driver: 'none', advisor: 'none',
-    note: 'A manager sees tonnes and margin per paddock, but not overheads or the whole farm\'s profit.' },
-  { key: 'production', area: 'Production', hint: 'Paddocks, yields, urea, seed, farm map', tab: 'production',
+    note: 'A manager sees tonnes and margin per field, but not overheads or the whole farm\'s profit.' },
+  { key: 'production', area: 'Production', hint: 'Fields, yields, urea, seed, farm map', tab: 'production',
     owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'view', driver: 'none', advisor: 'view',
-    note: 'A worker can change paddocks only if the owner has allowed them to record production. Workers do not see yields.' },
+    note: 'A worker can change fields only if the owner has allowed them to record production. Workers do not see yields.' },
   { key: 'contracts', area: 'Contracts and prices', hint: 'Sales', tab: 'sales',
     owner: 'full', manager: 'view', bookkeeper: 'full', farm_worker: 'none', driver: 'none', advisor: 'none',
     note: 'A manager sees contracts and tonnes with the prices left out.' },
@@ -77,7 +77,7 @@ export const ACCESS = [
     owner: 'full', manager: 'full', bookkeeper: 'none', farm_worker: 'none', driver: 'none', advisor: 'none' },
   { key: 'freightorders', area: 'Freight orders', hint: 'Loads to cart, and the carrier',
     owner: 'full', manager: 'full', bookkeeper: 'full', farm_worker: 'none', driver: 'none', advisor: 'none' },
-  { key: 'loads', area: 'Loads and tickets', hint: 'Movement, load tickets, the load report', tab: 'movement',
+  { key: 'loads', area: 'Loads and tickets', hint: 'Loads, load tickets, the load report', tab: 'movement',
     owner: 'full', manager: 'full', bookkeeper: 'view', farm_worker: 'own', driver: 'own', advisor: 'none',
     note: 'Workers and drivers can change a load until it is closed, and can remove only their own.' },
   { key: 'storage', area: 'Storage', hint: 'Silos and bunkers', tab: 'storage',
@@ -176,7 +176,7 @@ export const GUIDES = [
     blurb: 'One walk-through sets the farm up.',
     steps: [
       'Tap Start setup on Position, or Open the walk-through at the top of this page.',
-      'It asks one thing at a time: business, season, crops, paddocks, silos, a contract, a load and an invoice. Short answers sit side by side. The Farm box on a paddock is optional: fill it in only if you run more than one property.',
+      'It asks one thing at a time: business, season, crops, fields, silos, a contract, a load and an invoice. Short answers sit side by side. The Farm box on a field is optional: fill it in only if you run more than one property.',
       'Skip what you do not have yet. Continue setup picks up where you stopped.',
     ],
     tips: [
@@ -196,7 +196,7 @@ export const GUIDES = [
   },
   {
     id: 'offline', title: 'Working without signal', roles: ALL, open: '', openLabel: '',
-    blurb: 'The app is built for the paddock.',
+    blurb: 'The app is built for the field.',
     steps: [
       'Everything you enter is saved on the device first, so it works with no signal.',
       'The dot beside the season is white when everything has been sent and amber when something is waiting. It sends when you are back in range.',
@@ -206,28 +206,28 @@ export const GUIDES = [
     ],
   },
   {
-    id: 'paddocks', title: 'Paddocks and production', roles: ['owner', 'manager', 'bookkeeper', 'farm_worker'], open: 'production', openLabel: 'Open Production',
+    id: 'paddocks', title: 'Fields and production', roles: ['owner', 'manager', 'bookkeeper', 'farm_worker'], open: 'production', openLabel: 'Open Production',
     shot: 'help/field.jpg', shotAlt: 'The Add field form: name, farm, crop, area, yield and the folds below',
-    blurb: 'Area, crop, yield, fertiliser and seed for each paddock.',
+    blurb: 'Area, crop, yield, fertiliser and seed for each field.',
     steps: [
-      'On Production, tap + to add a paddock: name, farm, hectares and crop. Tick Double crop if it was sown straight after another crop.',
-      'Yield estimate sits beside the crop\'s default yield. When you edit a paddock, tap Use it to take the default.',
-      'Drive tons from says where the tonnes come from. Estimate is hectares times the yield estimate. Actual (movements) is the loads recorded from the paddock.',
+      'On Production, tap + to add a field: name, farm, hectares and crop. Tick Double crop if it was sown straight after another crop.',
+      'Yield estimate sits beside the crop\'s default yield. When you edit a field, tap Use it to take the default.',
+      'Drive tons from says where the tonnes come from. Estimate is hectares times the yield estimate. Actual (loads) is the loads recorded from the field.',
       'Harvest: mark it finished, or enter the hectares still to cut.',
       'Fertiliser planning: enter a target yield and the soil test N. It works out the N needed, and Use as Urea required fills in the urea to hit the target. Starter and seed has the sums for those.',
     ],
     tips: [
       'Rotation and Averages (Reports) compare seasons. A double crop shows its own yield beside the normal one. Yields are hidden from farm workers.',
-      'Open a paddock and tap Add a movement to start a load already filled in. Merge two paddocks from the paddock sheet.',
+      'Open a field and tap Add a load to start a load already filled in. Merge two fields from the field sheet.',
     ],
   },
   {
     id: 'map', title: 'The farm map', roles: ['owner', 'manager', 'bookkeeper', 'farm_worker'], open: 'production', openLabel: 'Open Production',
-    blurb: 'Your paddock outlines, coloured by crop.',
+    blurb: 'Your field outlines, coloured by crop.',
     steps: [
-      'Export your paddock boundaries as a shapefile from any mapping software. Any shapefile works, with its .dbf.',
+      'Export your field boundaries as a shapefile from any mapping software. Any shapefile works, with its .dbf.',
       'Open the Farm map (Reports or Production) and choose the .shp and .dbf files together, or the zip.',
-      'Paddocks match yours by name. Tick the ones that take their area from the map, then save.',
+      'Fields match yours by name. Tick the ones that take their area from the map, then save.',
     ],
     tips: [
       'The map can be sent as a PDF. A new season carries the outlines over.',
@@ -241,7 +241,7 @@ export const GUIDES = [
       'On Storage, tap + to add a silo or a bunker.',
       'Enter its volume in cubic metres. The tonnes it holds come from the volume and the commodity\'s test weight. Or measure it instead.',
       'Set what is in it and its opening stock. Loads move the stock.',
-      'Shrink: give the commodity a Shrink in silos % in Settings (normally 0.7). It comes off grain going from a paddock into a silo, and shows on Position as its own line.',
+      'Shrink: give the commodity a Shrink in silos % in Settings (normally 0.7). It comes off grain going from a field into a silo, and shows on Position as its own line.',
     ],
     tips: [
       'Search, the sort menu and More (measured view, grouping, the Silo calculator) are at the top.',
@@ -262,17 +262,17 @@ export const GUIDES = [
   },
   {
     id: 'spray', title: 'Spray requests', roles: ['owner', 'manager'], open: 'production', openLabel: 'Open Production',
-    shot: 'help/spray.jpg', shotAlt: 'The New spray request form: who and when, the paddocks by property, and the products',
+    shot: 'help/spray.jpg', shotAlt: 'The New spray request form: who and when, the fields by property, and the products',
     blurb: 'A spray form and a map for the contractor.',
     steps: [
-      'On the farm map tick the paddocks, then Spray request. Or open Spray requests under Inputs and spraying on Production.',
-      'Paddocks to spray lists your properties. Tap a property to open its paddocks, or tick the property to take them all.',
+      'On the farm map tick the fields, then Spray request. Or open Spray requests under Inputs and spraying on Production.',
+      'Fields to spray lists your properties. Tap a property to open its fields, or tick the property to take them all.',
       'Add the products with a rate per hectare, and the water rate.',
       'Who and when: the contractor and their email, the form to send it on, and the date required. The job has the property, crop, purchase order and who supplies the chemical.',
       'Tap View PDF to look at it, then send it. The map is the last page.',
     ],
     tips: [
-      'A different rate on some paddocks is under the product list, and is optional.',
+      'A different rate on some fields is under the product list, and is optional.',
       'The owner can switch on Aircair\'s own form in Settings, under Farm.',
     ],
   },
@@ -281,8 +281,8 @@ export const GUIDES = [
     blurb: 'Sold by the tonne, with the bales counted as well.',
     steps: [
       'In Settings, add each kind (lucerne, oaten hay, barley straw...) as its own commodity, sold in Tonnes. Set Baled hay to Yes, then the bale type and an average bale weight.',
-      'On the paddock, tap + Log bales baled for each cut or run. It shows baled, moved and still in the field.',
-      'Straw or hay off a grain paddock: use Straw and hay baled off this paddock, and pick the kind.',
+      'On the field, tap + Log bales baled for each cut or run. It shows baled, moved and still in the field.',
+      'Straw or hay off a grain field: use Straw and hay baled off this field, and pick the kind.',
       'On a load, enter the Bales. The weight is the bales times the bale weight until you type in the weighbridge weight.',
       'Hay fed on the farm: on the load, choose Used on farm as the destination and say what it was used for. It comes out of the stock and goes on no contract.',
     ],
@@ -321,40 +321,40 @@ export const GUIDES = [
     ],
   },
   {
-    id: 'load', title: 'Recording a load', roles: ['owner', 'manager', 'farm_worker', 'driver'], open: 'movement', openLabel: 'Open Movement',
-    shot: 'help/load.jpg', shotAlt: 'The Add movement form',
-    blurb: 'Every truck, from a paddock or silo to a silo or a contract.',
+    id: 'load', title: 'Recording a load', roles: ['owner', 'manager', 'farm_worker', 'driver'], open: 'movement', openLabel: 'Open Loads',
+    shot: 'help/load.jpg', shotAlt: 'The Add load form',
+    blurb: 'Every truck, from a field or silo to a silo or a contract.',
     steps: [
-      'On Movement, tap + Add load.',
+      'On Loads, tap + Add load.',
       'Choose the commodity, where it came from and where it is going, with the tonnes.',
       'Add the truck and driver, and gross and tare if it was weighed. A truck carted before fills in its company, driver and phone.',
       'Save. The load gets the next ticket number.',
-      'The driver can sign on the phone (Driver signature). Open the load and tap Send this load as a PDF to text or email the ticket, signature on it, as the load docket.',
+      'The driver can sign on the phone (Driver signature). Open the load and tap Send PDF to text or email the ticket, signature on it, as the load docket.',
     ],
     tips: [
       'It works with no signal. The dot beside the season shows what is still to send.',
-      'A load from two paddocks or silos lists the tonnes from each. A driver or worker can remove only their own loads.',
+      'A load from two fields or silos lists the tonnes from each. A driver or worker can remove only their own loads.',
     ],
   },
   {
-    id: 'ticket', title: 'Load tickets and the load report', roles: ['owner', 'manager', 'bookkeeper', 'farm_worker', 'driver'], open: 'movement', openLabel: 'Open Movement',
+    id: 'ticket', title: 'Load tickets and the load report', roles: ['owner', 'manager', 'bookkeeper', 'farm_worker', 'driver'], open: 'movement', openLabel: 'Open Loads',
     blurb: 'A PDF for one load, or a table of loads.',
     steps: [
-      'One load: open it and tap Send this load as a PDF. The ticks choose what prints.',
-      'Many loads: Load report (on Movement, or in Reports). Pick the dates, commodity or contract, then send or download.',
+      'One load: open it and tap Send PDF. The ticks choose what prints.',
+      'Many loads: Load report (on Loads, or in Reports). Pick the dates, commodity or contract, then send or download.',
     ],
     tips: [
-      'To see which paddocks a load came from, use Traceability.',
+      'To see which fields a load came from, use Traceability.',
     ],
   },
   {
     id: 'trace', title: 'Traceability: where a load came from', roles: ['owner', 'manager', 'farm_worker'], open: 'reports', openLabel: 'Open Reports',
     shot: 'help/trace.jpg', shotAlt: 'The Traceability sheet, by sale',
-    blurb: 'Which paddocks the grain on a load or contract came from.',
+    blurb: 'Which fields the grain on a load or contract came from.',
     steps: [
       'In Reports, tap Traceability. Choose the loads and, if you like, the dates and commodity.',
-      'By load lists each load with its paddocks. By sale groups them under each contract.',
-      'Tick Show the silo it came from to see ticket, silo, paddocks. A silo holding several paddocks shows as a blend.',
+      'By load lists each load with its fields. By sale groups them under each contract.',
+      'Tick Show the silo it came from to see ticket, silo, fields. A silo holding several fields shows as a blend.',
       'Download for Excel (CSV) for a table you can sort and total, or send it as a PDF.',
     ],
     tips: [
@@ -375,18 +375,18 @@ export const GUIDES = [
     ],
   },
   {
-    id: 'cotton', title: 'Cotton: modules to bales', roles: ['owner', 'manager', 'farm_worker'], open: 'movement', openLabel: 'Open Movement',
+    id: 'cotton', title: 'Cotton: modules to bales', roles: ['owner', 'manager', 'farm_worker'], open: 'movement', openLabel: 'Open Loads',
     blurb: 'From picking to lint bales and seed, step by step.',
     steps: [
       'Set up Cotton as a commodity sold in Bales, and Cottonseed as one sold in tonnes (Settings).',
-      'As modules are picked, open the paddock and tap Modules picked: the count, estimated weight and turnout. Reports, Modules lists them by paddock.',
-      'Truck them to the gin: Movement, More, Move modules, to a gin yard named after the gin. They come off the paddock.',
-      'When the gin runs them: Movement, More, Log ginning. Enter the modules ginned, the bales pressed and their numbers, the lint kg and the seed kg, and the gin\'s rates.',
+      'As modules are picked, open the field and tap Modules picked: the count, estimated weight and turnout. Reports, Modules lists them by field.',
+      'Truck them to the gin: Loads, More, Move modules, to a gin yard named after the gin. They come off the field.',
+      'When the gin runs them: Loads, More, Log ginning. Enter the modules ginned, the bales pressed and their numbers, the lint kg and the seed kg, and the gin\'s rates.',
       'Say where each lot of bales goes (a store or a bale contract) and where the seed goes. The run makes the gin invoice.',
     ],
     tips: [
       'A standard bale is 227 kg. Contracts and gin charges count standard bales (lint kg divided by 227), not the bales pressed.',
-      'Cotton on hand (Storage) adds up the modules in the field by paddock, in the gin yard, and the bales in the shed.',
+      'Cotton on hand (Storage) adds up the modules in the field by field, in the gin yard, and the bales in the shed.',
     ],
   },
   {
@@ -435,12 +435,12 @@ export const GUIDES = [
     id: 'season', title: 'Starting a new season', roles: ['owner', 'manager'], open: 'settings', openLabel: 'Open Settings',
     blurb: 'Carry the farm over and keep the old season\'s records.',
     steps: [
-      'Tap the season at the top right, then Start new year and enter the label, such as 2027.',
-      'Paddocks, outlines, silos and commodities carry over, and a silo still holding grain opens with it. Yields, contracts, loads and overheads start empty.',
+      'Tap the season at the top right, then Start new season and enter the label, such as 2027.',
+      'Fields, outlines, silos and commodities carry over, and a silo still holding grain opens with it. Yields, contracts, loads and overheads start empty.',
       'The old season stays: pick it in the Viewing box. On Sales, More, Bring in last season\'s contracts carries unfinished ones across.',
     ],
     tips: [
-      'Past seasons and past sales can be imported from CSV in Settings, and Line up paddock names matches renamed paddocks. Rename a season with the button beside Viewing.',
+      'Past seasons and past sales can be imported from CSV in Settings, and Line up field names matches renamed fields. Rename a season with the button beside Viewing.',
     ],
   },
   {
@@ -508,13 +508,13 @@ export const START_STEPS = [
     done: (d) => !!(d.business?.entityName && (d.business?.abn || d.business?.ngr)) },
   { id: 'commodities', label: 'Add your commodities', detail: 'Wheat, barley, canola and so on', route: 'settings', roles: ['owner', 'manager'],
     done: (d) => (d.commodities || []).length > 0 },
-  { id: 'paddocks', label: 'Add your paddocks', detail: 'Name, area and crop', route: 'production', roles: ['owner', 'manager'],
+  { id: 'paddocks', label: 'Add your fields', detail: 'Name, area and crop', route: 'production', roles: ['owner', 'manager'],
     done: (d) => (d.fields || []).length > 0 },
   { id: 'storage', label: 'Add your silos and bunkers', detail: 'And what is in them now', route: 'storage', roles: ['owner', 'manager'],
     done: (d) => (d.storages || []).length > 0 },
   { id: 'contract', label: 'Enter a contract', detail: 'Buyer, tonnes and price', route: 'sales', roles: ['owner', 'bookkeeper'],
     done: (d) => (d.sales || []).length > 0 },
-  { id: 'load', label: 'Record a load', detail: 'From a paddock or silo to a silo or contract', route: 'movement', roles: ['owner', 'manager'],
+  { id: 'load', label: 'Record a load', detail: 'From a field or silo to a silo or contract', route: 'movement', roles: ['owner', 'manager'],
     done: (d) => (d.movements || []).length > 0 },
   { id: 'invoice', label: 'Make an invoice', detail: 'From a contract with loads delivered', route: 'sales', roles: ['owner', 'manager', 'bookkeeper'],
     done: (d) => (d.invoices || []).length > 0 },

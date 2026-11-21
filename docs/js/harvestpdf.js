@@ -3,8 +3,8 @@
 // room in the silos, as on the screen. The report's own figures (harvest.js) go in; nothing is worked out again here.
 // Pure: it builds bytes.
 
-import { createReport, fixed } from './reportpdf.js?v=509';
-import { roomSummary } from './harvest.js?v=509';
+import { createReport, fixed } from './reportpdf.js?v=511';
+import { roomSummary } from './harvest.js?v=511';
 
 const pct = (p) => `${Math.round((Number(p) || 0) * 100)}%`;
 const haPct = (done, area) => (area > 0 ? `${Math.round((done / area) * 100)}%` : '-');
@@ -41,7 +41,7 @@ export function harvestPdf({ groups = [], farm = {}, seasons = [], scopeLabel = 
       ? 'In is the tonnes carted off the field; to come is its estimate less that, until the field is finished.'
       : 'Hectares cut and left, and the available storage. Third-party storage is not counted.',
   });
-  if (!groups.length) { report.message('Nothing to report yet: add a paddock in Production.'); return report.bytes(); }
+  if (!groups.length) { report.message('Nothing to report yet: add a field in Production.'); return report.bytes(); }
 
   // ---- the whole farm ----
   report.heading(scopeLabel || 'Whole farm');
@@ -55,7 +55,7 @@ export function harvestPdf({ groups = [], farm = {}, seasons = [], scopeLabel = 
     report.pair('Left to harvest', `${t0(farm.toGoHa)} ha`);
     report.pair('Of the area done', haPct(farm.doneHa, farm.areaHa), { bold: true });
   }
-  report.pair('Paddocks finished', `${farm.doneFields} of ${farm.fields}${showYield ? ` · ${t0(farm.doneHa)} of ${t0(farm.areaHa)} ha` : ''}`);
+  report.pair('Fields finished', `${farm.doneFields} of ${farm.fields}${showYield ? ` · ${t0(farm.doneHa)} of ${t0(farm.areaHa)} ha` : ''}`);
   // by when the crops are cut, so a summer crop still standing does not hide how far through the winter crops are
   if (seasons.length > 1) {
     report.gap(4);

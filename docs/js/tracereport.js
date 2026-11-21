@@ -3,11 +3,11 @@
 // The paddock-by-paddock replay is trace.js (the same one the movements CSV column uses); this picks the loads, adds them up
 // across the whole list ("which paddocks made up this contract") and lays out the PDF. Pure.
 
-import { Pdf, wrapText } from './pdf.js?v=509';
-import { drawBrandLogo } from './brand.js?v=509';
-import { dmy } from './fmt.js?v=509';
-import { traceDetailed, traceParts } from './trace.js?v=509';
-import { endName, rangeText, clipText } from './loadreport.js?v=509';
+import { Pdf, wrapText } from './pdf.js?v=511';
+import { drawBrandLogo } from './brand.js?v=511';
+import { dmy } from './fmt.js?v=511';
+import { traceDetailed, traceParts } from './trace.js?v=511';
+import { endName, rangeText, clipText } from './loadreport.js?v=511';
 
 const plain = (n, d = 2) => (Number.isFinite(Number(n)) ? Number(n).toFixed(d) : '');
 const round = (v, dp = 2) => { const f = 10 ** dp; return Math.round(v * f) / f; };
@@ -138,7 +138,7 @@ export const TRACE_CSV_COLUMNS = [
   { label: 'Truck', get: (r) => r.truck },
   { label: 'Load (t)', get: (r) => plain(r.loadTons) },
   { label: 'Silo it came out of', get: (r) => r.silo },
-  { label: 'Paddock it came from', get: (r) => r.source },
+  { label: 'Field it came from', get: (r) => r.source },
   { label: 'Tonnes from it', get: (r) => plain(r.tons) },
   { label: 'Share of the load (%)', get: (r) => plain(r.share * 100, 1) },
 ];
@@ -157,7 +157,7 @@ export function buildTraceReportPdf(rows, { title = 'Traceability', business = '
   const BOTTOM = PAGE.height - 48;
   const cols = [
     { key: 'date', head: 'Date', w: 56 }, { key: 'ticketNo', head: 'Ticket', w: 40 }, { key: 'commodity', head: 'Commodity', w: 62 },
-    { key: 'goingTo', head: 'Going to', w: 140 }, { key: 'tons', head: 'Net (t)', w: 54, right: true }, { key: 'from', head: showStore ? 'Silo and paddocks it came from' : 'Paddocks it came from', w: 0 },
+    { key: 'goingTo', head: 'Going to', w: 140 }, { key: 'tons', head: 'Net (t)', w: 54, right: true }, { key: 'from', head: showStore ? 'Silo and fields it came from' : 'Fields it came from', w: 0 },
   ];
   cols.find((c) => c.key === 'from').w = W - cols.reduce((s, c) => s + c.w, 0);
   let x = MARGIN; for (const c of cols) { c.x = x; x += c.w; }
@@ -238,7 +238,7 @@ export function buildTraceReportPdf(rows, { title = 'Traceability', business = '
     pdf.text(cols[3].x + 4, y + 6, 'Total', { size: 9.5, bold: true });
     pdf.text(cols[4].x + cols[4].w - 4, y + 6, plain(totals.tons), { size: 9.5, bold: true, align: 'right' });
   }
-  pdf.text(MARGIN, PAGE.height - 36, 'Worked out from the loads recorded: what leaves a silo is the grain that went in, in the order it went in. Opening stock has no paddock.', { size: 7.5, gray: 0.5 });
+  pdf.text(MARGIN, PAGE.height - 36, 'Worked out from the loads recorded: what leaves a silo is the grain that went in, in the order it went in. Opening stock has no field.', { size: 7.5, gray: 0.5 });
   pdf.text(MARGIN, PAGE.height - 22, `Made in Commodity Mate${madeAt ? ` ${madeAt}` : ''}`, { size: 7.5, gray: 0.5 });
   return pdf.bytes();
 }

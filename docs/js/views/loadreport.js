@@ -1,12 +1,12 @@
 // The load report sheet: pick the dates, tick what to narrow the loads by (any number of commodities, contracts, paddocks, silos,
 // grades, trucks or drivers), then send the list of loads on as a PDF.
 
-import { db } from '../storage.js?v=509';
-import { num, todayLocal, dmy, esc } from '../fmt.js?v=509';
-import { openSheet, field, getVal, toast, notify } from '../ui.js?v=509';
-import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=509';
-import { viewPdf } from '../pdfview.js?v=509';
-import { loadReportRows, loadReportTotals, loadFilterChoices, filterText, datePresets, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=509';
+import { db } from '../storage.js?v=511';
+import { num, todayLocal, dmy, esc } from '../fmt.js?v=511';
+import { openSheet, field, getVal, toast, notify } from '../ui.js?v=511';
+import { sharePdf, downloadFile, safeFileName } from '../sharefile.js?v=511';
+import { viewPdf } from '../pdfview.js?v=511';
+import { loadReportRows, loadReportTotals, loadFilterChoices, filterText, datePresets, buildLoadReportPdf, buildLoadTicketPdf, rangeText, nowTime } from '../loadreport.js?v=511';
 
 // what was chosen last time, remembered on this device
 const KEY = 'grainflow.loadreport';
@@ -49,7 +49,7 @@ Thanks`;
 const FILTERS = [
   { key: 'commodityIds', label: 'Commodity', list: 'commodities' },
   { key: 'saleIds', label: 'Contract', list: 'sales' },
-  { key: 'fieldIds', label: 'Paddock', list: 'fields' },
+  { key: 'fieldIds', label: 'Field', list: 'fields' },
   { key: 'storageIds', label: 'Storage', list: 'storages' },
   { key: 'grades', label: 'Grade', list: 'grades' },
   { key: 'trucks', label: 'Truck', list: 'trucks' },
@@ -101,13 +101,13 @@ export function openLoadReportSheet() {
       ${shown.length ? `<div class="subhead" style="margin-top:4px">Only loads that match</div>
       <div class="hint" style="margin:0 0 8px">Tick one or more in any of these. A load has to match one tick in each filter you use.</div>
       <div id="lr-filters">${shown.map(pickRow).join('')}</div>` : ''}
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:10px 0 10px"><input type="checkbox" id="lr-origin" ${d.showOrigin ? 'checked' : ''} style="width:18px;height:18px" /> Show where each load came from (storage or paddock)</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:10px 0 10px"><input type="checkbox" id="lr-origin" ${d.showOrigin ? 'checked' : ''} style="width:18px;height:18px" /> Show where each load came from (storage or field)</label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="lr-dest" ${d.showDestination ? 'checked' : ''} style="width:18px;height:18px" /> Show the destination when a load is going to a contract</label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 10px"><input type="checkbox" id="lr-quality" ${d.showQuality ? 'checked' : ''} style="width:18px;height:18px" /> Show quality results where a load was tested</label>
       ${field({ label: 'Send to (email, optional)', id: 'lr-email', value: d.email, placeholder: 'name@example.com' })}
       <div class="row"><span class="label">On the report</span><span class="value" id="lr-count">-</span></div>
       <button class="btn secondary" id="lr-view" type="button" style="margin-top:10px">View PDF</button>
-      <button class="btn" id="lr-send" type="button" style="margin-top:8px">Send as PDF</button>
+      <button class="btn" id="lr-send" type="button" style="margin-top:8px">Send PDF</button>
       <button class="btn secondary" id="lr-download" type="button" style="margin-top:8px">Download</button>`;
 
     const collect = () => {

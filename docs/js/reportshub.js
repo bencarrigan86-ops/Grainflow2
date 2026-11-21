@@ -8,7 +8,7 @@
  *   go     another screen (a tab)
  */
 
-import { canSeePrices, canSeeBills } from './nav.js?v=509';
+import { canSeePrices, canSeeBills } from './nav.js?v=511';
 
 export const MODE_KEY = 'grainflow.reports.mode';
 
@@ -38,7 +38,7 @@ export function hubGroups({ mode = 'simple', role = '', showYield = true, hasCot
   const tile = (id, label, kind, extra = {}) => ({ id, label, kind, ...extra });
   const groups = [
     {
-      title: 'Paddocks and crops',
+      title: 'Fields and crops',
       tiles: [
         showYield && has('production') && tile('yield', 'Yield', 'view', { simple: true }),
         has('production') && tile('harvest', 'Harvest progress', 'view', { simple: true }),

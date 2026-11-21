@@ -3,15 +3,15 @@
 // The words are in helpcontent.js, checked against nav.js and the database policies by tests/help.test.mjs. This only lays
 // them out, and offers each guide only to the roles that have it.
 
-import { db } from '../storage.js?v=509';
-import { esc } from '../fmt.js?v=509';
-import { canOpen } from '../nav.js?v=509';
-import { ROLE_INFO, ACCESS, LEVELS, effectiveAccess, guidesForRole, startProgress } from '../helpcontent.js?v=509';
-import { readSwitches, readLevels } from '../farmswitches.js?v=509';
-import { openSetupWalk } from './setupwalk.js?v=509';
-import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=509';
+import { db } from '../storage.js?v=511';
+import { esc } from '../fmt.js?v=511';
+import { canOpen } from '../nav.js?v=511';
+import { ROLE_INFO, ACCESS, LEVELS, effectiveAccess, guidesForRole, startProgress } from '../helpcontent.js?v=511';
+import { readSwitches, readLevels } from '../farmswitches.js?v=511';
+import { openSetupWalk } from './setupwalk.js?v=511';
+import { figureFor, tabsSvg, rolesSvg } from '../helpvisuals.js?v=511';
 
-import { pill, ROLE_SHORT } from './levelpill.js?v=509';
+import { pill, ROLE_SHORT } from './levelpill.js?v=511';
 
 const SHORT = ROLE_SHORT;
 
@@ -46,7 +46,7 @@ export function renderHelp(root) {
       </div>
     </div>
     <div class="view">
-      ${canWalk ? `<div class="card"><h2>Setup walk-through</h2><div class="hint" style="margin-bottom:8px">One question at a time: business, season, crops, paddocks, silos, a contract, a load and an invoice. Skip what you like, and come back to it here.</div><button type="button" class="btn" id="help-walk">Open the walk-through</button></div>` : ''}
+      ${canWalk ? `<div class="card"><h2>Setup walk-through</h2><div class="hint" style="margin-bottom:8px">One question at a time: business, season, crops, fields, silos, a contract, a load and an invoice. Skip what you like, and come back to it here.</div><button type="button" class="btn" id="help-walk">Open the walk-through</button></div>` : ''}
       <div class="card summary">
         <h2><span class="dot summary"></span>What you can do</h2>
         <div class="hint" style="margin-bottom:6px">${esc(me.summary)}</div>

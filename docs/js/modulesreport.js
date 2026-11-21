@@ -2,9 +2,9 @@
 //
 // Pure functions over the farm's records. The screen (views/reports.js) and the PDF (modulespdf.js) both draw from this.
 
-import { hasGin, hasModules, moduleLegs, cleanGin, stdBales, estimateBales, DEFAULT_TURNOUT } from './ginning.js?v=509';
-import { pickedTotals, cleanPicked } from './modulespicked.js?v=509';
-import { storageLedgerStock } from './derived.js?v=509';
+import { hasGin, hasModules, moduleLegs, cleanGin, stdBales, estimateBales, DEFAULT_TURNOUT } from './ginning.js?v=511';
+import { pickedTotals, cleanPicked } from './modulespicked.js?v=511';
+import { storageLedgerStock } from './derived.js?v=511';
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
@@ -178,7 +178,7 @@ export function ginnedByField({ fields = [], movements = [] } = {}) {
     }
   }
   const rows = [...acc.entries()].map(([id, a]) => ({
-    field: id ? (fields.find((f) => f.id === id) || { id, name: 'Deleted paddock' }) : null,
+    field: id ? (fields.find((f) => f.id === id) || { id, name: 'Deleted field' }) : null,
     ...a, avgKg: a.modules > 0 ? a.kg / a.modules : 0, turnoutPct: a.kg > 0 ? (a.lintKg / a.kg) * 100 : 0,
   })).sort((a, b) => (a.field ? 0 : 1) - (b.field ? 0 : 1) || String(a.field?.name || '').localeCompare(String(b.field?.name || ''), 'en', { numeric: true }));
   const sum = rows.reduce((s, r) => ({ modules: s.modules + r.modules, kg: s.kg + r.kg, lintKg: s.lintKg + r.lintKg, bales: s.bales + r.bales }), { modules: 0, kg: 0, lintKg: 0, bales: 0 });

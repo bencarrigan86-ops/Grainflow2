@@ -161,7 +161,7 @@ check('every figure draws, with no gaps in it, and belongs to a guide', () => {
   assert.equal(figureFor('nothing'), '');
 });
 check('the tab bar picture shows exactly the tabs that role has', () => {
-  const labels = { position: 'Position', production: 'Production', sales: 'Sales', movement: 'Movement', storage: 'Storage', reports: 'Reports' };
+  const labels = { position: 'Position', production: 'Production', sales: 'Sales', movement: 'Loads', storage: 'Storage', reports: 'Reports' };
   for (const role of ROLES) {
     const s = tabsSvg(role);
     for (const t of tabsForRole(role)) assert.ok(s.includes(`>${labels[t]}<`), `${role} bar is missing ${t}`);

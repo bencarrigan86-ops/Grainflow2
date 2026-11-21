@@ -11,7 +11,7 @@
 // named for the store, and a load that took more than the silo was recorded as holding says "Not recorded" for the
 // difference. Pure.
 
-import { inOrder, outloadEndOf } from './outload.js?v=509';
+import { inOrder, outloadEndOf } from './outload.js?v=511';
 
 const num = (v) => Number(v) || 0;
 const EPS = 1e-9;
@@ -111,7 +111,7 @@ export function traceParts(from, { fields = [], storages = [] } = {}) {
     const id = rest.join(':');
     if (kind === 'field') {
       const f = fields.find((x) => x.id === id);
-      return f ? [f.property, f.name].filter(Boolean).join(' ') : 'A paddock no longer on the list';
+      return f ? [f.property, f.name].filter(Boolean).join(' ') : 'A field no longer on the list';
     }
     const s = storages.find((x) => x.id === id);
     if (kind === 'opening') return `Opening stock in ${s?.name || 'a silo'}`;

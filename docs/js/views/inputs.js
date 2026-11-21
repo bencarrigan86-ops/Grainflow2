@@ -4,19 +4,19 @@
 // and Bought, Used and Count record an entry. Seed and fertiliser also show what this season's paddocks call for
 // against what is in the shed. The arithmetic is in inputs.js.
 
-import { tileIcon } from '../tileicon.js?v=509';
-import { db } from '../storage.js?v=509';
-import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=509';
-import { openSprayJobsSheet, canSpray } from './spray.js?v=509';
-import { canChangeInputs } from '../nav.js?v=509';
-import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=509';
-import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=509';
-import { isTransit } from '../transit.js?v=509';
-import { isOffFarm } from '../offfarm.js?v=509';
+import { tileIcon } from '../tileicon.js?v=511';
+import { db } from '../storage.js?v=511';
+import { openSheet, openOver, field, getVal, getNum, confirmDelete, toast, notify } from '../ui.js?v=511';
+import { openSprayJobsSheet, canSpray } from './spray.js?v=511';
+import { canChangeInputs } from '../nav.js?v=511';
+import { num, money, esc, todayLocal, dmy } from '../fmt.js?v=511';
+import { fieldSeed, fieldUrea, fieldStarter } from '../derived.js?v=511';
+import { isTransit } from '../transit.js?v=511';
+import { isOffFarm } from '../offfarm.js?v=511';
 import {
   KINDS, UNITS, MOVE_TYPES, kindLabel, defaultUnit, productKey, stockLevels, productMoves, stockValue,
   plannedNeeds, planVsStock, inputProblems, adjustmentFor, moveDelta, qtyText, onHandAt,
-} from '../inputs.js?v=509';
+} from '../inputs.js?v=511';
 
 // A farm worker sees what is on hand and records what is used and counts. The prices are not sent to their phone
 // at all (see the migration); this keeps the screens from showing blanks where a price would be, and from offering a delivery.
@@ -59,7 +59,7 @@ export function openInputsSheet() {
 
     const sprayOpen = canSpray(db.getRole()) ? db.getSprayJobs().filter((j) => j.status !== 'done').length : 0;
     root.innerHTML = `
-      ${canSpray(db.getRole()) && fields.length ? `<div class="tile-grid" style="grid-template-columns:1fr;margin-bottom:12px"><button type="button" class="btn secondary tool-tile" id="open-spray">${tileIcon('spray')}<span class="tt-text"><b>Spray requests</b><span>${sprayOpen ? `${sprayOpen} open` : 'make a job, tick the paddocks, send it'}</span></span></button></div>` : ''}
+      ${canSpray(db.getRole()) && fields.length ? `<div class="tile-grid" style="grid-template-columns:1fr;margin-bottom:12px"><button type="button" class="btn secondary tool-tile" id="open-spray">${tileIcon('spray')}<span class="tt-text"><b>Spray requests</b><span>${sprayOpen ? `${sprayOpen} open` : 'make a job, tick the fields, send it'}</span></span></button></div>` : ''}
       ${levels.length ? `<div class="stat-grid">
         <div class="stat"><div class="n">${levels.length}</div><div class="l">Product${levels.length === 1 ? '' : 's'} in stock</div></div>
         ${priced ? `<div class="stat"><div class="n">${value > 0 ? money(value, 0) : '-'}</div><div class="l">Stock value${value > 0 ? '' : ' (add prices to see it)'}</div></div>` : ''}
@@ -79,7 +79,7 @@ export function openInputsSheet() {
       ${plan.length ? `
       <div class="card" style="margin-top:12px">
         <h2>This season's plan</h2>
-        <div style="margin:0 0 6px;font-size:13px;opacity:.7">What the paddocks call for (seed with its buffer), against the stock of the same name.</div>
+        <div style="margin:0 0 6px;font-size:13px;opacity:.7">What the fields call for (seed with its buffer), against the stock of the same name.</div>
         ${plan.map((p) => `
           <div class="row"><span class="label">${esc(p.product)}<span class="meta" style="display:block">${p.bought ? `${qtyText(p.onHandT, 't')} on hand` : 'None bought yet'}</span></span>
             <span class="value">${qtyText(p.tons, 't')}${p.shortT > 0 ? ` <span class="badge neg">${qtyText(p.shortT, 't')} short</span>` : ' <span class="badge pos">Covered</span>'}</span></div>`).join('')}

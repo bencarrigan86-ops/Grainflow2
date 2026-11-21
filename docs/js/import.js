@@ -235,7 +235,7 @@ export function validate(state) {
 
     for (const f of year.fields || []) {
       stats.paddocks += 1;
-      const w = `${label} paddock "${f.name || '?'}"`;
+      const w = `${label} field "${f.name || '?'}"`;
       checkId(w, f.id);
       oneOf(w, 'yieldMode', f.yieldMode, ALLOWED.yieldMode);
       if (f.commodityId && !ids.commodity.has(f.commodityId)) {
