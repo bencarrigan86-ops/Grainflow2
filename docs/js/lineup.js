@@ -19,8 +19,8 @@
 //   Share (%)            optional: for a split, the part of the old paddock this new one takes
 //   Seasons              optional: "2020-2024" or "2020, 2022" (default: every season except the current one)
 
-import { parseCsv, detectDelimiter } from './loadimport.js?v=499';
-import { mergeFieldRecords, repointLoads } from './merge.js?v=499';
+import { parseCsv, detectDelimiter } from './loadimport.js?v=500';
+import { mergeFieldRecords, repointLoads } from './merge.js?v=500';
 
 const ALIASES = {
   from: ['old name', 'old', 'old paddock', 'from'],

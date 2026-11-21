@@ -101,6 +101,24 @@ function chooseStrategy({ url, method = 'GET', mode = '', origin = '' }) {
 
 // ---------------------------------------------------------------------------
 
+/**
+ * A response that was reached through a redirect says so (response.redirected), and a browser will not show a page the worker
+ * hands it with that flag set: Safari answers "Response served by service worker has redirections" and the app does not open.
+ * The host redirects /index.html to / (the home-screen icon starts at /index.html), so a saved copy of that page carries the flag.
+ * Rebuilding the response from its body drops it, and the page is then served as a plain 200.
+ */
+function plain(res) {
+  if (!res || !res.redirected) return res;
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: res.headers });
+}
+
+/** Fetch one file fresh from the network and keep it, as a plain response. Rejects if it cannot be had. */
+async function saveClean(cache, path) {
+  const res = await fetch(path, { cache: 'reload' });
+  if (!res || !res.ok) throw new Error(`could not download ${path}`);
+  await cache.put(path, plain(res));
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
@@ -110,10 +128,9 @@ self.addEventListener('install', (event) => {
     if (!res.ok) throw new Error('precache.json not found');
     const list = await res.json();
     const required = [...new Set([...SHELL, ...(list.required || [])])];
-    await Promise.all(required.map((path) => cache.add(new Request(path, { cache: 'reload' }))));
+    await Promise.all(required.map((path) => saveClean(cache, path)));
     // Icons, help pictures and the form: wanted offline, but one missing must not stop an update.
-    await Promise.all((list.optional || []).map((path) =>
-      cache.add(new Request(path, { cache: 'reload' })).catch(() => {})));
+    await Promise.all((list.optional || []).map((path) => saveClean(cache, path).catch(() => {})));
     await self.skipWaiting();
   })());
 });
@@ -156,14 +173,16 @@ async function handle(request, strategy, cacheName) {
 
   if (strategy === 'network-first') {
     try {
-      const attempt = fetch(request).then((fresh) => {
-        if (fresh && fresh.ok) cache.put(request, fresh.clone()).catch(() => {});
-        return fresh;
+      // The home-screen icon opens /index.html, which the host redirects to /. Ask for / itself, so nothing is redirected.
+      const isIndexPage = request.mode === 'navigate' && new URL(request.url).pathname.endsWith('/index.html');
+      const attempt = (isIndexPage ? fetch('./') : fetch(request)).then((fresh) => {
+        if (fresh && fresh.ok) cache.put(request, plain(fresh.clone())).catch(() => {});
+        return plain(fresh);
       });
       // A page open waits only so long for the network when there is a saved page to fall back on; the request carries on in the
       // background and refreshes the saved page for next time.
       if (request.mode === 'navigate') {
-        const saved = await cache.match(request) || await cache.match('./index.html');
+        const saved = plain(await cache.match(request) || await cache.match('./') || await cache.match('./index.html'));
         if (saved) {
           attempt.catch(() => {});
           return await Promise.race([attempt, new Promise((resolve) => setTimeout(() => resolve(saved), NAVIGATE_WAIT_MS))]);
@@ -172,7 +191,7 @@ async function handle(request, strategy, cacheName) {
       return await attempt;
     } catch {
       // No signal. This is the whole point of the exercise.
-      const cached = await cache.match(request) || await cache.match('./index.html');
+      const cached = plain(await cache.match(request) || await cache.match('./') || await cache.match('./index.html'));
       if (cached) return cached;
       throw new Error('offline and nothing cached');
     }
@@ -180,18 +199,18 @@ async function handle(request, strategy, cacheName) {
 
   const cached = await cache.match(request);
 
-  if (strategy === 'cache-first' && cached) return cached;
+  if (strategy === 'cache-first' && cached) return plain(cached);
 
   const network = fetch(request).then((res) => {
-    if (res && res.ok && res.type !== 'opaque') cache.put(request, res.clone()).catch(() => {});
-    return res;
+    if (res && res.ok && res.type !== 'opaque') cache.put(request, plain(res.clone())).catch(() => {});
+    return plain(res);
   });
 
   // revalidate: answer now from the cache if we have it, and let the refresh
   // finish in the background for next time. Nothing awaits it deliberately.
   if (cached) {
     network.catch(() => {});
-    return cached;
+    return plain(cached);
   }
   return network;
 }

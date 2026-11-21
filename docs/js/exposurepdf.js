@@ -3,8 +3,8 @@
 // the buyer's own row carries what they owe (unpaid, overdue, not invoiced, owing now). Landscape A4 in the same style as the Fert page. The
 // figures come from exposure.js (buyerExposure), the same ones the screen uses. Pure: it builds bytes.
 
-import { Pdf, wrapText } from './pdf.js?v=499';
-import { drawBrandLogo } from './brand.js?v=499';
+import { Pdf, wrapText } from './pdf.js?v=500';
+import { drawBrandLogo } from './brand.js?v=500';
 
 const PAGE = { width: 841.89, height: 595.28 };
 const M = 36;

@@ -15,7 +15,7 @@
 //             leaves no trace for a later upsert to find.
 
 import { openDB } from 'https://esm.sh/idb@8';
-import { touchesToQueue } from './dirty.js?v=499';
+import { touchesToQueue } from './dirty.js?v=500';
 
 const DB_NAME = 'grainflow';
 const DB_VERSION = 1;

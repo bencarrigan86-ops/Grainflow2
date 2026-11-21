@@ -1,8 +1,8 @@
 // The wording of a confirmation of sale's terms that has some working in it: the quantity tolerance and what each grade of a
 // multigrade contract is paid. Pure, so the confirmation (views/contract.js) and its tests share it.
 
-import { num, money } from './fmt.js?v=499';
-import { cleanGradeOptions } from './gradeprice.js?v=499';
+import { num, money } from './fmt.js?v=500';
+import { cleanGradeOptions } from './gradeprice.js?v=500';
 
 /**
  * Tolerance in the words the trade uses.

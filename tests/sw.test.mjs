@@ -150,22 +150,32 @@ check('the shell is the page and its manifest; the rest of the build comes from 
 });
 
 // Run the real install handler against a fake cache and a fake server.
-async function runInstall({ manifest, missing = [] }) {
+// 'redirected' lists paths the fake server answers as if reached through a redirect (the host sends /index.html to /).
+async function runInstall({ manifest, missing = [], redirected = [] }) {
   const added = [];
+  const stored = {};
   const store = {
-    open: async () => ({ add: async (req) => { if (missing.includes(req.url)) throw new Error('404 ' + req.url); added.push(req.url); } }),
+    open: async () => ({ put: async (path, res) => { added.push(String(path)); stored[String(path)] = res; } }),
     keys: async () => [],
   };
   const fetched = [];
-  const fakeFetch = async (url) => { fetched.push(String(url)); return manifest ? { ok: true, json: async () => manifest } : { ok: false }; };
+  const fakeFetch = async (url) => {
+    const u = String(url.url || url);
+    fetched.push(u);
+    if (u.includes('precache.json')) return manifest ? { ok: true, json: async () => manifest } : { ok: false };
+    if (missing.includes(u)) return { ok: false, status: 404 };
+    const r = new Response('<html></html>', { status: 200 });
+    if (redirected.includes(u)) Object.defineProperty(r, 'redirected', { value: true });
+    return r;
+  };
   const l = {};
   const sw = { ...self_, addEventListener: (n, fn) => { l[n] = fn; } };
-  new Function('self', 'caches', 'fetch', 'Request', src)(sw, store, fakeFetch, class { constructor(u) { this.url = u; } });
+  new Function('self', 'caches', 'fetch', 'Request', 'Response', src)(sw, store, fakeFetch, class { constructor(u) { this.url = u; } }, Response);
   let done;
   l.install({ waitUntil: (p) => { done = p; } });
   let error = null;
   try { await done; } catch (e) { error = e; }
-  return { added, fetched, error };
+  return { added, stored, fetched, error };
 }
 
 const acheck = async (name, fn) => {
@@ -192,6 +202,17 @@ await acheck('no file list fails the install too', async () => {
 await acheck('a missing icon does not stop an update', async () => {
   const r = await runInstall({ manifest: LIST, missing: ['./icons/icon-192.png'] });
   assert.equal(r.error, null);
+});
+await acheck('a saved page that came through a redirect is stored as a plain page, which Safari will open', async () => {
+  const r = await runInstall({ manifest: { required: ['./index.html', './js/main.js?v=84'], optional: [] }, redirected: ['./index.html'] });
+  assert.equal(r.error, null);
+  assert.equal(r.stored['./index.html'].redirected, false, 'a redirected response was kept as it was: Safari says "Response served by service worker has redirections"');
+  assert.equal(await r.stored['./index.html'].text(), '<html></html>', 'the page body was lost in the rebuild');
+});
+check('every answer from a cache goes through plain(), and the home-screen start page asks for / rather than a redirect', () => {
+  assert.ok(src.includes('function plain(res)'));
+  assert.ok((src.match(/plain\(/g) || []).length >= 8);
+  assert.ok(src.includes("fetch('./')") && src.includes("endsWith('/index.html')"));
 });
 check('a page request does not wait on a slow network when there is a saved page', () => {
   assert.ok(src.includes('NAVIGATE_WAIT_MS') && src.includes('Promise.race'));
